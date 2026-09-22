@@ -1,0 +1,292 @@
+# ============================================================
+# H-Immo - Git Ignore
+# Symfony 7.4 + React + TypeScript + Vite
+# ============================================================
+
+
+# ============================================================
+# Symfony
+# ============================================================
+
+###> symfony/framework-bundle ###
+/.env.local
+/.env.local.php
+/.env.*.local
+/config/secrets/prod/prod.decrypt.private.php
+/public/bundles/
+/var/
+/vendor/
+###< symfony/framework-bundle ###
+
+
+# ============================================================
+# Environment / Secrets
+# ============================================================
+
+.env.*
+!.env.example
+!.env.test
+
+# Local secrets
+*.key
+*.pem
+*.p12
+*.pfx
+*.crt
+*.cer
+
+# Local configuration
+/config/secrets/
+
+
+# ============================================================
+# PHP / Composer
+# ============================================================
+
+/vendor/
+composer.phar
+
+
+# ============================================================
+# Symfony generated files
+# ============================================================
+
+/var/
+/public/bundles/
+/public/build/
+
+
+# ============================================================
+# React / TypeScript / Vite
+# ============================================================
+
+/node_modules/
+/dist/
+/build/
+/.vite/
+
+# Vite generated files
+/public/build/
+
+# TypeScript
+*.tsbuildinfo
+
+
+# ============================================================
+# Yarn
+# ============================================================
+
+# Yarn cache / temporary files
+.yarn/cache/
+.yarn/install-state.gz
+.yarn/unplugged/
+.yarn/build-state.yml
+.yarn/patches/
+
+# Keep the project Yarn release if using packageManager/yarnPath
+!.yarn/releases/
+
+# Local Yarn workaround
+/.local-bin/
+
+
+# ============================================================
+# Logs
+# ============================================================
+
+*.log
+/logs/
+/npm-debug.log*
+/yarn-debug.log*
+/yarn-error.log*
+
+
+# ============================================================
+# PHPUnit / Coverage
+# ============================================================
+
+/.phpunit.result.cache
+/coverage/
+
+
+# ============================================================
+# PHPStan / Psalm / Static analysis
+# ============================================================
+
+/.phpstan.cache
+/.php-cs-fixer.cache
+/.php-cs-fixer.php.cache
+/.phpunit.cache/
+
+
+# ============================================================
+# IDE - JetBrains
+# ============================================================
+
+.idea/
+*.iml
+*.iws
+*.ipr
+
+
+# ============================================================
+# IDE - VS Code
+# ============================================================
+
+.vscode/
+
+# Keep shared VS Code configuration only if needed
+!.vscode/extensions.json
+!.vscode/settings.json
+
+
+# ============================================================
+# Operating System
+# ============================================================
+
+# Linux
+*~
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Windows
+Thumbs.db
+Thumbs.db:encryptable
+ehthumbs.db
+Desktop.ini
+
+# Windows installer files
+*.cab
+*.msi
+*.msix
+*.msm
+*.msp
+
+
+# ============================================================
+# Temporary / Backup files
+# ============================================================
+
+*.tmp
+*.temp
+*.bak
+*.backup
+*.swp
+*.swo
+*.orig
+*.old
+*.save
+*.~
+
+
+# ============================================================
+# Database / Local development
+# ============================================================
+
+# Local database dumps
+*.sql
+*.sql.gz
+*.dump
+*.sqlite
+*.sqlite3
+*.db
+
+# Exception: keep documentation/example SQL if explicitly tracked
+!database/example.sql
+!docs/**/*.sql
+
+
+# ============================================================
+# Docker local overrides
+# ============================================================
+
+docker-compose.override.yml
+docker-compose.local.yml
+.env.docker
+
+
+# ============================================================
+# Uploads / User generated files
+# ============================================================
+
+/public/uploads/
+/uploads/
+
+
+# ============================================================
+# Generated documents / exports
+# ============================================================
+
+/public/generated/
+/public/exports/
+/exports/
+
+
+# ============================================================
+# Visual Paradigm
+# ============================================================
+
+# Visual Paradigm generated / temporary files
+*.vpd
+*.vux
+*.vpx
+*.vpk
+*.vpw
+*.vpp.bak
+*.vpp~
+*.bak
+
+# Visual Paradigm temporary / backup folders
+.vp/
+.vpp_backup/
+.vpbackup/
+
+# Visual Paradigm generated reports / exports
+/vp-reports/
+/vp-export/
+
+
+# ============================================================
+# Visual Paradigm - KEEP ONLY THE MAIN MODEL
+# ============================================================
+
+# IMPORTANT:
+# The principal .vpp model containing the official uml
+# must remain tracked manually.
+#
+# Example:
+# /docs/uml/H-Immo.vpp
+#
+# Do NOT add *.vpp globally because the main model must
+# be committed to Git.
+
+
+# ============================================================
+# Documentation generated files
+# ============================================================
+
+/docs/generated/
+/docs/export/
+/docs/build/
+
+
+# ============================================================
+# Frontend generated assets
+# ============================================================
+
+/assets/app/node_modules/
+/assets/app/dist/
+/assets/app/build/
+
+
+# ============================================================
+# Miscellaneous generated files
+# ============================================================
+
+*.cache
+*.pid
+*.seed
+*.lock.tmp
