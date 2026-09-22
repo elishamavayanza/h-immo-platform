@@ -1,305 +1,158 @@
 flowchart TB
 
 %% ============================================================
-%% SOFT-IMMO
-%% ARCHITECTURE GLOBALE ET CYCLE D'ACTIVITE
+%% STYLES
 %% ============================================================
-
-%% ============================================================
-%% 1. ADMINISTRATION DE LA PLATEFORME
-%% ============================================================
-
-subgraph PLATFORM["PLATEFORME SOFT-IMMO"]
-
-SUPER_ADMIN["SUPER_ADMIN<br/>Administrateur de la plateforme"]
-
-ORGANIZATION["Organization<br/>Entreprise cliente"]
-
-PATRON["PATRON<br/>Responsable de l'entreprise"]
-
-end
-
-SUPER_ADMIN -->|"crée et administre"| ORGANIZATION
-ORGANIZATION -->|"possède"| PATRON
-
+    classDef platform fill:#e8f5e9,stroke:#2e7d32,stroke-width:2px,color:#111;
+    classDef access fill:#e3f2fd,stroke:#1565c0,stroke-width:2px,color:#111;
+    classDef property fill:#fff8e1,stroke:#f9a825,stroke-width:2px,color:#111;
+    classDef rental fill:#fce4ec,stroke:#ad1457,stroke-width:2px,color:#111;
+    classDef system fill:#f3e5f5,stroke:#6a1b9a,stroke-width:2px,color:#111;
+    classDef cycle fill:#eeeeee,stroke:#424242,stroke-width:1px,color:#111;
+    classDef technical fill:#e0f7fa,stroke:#00838f,stroke-width:2px,color:#111;
+    classDef security fill:#ffebee,stroke:#c62828,stroke-width:2px,color:#111;
 
 %% ============================================================
-%% 2. IDENTITE ET ACCES
+%% 1. ARCHITECTURE TECHNIQUE
 %% ============================================================
+    subgraph ARCHITECTURE ["ARCHITECTURE TECHNIQUE"]
+        direction LR
+        FRONTEND["React + TypeScript<br/>Web Application"]
+        API["Symfony 7.4<br/>REST API"]
+        SECURITY["Security<br/><br/>JWT<br/>Authorization<br/>Tenant Isolation"]
+        APPLICATION["Application Layer<br/><br/>Use Cases<br/>Validation<br/>Business Rules"]
+        DOMAIN["Domain Layer<br/><br/>Entities<br/>Enums"]
+        ORM["Doctrine ORM"]
 
-subgraph ACCESS["IDENTITY & ACCESS"]
-
-USER["User<br/>Compte utilisateur"]
-
-ORG_USER["OrganizationUser<br/>Appartenance à l'entreprise<br/>+ rôle"]
-
-USER_CITY["UserCity<br/>Accès aux villes autorisées"]
-
-ROLES["Organization Roles<br/><br/>PATRON<br/>ADMIN_IMMOBILIER<br/>ADMIN_VILLE"]
-
-end
-
-PATRON -->|"gère les utilisateurs"| ORG_USER
-USER -->|"possède"| ORG_USER
-ORGANIZATION -->|"possède"| ORG_USER
-
-ORG_USER -->|"attribue"| ROLES
-
-USER -->|"peut être autorisé"| USER_CITY
-
+        FRONTEND -->|"HTTPS / JSON"| API
+        API --> SECURITY
+        SECURITY --> APPLICATION
+        APPLICATION --> DOMAIN
+        DOMAIN --> ORM
+    end
 
 %% ============================================================
-%% 3. GESTION DES VILLES ET DU PATRIMOINE
+%% 2. REGLES DE SECURITE
 %% ============================================================
+    subgraph SECURITY_RULES ["REGLES DE SECURITE"]
+        direction LR
+        S1["Isolation<br/>Organization"]
+        S2["Authorization<br/>Backend"]
+        S3["ADMIN_VILLE<br/>City autorisées"]
+        S4["SUPER_ADMIN<br/>Plateforme séparée"]
+        S5["Contrôle<br/>à chaque opération"]
+    end
 
-subgraph PROPERTY["PROPERTY MANAGEMENT"]
-
-CITY["City<br/>Ville"]
-
-PARCEL["Parcel<br/>Parcelle"]
-
-BUILDING["Building<br/>Immeuble / bâtiment"]
-
-UNIT["Unit<br/>Unité immobilière"]
-
-end
-
-ORGANIZATION -->|"gère"| CITY
-
-CITY -->|"contient"| PARCEL
-
-PARCEL -->|"contient"| BUILDING
-
-BUILDING -->|"contient"| UNIT
-
-USER_CITY -->|"autorise l'accès"| CITY
-
+    SECURITY --> S1 & S2 & S3 & S4 & S5
 
 %% ============================================================
-%% 4. GESTION LOCATIVE
+%% 3. DOMAINES METIER (CŒUR DU SYSTEME)
 %% ============================================================
+    subgraph DOMAINS ["DOMAINES METIER"]
+        direction LR
 
-subgraph RENTAL["RENTAL MANAGEMENT"]
+    %% --- PLATEFORME & ACCES ---
+        subgraph PLATFORM ["1. PLATEFORME & ACCES"]
+            direction TB
+            SUPER_ADMIN["SUPER_ADMIN<br/>Plateforme"]
+            ORGANIZATION["Organization<br/>Entreprise"]
+            PATRON["PATRON<br/>Responsable"]
+            USER["User<br/>Utilisateur"]
+            ORG_USER["OrganizationUser<br/>Appartenance + rôle"]
+            USER_CITY["UserCity<br/>Villes autorisées"]
 
-TENANT["Tenant<br/>Locataire"]
+            SUPER_ADMIN -->|"administre"| ORGANIZATION
+            ORGANIZATION -->|"désigne"| PATRON
+            PATRON -->|"gère"| ORG_USER
+            USER -->|"appartient"| ORG_USER
+            ORGANIZATION -->|"possède"| ORG_USER
+            USER -->|"accès géographique"| USER_CITY
+        end
 
-LEASE["Lease<br/>Contrat de location"]
+    %% --- PATRIMOINE IMMOBILIER ---
+        subgraph PROPERTY ["2. PATRIMOINE IMMOBILIER"]
+            direction TB
+            CITY["City<br/>Ville"]
+            PARCEL["Parcel<br/>Parcelle"]
+            BUILDING["Building<br/>Immeuble"]
+            UNIT["Unit<br/>Unité"]
 
-RENT["Rent<br/>Loyer d'une période"]
+            ORGANIZATION -->|"gère"| CITY
+            USER_CITY -->|"autorise"| CITY
+            CITY -->|"contient"| PARCEL
+            PARCEL -->|"contient"| BUILDING
+            BUILDING -->|"contient"| UNIT
+        end
 
-PAYMENT["Payment<br/>Paiement"]
+    %% --- GESTION LOCATIVE ---
+        subgraph RENTAL ["3. GESTION LOCATIVE"]
+            direction TB
+            TENANT["Tenant<br/>Locataire"]
+            LEASE["Lease<br/>Contrat"]
+            RENT["Rent<br/>Loyer"]
+            PAYMENT["Payment<br/>Paiement"]
 
-end
-
-ORGANIZATION -->|"gère"| TENANT
-
-TENANT -->|"signe"| LEASE
-
-UNIT -->|"est louée via"| LEASE
-
-LEASE -->|"génère"| RENT
-
-RENT -->|"reçoit"| PAYMENT
-
-USER -->|"enregistre"| PAYMENT
-
+            ORGANIZATION -->|"gère"| TENANT
+            UNIT -->|"est louée via"| LEASE
+            TENANT -->|"signe"| LEASE
+            LEASE -->|"génère"| RENT
+            RENT -->|"est réglé par"| PAYMENT
+            USER -->|"enregistre"| PAYMENT
+        end
+    end
 
 %% ============================================================
-%% 5. AUDIT ET STOCKAGE
+%% 4. SYSTEME & TRAÇABILITE
 %% ============================================================
+    subgraph SYSTEM ["4. SYSTEME & TRAÇABILITE"]
+        direction LR
+        AUDIT["AuditLog<br/>Traçabilité"]
+        FILE_STORAGE["File Storage<br/>Photos & Logos"]
 
-subgraph SYSTEM["SYSTEM & AUDIT"]
+        USER -->|"actions"| AUDIT
+        ORGANIZATION -->|"contexte"| AUDIT
+        USER -->|"photo"| FILE_STORAGE
+        ORGANIZATION -->|"logo"| FILE_STORAGE
+    end
 
-AUDIT["AuditLog<br/>Traçabilité des actions"]
+%% ============================================================
+%% 5. INFRASTRUCTURE & DONNEES
+%% ============================================================
+    subgraph INFRASTRUCTURE ["INFRASTRUCTURE & DONNEES"]
+        direction LR
+        DATABASE[("Relational Database<br/>Soft-IMMO")]
+        STORAGE[("File Storage<br/>Uploads")]
+    end
 
-FILE_STORAGE["File Storage<br/>Photos de profil<br/>Logos entreprise"]
-
-end
-
-USER -->|"effectue une action"| AUDIT
-
-ORGANIZATION -->|"contexte entreprise"| AUDIT
-
-USER -->|"profilePhoto"| FILE_STORAGE
-
-ORGANIZATION -->|"logo"| FILE_STORAGE
-
+    ORM --> DATABASE
+    APPLICATION --> STORAGE
 
 %% ============================================================
 %% 6. CYCLE D'ACTIVITE METIER
 %% ============================================================
-
-subgraph BUSINESS_CYCLE["CYCLE D'ACTIVITE METIER"]
-
-C1["1. Création de l'entreprise"]
-
-C2["2. Création du PATRON"]
-
-C3["3. Création des utilisateurs"]
-
-C4["4. Attribution des rôles"]
-
-C5["5. Attribution des villes autorisées"]
-
-C6["6. Création des villes"]
-
-C7["7. Création des parcelles"]
-
-C8["8. Création des bâtiments"]
-
-C9["9. Création des unités"]
-
-C10["10. Enregistrement des locataires"]
-
-C11["11. Création des contrats de location"]
-
-C12["12. Génération des loyers"]
-
-C13["13. Enregistrement des paiements"]
-
-C14["14. Audit et suivi de l'activité"]
-
-end
-
-C1 --> C2
-C2 --> C3
-C3 --> C4
-C4 --> C5
-C5 --> C6
-C6 --> C7
-C7 --> C8
-C8 --> C9
-C9 --> C10
-C10 --> C11
-C11 --> C12
-C12 --> C13
-C13 --> C14
-
+    subgraph BUSINESS_CYCLE ["CYCLE D'ACTIVITE METIER"]
+        direction LR
+        C1["1<br/>Entreprise"] --> C2["2<br/>Utilisateurs"] --> C3["3<br/>Rôles & accès"] --> C4["4<br/>Villes"] --> C5["5<br/>Parcelles"] --> C6["6<br/>Bâtiments"] --> C7["7<br/>Unités"] --> C8["8<br/>Locataires"] --> C9["9<br/>Contrats"] --> C10["10<br/>Loyers"] --> C11["11<br/>Paiements"] --> C12["12<br/>Audit"]
+    end
 
 %% ============================================================
-%% 7. ARCHITECTURE TECHNIQUE
+%% LIENS ARCHITECTURAUX (TRANSVERSAUX)
 %% ============================================================
-
-subgraph CLIENT["CLIENT"]
-
-FRONTEND["React + TypeScript<br/>Application Web"]
-
-end
-
-
-subgraph BACKEND["BACKEND — API"]
-
-API["Symfony 7.4<br/>REST API"]
-
-SECURITY["Security Layer<br/><br/>JWT Authentication<br/>Authorization<br/>Organization Isolation"]
-
-APPLICATION["Application Services<br/><br/>Use Cases<br/>Validation<br/>Business Rules"]
-
-DOMAIN["Domain Layer<br/><br/>Entities<br/>Enums<br/>Business Rules"]
-
-ORM["Doctrine ORM"]
-
-end
-
-
-subgraph INFRASTRUCTURE["INFRASTRUCTURE"]
-
-DATABASE[("Relational Database<br/>Soft-IMMO")]
-
-STORAGE[("File Storage<br/>Uploads")]
-
-end
-
-
-FRONTEND -->|"HTTPS / JSON"| API
-
-API --> SECURITY
-
-SECURITY --> APPLICATION
-
-APPLICATION --> DOMAIN
-
-DOMAIN --> ORM
-
-ORM --> DATABASE
-
-APPLICATION --> STORAGE
-
+    DATABASE -.->|"persiste"| PLATFORM
+    DATABASE -.->|"persiste"| PROPERTY
+    DATABASE -.->|"persiste"| RENTAL
+    DATABASE -.->|"persiste"| SYSTEM
+    DOMAIN -.->|"supporte"| BUSINESS_CYCLE
+    SECURITY -.->|"protège"| BUSINESS_CYCLE
 
 %% ============================================================
-%% 8. REGLES DE SECURITE
+%% ASSIGNATION DES CLASSES
 %% ============================================================
-
-subgraph SECURITY_RULES["REGLES DE SECURITE"]
-
-S1["Isolation stricte par Organization"]
-
-S2["Autorisation contrôlée côté Backend"]
-
-S3["ADMIN_VILLE limité aux City autorisées"]
-
-S4["SUPER_ADMIN séparé des rôles d'entreprise"]
-
-S5["Le Frontend n'est jamais une couche de sécurité"]
-
-S6["Accès aux données vérifié avant chaque opération"]
-
-end
-
-SECURITY --> S1
-SECURITY --> S2
-SECURITY --> S3
-SECURITY --> S4
-SECURITY --> S5
-SECURITY --> S6
-
-
-%% ============================================================
-%% 9. LIENS ENTRE LE CYCLE METIER ET LE DOMAINE
-%% ============================================================
-
-DOMAIN -.->|"pilote"| BUSINESS_CYCLE
-
-DATABASE -.->|"persiste"| ACCESS
-DATABASE -.->|"persiste"| PROPERTY
-DATABASE -.->|"persiste"| RENTAL
-DATABASE -.->|"persiste"| SYSTEM
-
-
-%% ============================================================
-%% 10. STYLE
-%% ============================================================
-
-classDef platform fill:#e8f5e9,stroke:#2e7d32,stroke-width:2px,color:#111;
-
-classDef access fill:#e3f2fd,stroke:#1565c0,stroke-width:2px,color:#111;
-
-classDef property fill:#fff8e1,stroke:#f9a825,stroke-width:2px,color:#111;
-
-classDef rental fill:#fce4ec,stroke:#ad1457,stroke-width:2px,color:#111;
-
-classDef system fill:#f3e5f5,stroke:#6a1b9a,stroke-width:2px,color:#111;
-
-classDef cycle fill:#eeeeee,stroke:#424242,stroke-width:1px,color:#111;
-
-classDef technical fill:#e0f7fa,stroke:#00838f,stroke-width:2px,color:#111;
-
-classDef security fill:#ffebee,stroke:#c62828,stroke-width:2px,color:#111;
-
-
-class SUPER_ADMIN,ORGANIZATION,PATRON platform;
-
-class USER,ORG_USER,USER_CITY,ROLES access;
-
-class CITY,PARCEL,BUILDING,UNIT property;
-
-class TENANT,LEASE,RENT,PAYMENT rental;
-
-class AUDIT,FILE_STORAGE system;
-
-class C1,C2,C3,C4,C5,C6,C7,C8,C9,C10,C11,C12,C13,C14 cycle;
-
-class FRONTEND,API,SECURITY,APPLICATION,DOMAIN,ORM,DATABASE,STORAGE technical;
-
-class S1,S2,S3,S4,S5,S6 security;
-```
+    class SUPER_ADMIN,ORGANIZATION,PATRON platform;
+    class USER,ORG_USER,USER_CITY access;
+    class CITY,PARCEL,BUILDING,UNIT property;
+    class TENANT,LEASE,RENT,PAYMENT rental;
+    class AUDIT,FILE_STORAGE system;
+    class C1,C2,C3,C4,C5,C6,C7,C8,C9,C10,C11,C12 cycle;
+    class FRONTEND,API,SECURITY,APPLICATION,DOMAIN,ORM,DATABASE,STORAGE technical;
+    class S1,S2,S3,S4,S5 security;
