@@ -8,12 +8,18 @@ use App\Dto\Feedback;
 use App\Dto\Request\Identity\OrganizationUserRequest;
 use App\Dto\Request\PaginationQuery;
 use App\Entity\Identity\OrganizationUser;
+use App\Entity\Identity\User;
+use App\Entity\Identity\UserCity;
+use App\Enum\OrganizationRole;
 use App\Mapper\Identity\OrganizationUserMapper;
+use App\Repository\Property\CityRepository;
 use App\Repository\Identity\OrganizationRepository;
 use App\Repository\Identity\OrganizationUserRepository;
 use App\Repository\Identity\UserRepository;
+use App\Repository\Identity\UserCityRepository;
 use App\Security\SecurityAction;
 use App\Security\SecurityServiceInterface;
+use App\Service\Identity\PasswordResetService;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\Validator\Validator\ValidatorInterface;
 
@@ -24,6 +30,12 @@ use Symfony\Component\Validator\Validator\ValidatorInterface;
  *
  * Gère l'affectation et la révocation des accès/rôles des utilisateurs
  * au sein des différentes organisations (Tenants) via Feedback.
+ *
+ * Permet au PATRON de créer des ADMIN_IMMOBILIER et ADMIN_VILLE :
+ * - Création de l'utilisateur (email, nom, téléphone)
+ * - Rattachement à l'organisation avec le rôle approprié
+ * - Pour ADMIN_VILLE : attribution des villes via UserCity
+ * - Envoi d'email de configuration du mot de passe (flux forgot-password)
  */
 final readonly class OrganizationUserService
 {
@@ -36,9 +48,12 @@ final readonly class OrganizationUserService
         private OrganizationUserRepository $orgUserRepository,
         private OrganizationRepository $orgRepository,
         private UserRepository $userRepository,
+        private CityRepository $cityRepository,
+        private UserCityRepository $userCityRepository,
         private OrganizationUserMapper $mapper,
         private ValidatorInterface $validator,
-        private SecurityServiceInterface $security
+        private SecurityServiceInterface $security,
+        private PasswordResetService $passwordResetService
     ) {
     }
 
@@ -219,6 +234,140 @@ final readonly class OrganizationUserService
         return $feedback
             ->setFlushDescription('L\'accès de l\'utilisateur à l\'organisation a été révoqué.')
             ->setStatus(200)
+            ->autoInitFlush();
+    }
+
+    /**
+     * Crée un utilisateur ADMIN_IMMOBILIER ou ADMIN_VILLE pour l'organisation du PATRON.
+     *
+     * - Vérifie que l'appelant est PATRON de l'organisation
+     * - Crée l'utilisateur (email, nom, téléphone) sans mot de passe
+     * - Crée le lien OrganizationUser avec le rôle demandé
+     * - Pour ADMIN_VILLE : attache les villes via UserCity
+     * - Déclenche l'envoi d'email de configuration du mot de passe
+     *
+     * @param string $organizationUuid UUID de l'organisation du PATRON
+     * @param OrganizationRole $role ADMIN_IMMOBILIER ou ADMIN_VILLE
+     * @param string $email Email du nouvel utilisateur
+     * @param string $fullName Nom complet
+     * @param string $phone Téléphone
+     * @param array<string>|null $cityUuids UUIDs des villes (requis pour ADMIN_VILLE)
+     */
+    public function createAdmin(
+        string $organizationUuid,
+        OrganizationRole $role,
+        string $email,
+        string $fullName,
+        string $phone,
+        ?array $cityUuids = null
+    ): Feedback {
+        $feedback = new Feedback();
+
+        // Seuls les rôles ADMIN_IMMOBILIER et ADMIN_VILLE sont autorisés
+        if (!in_array($role, [OrganizationRole::ADMIN_IMMOBILIER, OrganizationRole::ADMIN_VILLE], true)) {
+            return $feedback
+                ->addError('role', 'Seuls les rôles ADMIN_IMMOBILIER et ADMIN_VILLE sont autorisés.')
+                ->setErrorFlushDescription('Rôle invalide pour la création.')
+                ->setStatus(422)
+                ->autoInitFlush();
+        }
+
+        // Récupérer l'organisation
+        $organization = $this->orgRepository->findOneBy(['uuid' => $organizationUuid]);
+        if (!$organization) {
+            return $feedback
+                ->addError('organizationUuid', 'Organisation introuvable.')
+                ->setErrorFlushDescription('Organisation introuvable.')
+                ->setStatus(404)
+                ->autoInitFlush();
+        }
+
+        // Vérifier que l'appelant est PATRON de cette organisation
+        $this->security->checkOrganizationAccess($organization, SecurityAction::MANAGE_USERS);
+        $currentUser = $this->security->getCurrentUser();
+        $currentUserRole = $this->security->getOrganizationRole($currentUser, $organization);
+
+        if ($currentUserRole !== OrganizationRole::PATRON) {
+            return $feedback
+                ->setErrorFlushDescription('Seul le PATRON peut créer des administrateurs.')
+                ->setStatus(403)
+                ->autoInitFlush();
+        }
+
+        // Vérifier unicité de l'email
+        if ($this->userRepository->findOneBy(['email' => $email])) {
+            return $feedback
+                ->addError('email', 'Cette adresse email est déjà utilisée.')
+                ->setErrorFlushDescription('Conflit sur l\'email.')
+                ->setStatus(422)
+                ->autoInitFlush();
+        }
+
+        // Pour ADMIN_VILLE, valider les villes
+        $cities = [];
+        if ($role === OrganizationRole::ADMIN_VILLE) {
+            if (!$cityUuids || empty($cityUuids)) {
+                return $feedback
+                    ->addError('cityUuids', 'Au moins une ville doit être assignée à un ADMIN_VILLE.')
+                    ->setErrorFlushDescription('Villes requises pour ADMIN_VILLE.')
+                    ->setStatus(422)
+                    ->autoInitFlush();
+                }
+
+                foreach ($cityUuids as $cityUuid) {
+                    $city = $this->cityRepository->findOneBy(['uuid' => $cityUuid]);
+                    if (!$city || $city->getOrganization() !== $organization) {
+                        return $feedback
+                            ->addError('cityUuids', "La ville {$cityUuid} n'appartient pas à cette organisation.")
+                            ->setErrorFlushDescription('Ville invalide pour cette organisation.')
+                            ->setStatus(422)
+                            ->autoInitFlush();
+                    }
+                    $cities[] = $city;
+                }
+            if (empty($cities)) {
+                return $feedback
+                    ->addError('cityUuids', 'Aucune ville valide trouvée.')
+                    ->setStatus(422)
+                    ->autoInitFlush();
+            }
+        }
+
+        // Créer l'utilisateur (sans mot de passe)
+        $user = new User();
+        $user->setEmail($email);
+        $user->setFullName($fullName);
+        $user->setPhone($phone);
+        $user->setIsActive(true);
+        $user->setPassword(''); // Sera défini via reset-password
+        $this->em->persist($user);
+        $this->em->flush();
+
+        // Créer le lien OrganizationUser
+        $orgUser = new OrganizationUser();
+        $orgUser->setOrganization($this->em->getReference(Organization::class, $organization->getId()));
+        $orgUser->setUser($this->em->getReference(User::class, $user->getId()));
+        $orgUser->setRole($role);
+        $this->em->persist($orgUser);
+        $this->em->flush();
+
+        // Pour ADMIN_VILLE, créer les UserCity
+        if ($role === OrganizationRole::ADMIN_VILLE) {
+            foreach ($cities as $city) {
+                $userCity = new UserCity();
+                $userCity->setUser($this->em->getReference(User::class, $user->getId()));
+                $userCity->setCity($this->em->getReference(City::class, $city->getId()));
+                $this->em->persist($userCity);
+            }
+            $this->em->flush();
+        }
+
+        // Déclencher l'envoi de l'email de réinitialisation de mot de passe
+        $this->passwordResetService->requestReset($email);
+
+        return $feedback
+            ->setFlushDescription("L'administrateur {$role->value} a été créé. Un email de configuration du mot de passe a été envoyé.")
+            ->setStatus(201)
             ->autoInitFlush();
     }
 }
