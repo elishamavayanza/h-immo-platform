@@ -15,9 +15,26 @@ use Symfony\Component\HttpKernel\Attribute\MapRequestPayload;
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
 
+/**
+ * TenantController
+ *
+ * Package : Rental Management
+ *
+ * Gestion des locataires (création, lecture, mise à jour, archivage).
+ * Un locataire peut être une personne physique ou morale, rattaché à une Organization.
+ * L'accès est restreint au périmètre Organization → City de l'utilisateur.
+ *
+ * Endpoints :
+ * - POST   /api/v1/tenants          : créer un locataire
+ * - GET    /api/v1/tenants          : lister les locataires (pagination, recherche)
+ * - GET    /api/v1/tenants/{uuid}   : détails d'un locataire
+ * - PUT    /api/v1/tenants/{uuid}   : modifier un locataire
+ * - PATCH  /api/v1/tenants/{uuid}/archive : archiver un locataire
+ * - DELETE /api/v1/tenants/{uuid}   : supprimer (soft delete)
+ */
 #[Route('/api/v1/tenants', name: 'api_tenants_')]
 #[IsGranted('ROLE_USER')]
-#[OA\Tag(name: 'Tenants')]
+#[OA\Tag(name: 'Tenants', description: 'Gestion des locataires (personnes physiques ou morales) rattachés à une organisation.')]
 final class TenantController extends AbstractController
 {
     use FeedbackTrait;

@@ -19,8 +19,24 @@ use Symfony\Component\HttpKernel\Attribute\MapQueryString;
 use Symfony\Component\HttpKernel\Attribute\MapRequestPayload;
 use Symfony\Component\Routing\Attribute\Route;
 
+/**
+ * UnitController
+ *
+ * Package : Property Management
+ *
+ * Gestion des unités locatives (appartements, bureaux, commerces).
+ * Chaque unité appartient à un Bâtiment, lui-même dans une Parcelle d'une Ville.
+ * L'accès est restreint au périmètre Organization → City de l'utilisateur.
+ *
+ * Endpoints :
+ * - POST   /api/v1/units          : créer une unité
+ * - GET    /api/v1/units          : lister les unités (pagination, filtres)
+ * - GET    /api/v1/units/{uuid}   : détails d'une unité
+ * - PUT    /api/v1/units/{uuid}   : modifier une unité
+ * - DELETE /api/v1/units/{uuid}   : supprimer (soft delete)
+ */
 #[Route('/api/v1/units', name: 'api_units_')]
-#[OA\Tag(name: 'Units')]
+#[OA\Tag(name: 'Units', description: 'Gestion des unités locatives (appartements, bureaux, commerces) dans les bâtiments.')]
 final class UnitController extends AbstractController
 {
     use FeedbackTrait;

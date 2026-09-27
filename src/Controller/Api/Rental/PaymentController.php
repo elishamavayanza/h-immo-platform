@@ -20,19 +20,24 @@ use Symfony\Component\Security\Http\Attribute\IsGranted;
  * PaymentController
  *
  * Package : Rental Management
- * Rôle    : exposition HTTP des règlements de loyers (lecture seule côté
- *          API : un règlement est une trace comptable, il ne se modifie
- *          ni ne se supprime pas par l'API).
+ *
+ * Exposition HTTP des règlements de loyers (lecture seule côté API :
+ * un règlement est une trace comptable, il ne se modifie ni ne se supprime
+ * pas par l'API).
  *
  * Le contrôleur ne fait que décoder, déléguer au service et sérialiser le
  * `Feedback` retourné. Toute l'autorisation et toute la résolution du
  * périmètre d'Organization sont assurées par `PaymentService` via
  * `SecurityService` : le contrôleur ne consulte jamais la base et ne
  * déduit jamais le tenant depuis l'utilisateur courant.
+ *
+ * Endpoints :
+ * - POST   /api/v1/payments       : enregistrer un règlement
+ * - GET    /api/v1/payments/{uuid} : détails d'un paiement
  */
 #[Route('/api/v1/payments', name: 'api_payments_')]
 #[IsGranted('ROLE_USER')]
-#[OA\Tag(name: 'Payments')]
+#[OA\Tag(name: 'Payments', description: 'Gestion des règlements de loyers (traces comptables, lecture seule).')]
 final class PaymentController extends AbstractController
 {
     use FeedbackTrait;
