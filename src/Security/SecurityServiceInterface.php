@@ -6,6 +6,7 @@ namespace App\Security;
 
 use App\Enum\OrganizationRole;
 use App\Enum\PlatformRole;
+use App\Entity\Expense\Expense;
 use App\Entity\Identity\Organization;
 use App\Entity\Identity\User;
 use App\Entity\Property\Building;
@@ -16,6 +17,8 @@ use App\Entity\Rental\Lease;
 use App\Entity\Rental\Payment;
 use App\Entity\Rental\Rent;
 use App\Entity\Rental\Tenant;
+use App\Entity\Staff\Worker;
+use App\Entity\Staff\WorkerAssignment;
 use App\Entity\System\AuditLog;
 
 /**
@@ -285,6 +288,48 @@ interface SecurityServiceInterface
 
     public function canAccessPayment(
         Payment $payment,
+        SecurityAction $action = SecurityAction::VIEW
+    ): bool;
+
+    /*
+     * ============================================================
+     * PERSONNEL
+     * ============================================================
+     */
+
+    /**
+     * @throws AccessDeniedException
+     */
+    public function checkWorkerAccess(Worker $worker, SecurityAction $action): void;
+
+    public function canAccessWorker(
+        Worker $worker,
+        SecurityAction $action = SecurityAction::VIEW
+    ): bool;
+
+    /**
+     * @throws AccessDeniedException
+     */
+    public function checkWorkerAssignmentAccess(WorkerAssignment $assignment, SecurityAction $action): void;
+
+    public function canAccessWorkerAssignment(
+        WorkerAssignment $assignment,
+        SecurityAction $action = SecurityAction::VIEW
+    ): bool;
+
+    /*
+     * ============================================================
+     * DEPENSES
+     * ============================================================
+     */
+
+    /**
+     * @throws AccessDeniedException
+     */
+    public function checkExpenseAccess(Expense $expense, SecurityAction $action): void;
+
+    public function canAccessExpense(
+        Expense $expense,
         SecurityAction $action = SecurityAction::VIEW
     ): bool;
 

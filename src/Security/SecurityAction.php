@@ -82,6 +82,24 @@ enum SecurityAction: string
     case DELETE_PAYMENT = 'delete_payment';
     case CANCEL_PAYMENT = 'cancel_payment';
 
+    // Worker (personnel)
+    case VIEW_WORKER = 'view_worker';
+    case CREATE_WORKER = 'create_worker';
+    case UPDATE_WORKER = 'update_worker';
+    case DELETE_WORKER = 'delete_worker';
+
+    // WorkerAssignment (affectation du personnel)
+    case VIEW_WORKER_ASSIGNMENT = 'view_worker_assignment';
+    case CREATE_WORKER_ASSIGNMENT = 'create_worker_assignment';
+    case UPDATE_WORKER_ASSIGNMENT = 'update_worker_assignment';
+    case DELETE_WORKER_ASSIGNMENT = 'delete_worker_assignment';
+
+    // Expense (dépense)
+    case VIEW_EXPENSE = 'view_expense';
+    case CREATE_EXPENSE = 'create_expense';
+    case UPDATE_EXPENSE = 'update_expense';
+    case DELETE_EXPENSE = 'delete_expense';
+
     // Audit
     case VIEW_AUDIT_LOG = 'view_audit_log';
     case EXPORT_AUDIT_LOG = 'export_audit_log';
