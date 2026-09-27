@@ -25,9 +25,27 @@ use Symfony\Component\HttpKernel\Attribute\MapRequestPayload;
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
 
+/**
+ * ReportController
+ *
+ * Package : Report Management
+ *
+ * Endpoints de génération de rapports administratifs multi-niveaux.
+ *
+ * Chaque rôle dispose d'un rapport adapté à son périmètre de responsabilité :
+ * - PATRON        : vision globale de son organisation (finances, occupation, impayés, dépenses)
+ * - ADMIN_IMMOBILIER : rapport opérationnel du patrimoine (occupation, impayés, dépenses liées aux biens)
+ * - ADMIN_VILLE   : rapport limité aux villes qui lui sont attribuées (occupation, impayés, dépenses, personnel)
+ * - SUPER_ADMIN   : vue plateforme (organisations, utilisateurs, indicateurs globaux)
+ *
+ * Tous les endpoints supportent l'export PDF (`?format=pdf`) via dompdf.
+ * L'authentification se fait par token Bearer (JWT).
+ *
+ * @see ReportService pour la logique d'agrégation et d'isolation Organization → City.
+ */
 #[Route('/api/v1/reports', name: 'api_reports_')]
 #[IsGranted('ROLE_USER')]
-#[OA\Tag(name: 'Reports')]
+#[OA\Tag(name: 'Reports', description: 'Rapports administratifs par rôle (Patron, Admin Immobilier, Admin Ville, Super Admin)')]
 final class ReportController extends AbstractController
 {
     use FeedbackTrait;
