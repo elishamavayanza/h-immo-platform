@@ -2,8 +2,20 @@
 framework:
     secret: '%env(APP_SECRET)%'
 
-    # Note that the session will be started ONLY if you read or write from it.
-    session: true
+    # La session n'est démarrée que si le code la lit ou l'écrit.
+    session:
+        # `save_path` est fixé explicitement. Laissé vide, Symfony n'applique
+        # rien et PHP écrit dans son réglage système — `/var/lib/php/sessions`
+        # sur une Debian — qui peut être absent ou non inscriptible en
+        # conteneur. Le fichier de session disparaît alors sans erreur visible
+        # et la requête suivant un login réussi est refusée en 401.
+        handler_id: session.handler.native_file
+        save_path: '%kernel.project_dir%/var/sessions/%kernel.environment%'
+        name: HIMMOMPA
+        cookie_httponly: true
+        cookie_samesite: lax
+        cookie_secure: auto
+        cookie_lifetime: 86400
 
     #esi: true
     #fragments: true
