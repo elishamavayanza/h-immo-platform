@@ -335,6 +335,19 @@ interface SecurityServiceInterface
 
     /*
      * ============================================================
+     * RAPPORTS
+     * ============================================================
+     */
+
+    /**
+     * @throws AccessDeniedException
+     */
+    public function checkReportAccess(string $reportType, SecurityAction $action): void;
+
+    public function canAccessReport(string $reportType, SecurityAction $action = SecurityAction::VIEW): bool;
+
+    /*
+     * ============================================================
      * JOURNAL D'AUDIT
      * ============================================================
      */

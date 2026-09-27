@@ -100,6 +100,10 @@ enum SecurityAction: string
     case UPDATE_EXPENSE = 'update_expense';
     case DELETE_EXPENSE = 'delete_expense';
 
+    // Report (rapports)
+    case VIEW_REPORT = 'view_report';
+    case EXPORT_REPORT = 'export_report';
+
     // Audit
     case VIEW_AUDIT_LOG = 'view_audit_log';
     case EXPORT_AUDIT_LOG = 'export_audit_log';
