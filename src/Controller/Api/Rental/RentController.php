@@ -1,0 +1,99 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Controller\Rental;
+
+use App\Dto\Feedback;
+use App\Dto\Request\Rental\RentRequest;
+use App\Entity\Identity\Organization;
+use App\Entity\Identity\User;
+use App\Service\Rental\RentService;
+use App\Trait\FeedbackTrait;
+use OpenApi\Attributes as OA;
+use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
+use Symfony\Component\HttpFoundation\JsonResponse;
+use Symfony\Component\HttpKernel\Attribute\MapRequestPayload;
+use Symfony\Component\Routing\Annotation\Route;
+use Symfony\Component\Security\Http\Attribute\IsGranted;
+
+#[Route('/api/v1/rents', name: 'api_rents_')]
+#[IsGranted('ROLE_USER')]
+#[OA\Tag(name: 'Rents')]
+final class RentController extends AbstractController
+{
+    use FeedbackTrait;
+
+    public function __construct(
+        private readonly RentService $rentService
+    ) {
+    }
+
+    #[Route('', name: 'create', methods: ['POST'])]
+    #[OA\Post(
+        path: '/api/v1/rents',
+        summary: 'Générer une nouvelle échéance de loyer',
+        requestBody: new OA\RequestBody(content: new OA\JsonContent(ref: RentRequest::class)),
+        responses: [
+            new OA\Response(response: 201, description: 'Échéance créée', content: new OA\JsonContent(ref: Feedback::class)),
+            new OA\Response(response: 422, description: 'Erreur de validation', content: new OA\JsonContent(ref: Feedback::class)),
+        ]
+    )]
+    public function create(
+        #[MapRequestPayload] RentRequest $request
+    ): JsonResponse {
+        /** @var User $user */
+        $user = $this->getUser();
+        /** @var Organization $organization */
+        $organization = $user->getOrganization();
+
+        $feedback = $this->rentService->createRent($request, $organization);
+
+        return $this->json($feedback, $feedback->getStatus());
+    }
+
+    #[Route('/{uuid}', name: 'show', methods: ['GET'])]
+    #[OA\Get(
+        path: '/api/v1/rents/{uuid}',
+        summary: 'Obtenir les détails d\'une échéance de loyer',
+        responses: [
+            new OA\Response(response: 200, description: 'Détails de l\'échéance', content: new OA\JsonContent(ref: Feedback::class)),
+            new OA\Response(response: 404, description: 'Échéance introuvable', content: new OA\JsonContent(ref: Feedback::class)),
+        ]
+    )]
+    public function show(string $uuid): JsonResponse
+    {
+        /** @var User $user */
+        $user = $this->getUser();
+        /** @var Organization $organization */
+        $organization = $user->getOrganization();
+
+        $feedback = $this->rentService->getRentByUuid($uuid, $organization);
+
+        return $this->json($feedback, $feedback->getStatus());
+    }
+
+    #[Route('/{uuid}', name: 'update', methods: ['PUT', 'PATCH'])]
+    #[OA\Put(
+        path: '/api/v1/rents/{uuid}',
+        summary: 'Mettre à jour une échéance de loyer',
+        requestBody: new OA\RequestBody(content: new OA\JsonContent(ref: RentRequest::class)),
+        responses: [
+            new OA\Response(response: 200, description: 'Échéance mise à jour', content: new OA\JsonContent(ref: Feedback::class)),
+            new OA\Response(response: 422, description: 'Erreur de validation', content: new OA\JsonContent(ref: Feedback::class)),
+        ]
+    )]
+    public function update(
+        string $uuid,
+        #[MapRequestPayload] RentRequest $request
+    ): JsonResponse {
+        /** @var User $user */
+        $user = $this->getUser();
+        /** @var Organization $organization */
+        $organization = $user->getOrganization();
+
+        $feedback = $this->rentService->updateRent($uuid, $request, $organization);
+
+        return $this->json($feedback, $feedback->getStatus());
+    }
+}
