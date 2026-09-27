@@ -7,11 +7,15 @@ namespace App\Service\Property;
 use App\Dto\Feedback;
 use App\Dto\Request\PaginationQuery;
 use App\Dto\Request\Property\CityRequest;
+use App\Entity\Identity\Organization;
 use App\Entity\Property\City;
 use App\Mapper\Property\CityMapper;
 use App\Repository\Identity\OrganizationRepository;
 use App\Repository\Property\CityRepository;
+use App\Security\SecurityAction;
+use App\Security\SecurityServiceInterface;
 use Doctrine\ORM\EntityManagerInterface;
+use Symfony\Component\Uid\Uuid;
 use Symfony\Component\Validator\Validator\ValidatorInterface;
 
 /**
@@ -21,61 +25,60 @@ use Symfony\Component\Validator\Validator\ValidatorInterface;
  *
  * Administre le cycle de vie des villes d'exploitation (City) et contrôle
  * l'unicité du code de la ville par organisation.
+ *
+ * Portée : une ville appartient à une organization. La liste est bornée
+ * aux organizations réellement accessibles à l'appelant, et resserrée aux
+ * villes attitrées s'il est administrateur de ville.
  */
 final readonly class CityService
 {
-    /**
-     * Injecte l'EntityManager, les repositories et le service de mapping.
-     * Prépare les dépendances pour la gestion des entités City.
-     */
     public function __construct(
         private EntityManagerInterface $em,
         private CityRepository $cityRepository,
         private OrganizationRepository $organizationRepository,
         private CityMapper $mapper,
+        private SecurityServiceInterface $securityService,
         private ValidatorInterface $validator
     ) {
     }
 
     /**
-     * Retourne la liste paginée des villes configurées sur la plateforme.
-     * Encapsule le résultat transformé dans une structure Feedback standard.
+     * Liste paginée des villes accessibles à l'appelant.
      */
     public function list(PaginationQuery $query): Feedback
     {
         $feedback = new Feedback();
-        $paginatedResult = $this->cityRepository->findPaginated($query);
 
-        $data = [
-            'items' => array_map([$this->mapper, 'toResponse'], $paginatedResult['items']),
-            'total' => $paginatedResult['total'],
-            'page' => $query->page,
-            'limit' => $query->limit,
-        ];
+        $result = $this->cityRepository->findPaginatedAccessible(
+            $this->securityService->getCurrentUserOrganizations(),
+            $this->securityService->getAccessibleCities(),
+            $query->page,
+            $query->limit,
+            $query->search
+        );
 
         return $feedback
-            ->setData($data)
+            ->setData([
+                'items' => array_map([$this->mapper, 'toResponse'], $result['items']),
+                'total' => $result['total'],
+                'page' => $query->page,
+                'limit' => $query->limit,
+            ])
             ->setFlushDescription('Liste des villes récupérée avec succès.')
             ->setStatus(200)
             ->autoInitFlush();
     }
 
-    /**
-     * Extrait les informations d'une ville via son identifiant UUID unique.
-     * Retourne une erreur HTTP 404 au format Feedback si la ville n'existe pas.
-     */
     public function getByUuid(string $uuid): Feedback
     {
         $feedback = new Feedback();
-        $city = $this->cityRepository->findOneBy(['uuid' => $uuid]);
 
-        if (!$city) {
-            return $feedback
-                ->addError('uuid', 'La ville demandée n\'existe pas.')
-                ->setErrorFlushDescription('Ville introuvable.')
-                ->setStatus(404)
-                ->autoInitFlush();
+        $city = $this->findCity($uuid, $feedback);
+        if ($city === null) {
+            return $feedback->autoInitFlush();
         }
+
+        $this->securityService->checkCityAccess($city, SecurityAction::VIEW_CITY);
 
         return $feedback
             ->setData($this->mapper->toResponse($city))
@@ -84,15 +87,11 @@ final readonly class CityService
             ->autoInitFlush();
     }
 
-    /**
-     * Crée une nouvelle ville rattachée à une organisation donnée.
-     * Valide l'absence de doublon sur le code unique de la ville dans l'organisation.
-     */
     public function create(CityRequest $request): Feedback
     {
         $feedback = new Feedback();
-        $violations = $this->validator->validate($request, groups: ['create']);
 
+        $violations = $this->validator->validate($request, groups: ['create']);
         if (count($violations) > 0) {
             return $feedback
                 ->bind($violations)
@@ -101,25 +100,20 @@ final readonly class CityService
                 ->autoInitFlush();
         }
 
-        $organization = $this->organizationRepository->findOneBy(['uuid' => $request->organizationUuid]);
-        if (!$organization) {
-            return $feedback
-                ->addError('organizationUuid', 'L\'organisation spécifiée est introuvable.')
-                ->setErrorFlushDescription('Organisation inexistante.')
-                ->setStatus(404)
-                ->autoInitFlush();
+        $organization = $this->resolveOrganization($request->organizationUuid, $feedback);
+        if ($organization === null) {
+            return $feedback->autoInitFlush();
         }
 
-        $existing = $this->cityRepository->findOneBy([
-            'organization' => $organization,
-            'code' => $request->code,
-        ]);
+        $this->securityService->checkOrganizationAccess($organization, SecurityAction::CREATE_CITY);
 
-        if ($existing) {
+        if ($request->code !== null
+            && $this->cityRepository->findOneByOrganizationAndCode($organization, $request->code) !== null
+        ) {
             return $feedback
                 ->addError('code', 'Ce code de ville existe déjà pour cette organisation.')
                 ->setErrorFlushDescription('Code de ville indisponible.')
-                ->setStatus(422)
+                ->setStatus(409)
                 ->autoInitFlush();
         }
 
@@ -137,22 +131,16 @@ final readonly class CityService
             ->autoInitFlush();
     }
 
-    /**
-     * Modifie les attributs d'une ville désignée par son UUID.
-     * Valide les nouvelles valeurs et vérifie l'unicité du code si modifié.
-     */
     public function update(string $uuid, CityRequest $request): Feedback
     {
         $feedback = new Feedback();
-        $city = $this->cityRepository->findOneBy(['uuid' => $uuid]);
 
-        if (!$city) {
-            return $feedback
-                ->addError('uuid', 'Ville introuvable.')
-                ->setErrorFlushDescription('Mise à jour impossible.')
-                ->setStatus(404)
-                ->autoInitFlush();
+        $city = $this->findCity($uuid, $feedback);
+        if ($city === null) {
+            return $feedback->autoInitFlush();
         }
+
+        $this->securityService->checkCityAccess($city, SecurityAction::UPDATE_CITY);
 
         $violations = $this->validator->validate($request, groups: ['update']);
         if (count($violations) > 0) {
@@ -163,17 +151,31 @@ final readonly class CityService
                 ->autoInitFlush();
         }
 
-        if ($request->code !== null && $request->code !== $city->getCode()) {
-            $existing = $this->cityRepository->findOneBy([
-                'organization' => $city->getOrganization(),
-                'code' => $request->code,
-            ]);
+        // Le rattachement à une autre organization n'est pas modifiable.
+        if ($request->organizationUuid !== null
+            && $request->organizationUuid !== (string) $city->getOrganization()->getUuid()
+        ) {
+            $feedback->addError(
+                'organizationUuid',
+                'Le rattachement de la ville à une autre organisation n\'est pas autorisé.'
+            );
 
-            if ($existing) {
+            return $feedback
+                ->setErrorFlushDescription('Changement d\'organisation refusé.')
+                ->autoInitFlush();
+        }
+
+        if ($request->code !== null && $request->code !== $city->getCode()) {
+            $existing = $this->cityRepository->findOneByOrganizationAndCode(
+                $city->getOrganization(),
+                $request->code
+            );
+
+            if ($existing !== null) {
                 return $feedback
                     ->addError('code', 'Ce code de ville est déjà attribué dans cette organisation.')
                     ->setErrorFlushDescription('Code de ville déjà utilisé.')
-                    ->setStatus(422)
+                    ->setStatus(409)
                     ->autoInitFlush();
             }
         }
@@ -189,21 +191,22 @@ final readonly class CityService
     }
 
     /**
-     * Supprime logiquement une ville de la base de données.
-     * Déclenche le soft delete tout en maintenant l'intégrité des parcelles sous-jacentes.
+     * Suppression logique d'une ville.
+     *
+     * La ville n'est pas réellement effacée : ses parcelles, bâtiments et
+     * unités la référencent, une suppression physique rendrait l'historique
+     * de location illisible.
      */
     public function delete(string $uuid): Feedback
     {
         $feedback = new Feedback();
-        $city = $this->cityRepository->findOneBy(['uuid' => $uuid]);
 
-        if (!$city) {
-            return $feedback
-                ->addError('uuid', 'Ville introuvable.')
-                ->setErrorFlushDescription('Suppression impossible.')
-                ->setStatus(404)
-                ->autoInitFlush();
+        $city = $this->findCity($uuid, $feedback);
+        if ($city === null) {
+            return $feedback->autoInitFlush();
         }
+
+        $this->securityService->checkCityAccess($city, SecurityAction::DELETE_CITY);
 
         $city->softDelete();
         $this->em->flush();
@@ -212,5 +215,55 @@ final readonly class CityService
             ->setFlushDescription('La ville a été supprimée avec succès.')
             ->setStatus(200)
             ->autoInitFlush();
+    }
+
+    private function resolveOrganization(?string $uuid, Feedback $feedback): ?Organization
+    {
+        if ($uuid === null || $uuid === '') {
+            $feedback->addError('organizationUuid', 'L\'organisation est obligatoire.');
+
+            return null;
+        }
+
+        try {
+            $parsed = Uuid::fromString($uuid);
+        } catch (\InvalidArgumentException) {
+            $feedback->addError('organizationUuid', 'Identifiant d\'organisation invalide.');
+
+            return null;
+        }
+
+        $organization = $this->organizationRepository->findOneByUuid($parsed);
+
+        if ($organization === null) {
+            $feedback
+                ->addError('organizationUuid', 'L\'organisation spécifiée est introuvable.')
+                ->setStatus(404);
+        }
+
+        return $organization;
+    }
+
+    private function findCity(string $uuid, Feedback $feedback): ?City
+    {
+        try {
+            $parsed = Uuid::fromString($uuid);
+        } catch (\InvalidArgumentException) {
+            $feedback
+                ->setErrorFlushDescription('Identifiant de ville invalide.')
+                ->setStatus(400);
+
+            return null;
+        }
+
+        $city = $this->cityRepository->findOneByUuid($parsed);
+
+        if ($city === null) {
+            $feedback
+                ->setErrorFlushDescription('Ville introuvable.')
+                ->setStatus(404);
+        }
+
+        return $city;
     }
 }

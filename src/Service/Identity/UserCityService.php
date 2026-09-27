@@ -12,6 +12,8 @@ use App\Mapper\Identity\UserCityMapper;
 use App\Repository\Identity\UserCityRepository;
 use App\Repository\Identity\UserRepository;
 use App\Repository\Property\CityRepository;
+use App\Security\SecurityAction;
+use App\Security\SecurityServiceInterface;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\Validator\Validator\ValidatorInterface;
 
@@ -35,7 +37,8 @@ final readonly class UserCityService
         private UserRepository $userRepository,
         private CityRepository $cityRepository,
         private UserCityMapper $mapper,
-        private ValidatorInterface $validator
+        private ValidatorInterface $validator,
+        private SecurityServiceInterface $security
     ) {
     }
 
@@ -56,7 +59,16 @@ final readonly class UserCityService
                 ->autoInitFlush();
         }
 
-        $paginatedResult = $this->userCityRepository->findPaginatedByUser($user, $query);
+        // Le périmètre géographique d'un utilisateur est un droit
+        // d'administration : sans contrôle, un ADMIN_VILLE pourrait lire
+        // les affectations d'un utilisateur d'un autre tenant.
+        $this->security->checkUserAccess($user, SecurityAction::ASSIGN_USER_CITY);
+
+        $paginatedResult = $this->userCityRepository->findPaginatedByUser(
+            $user,
+            $query->page,
+            $query->limit
+        );
 
         $data = [
             'items' => array_map([$this->mapper, 'toResponse'], $paginatedResult['items']),
@@ -107,6 +119,11 @@ final readonly class UserCityService
                 ->autoInitFlush();
         }
 
+        // Élargir le périmètre d'un utilisateur, c'est lui accorder des
+        // droits sur une ville : les deux cibles sont donc contrôlées.
+        $this->security->checkUserAccess($user, SecurityAction::ASSIGN_USER_CITY);
+        $this->security->checkCityAccess($city, SecurityAction::ASSIGN_USER_CITY);
+
         $existing = $this->userCityRepository->findOneBy(['user' => $user, 'city' => $city]);
         if ($existing) {
             return $feedback
@@ -146,6 +163,15 @@ final readonly class UserCityService
                 ->setStatus(404)
                 ->autoInitFlush();
         }
+
+        $this->security->checkUserAccess(
+            $userCity->getUser(),
+            SecurityAction::REVOKE_USER_CITY
+        );
+        $this->security->checkCityAccess(
+            $userCity->getCity(),
+            SecurityAction::REVOKE_USER_CITY
+        );
 
         $this->em->remove($userCity);
         $this->em->flush();

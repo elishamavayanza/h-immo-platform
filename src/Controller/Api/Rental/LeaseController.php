@@ -2,19 +2,17 @@
 
 declare(strict_types=1);
 
-namespace App\Controller\Rental;
+namespace App\Controller\Api\Rental;
 
 use App\Dto\Feedback;
 use App\Dto\Request\Rental\LeaseRequest;
-use App\Entity\Identity\Organization;
-use App\Entity\Identity\User;
 use App\Service\Rental\LeaseService;
 use App\Trait\FeedbackTrait;
 use OpenApi\Attributes as OA;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpKernel\Attribute\MapRequestPayload;
-use Symfony\Component\Routing\Annotation\Route;
+use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
 
 #[Route('/api/v1/leases', name: 'api_leases_')]
@@ -42,12 +40,7 @@ final class LeaseController extends AbstractController
     public function create(
         #[MapRequestPayload] LeaseRequest $request
     ): JsonResponse {
-        /** @var User $user */
-        $user = $this->getUser();
-        /** @var Organization $organization */
-        $organization = $user->getOrganization();
-
-        $feedback = $this->leaseService->createLease($request, $organization);
+        $feedback = $this->leaseService->createLease($request);
 
         return $this->json($feedback, $feedback->getStatus());
     }
@@ -63,12 +56,7 @@ final class LeaseController extends AbstractController
     )]
     public function show(string $uuid): JsonResponse
     {
-        /** @var User $user */
-        $user = $this->getUser();
-        /** @var Organization $organization */
-        $organization = $user->getOrganization();
-
-        $feedback = $this->leaseService->getLeaseByUuid($uuid, $organization);
+        $feedback = $this->leaseService->getLeaseByUuid($uuid);
 
         return $this->json($feedback, $feedback->getStatus());
     }
@@ -87,12 +75,7 @@ final class LeaseController extends AbstractController
         string $uuid,
         #[MapRequestPayload] LeaseRequest $request
     ): JsonResponse {
-        /** @var User $user */
-        $user = $this->getUser();
-        /** @var Organization $organization */
-        $organization = $user->getOrganization();
-
-        $feedback = $this->leaseService->updateLease($uuid, $request, $organization);
+        $feedback = $this->leaseService->updateLease($uuid, $request);
 
         return $this->json($feedback, $feedback->getStatus());
     }

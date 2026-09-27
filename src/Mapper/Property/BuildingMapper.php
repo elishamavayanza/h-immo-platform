@@ -16,35 +16,22 @@ use App\Entity\Property\Building;
  * Assure la conversion bidirectionnelle entre l'entité Building
  * et ses DTOs de requête et de réponse associés.
  */
-final readonly class BuildingMapper
+final class BuildingMapper
 {
     /**
      * Injecte le mapper de la parcelle parent pour la réponse imbriquée.
      * Permet la construction complète du DTO BuildingResponse.
      */
-    public function __construct(
-        private ParcelMapper $parcelMapper
-    ) {
-    }
-
     /**
-     * Transforme une instance de l'entité Building en DTO de réponse BuildingResponse.
-     * Extrait les informations publiques et la parcelle rattachée pour l'API.
+     * Delegue la projection Entite -> DTO a la fabrique statique du DTO
+     * de reponse, qui constitue l'unique source de verite du mapping
+     * en lecture (aucune duplication de la liste des champs).
      */
     public function toResponse(Building $building): BuildingResponse
     {
-        return new BuildingResponse(
-            uuid: $building->getUuid(),
-            parcel: $this->parcelMapper->toResponse($building->getParcel()),
-            reference: $building->getReference(),
-            name: $building->getName(),
-            type: $building->getType(),
-            numberOfFloors: $building->getNumberOfFloors(),
-            description: $building->getDescription(),
-            createdAt: $building->getCreatedAt(),
-            updatedAt: $building->getUpdatedAt()
-        );
+        return BuildingResponse::fromEntity($building);
     }
+
 
     /**
      * Mappe les données d'un DTO BuildingRequest vers l'entité Building.

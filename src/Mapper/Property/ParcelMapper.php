@@ -2,24 +2,25 @@
 
 declare(strict_types=1);
 
-namespace App\DataMapper\Property;
+namespace App\Mapper\Property;
 
 use App\Dto\Request\Property\ParcelRequest;
 use App\Dto\Response\Property\ParcelResponse;
-use App\Entity\Property\City;
 use App\Entity\Property\Parcel;
 
-final class ParcelDataMapper
+/**
+ * ParcelMapper
+ *
+ * Package : Property Management — Service de mapping d'entité
+ *
+ * Assure la conversion bidirectionnelle entre l'entité Parcel
+ * et les objets DTO de requête et de réponse associés.
+ * La ville parente est positionnée par le service appelant : le mapper
+ * ne fait que recopier les colonnes scalaires de la parcelle.
+ */
+final class ParcelMapper
 {
-    public function toEntity(ParcelRequest $request, City $city): Parcel
-    {
-        $parcel = new Parcel();
-        $parcel->setCity($city);
-
-        return $this->updateEntity($parcel, $request);
-    }
-
-    public function updateEntity(Parcel $parcel, ParcelRequest $request): Parcel
+    public function copyToEntity(ParcelRequest $request, Parcel $parcel): Parcel
     {
         if ($request->reference !== null) {
             $parcel->setReference($request->reference);
@@ -52,23 +53,14 @@ final class ParcelDataMapper
         return $parcel;
     }
 
+    /**
+     * Delegue la projection Entite -> DTO a la fabrique statique du DTO
+     * de reponse, qui constitue l'unique source de verite du mapping
+     * en lecture (aucune duplication de la liste des champs).
+     */
     public function toResponse(Parcel $parcel): ParcelResponse
     {
-        return new ParcelResponse(
-            uuid: $parcel->getUuid(),
-            cityUuid: $parcel->getCity()->getUuid(),
-            cityName: $parcel->getCity()->getName(),
-            reference: $parcel->getReference(),
-            titleNumber: $parcel->getTitleNumber(),
-            name: $parcel->getName(),
-            address: $parcel->getAddress(),
-            quarter: $parcel->getQuarter(),
-            area: $parcel->getArea(),
-            latitude: $parcel->getLatitude(),
-            longitude: $parcel->getLongitude(),
-            description: $parcel->getDescription(),
-            createdAt: $parcel->getCreatedAt()->format(\DateTimeInterface::ATOM),
-            updatedAt: $parcel->getUpdatedAt()?->format(\DateTimeInterface::ATOM)
-        );
+        return ParcelResponse::fromEntity($parcel);
     }
+
 }

@@ -10,6 +10,8 @@ use App\Dto\Request\PaginationQuery;
 use App\Entity\Identity\User;
 use App\Mapper\Identity\UserMapper;
 use App\Repository\Identity\UserRepository;
+use App\Security\SecurityAction;
+use App\Security\SecurityServiceInterface;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\Validator\Validator\ValidatorInterface;
 
@@ -31,7 +33,8 @@ final readonly class UserService
         private EntityManagerInterface $em,
         private UserRepository $repository,
         private UserMapper $mapper,
-        private ValidatorInterface $validator
+        private ValidatorInterface $validator,
+        private SecurityServiceInterface $security
     ) {
     }
 
@@ -42,7 +45,19 @@ final readonly class UserService
     public function list(PaginationQuery $query): Feedback
     {
         $feedback = new Feedback();
-        $paginatedResult = $this->repository->findPaginated($query);
+
+        // Sans restriction, cette liste exposerait les comptes de tous les
+        // tenants de la plateforme. Un utilisateur ne voit que les comptes
+        // d'une Organization dont il est membre ; seul le SUPER_ADMIN peut
+        // inventorier l'ensemble des comptes.
+        $paginatedResult = $this->security->isSuperAdmin()
+            ? $this->repository->findPaginatedAll($query->page, $query->limit, $query->search)
+            : $this->repository->findPaginatedByOrganizations(
+                $this->security->getCurrentUserOrganizations(),
+                $query->page,
+                $query->limit,
+                $query->search
+            );
 
         $data = [
             'items' => array_map([$this->mapper, 'toResponse'], $paginatedResult['items']),
@@ -75,6 +90,8 @@ final readonly class UserService
                 ->autoInitFlush();
         }
 
+        $this->security->checkUserAccess($user, SecurityAction::VIEW_USER);
+
         return $feedback
             ->setData($this->mapper->toResponse($user))
             ->setFlushDescription('Détails de l\'utilisateur récupérés.')
@@ -89,6 +106,9 @@ final readonly class UserService
     public function create(UserRequest $request): Feedback
     {
         $feedback = new Feedback();
+
+        // Créer un compte est une opération d'administration de plateforme.
+        $this->security->requirePlatformRole();
         $violations = $this->validator->validate($request, groups: ['create']);
 
         if (count($violations) > 0) {
@@ -135,6 +155,8 @@ final readonly class UserService
                 ->autoInitFlush();
         }
 
+        $this->security->checkUserAccess($user, SecurityAction::UPDATE_USER);
+
         $violations = $this->validator->validate($request, groups: ['update']);
         if (count($violations) > 0) {
             return $feedback
@@ -180,6 +202,8 @@ final readonly class UserService
                 ->setStatus(404)
                 ->autoInitFlush();
         }
+
+        $this->security->checkUserAccess($user, SecurityAction::DELETE_USER);
 
         $user->softDelete();
         $user->setIsActive(false);

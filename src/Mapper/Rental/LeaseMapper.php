@@ -8,30 +8,30 @@ use App\Dto\Request\Rental\LeaseRequest;
 use App\Dto\Response\Rental\LeaseResponse;
 use App\Entity\Rental\Lease;
 
-final class LeaseDataMapper
+/**
+ * LeaseMapper
+ *
+ * Package : Rental Management — Service de mapping d'entité
+ *
+ * Assure la conversion bidirectionnelle entre l'entité Lease
+ * et les objets DTO de requête et de réponse associés.
+ * L'organisation, le locataire et l'unité sont positionnés par le
+ * service appelant : le mapper ne fait que recopier les colonnes
+ * scalaires du contrat.
+ */
+final class LeaseMapper
 {
+    /**
+     * Delegue la projection Entite -> DTO a la fabrique statique du DTO
+     * de reponse, qui constitue l'unique source de verite du mapping
+     * en lecture (aucune duplication de la liste des champs).
+     */
     public function toResponse(Lease $lease): LeaseResponse
     {
-        return new LeaseResponse(
-            uuid: $lease->getUuid()->toString(),
-            tenantUuid: $lease->getTenant()->getUuid()->toString(),
-            unitUuid: $lease->getUnit()->getUuid()->toString(),
-            reference: $lease->getReference(),
-            startDate: $lease->getStartDate(),
-            endDate: $lease->getEndDate(),
-            monthlyRent: $lease->getMonthlyRent(),
-            depositAmount: $lease->getDepositAmount(),
-            currency: $lease->getCurrency(),
-            status: $lease->getStatus(),
-            terminationDate: $lease->getTerminationDate(),
-            terminationReason: $lease->getTerminationReason(),
-            notes: $lease->getNotes(),
-            createdAt: $lease->getCreatedAt(),
-            updatedAt: $lease->getUpdatedAt()
-        );
+        return LeaseResponse::fromEntity($lease);
     }
 
-    public function mapRequestToEntity(LeaseRequest $dto, Lease $lease): void
+    public function copyToEntity(LeaseRequest $dto, Lease $lease): Lease
     {
         if ($dto->reference !== null) {
             $lease->setReference($dto->reference);
@@ -63,5 +63,7 @@ final class LeaseDataMapper
         if ($dto->notes !== null) {
             $lease->setNotes($dto->notes);
         }
+
+        return $lease;
     }
 }

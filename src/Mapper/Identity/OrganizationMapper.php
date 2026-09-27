@@ -19,26 +19,15 @@ use App\Entity\Identity\Organization;
 final class OrganizationMapper
 {
     /**
-     * Transforme une instance de l'entité Organization en DTO de réponse.
-     * Reçoit l'entité source et produit la charge utile destinée aux réponses API.
+     * Delegue la projection Entite -> DTO a la fabrique statique du DTO
+     * de reponse, qui constitue l'unique source de verite du mapping
+     * en lecture (aucune duplication de la liste des champs).
      */
     public function toResponse(Organization $organization): OrganizationResponse
     {
-        return new OrganizationResponse(
-            uuid: $organization->getUuid(),
-            name: $organization->getName(),
-            code: $organization->getCode(),
-            logo: $organization->getLogo(),
-            email: $organization->getEmail(),
-            phone: $organization->getPhone(),
-            address: $organization->getAddress(),
-            city: $organization->getCity(),
-            country: $organization->getCountry(),
-            status: $organization->getStatus(),
-            createdAt: $organization->getCreatedAt(),
-            updatedAt: $organization->getUpdatedAt()
-        );
+        return OrganizationResponse::fromEntity($organization);
     }
+
 
     /**
      * Mappe les données d'un DTO OrganizationRequest vers une entité Organization.

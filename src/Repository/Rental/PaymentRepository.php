@@ -4,7 +4,11 @@ declare(strict_types=1);
 
 namespace App\Repository\Rental;
 
+use App\Entity\Identity\Organization;
 use App\Entity\Rental\Payment;
+use App\Entity\Rental\Rent;
+use App\Repository\PaginatedResultTrait;
+use App\Repository\UuidParameterTrait;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\Persistence\ManagerRegistry;
 use Symfony\Component\Uid\Uuid;
@@ -19,6 +23,9 @@ use Symfony\Component\Uid\Uuid;
  */
 class PaymentRepository extends ServiceEntityRepository
 {
+    use PaginatedResultTrait;
+    use UuidParameterTrait;
+
     public function __construct(ManagerRegistry $registry)
     {
         parent::__construct($registry, Payment::class);
@@ -46,7 +53,7 @@ class PaymentRepository extends ServiceEntityRepository
     {
         return $this->createQueryBuilder('p')
             ->andWhere('p.uuid = :uuid')
-            ->setParameter('uuid', $uuid)
+            ->setParameter('uuid', $this->bindableUuid($uuid))
             ->getQuery()
             ->getOneOrNullResult();
     }
@@ -57,11 +64,11 @@ class PaymentRepository extends ServiceEntityRepository
      *
      * @return Payment[]
      */
-    public function findByRent(int $rentId): array
+    public function findByRent(Rent $rent): array
     {
         return $this->createQueryBuilder('p')
-            ->andWhere('p.rent = :rentId')
-            ->setParameter('rentId', $rentId)
+            ->andWhere('p.rent = :rent')
+            ->setParameter('rent', $rent)
             ->orderBy('p.paymentDate', 'DESC')
             ->getQuery()
             ->getResult();
@@ -72,15 +79,45 @@ class PaymentRepository extends ServiceEntityRepository
      * (somme simple ; la comparaison avec le montant dû relève
      * du service métier, pas du repository).
      */
-    public function sumAmountByRent(int $rentId): string
+    public function sumAmountByRent(Rent $rent): string
     {
         $result = $this->createQueryBuilder('p')
             ->select('SUM(p.amount) AS total')
-            ->andWhere('p.rent = :rentId')
-            ->setParameter('rentId', $rentId)
+            ->andWhere('p.rent = :rent')
+            ->setParameter('rent', $rent)
             ->getQuery()
             ->getSingleScalarResult();
 
         return (string) ($result ?? '0');
+    }
+
+    /**
+     * Liste paginée des paiements d'une organisation.
+     *
+     * Le périmètre est porté par `payment -> rent -> lease -> organization` :
+     * aucun paiement ne peut être listé sans traverser un bail d'une
+     * organisation autorisée.
+     *
+     * @return array{items: list<Payment>, total: int}
+     */
+    public function findPaginatedByOrganization(
+        Organization $organization,
+        int $page,
+        int $limit,
+        ?string $search = null
+    ): array {
+        $qb = $this->createQueryBuilder('p')
+            ->innerJoin('p.rent', 'r')
+            ->innerJoin('r.lease', 'l')
+            ->andWhere('l.organization = :organization')
+            ->setParameter('organization', $organization)
+            ->orderBy('p.paymentDate', 'DESC');
+
+        if ($search !== null && $search !== '') {
+            $qb->andWhere('p.reference LIKE :search OR p.receiptNumber LIKE :search')
+                ->setParameter('search', '%' . $search . '%');
+        }
+
+        return $this->fetchPaginated($qb, $page, $limit);
     }
 }

@@ -29,24 +29,15 @@ final readonly class UserMapper
     }
 
     /**
-     * Transforme une instance de l'entité User en DTO de réponse UserResponse.
-     * Extrait les informations publiques et de profil pour l'exposition API.
+     * Delegue la projection Entite -> DTO a la fabrique statique du DTO
+     * de reponse, qui constitue l'unique source de verite du mapping
+     * en lecture (aucune duplication de la liste des champs).
      */
     public function toResponse(User $user): UserResponse
     {
-        return new UserResponse(
-            uuid: $user->getUuid(),
-            email: $user->getEmail(),
-            fullName: $user->getFullName(),
-            phone: $user->getPhone(),
-            profilePhoto: $user->getProfilePhoto(),
-            platformRole: $user->getPlatformRole(),
-            isActive: $user->isActive(),
-            lastLoginAt: $user->getLastLoginAt(),
-            createdAt: $user->getCreatedAt(),
-            updatedAt: $user->getUpdatedAt()
-        );
+        return UserResponse::fromEntity($user);
     }
+
 
     /**
      * Mappe les données d'un DTO UserRequest vers l'entité User.

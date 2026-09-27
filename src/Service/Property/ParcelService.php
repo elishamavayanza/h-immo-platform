@@ -4,27 +4,81 @@ declare(strict_types=1);
 
 namespace App\Service\Property;
 
-use App\DataMapper\Property\ParcelDataMapper;
 use App\Dto\Feedback;
 use App\Dto\Request\PaginationQuery;
 use App\Dto\Request\Property\ParcelRequest;
-use App\Dto\Response\PaginatedResponse;
-use App\Entity\Property\City;
 use App\Entity\Property\Parcel;
+use App\Mapper\Property\ParcelMapper;
 use App\Repository\Property\CityRepository;
 use App\Repository\Property\ParcelRepository;
+use App\Security\SecurityAction;
+use App\Security\SecurityServiceInterface;
 use Doctrine\ORM\EntityManagerInterface;
+use Symfony\Component\Uid\Uuid;
 use Symfony\Component\Validator\Validator\ValidatorInterface;
 
+/**
+ * ParcelService
+ *
+ * Package : Property Management — Service Métier
+ *
+ * Gère les parcelles (Parcel) d'une ville et assure l'unicité de leur
+ * référence au sein de cette ville.
+ *
+ * Portée : une parcelle hérite de son organisation via `city`; la liste est
+ * bornée aux villes réellement accessibles à l'appelant.
+ */
 final readonly class ParcelService
 {
     public function __construct(
         private ParcelRepository $parcelRepository,
         private CityRepository $cityRepository,
-        private ParcelDataMapper $parcelDataMapper,
+        private ParcelMapper $parcelMapper,
+        private SecurityServiceInterface $securityService,
         private EntityManagerInterface $entityManager,
-        private ValidatorInterface $validator,
+        private ValidatorInterface $validator
     ) {
+    }
+
+    public function list(PaginationQuery $query): Feedback
+    {
+        $feedback = new Feedback();
+
+        $result = $this->parcelRepository->findPaginatedAccessible(
+            $this->securityService->getScopedCities(),
+            $query->page,
+            $query->limit,
+            $query->search
+        );
+
+        return $feedback
+            ->setData([
+                'items' => array_map([$this->parcelMapper, 'toResponse'], $result['items']),
+                'total' => $result['total'],
+                'page' => $query->page,
+                'limit' => $query->limit,
+            ])
+            ->setFlushDescription('Liste des parcelles récupérée avec succès.')
+            ->setStatus(200)
+            ->autoInitFlush();
+    }
+
+    public function getByUuid(string $uuid): Feedback
+    {
+        $feedback = new Feedback();
+
+        $parcelRepository = $this->findParcel($uuid, $feedback);
+        if ($parcelRepository === null) {
+            return $feedback->autoInitFlush();
+        }
+
+        $this->securityService->checkParcelAccess($parcelRepository, SecurityAction::VIEW_PARCEL);
+
+        return $feedback
+            ->setData($this->parcelMapper->toResponse($parcelRepository))
+            ->setFlushDescription('Détails du parcelle récupérés.')
+            ->setStatus(200)
+            ->autoInitFlush();
     }
 
     public function create(ParcelRequest $request): Feedback
@@ -39,28 +93,32 @@ final readonly class ParcelService
                 ->autoInitFlush();
         }
 
-        $city = $this->cityRepository->findOneBy(['uuid' => $request->cityUuid]);
-        if (!$city instanceof City) {
-            return $feedback->addError('cityUuid', 'La ville spécifiée n\'existe pas.')
-                ->setErrorFlushDescription('Impossible de créer la parcelle.')
-                ->setStatus(404)
-                ->autoInitFlush();
+        $parent = $this->resolveParent($request->cityUuid, $feedback);
+        if ($parent === null) {
+            return $feedback->autoInitFlush();
         }
 
-        if ($this->parcelRepository->findOneBy(['city' => $city, 'reference' => $request->reference])) {
-            return $feedback->addError('reference', 'Cette référence existe déjà pour cette ville.')
+        $this->securityService->checkCityAccess($parent, SecurityAction::CREATE_PARCEL);
+
+        if ($request->reference !== null
+            && $this->parcelRepository->findOneByCityAndReference($parent, $request->reference) !== null
+        ) {
+            return $feedback->addError('reference', 'Cette référence existe déjà pour ce ville.')
                 ->setErrorFlushDescription('Conflit d\'unicité détecté.')
                 ->setStatus(409)
                 ->autoInitFlush();
         }
 
-        $parcel = $this->parcelDataMapper->toEntity($request, $city);
-        $this->entityManager->persist($parcel);
+        $parcelRepository = new Parcel();
+        $parcelRepository->setCity($parent);
+        $this->parcelMapper->copyToEntity($request, $parcelRepository);
+
+        $this->entityManager->persist($parcelRepository);
         $this->entityManager->flush();
 
         return $feedback
-            ->setData($this->parcelDataMapper->toResponse($parcel))
-            ->setFlushDescription('La parcelle a été créée avec succès.')
+            ->setData($this->parcelMapper->toResponse($parcelRepository))
+            ->setFlushDescription('Le parcelle a été créé avec succès.')
             ->setStatus(201)
             ->autoInitFlush();
     }
@@ -69,12 +127,12 @@ final readonly class ParcelService
     {
         $feedback = new Feedback();
 
-        $parcel = $this->parcelRepository->findOneBy(['uuid' => $uuid]);
-        if (!$parcel instanceof Parcel) {
-            return $feedback->setErrorFlushDescription('La parcelle demandée n\'existe pas.')
-                ->setStatus(404)
-                ->autoInitFlush();
+        $parcelRepository = $this->findParcel($uuid, $feedback);
+        if ($parcelRepository === null) {
+            return $feedback->autoInitFlush();
         }
+
+        $this->securityService->checkParcelAccess($parcelRepository, SecurityAction::UPDATE_PARCEL);
 
         $violations = $this->validator->validate($request, groups: ['update']);
         if (count($violations) > 0) {
@@ -84,70 +142,42 @@ final readonly class ParcelService
                 ->autoInitFlush();
         }
 
-        if ($request->reference !== null && $request->reference !== $parcel->getReference()) {
-            $existing = $this->parcelRepository->findOneBy([
-                'city' => $parcel->getCity(),
-                'reference' => $request->reference,
-            ]);
+        // Le rattachement au parent (ville, parcelle, bâtiment) n'est pas
+        // modifiable : le déplacer reviendrait à faire basculer la ressource
+        // dans un autre périmètre d'organization sans contrôle.
+        if ($request->cityUuid !== null
+            && $request->cityUuid !== (string) $parcelRepository->getCity()->getUuid()
+        ) {
+            $feedback->addError(
+                'cityUuid',
+                'Le rattachement à un autre ville n\'est pas autorisé.'
+            );
+
+            return $feedback
+                ->setErrorFlushDescription('Changement de ville refusé.')
+                ->autoInitFlush();
+        }
+
+        if ($request->reference !== null && $request->reference !== $parcelRepository->getReference()) {
+            $existing = $this->parcelRepository->findOneByCityAndReference(
+                $parcelRepository->getCity(),
+                $request->reference
+            );
+
             if ($existing !== null) {
-                return $feedback->addError('reference', 'Cette référence existe déjà pour cette ville.')
+                return $feedback->addError('reference', 'Cette référence existe déjà pour ce ville.')
                     ->setErrorFlushDescription('Conflit d\'unicité détecté.')
                     ->setStatus(409)
                     ->autoInitFlush();
             }
         }
 
-        $this->parcelDataMapper->updateEntity($parcel, $request);
+        $this->parcelMapper->copyToEntity($request, $parcelRepository);
         $this->entityManager->flush();
 
         return $feedback
-            ->setData($this->parcelDataMapper->toResponse($parcel))
-            ->setFlushDescription('La parcelle a été mise à jour avec succès.')
-            ->setStatus(200)
-            ->autoInitFlush();
-    }
-
-    public function getByUuid(string $uuid): Feedback
-    {
-        $feedback = new Feedback();
-
-        $parcel = $this->parcelRepository->findOneBy(['uuid' => $uuid]);
-        if (!$parcel instanceof Parcel) {
-            return $feedback->setErrorFlushDescription('La parcelle demandée n\'existe pas.')
-                ->setStatus(404)
-                ->autoInitFlush();
-        }
-
-        return $feedback
-            ->setData($this->parcelDataMapper->toResponse($parcel))
-            ->setFlushDescription('Détails de la parcelle récupérés.')
-            ->setStatus(200)
-            ->autoInitFlush();
-    }
-
-    public function list(PaginationQuery $query): Feedback
-    {
-        $feedback = new Feedback();
-
-        $paginator = $this->parcelRepository->findPaginated($query);
-        $totalItems = count($paginator);
-        $items = [];
-
-        foreach ($paginator as $parcel) {
-            $items[] = $this->parcelDataMapper->toResponse($parcel);
-        }
-
-        $paginatedResponse = new PaginatedResponse(
-            items: $items,
-            totalItems: $totalItems,
-            currentPage: $query->page,
-            limit: $query->limit,
-            totalPages: (int) ceil($totalItems / $query->limit)
-        );
-
-        return $feedback
-            ->setData($paginatedResponse)
-            ->setFlushDescription('Liste des parcelles récupérée avec succès.')
+            ->setData($this->parcelMapper->toResponse($parcelRepository))
+            ->setFlushDescription('Le parcelle a été mis à jour avec succès.')
             ->setStatus(200)
             ->autoInitFlush();
     }
@@ -156,19 +186,74 @@ final readonly class ParcelService
     {
         $feedback = new Feedback();
 
-        $parcel = $this->parcelRepository->findOneBy(['uuid' => $uuid]);
-        if (!$parcel instanceof Parcel) {
-            return $feedback->setErrorFlushDescription('La parcelle demandée n\'existe pas.')
-                ->setStatus(404)
-                ->autoInitFlush();
+        $parcelRepository = $this->findParcel($uuid, $feedback);
+        if ($parcelRepository === null) {
+            return $feedback->autoInitFlush();
         }
 
-        $parcel->setDeletedAt(new \DateTimeImmutable());
+        $this->securityService->checkParcelAccess($parcelRepository, SecurityAction::DELETE_PARCEL);
+
+        $parcelRepository->softDelete();
         $this->entityManager->flush();
 
         return $feedback
-            ->setFlushDescription('La parcelle a été supprimée avec succès.')
+            ->setFlushDescription('Le parcelle a été supprimé avec succès.')
             ->setStatus(200)
             ->autoInitFlush();
+    }
+
+    /**
+     * Résolution du parent (ville, parcelle, bâtiment) par UUID public, avec
+     * contrôle d'accès : la ressource ne peut être rattachée qu'à un parent
+     * que l'appelant est autorisé à administrer.
+     */
+    private function resolveParent(?string $uuid, Feedback $feedback): ?City
+    {
+        if ($uuid === null || $uuid === '') {
+            $feedback->addError('cityUuid', 'Le ville est obligatoire.');
+
+            return null;
+        }
+
+        try {
+            $parsed = Uuid::fromString($uuid);
+        } catch (\InvalidArgumentException) {
+            $feedback->addError('cityUuid', 'Identifiant de ville invalide.');
+
+            return null;
+        }
+
+        $parent = $this->cityRepository->findOneByUuid($parsed);
+
+        if ($parent === null) {
+            $feedback
+                ->addError('cityUuid', 'Le ville spécifié n\'existe pas.')
+                ->setStatus(404);
+        }
+
+        return $parent;
+    }
+
+    private function findParcel(string $uuid, Feedback $feedback): ?Parcel
+    {
+        try {
+            $parsed = Uuid::fromString($uuid);
+        } catch (\InvalidArgumentException) {
+            $feedback
+                ->setErrorFlushDescription('Identifiant de parcelle invalide.')
+                ->setStatus(400);
+
+            return null;
+        }
+
+        $parcelRepository = $this->parcelRepository->findOneByUuid($parsed);
+
+        if ($parcelRepository === null) {
+            $feedback
+                ->setErrorFlushDescription('Le parcelle demandé n\'existe pas.')
+                ->setStatus(404);
+        }
+
+        return $parcelRepository;
     }
 }

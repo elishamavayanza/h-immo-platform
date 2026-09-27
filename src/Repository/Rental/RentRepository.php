@@ -4,7 +4,11 @@ declare(strict_types=1);
 
 namespace App\Repository\Rental;
 
+use App\Entity\Identity\Organization;
+use App\Entity\Rental\Lease;
 use App\Entity\Rental\Rent;
+use App\Repository\PaginatedResultTrait;
+use App\Repository\UuidParameterTrait;
 use App\Enum\RentStatus;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\Persistence\ManagerRegistry;
@@ -20,6 +24,9 @@ use Symfony\Component\Uid\Uuid;
  */
 class RentRepository extends ServiceEntityRepository
 {
+    use PaginatedResultTrait;
+    use UuidParameterTrait;
+
     public function __construct(ManagerRegistry $registry)
     {
         parent::__construct($registry, Rent::class);
@@ -47,7 +54,7 @@ class RentRepository extends ServiceEntityRepository
     {
         return $this->createQueryBuilder('r')
             ->andWhere('r.uuid = :uuid')
-            ->setParameter('uuid', $uuid)
+            ->setParameter('uuid', $this->bindableUuid($uuid))
             ->getQuery()
             ->getOneOrNullResult();
     }
@@ -56,12 +63,12 @@ class RentRepository extends ServiceEntityRepository
      * Recherche l'échéance d'un bail pour une période donnée
      * (le couple lease/period est unique).
      */
-    public function findOneByLeaseAndPeriod(int $leaseId, \DateTimeImmutable $period): ?Rent
+    public function findOneByLeaseAndPeriod(Lease $lease, \DateTimeImmutable $period): ?Rent
     {
         return $this->createQueryBuilder('r')
-            ->andWhere('r.lease = :leaseId')
+            ->andWhere('r.lease = :lease')
             ->andWhere('r.period = :period')
-            ->setParameter('leaseId', $leaseId)
+            ->setParameter('lease', $lease)
             ->setParameter('period', $period)
             ->getQuery()
             ->getOneOrNullResult();
@@ -72,11 +79,11 @@ class RentRepository extends ServiceEntityRepository
      *
      * @return Rent[]
      */
-    public function findByLease(int $leaseId): array
+    public function findByLease(Lease $lease): array
     {
         return $this->createQueryBuilder('r')
-            ->andWhere('r.lease = :leaseId')
-            ->setParameter('leaseId', $leaseId)
+            ->andWhere('r.lease = :lease')
+            ->setParameter('lease', $lease)
             ->orderBy('r.period', 'ASC')
             ->getQuery()
             ->getResult();
@@ -88,18 +95,43 @@ class RentRepository extends ServiceEntityRepository
      *
      * @return Rent[]
      */
-    public function findOverdueByOrganization(int $organizationId): array
+    public function findOverdueByOrganization(Organization $organization): array
     {
         return $this->createQueryBuilder('r')
             ->innerJoin('r.lease', 'l')
-            ->andWhere('l.organization = :organizationId')
+            ->andWhere('l.organization = :organization')
             ->andWhere('r.dueDate < :today')
             ->andWhere('r.status IN (:openStatuses)')
-            ->setParameter('organizationId', $organizationId)
+            ->setParameter('organization', $organization)
             ->setParameter('today', new \DateTimeImmutable('today'))
             ->setParameter('openStatuses', [RentStatus::PENDING, RentStatus::PARTIALLY_PAID, RentStatus::OVERDUE])
             ->orderBy('r.dueDate', 'ASC')
             ->getQuery()
             ->getResult();
+    }
+
+    /**
+     * Liste paginée des échéances d'une organisation.
+     *
+     * @return array{items: list<Rent>, total: int}
+     */
+    public function findPaginatedByOrganization(
+        Organization $organization,
+        int $page,
+        int $limit,
+        ?string $search = null
+    ): array {
+        $qb = $this->createQueryBuilder('r')
+            ->innerJoin('r.lease', 'l')
+            ->andWhere('l.organization = :organization')
+            ->setParameter('organization', $organization)
+            ->orderBy('r.dueDate', 'DESC');
+
+        if ($search !== null && $search !== '') {
+            $qb->andWhere('l.reference LIKE :search')
+                ->setParameter('search', '%' . $search . '%');
+        }
+
+        return $this->fetchPaginated($qb, $page, $limit);
     }
 }

@@ -6,27 +6,41 @@ namespace App\Service\Rental;
 
 use App\Dto\Feedback;
 use App\Dto\Request\Rental\RentRequest;
-use App\Entity\Identity\Organization;
 use App\Entity\Rental\Lease;
 use App\Entity\Rental\Rent;
 use App\Mapper\Rental\RentMapper;
 use App\Repository\Rental\LeaseRepository;
 use App\Repository\Rental\RentRepository;
+use App\Security\SecurityAction;
+use App\Security\SecurityServiceInterface;
 use Doctrine\ORM\EntityManagerInterface;
+use Symfony\Component\Uid\Uuid;
 use Symfony\Component\Validator\Validator\ValidatorInterface;
 
+/**
+ * RentService
+ *
+ * Package : Rental Management
+ *
+ * Une échéance (Rent) hérite de son périmètre du bail (Lease), lequel
+ * hérite du sien de l'Organization. Le service ne reçoit donc jamais
+ * d'Organization en paramètre : celle-ci est déduite de la chaîne
+ * d'entités, ce qui élimine la possibilité qu'un client désigne une
+ * organization pour rattacher une échéance à un bail d'une autre.
+ */
 final readonly class RentService
 {
     public function __construct(
         private RentRepository $rentRepository,
         private LeaseRepository $leaseRepository,
         private RentMapper $rentMapper,
+        private SecurityServiceInterface $securityService,
         private EntityManagerInterface $entityManager,
         private ValidatorInterface $validator
     ) {
     }
 
-    public function createRent(RentRequest $request, Organization $organization): Feedback
+    public function createRent(RentRequest $request): Feedback
     {
         $feedback = new Feedback();
 
@@ -38,29 +52,27 @@ final readonly class RentService
                 ->autoInitFlush();
         }
 
-        /** @var Lease|null $lease */
-        $lease = $this->leaseRepository->findOneBy(['uuid' => $request->leaseUuid, 'organization' => $organization]);
-        if (!$lease) {
-            return $feedback
-                ->addError('leaseUuid', 'Contrat de bail non trouvé.')
-                ->setFlushDescriptionWithError('Le bail spécifié n\'existe pas ou n\'appartient pas à votre organisation.')
-                ->autoInitFlush();
+        $lease = $this->resolveLease($request->leaseUuid, SecurityAction::CREATE_RENT, $feedback);
+        if ($lease === null) {
+            return $feedback->autoInitFlush();
         }
 
-        // Contrôle d'unicité sur le couple (lease, period)
-        $existingRent = $this->rentRepository->findOneBy([
-            'lease' => $lease,
-            'period' => $request->period,
-        ]);
-
-        if ($existingRent !== null) {
+        // Unicité du couple (bail, période) : elle est déjà garantie par un
+        // index unique en base, mais elle est vérifiée ici pour renvoyer un
+        // 422 exploitable au lieu d'une violation de contrainte SQL.
+        if ($request->period !== null
+            && $this->rentRepository->findOneByLeaseAndPeriod($lease, $request->period) !== null
+        ) {
             return $feedback
                 ->addError('period', 'Une échéance existe déjà pour ce mois et ce bail.')
                 ->setFlushDescriptionWithError('L\'échéance pour cette période a déjà été générée.')
+                ->setStatus(409)
                 ->autoInitFlush();
         }
 
-        $rent = $this->rentMapper->toEntity($request, $lease);
+        $rent = new Rent();
+        $rent->setLease($lease);
+        $this->rentMapper->copyToEntity($request, $rent);
 
         $this->entityManager->persist($rent);
         $this->entityManager->flush();
@@ -72,17 +84,13 @@ final readonly class RentService
             ->autoInitFlush();
     }
 
-    public function updateRent(string $uuid, RentRequest $request, Organization $organization): Feedback
+    public function updateRent(string $uuid, RentRequest $request): Feedback
     {
         $feedback = new Feedback();
 
-        /** @var Rent|null $rent */
-        $rent = $this->rentRepository->findOneByUuidAndOrganization($uuid, $organization);
-        if (!$rent) {
-            return $feedback
-                ->setErrorFlushDescription('Échéance de loyer introuvable.')
-                ->setStatus(404)
-                ->autoInitFlush();
+        $rent = $this->findRent($uuid, $feedback);
+        if ($rent === null) {
+            return $feedback->autoInitFlush();
         }
 
         $violations = $this->validator->validate($request, null, ['update']);
@@ -93,7 +101,31 @@ final readonly class RentService
                 ->autoInitFlush();
         }
 
-        $rent = $this->rentMapper->toEntity($request, $rent->getLease(), $rent);
+        $this->securityService->checkRentAccess($rent, SecurityAction::UPDATE_RENT);
+
+        // Rattacher une échéance existante à un autre bail est refusé : cela
+        // déplacerait un montant d'une échéance vers une autre organization
+        // en contournant le contrôle d'accès du bail cible.
+        if ($request->leaseUuid !== null) {
+            $target = $this->resolveLease($request->leaseUuid, SecurityAction::VIEW_LEASE, $feedback);
+
+            if ($target === null) {
+                return $feedback->autoInitFlush();
+            }
+
+            if ($target !== $rent->getLease()) {
+                $feedback->addError(
+                    'leaseUuid',
+                    'Le rattachement d\'une échéance à un autre bail n\'est pas autorisé.'
+                );
+
+                return $feedback
+                    ->setFlushDescriptionWithError('Changement de bail refusé.')
+                    ->autoInitFlush();
+            }
+        }
+
+        $this->rentMapper->copyToEntity($request, $rent);
 
         $this->entityManager->flush();
 
@@ -104,23 +136,109 @@ final readonly class RentService
             ->autoInitFlush();
     }
 
-    public function getRentByUuid(string $uuid, Organization $organization): Feedback
+    public function getRentByUuid(string $uuid): Feedback
     {
         $feedback = new Feedback();
 
-        /** @var Rent|null $rent */
-        $rent = $this->rentRepository->findOneByUuidAndOrganization($uuid, $organization);
-        if (!$rent) {
-            return $feedback
-                ->setErrorFlushDescription('Échéance de loyer introuvable.')
-                ->setStatus(404)
-                ->autoInitFlush();
+        $rent = $this->findRent($uuid, $feedback);
+        if ($rent === null) {
+            return $feedback->autoInitFlush();
         }
+
+        $this->securityService->checkRentAccess($rent, SecurityAction::VIEW_RENT);
 
         return $feedback
             ->setData($this->rentMapper->toResponse($rent))
             ->setFlushDescription('Échéance de loyer récupérée.')
             ->setStatus(200)
             ->autoInitFlush();
+    }
+
+    /**
+     * Liste paginée des échéances en retard sur le périmètre autorisé.
+     */
+    public function listOverdueRents(int $page = 1, int $limit = 20): Feedback
+    {
+        $feedback = new Feedback();
+
+        $organizations = $this->securityService->getCurrentUserOrganizations();
+        $items = [];
+
+        foreach ($organizations as $organization) {
+            if (!$this->securityService->canAccessOrganization($organization, SecurityAction::VIEW_RENT)) {
+                continue;
+            }
+
+            foreach ($this->rentRepository->findOverdueByOrganization($organization) as $rent) {
+                if ($this->securityService->canAccessRent($rent, SecurityAction::VIEW_RENT)) {
+                    $items[] = $this->rentMapper->toResponse($rent);
+                }
+            }
+        }
+
+        return $feedback
+            ->setData([
+                'items' => $items,
+                'total' => count($items),
+                'page' => max(1, $page),
+                'limit' => $limit,
+            ])
+            ->setFlushDescription('Échéances en retard listées avec succès.')
+            ->setStatus(200)
+            ->autoInitFlush();
+    }
+
+    private function resolveLease(?string $uuid, SecurityAction $action, Feedback $feedback): ?Lease
+    {
+        if ($uuid === null || $uuid === '') {
+            $feedback->addError('leaseUuid', 'Le contrat de bail est obligatoire.');
+
+            return null;
+        }
+
+        try {
+            $parsed = Uuid::fromString($uuid);
+        } catch (\InvalidArgumentException) {
+            $feedback->addError('leaseUuid', 'Identifiant de bail invalide.');
+
+            return null;
+        }
+
+        $lease = $this->leaseRepository->findOneByUuid($parsed);
+
+        if ($lease === null) {
+            $feedback
+                ->setErrorFlushDescription('Contrat de bail introuvable.')
+                ->setStatus(404);
+
+            return null;
+        }
+
+        $this->securityService->checkLeaseAccess($lease, $action);
+
+        return $lease;
+    }
+
+    private function findRent(string $uuid, Feedback $feedback): ?Rent
+    {
+        try {
+            $parsed = Uuid::fromString($uuid);
+        } catch (\InvalidArgumentException) {
+            $feedback
+                ->setErrorFlushDescription('Identifiant d\'échéance invalide.')
+                ->setStatus(400);
+
+            return null;
+        }
+
+        $rent = $this->rentRepository->findOneByUuid($parsed);
+
+        if ($rent === null) {
+            $feedback
+                ->setErrorFlushDescription('Échéance de loyer introuvable.')
+                ->setStatus(404);
+        }
+
+        return $rent;
     }
 }

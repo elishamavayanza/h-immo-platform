@@ -2,24 +2,25 @@
 
 declare(strict_types=1);
 
-namespace App\DataMapper\Property;
+namespace App\Mapper\Property;
 
 use App\Dto\Request\Property\UnitRequest;
 use App\Dto\Response\Property\UnitResponse;
-use App\Entity\Property\Building;
 use App\Entity\Property\Unit;
 
-final class UnitDataMapper
+/**
+ * UnitMapper
+ *
+ * Package : Property Management — Service de mapping d'entité
+ *
+ * Assure la conversion bidirectionnelle entre l'entité Unit
+ * et les objets DTO de requête et de réponse associés.
+ * Le bâtiment parent est positionné par le service appelant : le mapper
+ * ne fait que recopier les colonnes scalaires de l'unité.
+ */
+final class UnitMapper
 {
-    public function toEntity(UnitRequest $request, Building $building): Unit
-    {
-        $unit = new Unit();
-        $unit->setBuilding($building);
-
-        return $this->updateEntity($unit, $request);
-    }
-
-    public function updateEntity(Unit $unit, UnitRequest $request): Unit
+    public function copyToEntity(UnitRequest $request, Unit $unit): Unit
     {
         if ($request->reference !== null) {
             $unit->setReference($request->reference);
@@ -55,24 +56,14 @@ final class UnitDataMapper
         return $unit;
     }
 
+    /**
+     * Delegue la projection Entite -> DTO a la fabrique statique du DTO
+     * de reponse, qui constitue l'unique source de verite du mapping
+     * en lecture (aucune duplication de la liste des champs).
+     */
     public function toResponse(Unit $unit): UnitResponse
     {
-        return new UnitResponse(
-            uuid: $unit->getUuid(),
-            buildingUuid: $unit->getBuilding()->getUuid(),
-            buildingName: $unit->getBuilding()->getName(),
-            reference: $unit->getReference(),
-            type: $unit->getType(),
-            floor: $unit->getFloor(),
-            surface: $unit->getSurface(),
-            bedrooms: $unit->getBedrooms(),
-            rooms: $unit->getRooms(),
-            bathrooms: $unit->getBathrooms(),
-            monthlyRent: $unit->getMonthlyRent(),
-            currency: $unit->getCurrency(),
-            description: $unit->getDescription(),
-            createdAt: $unit->getCreatedAt()->format(\DateTimeInterface::ATOM),
-            updatedAt: $unit->getUpdatedAt()?->format(\DateTimeInterface::ATOM)
-        );
+        return UnitResponse::fromEntity($unit);
     }
+
 }

@@ -11,13 +11,13 @@ use App\Dto\Response\HttpErrorResponsePayload;
 use App\Dto\Response\Property\ParcelResponse;
 use App\Service\Property\ParcelService;
 use App\Trait\FeedbackTrait;
-use Nelmio\ApiDocBundle\Annotation\Model;
+use Nelmio\ApiDocBundle\Attribute\Model;
 use OpenApi\Attributes as OA;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpKernel\Attribute\MapQueryString;
 use Symfony\Component\HttpKernel\Attribute\MapRequestPayload;
-use Symfony\Component\Routing\Annotation\Route;
+use Symfony\Component\Routing\Attribute\Route;
 
 #[Route('/api/v1/parcels', name: 'api_parcels_')]
 #[OA\Tag(name: 'Parcels')]

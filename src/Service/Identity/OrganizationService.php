@@ -10,6 +10,8 @@ use App\Dto\Request\PaginationQuery;
 use App\Entity\Identity\Organization;
 use App\Mapper\Identity\OrganizationMapper;
 use App\Repository\Identity\OrganizationRepository;
+use App\Security\SecurityAction;
+use App\Security\SecurityServiceInterface;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\Validator\Validator\ValidatorInterface;
 
@@ -31,7 +33,8 @@ final readonly class OrganizationService
         private EntityManagerInterface $em,
         private OrganizationRepository $repository,
         private OrganizationMapper $mapper,
-        private ValidatorInterface $validator
+        private ValidatorInterface $validator,
+        private SecurityServiceInterface $security
     ) {
     }
 
@@ -42,7 +45,23 @@ final readonly class OrganizationService
     public function list(PaginationQuery $query): Feedback
     {
         $feedback = new Feedback();
-        $paginatedResult = $this->repository->findPaginated($query);
+
+        // L'Organization est la frontière du multi-tenant : lister sans
+        // filtre livrerait à n'importe quel utilisateur authentifié la
+        // liste des entreprises clientes de la plateforme. On restreint donc
+        // aux Organizations dont l'appelant est membre, sauf pour le
+        // SUPER_ADMIN qui administre la plateforme.
+        $paginatedResult = $this->security->isSuperAdmin()
+            ? $this->repository->findPaginated($query->page, $query->limit, $query->search)
+            : $this->repository->findPaginatedByUuids(
+                array_map(
+                    static fn (Organization $organization): string => $organization->getUuid()->toRfc4122(),
+                    $this->security->getCurrentUserOrganizations()
+                ),
+                $query->page,
+                $query->limit,
+                $query->search
+            );
 
         $data = [
             'items' => array_map([$this->mapper, 'toResponse'], $paginatedResult['items']),
@@ -75,6 +94,8 @@ final readonly class OrganizationService
                 ->autoInitFlush();
         }
 
+        $this->security->checkOrganizationAccess($organization, SecurityAction::VIEW_ORGANIZATION);
+
         return $feedback
             ->setData($this->mapper->toResponse($organization))
             ->setFlushDescription('Organisation trouvée.')
@@ -89,6 +110,10 @@ final readonly class OrganizationService
     public function create(OrganizationRequest $request): Feedback
     {
         $feedback = new Feedback();
+
+        // Créer une Organization, c'est créer un tenant : seuls les
+        // comptes de plateforme en ont le droit.
+        $this->security->requirePlatformRole();
         $violations = $this->validator->validate($request, groups: ['create']);
 
         if (count($violations) > 0) {
@@ -135,6 +160,8 @@ final readonly class OrganizationService
                 ->autoInitFlush();
         }
 
+        $this->security->checkOrganizationAccess($organization, SecurityAction::UPDATE);
+
         $violations = $this->validator->validate($request, groups: ['update']);
         if (count($violations) > 0) {
             return $feedback
@@ -170,6 +197,8 @@ final readonly class OrganizationService
                 ->setStatus(404)
                 ->autoInitFlush();
         }
+
+        $this->security->checkOrganizationAccess($organization, SecurityAction::DELETE);
 
         $organization->softDelete();
         $this->em->flush();
