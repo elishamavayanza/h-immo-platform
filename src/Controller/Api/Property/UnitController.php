@@ -11,13 +11,13 @@ use App\Dto\Response\HttpErrorResponsePayload;
 use App\Dto\Response\Property\UnitResponse;
 use App\Service\Property\UnitService;
 use App\Trait\FeedbackTrait;
-use Nelmio\ApiDocBundle\Annotation\Model;
+use Nelmio\ApiDocBundle\Attribute\Model;
 use OpenApi\Attributes as OA;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpKernel\Attribute\MapQueryString;
 use Symfony\Component\HttpKernel\Attribute\MapRequestPayload;
-use Symfony\Component\Routing\Annotation\Route;
+use Symfony\Component\Routing\Attribute\Route;
 
 #[Route('/api/v1/units', name: 'api_units_')]
 #[OA\Tag(name: 'Units')]

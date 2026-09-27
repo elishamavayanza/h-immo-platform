@@ -6,21 +6,13 @@ namespace App\Mapper\Rental;
 
 use App\Dto\Request\Rental\TenantRequest;
 use App\Dto\Response\Rental\TenantResponse;
-use App\Entity\Identity\Organization;
 use App\Entity\Rental\Tenant;
 use App\Enum\TenantType;
 
 final class TenantMapper
 {
-    public function toEntity(
-        TenantRequest $request,
-        Organization $organization,
-        ?Tenant $tenant = null
-    ): Tenant {
-        $tenant ??= new Tenant();
-
-        $tenant->setOrganization($organization);
-
+    public function copyToEntity(TenantRequest $request, Tenant $tenant): Tenant
+    {
         if ($request->type !== null) {
             $tenant->setType($request->type);
         }
@@ -45,20 +37,14 @@ final class TenantMapper
         return $tenant;
     }
 
+    /**
+     * Delegue la projection Entite -> DTO a la fabrique statique du DTO
+     * de reponse, qui constitue l'unique source de verite du mapping
+     * en lecture (aucune duplication de la liste des champs).
+     */
     public function toResponse(Tenant $tenant): TenantResponse
     {
-        return new TenantResponse(
-            uuid: $tenant->getUuid(),
-            organizationUuid: $tenant->getOrganization()->getUuid(),
-            type: $tenant->getType(),
-            fullName: $tenant->getFullName(),
-            companyName: $tenant->getCompanyName(),
-            phone: $tenant->getPhone(),
-            email: $tenant->getEmail(),
-            address: $tenant->getAddress(),
-            notes: $tenant->getNotes(),
-            createdAt: $tenant->getCreatedAt(),
-            updatedAt: $tenant->getUpdatedAt()
-        );
+        return TenantResponse::fromEntity($tenant);
     }
+
 }

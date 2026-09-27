@@ -12,6 +12,8 @@ use App\Mapper\Identity\OrganizationUserMapper;
 use App\Repository\Identity\OrganizationRepository;
 use App\Repository\Identity\OrganizationUserRepository;
 use App\Repository\Identity\UserRepository;
+use App\Security\SecurityAction;
+use App\Security\SecurityServiceInterface;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\Validator\Validator\ValidatorInterface;
 
@@ -35,7 +37,8 @@ final readonly class OrganizationUserService
         private OrganizationRepository $orgRepository,
         private UserRepository $userRepository,
         private OrganizationUserMapper $mapper,
-        private ValidatorInterface $validator
+        private ValidatorInterface $validator,
+        private SecurityServiceInterface $security
     ) {
     }
 
@@ -56,7 +59,15 @@ final readonly class OrganizationUserService
                 ->autoInitFlush();
         }
 
-        $paginatedResult = $this->orgUserRepository->findPaginatedByOrganization($org, $query);
+        // Consulter la liste des membres d'une Organization est un droit
+        // d'administration, pas une simple lecture.
+        $this->security->checkOrganizationAccess($org, SecurityAction::MANAGE_USERS);
+
+        $paginatedResult = $this->orgUserRepository->findPaginatedByOrganization(
+            $org,
+            $query->page,
+            $query->limit
+        );
 
         $data = [
             'items' => array_map([$this->mapper, 'toResponse'], $paginatedResult['items']),
@@ -107,6 +118,12 @@ final readonly class OrganizationUserService
                 ->autoInitFlush();
         }
 
+        // Attribuer un rôle revient à accorder des droits : sans ce contrôle,
+        // n'importe quel utilisateur authentifié pouvait se nommer lui-même
+        // PATRON d'une Organization et hériter de toutes ses données.
+        $this->security->checkOrganizationAccess($organization, SecurityAction::MANAGE_USERS);
+        $this->security->checkUserAccess($user, SecurityAction::MANAGE_USERS);
+
         $existing = $this->orgUserRepository->findOneBy(['organization' => $organization, 'user' => $user]);
         if ($existing) {
             return $feedback
@@ -148,6 +165,11 @@ final readonly class OrganizationUserService
                 ->autoInitFlush();
         }
 
+        $this->security->checkOrganizationAccess(
+            $orgUser->getOrganization(),
+            SecurityAction::MANAGE_USERS
+        );
+
         $violations = $this->validator->validate($request, groups: ['update']);
         if (count($violations) > 0) {
             return $feedback
@@ -185,6 +207,11 @@ final readonly class OrganizationUserService
                 ->setStatus(404)
                 ->autoInitFlush();
         }
+
+        $this->security->checkOrganizationAccess(
+            $orgUser->getOrganization(),
+            SecurityAction::MANAGE_USERS
+        );
 
         $this->em->remove($orgUser);
         $this->em->flush();

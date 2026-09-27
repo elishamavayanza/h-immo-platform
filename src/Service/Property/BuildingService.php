@@ -9,9 +9,12 @@ use App\Dto\Request\PaginationQuery;
 use App\Dto\Request\Property\BuildingRequest;
 use App\Entity\Property\Building;
 use App\Mapper\Property\BuildingMapper;
-use App\Repository\Property\BuildingRepository;
 use App\Repository\Property\ParcelRepository;
+use App\Repository\Property\BuildingRepository;
+use App\Security\SecurityAction;
+use App\Security\SecurityServiceInterface;
 use Doctrine\ORM\EntityManagerInterface;
+use Symfony\Component\Uid\Uuid;
 use Symfony\Component\Validator\Validator\ValidatorInterface;
 
 /**
@@ -19,194 +22,238 @@ use Symfony\Component\Validator\Validator\ValidatorInterface;
  *
  * Package : Property Management — Service Métier
  *
- * Gère la logique applicative, la validation et la persistance des bâtiments (Building).
- * Assure également l'unicité des références par parcelle.
+ * Gère les bâtiments (Building) d'une parcelle et assure l'unicité de leur
+ * référence au sein de cette parcelle.
+ *
+ * Portée : `building -> parcel -> city -> organization`; la liste est bornée
+ * aux villes réellement accessibles à l'appelant.
  */
 final readonly class BuildingService
 {
-    /**
-     * Initialise les repositories, le mapper et les services de validation.
-     * Injecte l'EntityManager pour la persistance des entités Building.
-     */
     public function __construct(
-        private EntityManagerInterface $em,
         private BuildingRepository $buildingRepository,
         private ParcelRepository $parcelRepository,
-        private BuildingMapper $mapper,
+        private BuildingMapper $buildingMapper,
+        private SecurityServiceInterface $securityService,
+        private EntityManagerInterface $entityManager,
         private ValidatorInterface $validator
     ) {
     }
 
-    /**
-     * Récupère la liste paginée des bâtiments enregistrés.
-     * Retourne le jeu de données mappé encapsulé dans un objet Feedback HTTP 200.
-     */
     public function list(PaginationQuery $query): Feedback
     {
         $feedback = new Feedback();
-        $paginatedResult = $this->buildingRepository->findPaginated($query);
 
-        $data = [
-            'items' => array_map([$this->mapper, 'toResponse'], $paginatedResult['items']),
-            'total' => $paginatedResult['total'],
-            'page' => $query->page,
-            'limit' => $query->limit,
-        ];
+        $result = $this->buildingRepository->findPaginatedAccessible(
+            $this->securityService->getScopedCities(),
+            $query->page,
+            $query->limit,
+            $query->search
+        );
 
         return $feedback
-            ->setData($data)
+            ->setData([
+                'items' => array_map([$this->buildingMapper, 'toResponse'], $result['items']),
+                'total' => $result['total'],
+                'page' => $query->page,
+                'limit' => $query->limit,
+            ])
             ->setFlushDescription('Liste des bâtiments récupérée avec succès.')
             ->setStatus(200)
             ->autoInitFlush();
     }
 
-    /**
-     * Restitue les détails d'un bâtiment spécifique désigné par son UUID.
-     * Renvoie une réponse Feedback 404 si le bâtiment n'est pas trouvé.
-     */
     public function getByUuid(string $uuid): Feedback
     {
         $feedback = new Feedback();
-        $building = $this->buildingRepository->findOneBy(['uuid' => $uuid]);
 
-        if (!$building) {
-            return $feedback
-                ->addError('uuid', 'Le bâtiment demandé n\'existe pas.')
-                ->setErrorFlushDescription('Bâtiment introuvable.')
-                ->setStatus(404)
-                ->autoInitFlush();
+        $buildingRepository = $this->findBuilding($uuid, $feedback);
+        if ($buildingRepository === null) {
+            return $feedback->autoInitFlush();
         }
 
+        $this->securityService->checkBuildingAccess($buildingRepository, SecurityAction::VIEW_BUILDING);
+
         return $feedback
-            ->setData($this->mapper->toResponse($building))
-            ->setFlushDescription('Détails du bâtiment récupérés avec succès.')
+            ->setData($this->buildingMapper->toResponse($buildingRepository))
+            ->setFlushDescription('Détails du bâtiment récupérés.')
             ->setStatus(200)
             ->autoInitFlush();
     }
 
-    /**
-     * Enregistre un nouveau bâtiment rattaché à une parcelle existante.
-     * Valide le DTO et garantit l'unicité de la référence au sein de la parcelle.
-     */
     public function create(BuildingRequest $request): Feedback
     {
         $feedback = new Feedback();
+
         $violations = $this->validator->validate($request, groups: ['create']);
-
         if (count($violations) > 0) {
-            return $feedback
-                ->bind($violations)
-                ->setErrorFlushDescription('Données du bâtiment invalides.')
+            return $feedback->bind($violations)
+                ->setErrorFlushDescription('Les données soumises sont invalides.')
                 ->setStatus(422)
                 ->autoInitFlush();
         }
 
-        $parcel = $this->parcelRepository->findOneBy(['uuid' => $request->parcelUuid]);
-        if (!$parcel) {
-            return $feedback
-                ->addError('parcelUuid', 'La parcelle spécifiée est introuvable.')
-                ->setErrorFlushDescription('Parcelle inexistante.')
-                ->setStatus(404)
+        $parent = $this->resolveParent($request->parcelUuid, $feedback);
+        if ($parent === null) {
+            return $feedback->autoInitFlush();
+        }
+
+        $this->securityService->checkParcelAccess($parent, SecurityAction::CREATE_BUILDING);
+
+        if ($request->reference !== null
+            && $this->buildingRepository->findOneByParcelAndReference($parent, $request->reference) !== null
+        ) {
+            return $feedback->addError('reference', 'Cette référence existe déjà pour ce parcelle.')
+                ->setErrorFlushDescription('Conflit d\'unicité détecté.')
+                ->setStatus(409)
                 ->autoInitFlush();
         }
 
-        $existing = $this->buildingRepository->findOneBy(['parcel' => $parcel, 'reference' => $request->reference]);
-        if ($existing) {
-            return $feedback
-                ->addError('reference', 'Cette référence existe déjà pour cette parcelle.')
-                ->setErrorFlushDescription('Référence de bâtiment déjà utilisée.')
-                ->setStatus(422)
-                ->autoInitFlush();
-        }
+        $buildingRepository = new Building();
+        $buildingRepository->setParcel($parent);
+        $this->buildingMapper->copyToEntity($request, $buildingRepository);
 
-        $building = new Building();
-        $building->setParcel($parcel);
-        $this->mapper->copyToEntity($request, $building);
-
-        $this->em->persist($building);
-        $this->em->flush();
+        $this->entityManager->persist($buildingRepository);
+        $this->entityManager->flush();
 
         return $feedback
-            ->setData($this->mapper->toResponse($building))
-            ->setFlushDescription('Bâtiment créé avec succès.')
+            ->setData($this->buildingMapper->toResponse($buildingRepository))
+            ->setFlushDescription('Le bâtiment a été créé avec succès.')
             ->setStatus(201)
             ->autoInitFlush();
     }
 
-    /**
-     * Met à jour les propriétés d'un bâtiment existant identifié par son UUID.
-     * Vérifie l'unicité de la référence en cas de modification de celle-ci.
-     */
     public function update(string $uuid, BuildingRequest $request): Feedback
     {
         $feedback = new Feedback();
-        $building = $this->buildingRepository->findOneBy(['uuid' => $uuid]);
 
-        if (!$building) {
-            return $feedback
-                ->addError('uuid', 'Bâtiment introuvable.')
-                ->setErrorFlushDescription('Mise à jour impossible.')
-                ->setStatus(404)
-                ->autoInitFlush();
+        $buildingRepository = $this->findBuilding($uuid, $feedback);
+        if ($buildingRepository === null) {
+            return $feedback->autoInitFlush();
         }
+
+        $this->securityService->checkBuildingAccess($buildingRepository, SecurityAction::UPDATE_BUILDING);
 
         $violations = $this->validator->validate($request, groups: ['update']);
         if (count($violations) > 0) {
-            return $feedback
-                ->bind($violations)
-                ->setErrorFlushDescription('Données de mise à jour invalides.')
+            return $feedback->bind($violations)
+                ->setErrorFlushDescription('Les données de mise à jour sont invalides.')
                 ->setStatus(422)
                 ->autoInitFlush();
         }
 
-        if ($request->reference !== null && $request->reference !== $building->getReference()) {
-            $existing = $this->buildingRepository->findOneBy([
-                'parcel' => $building->getParcel(),
-                'reference' => $request->reference,
-            ]);
+        // Le rattachement au parent (ville, parcelle, bâtiment) n'est pas
+        // modifiable : le déplacer reviendrait à faire basculer la ressource
+        // dans un autre périmètre d'organization sans contrôle.
+        if ($request->parcelUuid !== null
+            && $request->parcelUuid !== (string) $buildingRepository->getParcel()->getUuid()
+        ) {
+            $feedback->addError(
+                'parcelUuid',
+                'Le rattachement à un autre parcelle n\'est pas autorisé.'
+            );
 
-            if ($existing) {
-                return $feedback
-                    ->addError('reference', 'Cette référence est déjà attribuée dans cette parcelle.')
-                    ->setErrorFlushDescription('Conflit de référence.')
-                    ->setStatus(422)
+            return $feedback
+                ->setErrorFlushDescription('Changement de parcelle refusé.')
+                ->autoInitFlush();
+        }
+
+        if ($request->reference !== null && $request->reference !== $buildingRepository->getReference()) {
+            $existing = $this->buildingRepository->findOneByParcelAndReference(
+                $buildingRepository->getParcel(),
+                $request->reference
+            );
+
+            if ($existing !== null) {
+                return $feedback->addError('reference', 'Cette référence existe déjà pour ce parcelle.')
+                    ->setErrorFlushDescription('Conflit d\'unicité détecté.')
+                    ->setStatus(409)
                     ->autoInitFlush();
             }
         }
 
-        $this->mapper->copyToEntity($request, $building);
-        $this->em->flush();
+        $this->buildingMapper->copyToEntity($request, $buildingRepository);
+        $this->entityManager->flush();
 
         return $feedback
-            ->setData($this->mapper->toResponse($building))
-            ->setFlushDescription('Bâtiment mis à jour avec succès.')
+            ->setData($this->buildingMapper->toResponse($buildingRepository))
+            ->setFlushDescription('Le bâtiment a été mis à jour avec succès.')
             ->setStatus(200)
             ->autoInitFlush();
     }
 
-    /**
-     * Effectue une suppression logique (Soft Delete) du bâtiment.
-     * Marque la date de suppression sans retirer définitivement l'enregistrement.
-     */
     public function delete(string $uuid): Feedback
     {
         $feedback = new Feedback();
-        $building = $this->buildingRepository->findOneBy(['uuid' => $uuid]);
 
-        if (!$building) {
-            return $feedback
-                ->addError('uuid', 'Bâtiment introuvable.')
-                ->setErrorFlushDescription('Suppression impossible.')
-                ->setStatus(404)
-                ->autoInitFlush();
+        $buildingRepository = $this->findBuilding($uuid, $feedback);
+        if ($buildingRepository === null) {
+            return $feedback->autoInitFlush();
         }
 
-        $building->softDelete();
-        $this->em->flush();
+        $this->securityService->checkBuildingAccess($buildingRepository, SecurityAction::DELETE_BUILDING);
+
+        $buildingRepository->softDelete();
+        $this->entityManager->flush();
 
         return $feedback
             ->setFlushDescription('Le bâtiment a été supprimé avec succès.')
             ->setStatus(200)
             ->autoInitFlush();
+    }
+
+    /**
+     * Résolution du parent (ville, parcelle, bâtiment) par UUID public, avec
+     * contrôle d'accès : la ressource ne peut être rattachée qu'à un parent
+     * que l'appelant est autorisé à administrer.
+     */
+    private function resolveParent(?string $uuid, Feedback $feedback): ?Parcel
+    {
+        if ($uuid === null || $uuid === '') {
+            $feedback->addError('parcelUuid', 'Le parcelle est obligatoire.');
+
+            return null;
+        }
+
+        try {
+            $parsed = Uuid::fromString($uuid);
+        } catch (\InvalidArgumentException) {
+            $feedback->addError('parcelUuid', 'Identifiant de parcelle invalide.');
+
+            return null;
+        }
+
+        $parent = $this->parcelRepository->findOneByUuid($parsed);
+
+        if ($parent === null) {
+            $feedback
+                ->addError('parcelUuid', 'Le parcelle spécifié n\'existe pas.')
+                ->setStatus(404);
+        }
+
+        return $parent;
+    }
+
+    private function findBuilding(string $uuid, Feedback $feedback): ?Building
+    {
+        try {
+            $parsed = Uuid::fromString($uuid);
+        } catch (\InvalidArgumentException) {
+            $feedback
+                ->setErrorFlushDescription('Identifiant de bâtiment invalide.')
+                ->setStatus(400);
+
+            return null;
+        }
+
+        $buildingRepository = $this->buildingRepository->findOneByUuid($parsed);
+
+        if ($buildingRepository === null) {
+            $feedback
+                ->setErrorFlushDescription('Le bâtiment demandé n\'existe pas.')
+                ->setStatus(404);
+        }
+
+        return $buildingRepository;
     }
 }

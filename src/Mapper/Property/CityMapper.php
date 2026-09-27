@@ -7,7 +7,6 @@ namespace App\Mapper\Property;
 use App\Dto\Request\Property\CityRequest;
 use App\Dto\Response\Property\CityResponse;
 use App\Entity\Property\City;
-use App\Mapper\Identity\OrganizationMapper;
 
 /**
  * CityMapper
@@ -17,35 +16,22 @@ use App\Mapper\Identity\OrganizationMapper;
  * Assure la conversion bidirectionnelle entre l'entité City
  * et ses DTOs de requête et de réponse associés.
  */
-final readonly class CityMapper
+final class CityMapper
 {
     /**
      * Injecte le mapper de l'organisation pour mapper les données d'appartenance.
      * Permet d'inclure les détails de l'organisation dans CityResponse.
      */
-    public function __construct(
-        private OrganizationMapper $organizationMapper
-    ) {
-    }
-
     /**
-     * Transforme une instance de l'entité City en DTO de réponse CityResponse.
-     * Convertit l'entité ville en structure de données prête pour l'exposition API.
+     * Delegue la projection Entite -> DTO a la fabrique statique du DTO
+     * de reponse, qui constitue l'unique source de verite du mapping
+     * en lecture (aucune duplication de la liste des champs).
      */
     public function toResponse(City $city): CityResponse
     {
-        return new CityResponse(
-            uuid: $city->getUuid(),
-            organization: $this->organizationMapper->toResponse($city->getOrganization()),
-            name: $city->getName(),
-            code: $city->getCode(),
-            province: $city->getProvince(),
-            country: $city->getCountry(),
-            status: $city->getStatus(),
-            createdAt: $city->getCreatedAt(),
-            updatedAt: $city->getUpdatedAt()
-        );
+        return CityResponse::fromEntity($city);
     }
+
 
     /**
      * Mappe les données d'un DTO CityRequest vers l'entité City.

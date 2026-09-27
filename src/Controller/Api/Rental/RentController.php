@@ -2,19 +2,17 @@
 
 declare(strict_types=1);
 
-namespace App\Controller\Rental;
+namespace App\Controller\Api\Rental;
 
 use App\Dto\Feedback;
 use App\Dto\Request\Rental\RentRequest;
-use App\Entity\Identity\Organization;
-use App\Entity\Identity\User;
 use App\Service\Rental\RentService;
 use App\Trait\FeedbackTrait;
 use OpenApi\Attributes as OA;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpKernel\Attribute\MapRequestPayload;
-use Symfony\Component\Routing\Annotation\Route;
+use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
 
 #[Route('/api/v1/rents', name: 'api_rents_')]
@@ -42,12 +40,7 @@ final class RentController extends AbstractController
     public function create(
         #[MapRequestPayload] RentRequest $request
     ): JsonResponse {
-        /** @var User $user */
-        $user = $this->getUser();
-        /** @var Organization $organization */
-        $organization = $user->getOrganization();
-
-        $feedback = $this->rentService->createRent($request, $organization);
+        $feedback = $this->rentService->createRent($request);
 
         return $this->json($feedback, $feedback->getStatus());
     }
@@ -63,12 +56,7 @@ final class RentController extends AbstractController
     )]
     public function show(string $uuid): JsonResponse
     {
-        /** @var User $user */
-        $user = $this->getUser();
-        /** @var Organization $organization */
-        $organization = $user->getOrganization();
-
-        $feedback = $this->rentService->getRentByUuid($uuid, $organization);
+        $feedback = $this->rentService->getRentByUuid($uuid);
 
         return $this->json($feedback, $feedback->getStatus());
     }
@@ -87,12 +75,7 @@ final class RentController extends AbstractController
         string $uuid,
         #[MapRequestPayload] RentRequest $request
     ): JsonResponse {
-        /** @var User $user */
-        $user = $this->getUser();
-        /** @var Organization $organization */
-        $organization = $user->getOrganization();
-
-        $feedback = $this->rentService->updateRent($uuid, $request, $organization);
+        $feedback = $this->rentService->updateRent($uuid, $request);
 
         return $this->json($feedback, $feedback->getStatus());
     }

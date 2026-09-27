@@ -6,20 +6,21 @@ namespace App\Mapper\Rental;
 
 use App\Dto\Request\Rental\RentRequest;
 use App\Dto\Response\Rental\RentResponse;
-use App\Entity\Rental\Lease;
 use App\Entity\Rental\Rent;
 
+/**
+ * RentMapper
+ *
+ * Package : Rental Management — Service de mapping d'entité
+ *
+ * Assure la conversion bidirectionnelle entre l'entité Rent
+ * et les objets DTO de requête et de réponse associés.
+ * Le bail parent est positionné par le service appelant.
+ */
 final class RentMapper
 {
-    public function toEntity(
-        RentRequest $request,
-        Lease $lease,
-        ?Rent $rent = null
-    ): Rent {
-        $rent ??= new Rent();
-
-        $rent->setLease($lease);
-
+    public function copyToEntity(RentRequest $request, Rent $rent): Rent
+    {
         if ($request->period !== null) {
             $rent->setPeriod($request->period);
         }
@@ -32,7 +33,9 @@ final class RentMapper
         if ($request->currency !== null) {
             $rent->setCurrency($request->currency);
         }
-        $rent->setStatus($request->status);
+        if ($request->status !== null) {
+            $rent->setStatus($request->status);
+        }
 
         return $rent;
     }

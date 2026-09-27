@@ -38,4 +38,35 @@ abstract class SoftDeletableEntity extends TimestampedEntity
 
         return $this;
     }
+
+    /**
+     * Marque l'entité comme supprimée logiquement.
+     *
+     * Raccourci symétrique de `setDeletedAt(new \DateTimeImmutable())`,
+     * factorisé ici pour que les services n'aient pas à répéter l'horloge
+     * système à chaque suppression. Il ne s'agit pas de logique métier :
+     * la décision de supprimer (et les contrôles d'accès qui la
+     * précèdent) restent dans les services.
+     */
+    public function softDelete(): static
+    {
+        $this->deletedAt = new \DateTimeImmutable();
+
+        return $this;
+    }
+
+    /**
+     * Annule une suppression logique (restaure la ligne).
+     */
+    public function restore(): static
+    {
+        $this->deletedAt = null;
+
+        return $this;
+    }
+
+    public function isDeleted(): bool
+    {
+        return $this->deletedAt !== null;
+    }
 }

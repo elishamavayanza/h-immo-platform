@@ -8,26 +8,19 @@ use App\Dto\Request\Rental\PaymentRequest;
 use App\Dto\Response\Rental\PaymentResponse;
 use App\Entity\Rental\Payment;
 
-final class PaymentDataMapper
+final class PaymentMapper
 {
+    /**
+     * Delegue la projection Entite -> DTO a la fabrique statique du DTO
+     * de reponse, qui constitue l'unique source de verite du mapping
+     * en lecture (aucune duplication de la liste des champs).
+     */
     public function toResponse(Payment $payment): PaymentResponse
     {
-        return new PaymentResponse(
-            uuid: $payment->getUuid()->toString(),
-            rentUuid: $payment->getRent()->getUuid()->toString(),
-            createdByUuid: $payment->getCreatedBy()->getUuid()->toString(),
-            amount: $payment->getAmount(),
-            currency: $payment->getCurrency(),
-            paymentDate: $payment->getPaymentDate(),
-            method: $payment->getMethod(),
-            reference: $payment->getReference(),
-            receiptNumber: $payment->getReceiptNumber(),
-            notes: $payment->getNotes(),
-            createdAt: $payment->getCreatedAt()
-        );
+        return PaymentResponse::fromEntity($payment);
     }
 
-    public function mapRequestToEntity(PaymentRequest $dto, Payment $payment): void
+    public function copyToEntity(PaymentRequest $dto, Payment $payment): Payment
     {
         if ($dto->amount !== null) {
             $payment->setAmount($dto->amount);
@@ -50,5 +43,7 @@ final class PaymentDataMapper
         if ($dto->notes !== null) {
             $payment->setNotes($dto->notes);
         }
+
+        return $payment;
     }
 }
