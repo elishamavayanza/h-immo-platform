@@ -15,9 +15,23 @@ use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
 
+/**
+ * AuditLogController
+ *
+ * Package : System & Audit
+ *
+ * Journal d'audit centralisé (traçabilité des actions sur la plateforme).
+ * Enregistre : action, type d'entité, ID, valeurs avant/après, organisation, utilisateur.
+ * Accessible uniquement aux rôles d'administration (ROLE_ADMIN).
+ * L'isolation Organization est appliquée : un PATRON/ADMIN_IMMOBILIER ne voit que son organisation.
+ *
+ * Endpoints :
+ * - GET /api/v1/system/audit-logs          : liste paginée avec filtres
+ * - GET /api/v1/system/audit-logs/{uuid}   : détails d'une entrée
+ */
 #[Route('/api/v1/system/audit-logs')]
 #[IsGranted('ROLE_ADMIN')]
-#[OA\Tag(name: 'System & Audit')]
+#[OA\Tag(name: 'System & Audit', description: 'Journal d\'audit centralisé (traçabilité, sécurité, conformité).')]
 final class AuditLogController extends AbstractController
 {
     public function __construct(

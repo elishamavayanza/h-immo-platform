@@ -19,8 +19,24 @@ use Symfony\Component\HttpKernel\Attribute\MapQueryString;
 use Symfony\Component\HttpKernel\Attribute\MapRequestPayload;
 use Symfony\Component\Routing\Attribute\Route;
 
+/**
+ * ParcelController
+ *
+ * Package : Property Management
+ *
+ * Gestion des parcelles cadastrales (création, lecture, mise à jour, suppression).
+ * Chaque parcelle est rattachée à une Ville et contient des immeubles.
+ * L'accès est restreint au périmètre Organization → City de l'utilisateur.
+ *
+ * Endpoints :
+ * - POST   /api/v1/parcels          : créer une parcelle
+ * - GET    /api/v1/parcels          : lister les parcelles (pagination)
+ * - GET    /api/v1/parcels/{uuid}   : détails d'une parcelle
+ * - PUT    /api/v1/parcels/{uuid}   : modifier une parcelle
+ * - DELETE /api/v1/parcels/{uuid}   : supprimer (soft delete)
+ */
 #[Route('/api/v1/parcels', name: 'api_parcels_')]
-#[OA\Tag(name: 'Parcels')]
+#[OA\Tag(name: 'Parcels', description: 'Gestion des parcelles cadastrales rattachées aux villes.')]
 final class ParcelController extends AbstractController
 {
     use FeedbackTrait;

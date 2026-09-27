@@ -15,9 +15,28 @@ use Symfony\Component\HttpKernel\Attribute\MapRequestPayload;
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
 
+/**
+ * LeaseController
+ *
+ * Package : Rental Management
+ *
+ * Gestion des contrats de bail (création, lecture, activation, résiliation).
+ * Un bail lie un Locataire à une Unité pour une période, avec un loyer et une devise.
+ * L'accès est restreint au périmètre Organization → City de l'utilisateur.
+ *
+ * Endpoints :
+ * - POST   /api/v1/leases          : créer un bail
+ * - GET    /api/v1/leases          : lister les baux (pagination)
+ * - GET    /api/v1/leases/{uuid}   : détails d'un bail
+ * - PUT    /api/v1/leases/{uuid}   : modifier un bail
+ * - PATCH  /api/v1/leases/{uuid}/activate   : activer un bail
+ * - PATCH  /api/v1/leases/{uuid}/terminate  : résilier un bail
+ * - PATCH  /api/v1/leases/{uuid}/cancel     : annuler un bail
+ * - DELETE /api/v1/leases/{uuid}   : supprimer (soft delete)
+ */
 #[Route('/api/v1/leases', name: 'api_leases_')]
 #[IsGranted('ROLE_USER')]
-#[OA\Tag(name: 'Leases')]
+#[OA\Tag(name: 'Leases', description: 'Gestion des contrats de bail (locataire, unité, loyer, période).')]
 final class LeaseController extends AbstractController
 {
     use FeedbackTrait;
