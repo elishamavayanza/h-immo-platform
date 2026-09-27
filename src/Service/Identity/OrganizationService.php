@@ -8,10 +8,16 @@ use App\Dto\Feedback;
 use App\Dto\Request\Identity\OrganizationRequest;
 use App\Dto\Request\PaginationQuery;
 use App\Entity\Identity\Organization;
+use App\Entity\Identity\OrganizationUser;
+use App\Entity\Identity\User;
+use App\Enum\OrganizationRole;
 use App\Mapper\Identity\OrganizationMapper;
 use App\Repository\Identity\OrganizationRepository;
+use App\Repository\Identity\OrganizationUserRepository;
+use App\Repository\Identity\UserRepository;
 use App\Security\SecurityAction;
 use App\Security\SecurityServiceInterface;
+use App\Service\Identity\PasswordResetService;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\Validator\Validator\ValidatorInterface;
 
@@ -32,9 +38,12 @@ final readonly class OrganizationService
     public function __construct(
         private EntityManagerInterface $em,
         private OrganizationRepository $repository,
+        private UserRepository $userRepository,
+        private OrganizationUserRepository $orgUserRepository,
         private OrganizationMapper $mapper,
         private ValidatorInterface $validator,
-        private SecurityServiceInterface $security
+        private SecurityServiceInterface $security,
+        private PasswordResetService $passwordResetService
     ) {
     }
 
@@ -105,6 +114,8 @@ final readonly class OrganizationService
 
     /**
      * Crée une nouvelle organisation après validation des contraintes d'unicité et de format.
+     * Crée aussi le compte PATRON (utilisateur responsable) et le rattache à l'organisation
+     * avec le rôle PATRON. Envoie un email de réinitialisation de mot de passe au PATRON.
      * Persiste l'entité en base et retourne le DTO de réponse dans le Feedback.
      */
     public function create(OrganizationRequest $request): Feedback
@@ -132,13 +143,54 @@ final readonly class OrganizationService
                 ->autoInitFlush();
         }
 
+        // Vérifier les champs PATRON obligatoires
+        if (!$request->patronEmail || !$request->patronFullName || !$request->patronPhone) {
+            return $feedback
+                ->addError('patron', 'Les informations du PATRON (email, nom, téléphone) sont obligatoires.')
+                ->setErrorFlushDescription('Données du PATRON incomplètes.')
+                ->setStatus(422)
+                ->autoInitFlush();
+        }
+
+        // Vérifier unicité de l'email du PATRON
+        if ($this->userRepository->findOneBy(['email' => $request->patronEmail])) {
+            return $feedback
+                ->addError('patronEmail', 'Cette adresse email est déjà utilisée par un autre utilisateur.')
+                ->setErrorFlushDescription('Conflit sur l\'email du PATRON.')
+                ->setStatus(422)
+                ->autoInitFlush();
+        }
+
         $organization = $this->mapper->copyToEntity($request, new Organization());
         $this->em->persist($organization);
         $this->em->flush();
 
+        // Créer l'utilisateur PATRON
+        $patron = new User();
+        $patron->setEmail($request->patronEmail);
+        $patron->setFullName($request->patronFullName);
+        $patron->setPhone($request->patronPhone);
+        $patron->setIsActive(true);
+        // Le mot de passe sera défini via le flux "mot de passe oublié"
+        $patron->setPassword(''); // Sera mis à jour via reset-password
+        $this->em->persist($patron);
+        $this->em->flush();
+
+        // Créer le lien OrganizationUser avec rôle PATRON
+        $orgUser = new OrganizationUser();
+        $orgUser->setOrganization($organization);
+        $orgUser->setUser($patron);
+        $orgUser->setRole(OrganizationRole::PATRON);
+        $this->em->persist($orgUser);
+        $this->em->flush();
+
+        // Déclencher l'envoi de l'email de réinitialisation de mot de passe
+        // (le PATRON n'a pas de mot de passe, il doit en définir un via le lien)
+        $this->passwordResetService->requestReset($request->patronEmail);
+
         return $feedback
             ->setData($this->mapper->toResponse($organization))
-            ->setFlushDescription('L\'organisation a été créée avec succès.')
+            ->setFlushDescription('L\'organisation et son PATRON ont été créés. Un email de configuration du mot de passe a été envoyé au PATRON.')
             ->setStatus(201)
             ->autoInitFlush();
     }

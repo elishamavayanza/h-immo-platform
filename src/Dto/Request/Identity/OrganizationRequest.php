@@ -101,7 +101,36 @@ final readonly class OrganizationRequest
             example: 'ACTIVE',
             enum: [OrganizationStatus::ACTIVE, OrganizationStatus::SUSPENDED, OrganizationStatus::INACTIVE]
         )]
-        public OrganizationStatus $status = OrganizationStatus::ACTIVE
+        public OrganizationStatus $status = OrganizationStatus::ACTIVE,
+
+        // --- Champs pour la création du PATRON (utilisateur responsable) ---
+        #[OA\Property(
+            description: 'Email du PATRON (sera son identifiant de connexion)',
+            example: 'patron@immo-rdc.cd',
+            maxLength: 180
+        )]
+        #[Assert\NotBlank(groups: ['create'])]
+        #[Assert\Email(groups: ['create'])]
+        #[Assert\Length(max: 180, groups: ['create'])]
+        public ?string $patronEmail = null,
+
+        #[OA\Property(
+            description: 'Nom complet du PATRON',
+            example: 'Jean Dupont',
+            maxLength: 200
+        )]
+        #[Assert\NotBlank(groups: ['create'])]
+        #[Assert\Length(max: 200, groups: ['create'])]
+        public ?string $patronFullName = null,
+
+        #[OA\Property(
+            description: 'Téléphone du PATRON',
+            example: '+243990000001',
+            maxLength: 30
+        )]
+        #[Assert\NotBlank(groups: ['create'])]
+        #[Assert\Length(max: 30, groups: ['create'])]
+        public ?string $patronPhone = null
     ) {
     }
 }
