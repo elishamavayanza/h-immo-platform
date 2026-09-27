@@ -1,0 +1,184 @@
+{% extends 'report/base.html.twig' %}
+
+{% block content %}
+    <div class="summary-grid">
+        <div class="summary-card">
+            <h4>Total Revenus</h4>
+            <div class="value">{{ report.totalRevenues }} {{ report.currency }}</div>
+        </div>
+        <div class="summary-card">
+            <h4>Total Dépenses</h4>
+            <div class="value">{{ report.totalExpenses }} {{ report.currency }}</div>
+        </div>
+        <div class="summary-card">
+            <h4>Résultat Net</h4>
+            <div class="value" style="color: {{ report.totalRevenues - report.totalExpenses >= 0 ? '#27ae60' : '#e74c3c' }};">
+                {{ report.totalRevenues - report.totalExpenses }} {{ report.currency }}
+            </div>
+        </div>
+        <div class="summary-card">
+            <h4>Total Impayés</h4>
+            <div class="value" style="color: #e74c3c;">{{ report.totalArrears }} {{ report.currency }}</div>
+        </div>
+    </div>
+
+    <h2>Résumé financier par période</h2>
+    {% if report.financialSummary %}
+    <table>
+        <thead>
+            <tr>
+                <th>Période</th>
+                <th class="text-right">Revenus</th>
+                <th class="text-right">Dépenses</th>
+                <th class="text-right">Résultat net</th>
+                <th class="text-center">Devise</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for item in report.financialSummary %}
+            <tr>
+                <td>{{ item.period }}</td>
+                <td class="text-right">{{ item.revenues }} {{ item.currency }}</td>
+                <td class="text-right">{{ item.expenses }} {{ item.currency }}</td>
+                <td class="text-right" style="color: {{ item.netResult >= 0 ? '#27ae60' : '#e74c3c' }};">{{ item.netResult }} {{ item.currency }}</td>
+                <td class="text-center">{{ item.currency }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <p>Aucune donnée financière pour cette période.</p>
+    {% endif %}
+
+    <h2>Occupation par ville</h2>
+    {% if report.occupancyByCity %}
+    <table>
+        <thead>
+            <tr>
+                <th>Ville</th>
+                <th class="text-center">Total unités</th>
+                <th class="text-center">Occupées</th>
+                <th class="text-center">Disponibles</th>
+                <th class="text-center">Taux (%)</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for item in report.occupancyByCity %}
+            <tr>
+                <td>{{ item.label }}</td>
+                <td class="text-center">{{ item.totalUnits }}</td>
+                <td class="text-center">{{ item.occupiedUnits }}</td>
+                <td class="text-center">{{ item.availableUnits }}</td>
+                <td class="text-center">{{ item.occupancyRate }}%</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <p>Aucune donnée d'occupation.</p>
+    {% endif %}
+
+    <h2>Occupation par parcelle</h2>
+    {% if report.occupancyByParcel %}
+    <table>
+        <thead>
+            <tr>
+                <th>Parcelle</th>
+                <th class="text-center">Total unités</th>
+                <th class="text-center">Occupées</th>
+                <th class="text-center">Disponibles</th>
+                <th class="text-center">Taux (%)</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for item in report.occupancyByParcel %}
+            <tr>
+                <td>{{ item.label }}</td>
+                <td class="text-center">{{ item.totalUnits }}</td>
+                <td class="text-center">{{ item.occupiedUnits }}</td>
+                <td class="text-center">{{ item.availableUnits }}</td>
+                <td class="text-center">{{ item.occupancyRate }}%</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% endif %}
+
+    <h2>Impayés et retards</h2>
+    {% if report.arrears %}
+    <table>
+        <thead>
+            <tr>
+                <th>Bail</th>
+                <th>Locataire</th>
+                <th>Unité</th>
+                <th class="text-right">Dû</th>
+                <th class="text-right">Payé</th>
+                <th class="text-right">Impayé</th>
+                <th class="text-center">Jours retard</th>
+                <th>Devise</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for item in report.arrears %}
+            <tr>
+                <td>{{ item.leaseReference }}</td>
+                <td>{{ item.tenantName }}</td>
+                <td>{{ item.unitLabel }}</td>
+                <td class="text-right">{{ item.amountDue }} {{ item.currency }}</td>
+                <td class="text-right">{{ item.amountPaid }} {{ item.currency }}</td>
+                <td class="text-right" style="color: #e74c3c;">{{ item.arrears }} {{ item.currency }}</td>
+                <td class="text-center">{{ item.daysOverdue }}</td>
+                <td>{{ item.currency }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <p>Aucun impayé pour cette période.</p>
+    {% endif %}
+
+    <h2>Dépenses par catégorie</h2>
+    {% if report.expensesByCategory %}
+    <table>
+        <thead>
+            <tr>
+                <th>Catégorie</th>
+                <th class="text-right">Montant total</th>
+                <th>Devise</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for item in report.expensesByCategory %}
+            <tr>
+                <td>{{ item.category }}</td>
+                <td class="text-right">{{ item.totalAmount }} {{ item.currency }}</td>
+                <td>{{ item.currency }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% endif %}
+
+    <h2>Dépenses par ville</h2>
+    {% if report.expensesByCity %}
+    <table>
+        <thead>
+            <tr>
+                <th>Ville</th>
+                <th class="text-right">Montant total</th>
+                <th>Devise</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for item in report.expensesByCity %}
+            <tr>
+                <td>{{ item.levelLabel }}</td>
+                <td class="text-right">{{ item.totalAmount }} {{ item.currency }}</td>
+                <td>{{ item.currency }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% endif %}
+{% endblock %}
