@@ -17,6 +17,9 @@ enum SecurityAction: string
     case VIEW_ORGANIZATION = 'view_organization';
 
     // Utilisateurs
+    case VIEW_USER = 'view_user';
+    case UPDATE_USER = 'update_user';
+    case DELETE_USER = 'delete_user';
     case MANAGE_USERS = 'manage_users';
     case SUSPEND_USER = 'suspend_user';
     case ACTIVATE_USER = 'activate_user';

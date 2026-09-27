@@ -21,3 +21,10 @@ services:
 
     # add more service definitions when explicit configuration is needed
     # please note that last definitions always *replace* previous ones
+
+    # Le provider doit recevoir la classe d'entité et la propriété
+    # d'identification, sinon Symfony ne peut pas le construire.
+    App\Security\AppUserProvider:
+        arguments:
+            $classOrAlias: App\Entity\Identity\User
+            $property: email

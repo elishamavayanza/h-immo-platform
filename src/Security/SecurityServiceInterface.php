@@ -1,7 +1,11 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Security;
 
+use App\Enum\OrganizationRole;
+use App\Enum\PlatformRole;
 use App\Entity\Identity\Organization;
 use App\Entity\Identity\User;
 use App\Entity\Property\Building;
@@ -14,11 +18,21 @@ use App\Entity\Rental\Rent;
 use App\Entity\Rental\Tenant;
 use App\Entity\System\AuditLog;
 
+/**
+ * Contrat d'autorisation.
+ *
+ * Les services doivent typer ce contrat plutôt que `SecurityService`
+ * concret : l'autorisation devient alors mockable et testable sans
+ * conteneur ni base de données.
+ *
+ * Convention : `check*()` lève une exception si l'accès est refusé,
+ * `can*()` renvoie un booléen, `is*()` décrit l'utilisateur courant.
+ */
 interface SecurityServiceInterface
 {
     /*
      * ============================================================
-     * CURRENT USER
+     * UTILISATEUR COURANT
      * ============================================================
      */
 
@@ -26,13 +40,25 @@ interface SecurityServiceInterface
 
     public function isAuthenticated(): bool;
 
+    /**
+     * L'utilisateur courant est-il utilisable (authentifié et actif) ?
+     */
+    public function isCurrentUserUsable(): bool;
+
     /*
      * ============================================================
-     * ROLES
+     * RÔLES
      * ============================================================
      */
 
     public function isSuperAdmin(): bool;
+
+    /**
+     * Exige un rôle de plateforme et renvoie l'utilisateur courant.
+     *
+     * @throws AccessDeniedException
+     */
+    public function requirePlatformRole(PlatformRole $role = PlatformRole::SUPER_ADMIN): User;
 
     public function isPatron(): bool;
 
@@ -42,6 +68,9 @@ interface SecurityServiceInterface
 
     public function hasRole(string $role): bool;
 
+    /**
+     * @param list<string> $roles
+     */
     public function hasAnyRole(array $roles): bool;
 
     /*
@@ -50,121 +79,252 @@ interface SecurityServiceInterface
      * ============================================================
      */
 
-    public function checkOrganizationAccess(
+    /**
+     * Rôle de l'utilisateur dans une organization donnée, `null` s'il
+     * n'en fait pas partie.
+     */
+    public function getOrganizationRole(User $user, Organization $organization): ?OrganizationRole;
+
+    public function hasOrganizationRole(
+        User $user,
         Organization $organization,
-        SecurityAction $action
-    ): void;
+        OrganizationRole ...$roles
+    ): bool;
 
-    public function checkOrganizationActive(
-        Organization $organization
-    ): void;
-
-    public function checkCurrentUserOrganizationActive(): void;
+    public function hasAnyOrganizationRoleOf(
+        Organization $organization,
+        OrganizationRole ...$roles
+    ): bool;
 
     public function belongsToOrganization(
         User $user,
         Organization $organization
     ): bool;
 
+    /**
+     * @return list<Organization>
+     */
+    public function getCurrentUserOrganizations(): array;
+
+    /**
+     * @throws AccessDeniedException
+     */
+    public function checkOrganizationAccess(
+        Organization $organization,
+        SecurityAction $action
+    ): void;
+
+    public function canAccessOrganization(
+        Organization $organization,
+        SecurityAction $action = SecurityAction::VIEW
+    ): bool;
+
+    /**
+     * @throws AccessDeniedException
+     */
+    public function checkOrganizationActive(Organization $organization): void;
+
+    /**
+     * @throws AccessDeniedException
+     */
+    public function checkCurrentUserOrganizationActive(): void;
+
     /*
      * ============================================================
-     * CITY
+     * UTILISATEUR
      * ============================================================
      */
 
+    /**
+     * @throws AccessDeniedException
+     * @throws UnauthenticatedException
+     */
+    public function checkUserAccess(
+        User $user,
+        SecurityAction $action = SecurityAction::VIEW_USER
+    ): void;
+
+    public function canAccessUser(
+        User $user,
+        SecurityAction $action = SecurityAction::VIEW_USER
+    ): bool;
+
+    /*
+     * ============================================================
+     * VILLE
+     * ============================================================
+     */
+
+    /**
+     * @throws AccessDeniedException
+     */
     public function checkCityAccess(
         City $city,
         SecurityAction $action
     ): void;
+
+    public function canAccessCity(
+        City $city,
+        SecurityAction $action = SecurityAction::VIEW
+    ): bool;
 
     public function isCityAllowed(
         User $user,
         City $city
     ): bool;
 
+    /**
+     * Villes accessibles à l'utilisateur courant.
+     *
+     * @return list<City>|null `null` = aucun filtre de ville à appliquer
+     */
+    public function getAccessibleCities(): ?array;
+
+    /**
+     * Villes à utiliser pour BORNER une requête de liste : la valeur n'est
+     * jamais `null`, une liste vide signifiant « aucune ville visible ».
+     *
+     * @return list<City>
+     */
+    public function getScopedCities(): array;
+
     /*
      * ============================================================
-     * PROPERTY (PARCEL / BUILDING / UNIT)
+     * PATRIMOINE (PARCELLE / BÂTIMENT / UNITÉ)
      * ============================================================
      */
 
-    public function checkParcelAccess(
+    /**
+     * @throws AccessDeniedException
+     */
+    public function checkParcelAccess(Parcel $parcel, SecurityAction $action): void;
+
+    public function canAccessParcel(
         Parcel $parcel,
-        SecurityAction $action
-    ): void;
+        SecurityAction $action = SecurityAction::VIEW
+    ): bool;
 
-    public function checkBuildingAccess(
+    /**
+     * @throws AccessDeniedException
+     */
+    public function checkBuildingAccess(Building $building, SecurityAction $action): void;
+
+    public function canAccessBuilding(
         Building $building,
-        SecurityAction $action
-    ): void;
+        SecurityAction $action = SecurityAction::VIEW
+    ): bool;
 
-    public function checkUnitAccess(
+    /**
+     * @throws AccessDeniedException
+     */
+    public function checkUnitAccess(Unit $unit, SecurityAction $action): void;
+
+    public function canAccessUnit(
         Unit $unit,
-        SecurityAction $action
-    ): void;
+        SecurityAction $action = SecurityAction::VIEW
+    ): bool;
 
     /*
      * ============================================================
-     * TENANT
+     * LOCATAIRE
      * ============================================================
      */
 
-    public function checkTenantAccess(
+    /**
+     * @throws AccessDeniedException
+     */
+    public function checkTenantAccess(Tenant $tenant, SecurityAction $action): void;
+
+    public function canAccessTenant(
         Tenant $tenant,
-        SecurityAction $action
-    ): void;
+        SecurityAction $action = SecurityAction::VIEW
+    ): bool;
 
     /*
      * ============================================================
-     * LEASE
+     * BAIL
      * ============================================================
      */
 
-    public function checkLeaseAccess(
+    /**
+     * @throws AccessDeniedException
+     */
+    public function checkLeaseAccess(Lease $lease, SecurityAction $action): void;
+
+    public function canAccessLease(
         Lease $lease,
-        SecurityAction $action
-    ): void;
+        SecurityAction $action = SecurityAction::VIEW
+    ): bool;
 
     /*
      * ============================================================
-     * RENT
+     * LOYER
      * ============================================================
      */
 
-    public function checkRentAccess(
+    /**
+     * @throws AccessDeniedException
+     */
+    public function checkRentAccess(Rent $rent, SecurityAction $action): void;
+
+    public function canAccessRent(
         Rent $rent,
-        SecurityAction $action
-    ): void;
+        SecurityAction $action = SecurityAction::VIEW
+    ): bool;
 
     /*
      * ============================================================
-     * PAYMENT
+     * PAIEMENT
      * ============================================================
      */
 
-    public function checkPaymentAccess(
+    /**
+     * @throws AccessDeniedException
+     */
+    public function checkPaymentAccess(Payment $payment, SecurityAction $action): void;
+
+    public function canAccessPayment(
         Payment $payment,
-        SecurityAction $action
-    ): void;
+        SecurityAction $action = SecurityAction::VIEW
+    ): bool;
 
     /*
      * ============================================================
-     * AUDIT
+     * JOURNAL D'AUDIT
      * ============================================================
      */
 
-    public function checkAuditLogAccess(
+    /**
+     * @throws AccessDeniedException
+     */
+    public function checkAuditLogAccess(AuditLog $auditLog, SecurityAction $action): void;
+
+    public function canAccessAuditLog(
         AuditLog $auditLog,
+        SecurityAction $action = SecurityAction::VIEW
+    ): bool;
+
+    /**
+     * Contrôle d'accès au journal d'audit d'une Organization, applicable
+     * avant toute requête de liste.
+     *
+     * @throws AccessDeniedException
+     */
+    public function checkOrganizationAuditLogAccess(
+        Organization $organization,
         SecurityAction $action
     ): void;
 
     /*
      * ============================================================
-     * PERMISSION
+     * PERMISSIONS
      * ============================================================
      */
 
     public function hasPermission(string $permission): bool;
 
+    /**
+     * @throws AccessDeniedException
+     */
     public function checkPermission(string $permission): void;
 }
