@@ -1,0 +1,99 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Controller\Rental;
+
+use App\Dto\Feedback;
+use App\Dto\Request\Rental\TenantRequest;
+use App\Entity\Identity\Organization;
+use App\Entity\Identity\User;
+use App\Service\Rental\TenantService;
+use App\Trait\FeedbackTrait;
+use OpenApi\Attributes as OA;
+use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
+use Symfony\Component\HttpFoundation\JsonResponse;
+use Symfony\Component\HttpKernel\Attribute\MapRequestPayload;
+use Symfony\Component\Routing\Annotation\Route;
+use Symfony\Component\Security\Http\Attribute\IsGranted;
+
+#[Route('/api/v1/tenants', name: 'api_tenants_')]
+#[IsGranted('ROLE_USER')]
+#[OA\Tag(name: 'Tenants')]
+final class TenantController extends AbstractController
+{
+    use FeedbackTrait;
+
+    public function __construct(
+        private readonly TenantService $tenantService
+    ) {
+    }
+
+    #[Route('', name: 'create', methods: ['POST'])]
+    #[OA\Post(
+        path: '/api/v1/tenants',
+        summary: 'Créer un nouveau locataire',
+        requestBody: new OA\RequestBody(content: new OA\JsonContent(ref: TenantRequest::class)),
+        responses: [
+            new OA\Response(response: 201, description: 'Locataire créé', content: new OA\JsonContent(ref: Feedback::class)),
+            new OA\Response(response: 422, description: 'Erreur de validation', content: new OA\JsonContent(ref: Feedback::class)),
+        ]
+    )]
+    public function create(
+        #[MapRequestPayload] TenantRequest $request
+    ): JsonResponse {
+        /** @var User $user */
+        $user = $this->getUser();
+        /** @var Organization $organization */
+        $organization = $user->getOrganization();
+
+        $feedback = $this->tenantService->createTenant($request, $organization);
+
+        return $this->json($feedback, $feedback->getStatus());
+    }
+
+    #[Route('/{uuid}', name: 'show', methods: ['GET'])]
+    #[OA\Get(
+        path: '/api/v1/tenants/{uuid}',
+        summary: 'Obtenir les détails d\'un locataire',
+        responses: [
+            new OA\Response(response: 200, description: 'Détails du locataire', content: new OA\JsonContent(ref: Feedback::class)),
+            new OA\Response(response: 404, description: 'Locataire non trouvé', content: new OA\JsonContent(ref: Feedback::class)),
+        ]
+    )]
+    public function show(string $uuid): JsonResponse
+    {
+        /** @var User $user */
+        $user = $this->getUser();
+        /** @var Organization $organization */
+        $organization = $user->getOrganization();
+
+        $feedback = $this->tenantService->getTenantByUuid($uuid, $organization);
+
+        return $this->json($feedback, $feedback->getStatus());
+    }
+
+    #[Route('/{uuid}', name: 'update', methods: ['PUT', 'PATCH'])]
+    #[OA\Put(
+        path: '/api/v1/tenants/{uuid}',
+        summary: 'Mettre à jour la fiche d\'un locataire',
+        requestBody: new OA\RequestBody(content: new OA\JsonContent(ref: TenantRequest::class)),
+        responses: [
+            new OA\Response(response: 200, description: 'Locataire mis à jour', content: new OA\JsonContent(ref: Feedback::class)),
+            new OA\Response(response: 422, description: 'Erreur de validation', content: new OA\JsonContent(ref: Feedback::class)),
+        ]
+    )]
+    public function update(
+        string $uuid,
+        #[MapRequestPayload] TenantRequest $request
+    ): JsonResponse {
+        /** @var User $user */
+        $user = $this->getUser();
+        /** @var Organization $organization */
+        $organization = $user->getOrganization();
+
+        $feedback = $this->tenantService->updateTenant($uuid, $request, $organization);
+
+        return $this->json($feedback, $feedback->getStatus());
+    }
+}
