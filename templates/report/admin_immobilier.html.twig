@@ -1,0 +1,150 @@
+{% extends 'report/base.html.twig' %}
+
+{% block content %}
+    <div class="summary-grid">
+        <div class="summary-card">
+            <h4>Total unités gérées</h4>
+            <div class="value">{{ report.totalUnits }}</div>
+        </div>
+        <div class="summary-card">
+            <h4>Taux occupation global</h4>
+            <div class="value">{{ report.globalOccupancyRate }}%</div>
+        </div>
+        <div class="summary-card">
+            <h4>Devise</h4>
+            <div class="value">{{ report.currency }}</div>
+        </div>
+    </div>
+
+    <h2>Occupation par parcelle</h2>
+    {% if report.occupancyByParcel %}
+    <table>
+        <thead>
+            <tr>
+                <th>Parcelle</th>
+                <th class="text-center">Total unités</th>
+                <th class="text-center">Occupées</th>
+                <th class="text-center">Disponibles</th>
+                <th class="text-center">Taux (%)</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for item in report.occupancyByParcel %}
+            <tr>
+                <td>{{ item.label }}</td>
+                <td class="text-center">{{ item.totalUnits }}</td>
+                <td class="text-center">{{ item.occupiedUnits }}</td>
+                <td class="text-center">{{ item.availableUnits }}</td>
+                <td class="text-center">{{ item.occupancyRate }}%</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% endif %}
+
+    <h2>Occupation par immeuble</h2>
+    {% if report.occupancyByBuilding %}
+    <table>
+        <thead>
+            <tr>
+                <th>Immeuble</th>
+                <th class="text-center">Total unités</th>
+                <th class="text-center">Occupées</th>
+                <th class="text-center">Disponibles</th>
+                <th class="text-center">Taux (%)</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for item in report.occupancyByBuilding %}
+            <tr>
+                <td>{{ item.label }}</td>
+                <td class="text-center">{{ item.totalUnits }}</td>
+                <td class="text-center">{{ item.occupiedUnits }}</td>
+                <td class="text-center">{{ item.availableUnits }}</td>
+                <td class="text-center">{{ item.occupancyRate }}%</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% endif %}
+
+    <h2>Impayés et retards</h2>
+    {% if report.arrears %}
+    <table>
+        <thead>
+            <tr>
+                <th>Bail</th>
+                <th>Locataire</th>
+                <th>Unité</th>
+                <th class="text-right">Dû</th>
+                <th class="text-right">Payé</th>
+                <th class="text-right">Impayé</th>
+                <th class="text-center">Jours retard</th>
+                <th>Devise</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for item in report.arrears %}
+            <tr>
+                <td>{{ item.leaseReference }}</td>
+                <td>{{ item.tenantName }}</td>
+                <td>{{ item.unitLabel }}</td>
+                <td class="text-right">{{ item.amountDue }} {{ item.currency }}</td>
+                <td class="text-right">{{ item.amountPaid }} {{ item.currency }}</td>
+                <td class="text-right" style="color: #e74c3c;">{{ item.arrears }} {{ item.currency }}</td>
+                <td class="text-center">{{ item.daysOverdue }}</td>
+                <td>{{ item.currency }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <p>Aucun impayé pour cette période.</p>
+    {% endif %}
+
+    <h2>Dépenses liées aux biens</h2>
+    {% if report.propertyExpenses %}
+    <table>
+        <thead>
+            <tr>
+                <th>Catégorie</th>
+                <th>Niveau</th>
+                <th>Cible</th>
+                <th class="text-right">Montant</th>
+                <th>Devise</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for item in report.propertyExpenses %}
+            <tr>
+                <td>{{ item.category }}</td>
+                <td>{{ item.level }}</td>
+                <td>{{ item.levelLabel }}</td>
+                <td class="text-right">{{ item.totalAmount }} {{ item.currency }}</td>
+                <td>{{ item.currency }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% endif %}
+
+    <h2>Évolution de l'occupation</h2>
+    {% if report.occupancyEvolution %}
+    <table>
+        <thead>
+            <tr>
+                <th>Période</th>
+                <th class="text-center">Taux (%)</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for item in report.occupancyEvolution %}
+            <tr>
+                <td>{{ item.label }}</td>
+                <td class="text-center">{{ item.occupancyRate }}%</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% endif %}
+{% endblock %}

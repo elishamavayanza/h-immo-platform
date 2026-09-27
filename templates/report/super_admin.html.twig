@@ -1,0 +1,54 @@
+{% extends 'report/base.html.twig' %}
+
+{% block content %}
+    <div class="summary-grid">
+        <div class="summary-card">
+            <h4>Total organisations</h4>
+            <div class="value">{{ report.totalOrganizations }}</div>
+        </div>
+        <div class="summary-card">
+            <h4>Organisations actives</h4>
+            <div class="value">{{ report.activeOrganizations }}</div>
+        </div>
+        <div class="summary-card">
+            <h4>Total utilisateurs</h4>
+            <div class="value">{{ report.totalUsers }}</div>
+        </div>
+    </div>
+
+    <h2>Détail par organisation</h2>
+    {% if report.organizations %}
+    <table>
+        <thead>
+            <tr>
+                <th>Organisation</th>
+                <th>Code</th>
+                <th class="text-center">Villes</th>
+                <th class="text-center">Unités</th>
+                <th class="text-center">Taux occ. (%)</th>
+                <th class="text-right">Revenus</th>
+                <th class="text-right">Dépenses</th>
+                <th class="text-right">Impayés</th>
+                <th>Statut</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for item in report.organizations %}
+            <tr>
+                <td>{{ item.name }}</td>
+                <td>{{ item.code }}</td>
+                <td class="text-center">{{ item.cityCount }}</td>
+                <td class="text-center">{{ item.unitCount }}</td>
+                <td class="text-center">{{ item.occupancyRate }}%</td>
+                <td class="text-right">{{ item.revenues }}</td>
+                <td class="text-right">{{ item.expenses }}</td>
+                <td class="text-right" style="color: #e74c3c;">{{ item.arrears }}</td>
+                <td><span class="badge badge-{{ item.status == 'ACTIVE' ? 'success' : 'danger' }}">{{ item.status }}</span></td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <p>Aucune organisation trouvée.</p>
+    {% endif %}
+{% endblock %}

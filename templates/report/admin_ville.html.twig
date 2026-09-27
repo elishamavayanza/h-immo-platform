@@ -1,0 +1,162 @@
+{% extends 'report/base.html.twig' %}
+
+{% block content %}
+    <div class="summary-grid">
+        <div class="summary-card">
+            <h4>Total unités</h4>
+            <div class="value">{{ report.totalUnits }}</div>
+        </div>
+        <div class="summary-card">
+            <h4>Taux occupation</h4>
+            <div class="value">{{ report.occupancyRate }}%</div>
+        </div>
+        <div class="summary-card">
+            <h4>Total dépenses</h4>
+            <div class="value">{{ report.totalExpenses }} {{ report.currency }}</div>
+        </div>
+        <div class="summary-card">
+            <h4>Personnel</h4>
+            <div class="value">{{ report.workers|length }}</div>
+        </div>
+    </div>
+
+    <h2>Occupation par parcelle</h2>
+    {% if report.occupancyByParcel %}
+    <table>
+        <thead>
+            <tr>
+                <th>Parcelle</th>
+                <th class="text-center">Total unités</th>
+                <th class="text-center">Occupées</th>
+                <th class="text-center">Disponibles</th>
+                <th class="text-center">Taux (%)</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for item in report.occupancyByParcel %}
+            <tr>
+                <td>{{ item.label }}</td>
+                <td class="text-center">{{ item.totalUnits }}</td>
+                <td class="text-center">{{ item.occupiedUnits }}</td>
+                <td class="text-center">{{ item.availableUnits }}</td>
+                <td class="text-center">{{ item.occupancyRate }}%</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% endif %}
+
+    <h2>Occupation par immeuble</h2>
+    {% if report.occupancyByBuilding %}
+    <table>
+        <thead>
+            <tr>
+                <th>Immeuble</th>
+                <th class="text-center">Total unités</th>
+                <th class="text-center">Occupées</th>
+                <th class="text-center">Disponibles</th>
+                <th class="text-center">Taux (%)</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for item in report.occupancyByBuilding %}
+            <tr>
+                <td>{{ item.label }}</td>
+                <td class="text-center">{{ item.totalUnits }}</td>
+                <td class="text-center">{{ item.occupiedUnits }}</td>
+                <td class="text-center">{{ item.availableUnits }}</td>
+                <td class="text-center">{{ item.occupancyRate }}%</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% endif %}
+
+    <h2>Impayés et retards</h2>
+    {% if report.arrears %}
+    <table>
+        <thead>
+            <tr>
+                <th>Bail</th>
+                <th>Locataire</th>
+                <th>Unité</th>
+                <th class="text-right">Dû</th>
+                <th class="text-right">Payé</th>
+                <th class="text-right">Impayé</th>
+                <th class="text-center">Jours retard</th>
+                <th>Devise</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for item in report.arrears %}
+            <tr>
+                <td>{{ item.leaseReference }}</td>
+                <td>{{ item.tenantName }}</td>
+                <td>{{ item.unitLabel }}</td>
+                <td class="text-right">{{ item.amountDue }} {{ item.currency }}</td>
+                <td class="text-right">{{ item.amountPaid }} {{ item.currency }}</td>
+                <td class="text-right" style="color: #e74c3c;">{{ item.arrears }} {{ item.currency }}</td>
+                <td class="text-center">{{ item.daysOverdue }}</td>
+                <td>{{ item.currency }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <p>Aucun impayé pour cette période.</p>
+    {% endif %}
+
+    <h2>Dépenses de la ville</h2>
+    {% if report.cityExpenses %}
+    <table>
+        <thead>
+            <tr>
+                <th>Catégorie</th>
+                <th>Niveau</th>
+                <th>Cible</th>
+                <th class="text-right">Montant</th>
+                <th>Devise</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for item in report.cityExpenses %}
+            <tr>
+                <td>{{ item.category }}</td>
+                <td>{{ item.level }}</td>
+                <td>{{ item.levelLabel }}</td>
+                <td class="text-right">{{ item.totalAmount }} {{ item.currency }}</td>
+                <td>{{ item.currency }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% endif %}
+
+    <h2>Personnel / Travailleurs</h2>
+    {% if report.workers %}
+    <table>
+        <thead>
+            <tr>
+                <th>Travailleur</th>
+                <th>Rôle</th>
+                <th>Affectation</th>
+                <th class="text-right">Salaire mensuel</th>
+                <th>Devise</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for item in report.workers %}
+            <tr>
+                <td>{{ item.fullName }}</td>
+                <td><span class="badge badge-info">{{ item.role }}</span></td>
+                <td>{{ item.assignmentLabel }}</td>
+                <td class="text-right">{{ item.monthlySalary }} {{ item.currency }}</td>
+                <td>{{ item.currency }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <p>Aucun travailleur affecté à cette ville.</p>
+    {% endif %}
+{% endblock %}
