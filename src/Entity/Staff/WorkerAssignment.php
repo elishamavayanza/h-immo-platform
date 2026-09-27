@@ -11,6 +11,7 @@ use App\Entity\Property\Unit;
 use App\Entity\Shared\SoftDeletableEntity;
 use App\Enum\Currency;
 use App\Enum\WorkerRole;
+use App\Repository\Staff\WorkerAssignmentRepository;
 use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
 
@@ -35,7 +36,7 @@ use Doctrine\ORM\Mapping as ORM;
  * enregistrés dans Expense avec la catégorie SALARY, ce qui évite de dupliquer
  * un montant entre son taux contractuel et son règlement.
  */
-#[ORM\Entity]
+#[ORM\Entity(repositoryClass: WorkerAssignmentRepository::class)]
 #[ORM\Table(name: 'worker_assignment')]
 #[ORM\Index(name: 'idx_assignment_worker', columns: ['worker_id'])]
 #[ORM\Index(name: 'idx_assignment_city', columns: ['city_id'])]
@@ -44,7 +45,7 @@ class WorkerAssignment extends SoftDeletableEntity
     /**
      * Travailleur affecté.
      */
-    #[ORM\ManyToOne(targetEntity: Worker::class)]
+    #[ORM\ManyToOne(targetEntity: Worker::class, inversedBy: 'assignments')]
     #[ORM\JoinColumn(name: 'worker_id', referencedColumnName: 'id', nullable: false)]
     private Worker $worker;
 

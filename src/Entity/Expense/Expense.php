@@ -15,6 +15,7 @@ use App\Entity\Staff\Worker;
 use App\Enum\Currency;
 use App\Enum\ExpenseCategory;
 use App\Enum\PaymentMethod;
+use App\Repository\Expense\ExpenseRepository;
 use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
 
@@ -43,7 +44,7 @@ use Doctrine\ORM\Mapping as ORM;
  * TimestampedEntity et par le journal d'audit ; cette entité n'est donc pas
  * supprimable logiquement, à l'instar de Payment et Rent.
  */
-#[ORM\Entity]
+#[ORM\Entity(repositoryClass: ExpenseRepository::class)]
 #[ORM\Table(name: 'expense')]
 #[ORM\Index(name: 'idx_expense_city_date', columns: ['city_id', 'expense_date'])]
 #[ORM\Index(name: 'idx_expense_category', columns: ['category'])]

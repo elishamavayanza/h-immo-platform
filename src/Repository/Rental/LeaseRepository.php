@@ -157,4 +157,35 @@ class LeaseRepository extends ServiceEntityRepository
 
         return $this->fetchPaginated($qb, $page, $limit);
     }
+
+    /**
+     * Trouve les baux actifs selon les organisations et villes spécifiées.
+     *
+     * @return Lease[]
+     */
+    public function findActiveByOrganizationsAndCities(
+        ?array $organizationIds = null,
+        ?array $cityIds = null
+    ): array {
+        $qb = $this->createQueryBuilder('l')
+            ->innerJoin('l.unit', 'u')
+            ->innerJoin('u.building', 'b')
+            ->innerJoin('b.parcel', 'par')
+            ->innerJoin('par.city', 'c')
+            ->andWhere('l.status = :status')
+            ->andWhere('l.deletedAt IS NULL')
+            ->setParameter('status', LeaseStatus::ACTIVE);
+
+        if ($organizationIds !== null && !empty($organizationIds)) {
+            $qb->andWhere('l.organization IN (:orgs)')
+                ->setParameter('orgs', $organizationIds);
+        }
+
+        if ($cityIds !== null && !empty($cityIds)) {
+            $qb->andWhere('c.id IN (:cities)')
+                ->setParameter('cities', $cityIds);
+        }
+
+        return $qb->getQuery()->getResult();
+    }
 }

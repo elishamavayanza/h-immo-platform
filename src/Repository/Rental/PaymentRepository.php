@@ -120,4 +120,49 @@ class PaymentRepository extends ServiceEntityRepository
 
         return $this->fetchPaginated($qb, $page, $limit);
     }
+
+    /**
+     * Résumé financier par période pour les paiements.
+     *
+     * @return array<array{period: string, total: string, currency: string}>
+     */
+    public function getFinancialSummary(
+        ?array $organizationIds = null,
+        ?array $cityIds = null,
+        ?\DateTimeImmutable $periodFrom = null,
+        ?\DateTimeImmutable $periodTo = null
+    ): array {
+        $qb = $this->createQueryBuilder('p')
+            ->select('DATE_FORMAT(p.paymentDate, \'%Y-%m\') as period, SUM(p.amount) as total, p.currency')
+            ->innerJoin('p.rent', 'r')
+            ->innerJoin('r.lease', 'l')
+            ->groupBy('period, p.currency')
+            ->orderBy('period', 'ASC');
+
+        if ($organizationIds !== null && !empty($organizationIds)) {
+            $qb->andWhere('l.organization IN (:orgs)')
+                ->setParameter('orgs', $organizationIds);
+        }
+
+        if ($cityIds !== null && !empty($cityIds)) {
+            $qb->innerJoin('l.unit', 'u')
+                ->innerJoin('u.building', 'b')
+                ->innerJoin('b.parcel', 'par')
+                ->innerJoin('par.city', 'c')
+                ->andWhere('c.id IN (:cities)')
+                ->setParameter('cities', $cityIds);
+        }
+
+        if ($periodFrom !== null) {
+            $qb->andWhere('p.paymentDate >= :periodFrom')
+                ->setParameter('periodFrom', $periodFrom);
+        }
+
+        if ($periodTo !== null) {
+            $qb->andWhere('p.paymentDate <= :periodTo')
+                ->setParameter('periodTo', $periodTo);
+        }
+
+        return $qb->getQuery()->getResult();
+    }
 }

@@ -6,6 +6,9 @@ namespace App\Entity\Staff;
 
 use App\Entity\Identity\Organization;
 use App\Entity\Shared\SoftDeletableEntity;
+use App\Repository\Staff\WorkerRepository;
+use Doctrine\Common\Collections\ArrayCollection;
+use Doctrine\Common\Collections\Collection;
 use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
 
@@ -27,7 +30,7 @@ use Doctrine\ORM\Mapping as ORM;
  * il rend l'isolation inter-entreprise vérifiable sans traverser la
  * chaîne du patrimoine.
  */
-#[ORM\Entity]
+#[ORM\Entity(repositoryClass: WorkerRepository::class)]
 #[ORM\Table(name: 'worker')]
 #[ORM\UniqueConstraint(name: 'uniq_worker_org_national_id', columns: ['organization_id', 'national_id'])]
 class Worker extends SoftDeletableEntity
@@ -74,6 +77,19 @@ class Worker extends SoftDeletableEntity
      */
     #[ORM\Column(type: Types::TEXT, nullable: true)]
     private ?string $notes = null;
+
+    /**
+     * Affectations de ce travailleur.
+     *
+     * @var Collection<int, WorkerAssignment>
+     */
+    #[ORM\OneToMany(targetEntity: WorkerAssignment::class, mappedBy: 'worker', cascade: ['persist', 'remove'], orphanRemoval: true)]
+    private Collection $assignments;
+
+    public function __construct()
+    {
+        $this->assignments = new ArrayCollection();
+    }
 
     public function getOrganization(): Organization
     {
@@ -155,6 +171,35 @@ class Worker extends SoftDeletableEntity
     public function setNotes(?string $notes): static
     {
         $this->notes = $notes;
+
+        return $this;
+    }
+
+    /**
+     * @return Collection<int, WorkerAssignment>
+     */
+    public function getAssignments(): Collection
+    {
+        return $this->assignments;
+    }
+
+    public function addAssignment(WorkerAssignment $assignment): static
+    {
+        if (!$this->assignments->contains($assignment)) {
+            $this->assignments->add($assignment);
+            $assignment->setWorker($this);
+        }
+
+        return $this;
+    }
+
+    public function removeAssignment(WorkerAssignment $assignment): static
+    {
+        if ($this->assignments->removeElement($assignment)) {
+            if ($assignment->getWorker() === $this) {
+                $assignment->setWorker(null);
+            }
+        }
 
         return $this;
     }
