@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Security;
 
+use App\Entity\Expense\Expense;
 use App\Entity\Identity\Organization;
 use App\Entity\Identity\User;
 use App\Entity\Property\Building;
@@ -14,6 +15,8 @@ use App\Entity\Rental\Lease;
 use App\Entity\Rental\Payment;
 use App\Entity\Rental\Rent;
 use App\Entity\Rental\Tenant;
+use App\Entity\Staff\Worker;
+use App\Entity\Staff\WorkerAssignment;
 use App\Entity\System\AuditLog;
 use App\Enum\OrganizationRole;
 use App\Enum\OrganizationStatus;
@@ -663,6 +666,107 @@ final class SecurityService implements SecurityServiceInterface
 
     /*
     |--------------------------------------------------------------------------
+    | PERSONNEL
+    |--------------------------------------------------------------------------
+    */
+
+    /**
+     * Contrôle d'accès à un travailleur.
+     *
+     * Un Worker n'est rattaché qu'à une Organization : il ne porte pas de
+     * ville. L'ADMIN_VILLE ne peut donc pas agir sur l'identité d'un
+     * travailleur, faute de quoi il managingerait une personne relevant de
+     * toute l'Organization. Il intervient sur ses effectifs par
+     * WorkerAssignment, dont la ville est connue.
+     */
+    public function checkWorkerAccess(Worker $worker, SecurityAction $action): void
+    {
+        if ($this->isSuperAdmin()) {
+            return;
+        }
+
+        $this->checkOrganizationAccess($worker->getOrganization(), $action);
+
+        if ($this->isAdminVille()) {
+            throw new AccessDeniedException(
+                'Accès refusé : la gestion du personnel s\'effectue par affectation à une ville, '
+                . 'la fiche du travailleur n\'étant pas rattachée à une ville.'
+            );
+        }
+    }
+
+    public function canAccessWorker(Worker $worker, SecurityAction $action = SecurityAction::VIEW): bool
+    {
+        try {
+            $this->checkWorkerAccess($worker, $action);
+
+            return true;
+        } catch (AccessDeniedException) {
+            return false;
+        }
+    }
+
+    /**
+     * Une affectation est bornée par la ville d'exercice : le contrôle
+     * passe par `checkCityAccess()`, qui applique déjà l'isolation par
+     * Organization puis la restriction UserCity de l'ADMIN_VILLE.
+     */
+    public function checkWorkerAssignmentAccess(WorkerAssignment $assignment, SecurityAction $action): void
+    {
+        if ($this->isSuperAdmin()) {
+            return;
+        }
+
+        $this->checkCityAccess($assignment->getCity(), $action);
+    }
+
+    public function canAccessWorkerAssignment(
+        WorkerAssignment $assignment,
+        SecurityAction $action = SecurityAction::VIEW
+    ): bool {
+        try {
+            $this->checkWorkerAssignmentAccess($assignment, $action);
+
+            return true;
+        } catch (AccessDeniedException) {
+            return false;
+        }
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | DEPENSES
+    |--------------------------------------------------------------------------
+    */
+
+    /**
+     * Une dépense est toujours rattachée à une ville, y compris lorsqu'elle
+     * porte sur une parcelle, un immeuble ou une unité : le contrôle
+     * s'appuie donc sur cette ville, ce qui borne simultanément la dépense
+     * à l'Organization et au périmètre de l'ADMIN_VILLE.
+     */
+    public function checkExpenseAccess(Expense $expense, SecurityAction $action): void
+    {
+        if ($this->isSuperAdmin()) {
+            return;
+        }
+
+        $this->checkCityAccess($expense->getCity(), $action);
+    }
+
+    public function canAccessExpense(Expense $expense, SecurityAction $action = SecurityAction::VIEW): bool
+    {
+        try {
+            $this->checkExpenseAccess($expense, $action);
+
+            return true;
+        } catch (AccessDeniedException) {
+            return false;
+        }
+    }
+
+    /*
+    |--------------------------------------------------------------------------
     | AUDIT
     |--------------------------------------------------------------------------
     */
@@ -838,6 +942,13 @@ final class SecurityService implements SecurityServiceInterface
 
             SecurityAction::VIEW_PAYMENT, SecurityAction::CREATE_PAYMENT, SecurityAction::UPDATE_PAYMENT, SecurityAction::DELETE_PAYMENT, SecurityAction::CANCEL_PAYMENT,
 
+            SecurityAction::VIEW_WORKER, SecurityAction::CREATE_WORKER, SecurityAction::UPDATE_WORKER, SecurityAction::DELETE_WORKER,
+
+            SecurityAction::VIEW_WORKER_ASSIGNMENT, SecurityAction::CREATE_WORKER_ASSIGNMENT,
+            SecurityAction::UPDATE_WORKER_ASSIGNMENT, SecurityAction::DELETE_WORKER_ASSIGNMENT,
+
+            SecurityAction::VIEW_EXPENSE, SecurityAction::CREATE_EXPENSE, SecurityAction::UPDATE_EXPENSE, SecurityAction::DELETE_EXPENSE,
+
             SecurityAction::VIEW_AUDIT_LOG, SecurityAction::EXPORT_AUDIT_LOG,
         ];
 
@@ -845,9 +956,17 @@ final class SecurityService implements SecurityServiceInterface
     }
 
     /**
-     * L'ADMIN_VILLE est borné à SES villes (UserCity). Il ne gère que
-     * le patrimoine et la location : ni suppression, ni gestion des
-     * rôles, ni journal d'audit, ni activation/désactivation de villes.
+     * L'ADMIN_VILLE est borné à SES villes (UserCity). Il gère le
+     * patrimoine et la location de ces villes, les affectations de personnel
+     * qui y exercent et les dépenses qui y sont engagées : ni suppression de
+     * dépense, ni gestion des rôles, ni journal d'audit, ni
+     * activation/désactivation de villes.
+     *
+     * Sur le personnel, il ne dispose que de VIEW_WORKER : la fiche d'un
+     * travailleur n'est rattachée à aucune ville, et `checkWorkerAccess()`
+     * lui refuse toute action. Il agit par affectation, dont la ville est
+     * connue. Les suppressions d'affectation lui restent ouvertes car une
+     * affectation est un lien de gestion, pas une pièce comptable.
      */
     private function checkAdminVilleAction(SecurityAction $action): void
     {
@@ -870,6 +989,13 @@ final class SecurityService implements SecurityServiceInterface
             SecurityAction::VIEW_RENT, SecurityAction::CREATE_RENT, SecurityAction::UPDATE_RENT, SecurityAction::MARK_RENT_OVERDUE,
 
             SecurityAction::VIEW_PAYMENT, SecurityAction::CREATE_PAYMENT, SecurityAction::CANCEL_PAYMENT,
+
+            SecurityAction::VIEW_WORKER,
+
+            SecurityAction::VIEW_WORKER_ASSIGNMENT, SecurityAction::CREATE_WORKER_ASSIGNMENT,
+            SecurityAction::UPDATE_WORKER_ASSIGNMENT, SecurityAction::DELETE_WORKER_ASSIGNMENT,
+
+            SecurityAction::VIEW_EXPENSE, SecurityAction::CREATE_EXPENSE, SecurityAction::UPDATE_EXPENSE,
         ];
 
         $this->denyIfNotAllowed($action, $allowed, 'Administrateur de ville');
