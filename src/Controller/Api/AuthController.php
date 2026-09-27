@@ -83,7 +83,7 @@ final class AuthController extends AbstractController
                     ])
                 ]
             )),
-            new OA\Response(response: 401, description: 'Identifiants invalides', content: new OA\JsonContent(ref: Feedback::class)),
+            new OA\Response(response: 401, description: 'Identifiants invalides', content: new OA\JsonContent(ref: '#/components/schemas/Feedback')),
         ]
     )]
     public function login(): JsonResponse
@@ -176,10 +176,10 @@ final class AuthController extends AbstractController
         path: '/api/auth/forgot-password',
         summary: 'Demander la réinitialisation de son mot de passe',
         description: 'Envoie un lien de réinitialisation par email si le compte existe et est actif. Ne révèle pas si l\'email existe.',
-        requestBody: new OA\RequestBody(content: new OA\JsonContent(ref: ForgotPasswordRequest::class)),
+        requestBody: new OA\RequestBody(content: new OA\JsonContent(ref: '#/components/schemas/ForgotPasswordRequest')),
         responses: [
-            new OA\Response(response: 200, description: 'Si l\'email existe, un lien a été envoyé', content: new OA\JsonContent(ref: Feedback::class)),
-            new OA\Response(response: 422, description: 'Données invalides', content: new OA\JsonContent(ref: Feedback::class)),
+            new OA\Response(response: 200, description: 'Si l\'email existe, un lien a été envoyé', content: new OA\JsonContent(ref: '#/components/schemas/Feedback')),
+            new OA\Response(response: 422, description: 'Données invalides', content: new OA\JsonContent(ref: '#/components/schemas/Feedback')),
         ]
     )]
     public function forgotPassword(
@@ -205,10 +205,10 @@ final class AuthController extends AbstractController
         path: '/api/auth/reset-password',
         summary: 'Réinitialiser son mot de passe avec le jeton reçu par email',
         description: 'Valide le jeton reçu par email, définit le nouveau mot de passe, marque le jeton comme consommé.',
-        requestBody: new OA\RequestBody(content: new OA\JsonContent(ref: ResetPasswordRequest::class)),
+        requestBody: new OA\RequestBody(content: new OA\JsonContent(ref: '#/components/schemas/ResetPasswordRequest')),
         responses: [
-            new OA\Response(response: 200, description: 'Mot de passe réinitialisé', content: new OA\JsonContent(ref: Feedback::class)),
-            new OA\Response(response: 422, description: 'Jeton invalide ou expiré', content: new OA\JsonContent(ref: Feedback::class)),
+            new OA\Response(response: 200, description: 'Mot de passe réinitialisé', content: new OA\JsonContent(ref: '#/components/schemas/Feedback')),
+            new OA\Response(response: 422, description: 'Jeton invalide ou expiré', content: new OA\JsonContent(ref: '#/components/schemas/Feedback')),
         ]
     )]
     public function resetPassword(
