@@ -101,10 +101,36 @@ flowchart TB
         end
     end
 
+    subgraph STAFF ["4. GESTION DES DEPENSES ET DU PERSONNEL"]
+        direction TB
+        WORKER["Worker<br/>Travailleur"]
+        ASSIGNMENT["WorkerAssignment<br/>Affectation"]
+        EXPENSE["Expense<br/>Dépense"]
+        WORKER_ROLE["WorkerRole<br/>Fonction"]
+        EXPENSE_CATEGORY["ExpenseCategory<br/>Nature"]
+
+        ORGANIZATION -->|"emploie"| WORKER
+        WORKER -->|"est affecté par"| ASSIGNMENT
+        CITY -->|"lieu d'exercice"| ASSIGNMENT
+        PARCEL -.->|"cible"| ASSIGNMENT
+        BUILDING -.->|"cible"| ASSIGNMENT
+        UNIT -.->|"cible"| ASSIGNMENT
+        WORKER_ROLE -->|"qualifie"| ASSIGNMENT
+
+        ORGANIZATION -->|"engage"| EXPENSE
+        CITY -->|"porte"| EXPENSE
+        PARCEL -.->|"cible"| EXPENSE
+        BUILDING -.->|"cible"| EXPENSE
+        UNIT -.->|"cible"| EXPENSE
+        WORKER -.->|"bénéficiaire"| EXPENSE
+        USER -->|"enregistre"| EXPENSE
+        EXPENSE_CATEGORY -->|"catégorise"| EXPENSE
+    end
+
 %% ============================================================
-%% 4. SYSTEME & TRAÇABILITE
+%% 5. SYSTEME & TRAÇABILITE
 %% ============================================================
-    subgraph SYSTEM ["4. SYSTEME & TRAÇABILITE"]
+    subgraph SYSTEM ["5. SYSTEME & TRAÇABILITE"]
         direction LR
         AUDIT["AuditLog<br/>Traçabilité"]
         FILE_STORAGE["File Storage<br/>Photos & Logos"]
@@ -152,6 +178,7 @@ flowchart TB
     class USER,ORG_USER,USER_CITY access;
     class CITY,PARCEL,BUILDING,UNIT property;
     class TENANT,LEASE,RENT,PAYMENT rental;
+    class WORKER,ASSIGNMENT,EXPENSE,WORKER_ROLE,EXPENSE_CATEGORY expense;
     class AUDIT,FILE_STORAGE system;
     class C1,C2,C3,C4,C5,C6,C7,C8,C9,C10,C11,C12 cycle;
     class FRONTEND,API,SECURITY,APPLICATION,DOMAIN,ORM,DATABASE,STORAGE technical;
