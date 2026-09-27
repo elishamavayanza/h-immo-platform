@@ -1389,6 +1389,9 @@ src/
         Rent.php
         Payment.php
         AuditLog.php
+        Worker.php
+        WorkerAssignment.php
+        Expense.php
 ```
 
 ---
