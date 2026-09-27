@@ -826,6 +826,40 @@ final class SecurityService implements SecurityServiceInterface
         }
     }
 
+    /**
+     * Contrôle d'accès aux rapports.
+     *
+     * Les rapports ne sont pas attachés à une entité unique : le type
+     * de rapport détermine le périmètre (organization, city, platform).
+     * Le contrôle délègue à la méthode appropriée selon le type.
+     */
+    public function checkReportAccess(string $reportType, SecurityAction $action): void
+    {
+        if ($this->isSuperAdmin()) {
+            return;
+        }
+
+        match ($reportType) {
+            'patron', 'admin_immobilier' => $this->checkCurrentUserOrganizationActive(),
+            'admin_ville' => null, // Checked via city access in controller
+            'super_admin' => null, // Only super admin, already checked above
+            default => throw new AccessDeniedException(
+                sprintf('Type de rapport inconnu : "%s".', $reportType)
+            ),
+        };
+    }
+
+    public function canAccessReport(string $reportType, SecurityAction $action = SecurityAction::VIEW): bool
+    {
+        try {
+            $this->checkReportAccess($reportType, $action);
+
+            return true;
+        } catch (AccessDeniedException) {
+            return false;
+        }
+    }
+
     /*
     |--------------------------------------------------------------------------
     | PERMISSIONS
@@ -949,6 +983,8 @@ final class SecurityService implements SecurityServiceInterface
 
             SecurityAction::VIEW_EXPENSE, SecurityAction::CREATE_EXPENSE, SecurityAction::UPDATE_EXPENSE, SecurityAction::DELETE_EXPENSE,
 
+            SecurityAction::VIEW_REPORT, SecurityAction::EXPORT_REPORT,
+
             SecurityAction::VIEW_AUDIT_LOG, SecurityAction::EXPORT_AUDIT_LOG,
         ];
 
@@ -996,6 +1032,8 @@ final class SecurityService implements SecurityServiceInterface
             SecurityAction::UPDATE_WORKER_ASSIGNMENT, SecurityAction::DELETE_WORKER_ASSIGNMENT,
 
             SecurityAction::VIEW_EXPENSE, SecurityAction::CREATE_EXPENSE, SecurityAction::UPDATE_EXPENSE,
+
+            SecurityAction::VIEW_REPORT, SecurityAction::EXPORT_REPORT,
         ];
 
         $this->denyIfNotAllowed($action, $allowed, 'Administrateur de ville');
