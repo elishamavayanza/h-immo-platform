@@ -49,9 +49,11 @@ class User extends SoftDeletableEntity implements UserInterface, PasswordAuthent
     /**
      * Mot de passe haché de l'utilisateur.
      * Ne doit JAMAIS être exposé dans un DTO de réponse (cf. UserResponse).
+     * Peut être null temporairement lors de la création via OrganizationService
+     * (le PATRON définit son mot de passe via le flux "mot de passe oublié").
      */
-    #[ORM\Column(type: Types::STRING, length: 255)]
-    private string $password;
+    #[ORM\Column(type: Types::STRING, length: 255, nullable: true)]
+    private ?string $password = null;
 
     /**
      * Nom complet de l'utilisateur.
@@ -101,12 +103,12 @@ class User extends SoftDeletableEntity implements UserInterface, PasswordAuthent
         return $this;
     }
 
-    public function getPassword(): string
+    public function getPassword(): ?string
     {
         return $this->password;
     }
 
-    public function setPassword(string $password): static
+    public function setPassword(?string $password): static
     {
         $this->password = $password;
 
