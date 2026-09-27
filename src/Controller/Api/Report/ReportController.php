@@ -16,6 +16,7 @@ use App\Dto\Response\Report\SuperAdminReportResponse;
 use App\Entity\Identity\User;
 use App\Service\Report\ReportService;
 use App\Trait\FeedbackTrait;
+use Nelmio\ApiDocBundle\Attribute\Model;
 use OpenApi\Attributes as OA;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
@@ -51,9 +52,9 @@ final class ReportController extends AbstractController
             new OA\Parameter(name: 'format', in: 'query', schema: new OA\Schema(type: 'string', enum: ['json', 'pdf']), description: 'Format de sortie (json ou pdf)'),
         ],
         responses: [
-            new OA\Response(response: 200, description: 'Rapport généré', content: new OA\JsonContent(ref: PatronReportResponse::class)),
-            new OA\Response(response: 403, description: 'Accès refusé', content: new OA\JsonContent(ref: Feedback::class)),
-            new OA\Response(response: 401, description: 'Non authentifié', content: new OA\JsonContent(ref: Feedback::class)),
+            new OA\Response(response: 200, description: 'Rapport généré', content: new OA\JsonContent(ref: new Model(type: PatronReportResponse::class))),
+            new OA\Response(response: 403, description: 'Accès refusé', content: new OA\JsonContent(ref: new Model(type: Feedback::class))),
+            new OA\Response(response: 401, description: 'Non authentifié', content: new OA\JsonContent(ref: new Model(type: Feedback::class))),
         ]
     )]
     public function patronReport(PatronReportFilterDto $filter): JsonResponse
@@ -100,9 +101,9 @@ final class ReportController extends AbstractController
             new OA\Parameter(name: 'format', in: 'query', schema: new OA\Schema(type: 'string', enum: ['json', 'pdf']), description: 'Format de sortie (json ou pdf)'),
         ],
         responses: [
-            new OA\Response(response: 200, description: 'Rapport généré', content: new OA\JsonContent(ref: AdminImmobilierReportResponse::class)),
-            new OA\Response(response: 403, description: 'Accès refusé', content: new OA\JsonContent(ref: Feedback::class)),
-            new OA\Response(response: 401, description: 'Non authentifié', content: new OA\JsonContent(ref: Feedback::class)),
+            new OA\Response(response: 200, description: 'Rapport généré', content: new OA\JsonContent(ref: new Model(type: AdminImmobilierReportResponse::class))),
+            new OA\Response(response: 403, description: 'Accès refusé', content: new OA\JsonContent(ref: new Model(type: Feedback::class))),
+            new OA\Response(response: 401, description: 'Non authentifié', content: new OA\JsonContent(ref: new Model(type: Feedback::class))),
         ]
     )]
     public function adminImmobilierReport(AdminImmobilierReportFilterDto $filter): JsonResponse
@@ -149,10 +150,10 @@ final class ReportController extends AbstractController
             new OA\Parameter(name: 'format', in: 'query', schema: new OA\Schema(type: 'string', enum: ['json', 'pdf']), description: 'Format de sortie (json ou pdf)'),
         ],
         responses: [
-            new OA\Response(response: 200, description: 'Rapport généré', content: new OA\JsonContent(ref: AdminVilleReportResponse::class)),
-            new OA\Response(response: 403, description: 'Accès refusé (ville non attribuée)', content: new OA\JsonContent(ref: Feedback::class)),
-            new OA\Response(response: 404, description: 'Ville introuvable', content: new OA\JsonContent(ref: Feedback::class)),
-            new OA\Response(response: 401, description: 'Non authentifié', content: new OA\JsonContent(ref: Feedback::class)),
+            new OA\Response(response: 200, description: 'Rapport généré', content: new OA\JsonContent(ref: new Model(type: AdminVilleReportResponse::class))),
+            new OA\Response(response: 403, description: 'Accès refusé (ville non attribuée)', content: new OA\JsonContent(ref: new Model(type: Feedback::class))),
+            new OA\Response(response: 404, description: 'Ville introuvable', content: new OA\JsonContent(ref: new Model(type: Feedback::class))),
+            new OA\Response(response: 401, description: 'Non authentifié', content: new OA\JsonContent(ref: new Model(type: Feedback::class))),
         ]
     )]
     public function adminVilleReport(string $cityUuid, AdminVilleReportFilterDto $filter): JsonResponse
@@ -206,9 +207,9 @@ final class ReportController extends AbstractController
             new OA\Parameter(name: 'format', in: 'query', schema: new OA\Schema(type: 'string', enum: ['json', 'pdf']), description: 'Format de sortie (json ou pdf)'),
         ],
         responses: [
-            new OA\Response(response: 200, description: 'Rapport généré', content: new OA\JsonContent(ref: SuperAdminReportResponse::class)),
-            new OA\Response(response: 403, description: 'Accès réservé à SUPER_ADMIN', content: new OA\JsonContent(ref: Feedback::class)),
-            new OA\Response(response: 401, description: 'Non authentifié', content: new OA\JsonContent(ref: Feedback::class)),
+            new OA\Response(response: 200, description: 'Rapport généré', content: new OA\JsonContent(ref: new Model(type: SuperAdminReportResponse::class))),
+            new OA\Response(response: 403, description: 'Accès réservé à SUPER_ADMIN', content: new OA\JsonContent(ref: new Model(type: Feedback::class))),
+            new OA\Response(response: 401, description: 'Non authentifié', content: new OA\JsonContent(ref: new Model(type: Feedback::class))),
         ]
     )]
     public function superAdminReport(ReportFilterDto $filter): JsonResponse
