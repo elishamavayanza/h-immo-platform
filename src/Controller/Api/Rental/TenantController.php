@@ -8,6 +8,7 @@ use App\Dto\Feedback;
 use App\Dto\Request\Rental\TenantRequest;
 use App\Service\Rental\TenantService;
 use App\Trait\FeedbackTrait;
+use Nelmio\ApiDocBundle\Attribute\Model;
 use OpenApi\Attributes as OA;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
@@ -48,10 +49,10 @@ final class TenantController extends AbstractController
     #[OA\Post(
         path: '/api/v1/tenants',
         summary: 'Créer un nouveau locataire',
-        requestBody: new OA\RequestBody(content: new OA\JsonContent(ref: TenantRequest::class)),
+        requestBody: new OA\RequestBody(content: new OA\JsonContent(ref: new Model(type: TenantRequest::class))),
         responses: [
-            new OA\Response(response: 201, description: 'Locataire créé', content: new OA\JsonContent(ref: Feedback::class)),
-            new OA\Response(response: 422, description: 'Erreur de validation', content: new OA\JsonContent(ref: Feedback::class)),
+            new OA\Response(response: 201, description: 'Locataire créé', content: new OA\JsonContent(ref: new Model(type: Feedback::class))),
+            new OA\Response(response: 422, description: 'Erreur de validation', content: new OA\JsonContent(ref: new Model(type: Feedback::class))),
         ]
     )]
     public function create(
@@ -67,8 +68,8 @@ final class TenantController extends AbstractController
         path: '/api/v1/tenants/{uuid}',
         summary: 'Obtenir les détails d\'un locataire',
         responses: [
-            new OA\Response(response: 200, description: 'Détails du locataire', content: new OA\JsonContent(ref: Feedback::class)),
-            new OA\Response(response: 404, description: 'Locataire non trouvé', content: new OA\JsonContent(ref: Feedback::class)),
+            new OA\Response(response: 200, description: 'Détails du locataire', content: new OA\JsonContent(ref: new Model(type: Feedback::class))),
+            new OA\Response(response: 404, description: 'Locataire non trouvé', content: new OA\JsonContent(ref: new Model(type: Feedback::class))),
         ]
     )]
     public function show(string $uuid): JsonResponse
@@ -82,10 +83,10 @@ final class TenantController extends AbstractController
     #[OA\Put(
         path: '/api/v1/tenants/{uuid}',
         summary: 'Mettre à jour la fiche d\'un locataire',
-        requestBody: new OA\RequestBody(content: new OA\JsonContent(ref: TenantRequest::class)),
+        requestBody: new OA\RequestBody(content: new OA\JsonContent(ref: new Model(type: TenantRequest::class))),
         responses: [
-            new OA\Response(response: 200, description: 'Locataire mis à jour', content: new OA\JsonContent(ref: Feedback::class)),
-            new OA\Response(response: 422, description: 'Erreur de validation', content: new OA\JsonContent(ref: Feedback::class)),
+            new OA\Response(response: 200, description: 'Locataire mis à jour', content: new OA\JsonContent(ref: new Model(type: Feedback::class))),
+            new OA\Response(response: 422, description: 'Erreur de validation', content: new OA\JsonContent(ref: new Model(type: Feedback::class))),
         ]
     )]
     public function update(

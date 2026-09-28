@@ -8,6 +8,7 @@ use App\Dto\Feedback;
 use App\Dto\Request\Rental\LeaseRequest;
 use App\Service\Rental\LeaseService;
 use App\Trait\FeedbackTrait;
+use Nelmio\ApiDocBundle\Attribute\Model;
 use OpenApi\Attributes as OA;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
@@ -50,10 +51,10 @@ final class LeaseController extends AbstractController
     #[OA\Post(
         path: '/api/v1/leases',
         summary: 'Créer un nouveau contrat de bail',
-        requestBody: new OA\RequestBody(content: new OA\JsonContent(ref: LeaseRequest::class)),
+        requestBody: new OA\RequestBody(content: new OA\JsonContent(ref: new Model(type: LeaseRequest::class))),
         responses: [
-            new OA\Response(response: 201, description: 'Bail créé', content: new OA\JsonContent(ref: Feedback::class)),
-            new OA\Response(response: 422, description: 'Erreur de validation', content: new OA\JsonContent(ref: Feedback::class)),
+            new OA\Response(response: 201, description: 'Bail créé', content: new OA\JsonContent(ref: new Model(type: Feedback::class))),
+            new OA\Response(response: 422, description: 'Erreur de validation', content: new OA\JsonContent(ref: new Model(type: Feedback::class))),
         ]
     )]
     public function create(
@@ -69,8 +70,8 @@ final class LeaseController extends AbstractController
         path: '/api/v1/leases/{uuid}',
         summary: 'Obtenir les détails d\'un contrat de bail',
         responses: [
-            new OA\Response(response: 200, description: 'Détails du bail', content: new OA\JsonContent(ref: Feedback::class)),
-            new OA\Response(response: 404, description: 'Bail non trouvé', content: new OA\JsonContent(ref: Feedback::class)),
+            new OA\Response(response: 200, description: 'Détails du bail', content: new OA\JsonContent(ref: new Model(type: Feedback::class))),
+            new OA\Response(response: 404, description: 'Bail non trouvé', content: new OA\JsonContent(ref: new Model(type: Feedback::class))),
         ]
     )]
     public function show(string $uuid): JsonResponse
@@ -84,10 +85,10 @@ final class LeaseController extends AbstractController
     #[OA\Put(
         path: '/api/v1/leases/{uuid}',
         summary: 'Mettre à jour un contrat de bail',
-        requestBody: new OA\RequestBody(content: new OA\JsonContent(ref: LeaseRequest::class)),
+        requestBody: new OA\RequestBody(content: new OA\JsonContent(ref: new Model(type: LeaseRequest::class))),
         responses: [
-            new OA\Response(response: 200, description: 'Bail mis à jour', content: new OA\JsonContent(ref: Feedback::class)),
-            new OA\Response(response: 422, description: 'Erreur de validation', content: new OA\JsonContent(ref: Feedback::class)),
+            new OA\Response(response: 200, description: 'Bail mis à jour', content: new OA\JsonContent(ref: new Model(type: Feedback::class))),
+            new OA\Response(response: 422, description: 'Erreur de validation', content: new OA\JsonContent(ref: new Model(type: Feedback::class))),
         ]
     )]
     public function update(
