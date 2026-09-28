@@ -20,6 +20,7 @@ php tests/verify-http-mapping.php
 php tests/verify-auth.php
 php tests/verify-api-doc.php
 php tests/verify-super-admin.php
+php tests/verify-password-reset.php
 ```
 
 ## Contrôles
@@ -31,6 +32,8 @@ php tests/verify-super-admin.php
 | `verify-auth.php` | Ouverture de session, cookie de session, accès authentifié, refus des comptes désactivés, 401 anonyme, limitation des tentatives, déconnexion et révocation de session. |
 | `verify-api-doc.php` | Génération de la spécification OpenAPI : classes de modèles résolues, paramètres de requête, corps de requête et réponses référencées. |
 | `verify-super-admin.php` | Amorçage de la plateforme : création du compte `SUPER_ADMIN` par défaut, hachage du mot de passe, connexion réelle via `POST /api/auth/login`, réinitialisation du mot de passe et garde-fous de la commande. |
+| `verify-password-reset.php` | Flux « mot de passe oublié » complet : création du jeton, condensat SHA-256, expiration, usage unique, anti-énumération, refus des jetons expirés/inconnus/consommés et connexion avec le nouveau mot de passe. |
+
 
 ## Prérequis
 
