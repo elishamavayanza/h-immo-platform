@@ -86,10 +86,9 @@ final readonly class PasswordResetService
         // Expiration : 1 heure
         $expiresAt = new \DateTimeImmutable('+1 hour');
 
-        $token = new PasswordResetToken();
-        $token->setTokenHash($tokenHash);
-        $token->setUser($this->getUserReference($user));
-        $token->setExpiresAt($expiresAt);
+        // Le jeton est immuable : il se construit complet, jamais par
+        // setters successifs.
+        $token = new PasswordResetToken($tokenHash, $user, $expiresAt);
 
         $this->em->persist($token);
         $this->em->flush();
@@ -231,14 +230,5 @@ Si vous n'avez pas fait cette demande, ignorez simplement cet email.
 Équipe Soft-IMMO
 Ce message est automatique, merci de ne pas y répondre.
 TEXT;
-    }
-
-    /**
-     * Récupère la référence gérée vers l'utilisateur pour éviter les problèmes
-     * de proxy Doctrine dans l'entité PasswordResetToken.
-     */
-    private function getUserReference(User $user): User
-    {
-        return $this->em->getReference(User::class, $user->getId());
     }
 }

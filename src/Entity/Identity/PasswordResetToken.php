@@ -29,7 +29,7 @@ use Doctrine\ORM\Mapping as ORM;
  *   - le jeton expire : `expiresAt` est fixé à la création et vérifié
  *     à chaque résolution ;
  *   - la table est purgée périodiquement des lignes expirées ou
- *     consommées (cf. PasswordResetService::purgeExpiredTokens()).
+ *     consommées (cf. PasswordResetTokenRepository::purgeConsumedAndExpired()).
  */
 #[ORM\Entity]
 #[ORM\Table(name: 'password_reset_token')]
@@ -52,6 +52,28 @@ class PasswordResetToken extends CreatedOnlyEntity
 
     #[ORM\Column(type: Types::DATETIME_IMMUTABLE, nullable: true)]
     private ?DateTimeImmutable $consumedAt = null;
+
+    /**
+     * Un jeton est construit complet, jamais modifié ensuite.
+     *
+     * L'absence de setters est délibérée : un jeton ne se crée que dans
+     * `PasswordResetService::requestReset()`, qui détient déjà le
+     * condensat, le compte concerné et l'échéance. La seule transition
+     * autorisée ensuite est la consommation (`markConsumed()`). Exposer
+     * des setters permettrait de réécrire le condensat d'un jeton déjà émis
+     * et de contourner sa vérification.
+     */
+    public function __construct(
+        string $tokenHash,
+        User $user,
+        DateTimeImmutable $expiresAt
+    ) {
+        parent::__construct();
+
+        $this->tokenHash = $tokenHash;
+        $this->user = $user;
+        $this->expiresAt = $expiresAt;
+    }
 
     public function getTokenHash(): string
     {
