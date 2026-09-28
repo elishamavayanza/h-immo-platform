@@ -16,6 +16,8 @@ use Doctrine\ORM\QueryBuilder;
 use Doctrine\Persistence\ManagerRegistry;
 use Symfony\Component\Uid\Uuid;
 
+use App\Repository\UuidParameterTrait;
+
 /**
  * ExpenseRepository
  *
@@ -23,6 +25,7 @@ use Symfony\Component\Uid\Uuid;
  */
 final class ExpenseRepository extends ServiceEntityRepository
 {
+    use UuidParameterTrait;
     public function __construct(ManagerRegistry $registry)
     {
         parent::__construct($registry, Expense::class);
@@ -50,7 +53,7 @@ final class ExpenseRepository extends ServiceEntityRepository
     {
         return $this->createQueryBuilder('e')
             ->andWhere('e.uuid = :uuid')
-            ->setParameter('uuid', $uuid)
+            ->setParameter('uuid', $this->bindableUuid($uuid))
             ->getQuery()
             ->getOneOrNullResult();
     }
@@ -73,9 +76,14 @@ final class ExpenseRepository extends ServiceEntityRepository
         string $sortBy = 'expenseDate',
         string $sortOrder = 'DESC'
     ): array {
+        // Whitelist des champs de tri autorisés (injection DQL empêchée)
+        $allowedSortFields = ['expenseDate', 'amount', 'createdAt', 'category'];
+        $sortBy = in_array($sortBy, $allowedSortFields, true) ? $sortBy : 'expenseDate';
+        $sortOrder = strtoupper($sortOrder) === 'ASC' ? 'ASC' : 'DESC';
+
         $qb = $this->createQueryBuilder('e')
             ->select('e')
-            ->orderBy("e.$sortBy", strtoupper($sortOrder) === 'ASC' ? 'ASC' : 'DESC')
+            ->orderBy("e.$sortBy", $sortOrder)
             ->setFirstResult(($page - 1) * $limit)
             ->setMaxResults($limit);
 

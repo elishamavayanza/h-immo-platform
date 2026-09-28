@@ -138,4 +138,76 @@ final class WorkerAssignmentRepository extends ServiceEntityRepository
             ->getQuery()
             ->getResult();
     }
+
+    /**
+     * Trouve les affectations chevauchant une période pour un worker dans une ville.
+     */
+    public function findOverlapping(
+        \App\Entity\Staff\Worker $worker,
+        \App\Entity\Property\City $city,
+        \DateTimeImmutable $startDate,
+        ?\DateTimeImmutable $endDate,
+        ?\App\Entity\Staff\WorkerAssignment $exclude = null
+    ): array {
+        $qb = $this->createQueryBuilder('wa')
+            ->andWhere('wa.worker = :worker')
+            ->andWhere('wa.city = :city')
+            ->andWhere('wa.startDate <= :endCheck')
+            ->andWhere('wa.endDate IS NULL OR wa.endDate >= :startCheck')
+            ->setParameter('worker', $worker)
+            ->setParameter('city', $city)
+            ->setParameter('startCheck', $startDate)
+            ->setParameter('endCheck', $endDate ?? new \DateTimeImmutable('+100 years'));
+
+        if ($exclude !== null) {
+            $qb->andWhere('wa.uuid <> :excludeUuid')
+                ->setParameter('excludeUuid', $exclude->getUuid());
+        }
+
+        return $qb->getQuery()->getResult();
+    }
+
+    /**
+     * Trouve les affectations selon les filtres donnés.
+     */
+    public function findByFilters(
+        ?array $cityIds = null,
+        int $page = 1,
+        int $limit = 20,
+        string $sortBy = 'startDate',
+        string $sortOrder = 'DESC'
+    ): array {
+        // Whitelist des champs de tri autorisés
+        $allowedSortFields = ['startDate', 'endDate', 'monthlySalary', 'createdAt'];
+        $sortBy = in_array($sortBy, $allowedSortFields, true) ? $sortBy : 'startDate';
+        $sortOrder = strtoupper($sortOrder) === 'ASC' ? 'ASC' : 'DESC';
+
+        $qb = $this->createQueryBuilder('wa')
+            ->select('wa')
+            ->orderBy("wa.$sortBy", $sortOrder)
+            ->setFirstResult(($page - 1) * $limit)
+            ->setMaxResults($limit);
+
+        if ($cityIds !== null && !empty($cityIds)) {
+            $qb->andWhere('wa.city IN (:cities)')
+                ->setParameter('cities', $cityIds);
+        }
+
+        $items = $qb->getQuery()->getResult();
+
+        $countQb = $this->createQueryBuilder('wa')
+            ->select('COUNT(wa.id)');
+
+        if ($cityIds !== null && !empty($cityIds)) {
+            $countQb->andWhere('wa.city IN (:cities)')
+                ->setParameter('cities', $cityIds);
+        }
+
+        $total = (int) $countQb->getQuery()->getSingleScalarResult();
+
+        return [
+            'items' => $items,
+            'total' => $total,
+        ];
+    }
 }

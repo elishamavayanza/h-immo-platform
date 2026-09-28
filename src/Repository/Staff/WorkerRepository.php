@@ -72,4 +72,15 @@ final class WorkerRepository extends ServiceEntityRepository
             ->getQuery()
             ->getResult();
     }
+
+    public function findOneByNationalIdAndOrganization(string $nationalId, \App\Entity\Identity\Organization $organization): ?Worker
+    {
+        return $this->createQueryBuilder('w')
+            ->andWhere('w.nationalId = :nid')
+            ->andWhere('w.organization = :org')
+            ->setParameter('nid', $nationalId)
+            ->setParameter('org', $organization)
+            ->getQuery()
+            ->getOneOrNullResult();
+    }
 }

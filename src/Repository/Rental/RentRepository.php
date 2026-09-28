@@ -134,4 +134,20 @@ class RentRepository extends ServiceEntityRepository
 
         return $this->fetchPaginated($qb, $page, $limit);
     }
+
+    /**
+     * Verrouille une échéance en mode pessimiste (SELECT ... FOR UPDATE).
+     *
+     * Retourne l'entité rechargée depuis la base avec le verrou, ou null
+     * si l'entité n'existe plus.
+     */
+    public function lockForUpdate(Rent $rent): ?Rent
+    {
+        return $this->createQueryBuilder('r')
+            ->andWhere('r.id = :id')
+            ->setParameter('id', $rent->getId())
+            ->setLockMode(\Doctrine\DBAL\LockMode::PESSIMISTIC_WRITE)
+            ->getQuery()
+            ->getOneOrNullResult();
+    }
 }
