@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Repository\Rental;
 
 use App\Entity\Identity\Organization;
+use App\Entity\Rental\Lease;
 use App\Entity\Rental\Payment;
 use App\Entity\Rental\Rent;
 use App\Repository\PaginatedResultTrait;
@@ -59,44 +60,56 @@ class PaymentRepository extends ServiceEntityRepository
     }
 
     /**
-     * Liste tous les paiements enregistrés pour une échéance (Rent)
-     * donnée, du plus récent au plus ancien.
+     * Liste paginée des paiements selon les organisations et villes autorisées.
      *
-     * @return Payment[]
+     * @param list<int>|null $organizationIds
+     * @param list<int>|null $cityIds
+     *
+     * @return array{items: list<Payment>, total: int}
      */
-    public function findByRent(Rent $rent): array
-    {
-        return $this->createQueryBuilder('p')
-            ->andWhere('p.rent = :rent')
-            ->setParameter('rent', $rent)
-            ->orderBy('p.paymentDate', 'DESC')
-            ->getQuery()
-            ->getResult();
-    }
+    public function findPaginatedByOrganizationsAndCities(
+        ?array $organizationIds = null,
+        ?array $cityIds = null,
+        int $page = 1,
+        int $limit = 20,
+        ?string $search = null,
+        ?string $sortBy = 'paymentDate',
+        ?string $sortOrder = 'DESC'
+    ): array {
+        // Whitelist des champs de tri
+        $allowedSortFields = ['paymentDate', 'amount', 'reference', 'receiptNumber', 'createdAt'];
+        $sortBy = in_array($sortBy, $allowedSortFields, true) ? $sortBy : 'paymentDate';
+        $sortOrder = strtoupper($sortOrder) === 'ASC' ? 'ASC' : 'DESC';
 
-    /**
-     * Calcule le montant total déjà payé pour une échéance donnée
-     * (somme simple ; la comparaison avec le montant dû relève
-     * du service métier, pas du repository).
-     */
-    public function sumAmountByRent(Rent $rent): string
-    {
-        $result = $this->createQueryBuilder('p')
-            ->select('SUM(p.amount) AS total')
-            ->andWhere('p.rent = :rent')
-            ->setParameter('rent', $rent)
-            ->getQuery()
-            ->getSingleScalarResult();
+        $qb = $this->createQueryBuilder('p')
+            ->innerJoin('p.rent', 'r')
+            ->innerJoin('r.lease', 'l')
+            ->orderBy("p.$sortBy", $sortOrder);
 
-        return (string) ($result ?? '0');
+        if ($organizationIds !== null && !empty($organizationIds)) {
+            $qb->andWhere('l.organization IN (:orgs)')
+                ->setParameter('orgs', $organizationIds);
+        }
+
+        if ($cityIds !== null && !empty($cityIds)) {
+            $qb->innerJoin('l.unit', 'u')
+                ->innerJoin('u.building', 'b')
+                ->innerJoin('b.parcel', 'par')
+                ->innerJoin('par.city', 'c')
+                ->andWhere('c.id IN (:cities)')
+                ->setParameter('cities', $cityIds);
+        }
+
+        if ($search !== null && $search !== '') {
+            $qb->andWhere('p.reference LIKE :search OR p.receiptNumber LIKE :search')
+                ->setParameter('search', '%' . $search . '%');
+        }
+
+        return $this->fetchPaginated($qb, $page, $limit);
     }
 
     /**
      * Liste paginée des paiements d'une organisation.
-     *
-     * Le périmètre est porté par `payment -> rent -> lease -> organization` :
-     * aucun paiement ne peut être listé sans traverser un bail d'une
-     * organisation autorisée.
      *
      * @return array{items: list<Payment>, total: int}
      */
@@ -119,6 +132,21 @@ class PaymentRepository extends ServiceEntityRepository
         }
 
         return $this->fetchPaginated($qb, $page, $limit);
+    }
+
+    /**
+     * Somme des montants par bail.
+     */
+    public function sumAmountByRent(Rent $rent): string
+    {
+        $result = $this->createQueryBuilder('p')
+            ->select('SUM(p.amount) AS total')
+            ->andWhere('p.rent = :rent')
+            ->setParameter('rent', $rent)
+            ->getQuery()
+            ->getSingleScalarResult();
+
+        return (string) ($result ?? '0');
     }
 
     /**

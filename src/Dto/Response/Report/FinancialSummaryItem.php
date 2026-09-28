@@ -25,7 +25,10 @@ final class FinancialSummaryItem
         #[OA\Property(description: 'Dépenses', type: 'number', format: 'decimal')]
         public string $expenses,
 
-        #[OA\Property(description: 'Résultat net', type: 'number', format: 'decimal')]
+        #[OA\Property(description: 'Loyers attendus (somme des échéances générées)', type: 'number', format: 'decimal')]
+        public string $expected,
+
+        #[OA\Property(description: 'Résultat net (revenus - dépenses)', type: 'number', format: 'decimal')]
         public string $netResult,
 
         #[OA\Property(description: 'Devise', type: 'string', example: 'USD', enum: Currency::class)]

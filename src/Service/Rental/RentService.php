@@ -165,31 +165,72 @@ final readonly class RentService
     /**
      * Liste paginée des échéances en retard sur le périmètre autorisé.
      */
-    public function listOverdueRents(int $page = 1, int $limit = 20): Feedback
+    public function listOverdueRents(?RentOverdueFilterDto $filter = null): Feedback
     {
         $feedback = new Feedback();
 
+        $filter ??= new \App\Dto\Request\Rental\RentOverdueFilterDto();
+
+        // Récupérer les organisations et villes accessibles
         $organizations = $this->securityService->getCurrentUserOrganizations();
-        $items = [];
+        $organizationIds = array_map(fn($o) => $o->getId(), $organizations);
 
-        foreach ($organizations as $organization) {
-            if (!$this->securityService->canAccessOrganization($organization, SecurityAction::VIEW_RENT)) {
-                continue;
-            }
-
-            foreach ($this->rentRepository->findOverdueByOrganization($organization) as $rent) {
-                if ($this->securityService->canAccessRent($rent, SecurityAction::VIEW_RENT)) {
-                    $items[] = $this->rentMapper->toResponse($rent);
+        $cityIds = [];
+        foreach ($organizations as $org) {
+            $cities = $this->cityRepository->findActiveByOrganization($org);
+            foreach ($cities as $city) {
+                if ($this->securityService->canAccessCity($city, SecurityAction::VIEW_RENT)) {
+                    $cityIds[] = $city->getId();
                 }
             }
         }
 
+        if ($cityIds === []) {
+            return $feedback
+                ->setData(['items' => [], 'total' => 0, 'page' => 1, 'limit' => 20])
+                ->setFlushDescription('Aucune ville accessible.')
+                ->setStatus(200)
+                ->autoInitFlush();
+        }
+
+        // Filtrage optionnel par organizationId
+        $targetOrgIds = $organizationIds;
+        if ($filter->organizationId !== null) {
+            try {
+                $uuid = \Symfony\Component\Uid\Uuid::fromString($filter->organizationId);
+                $org = $this->organizationRepository->findOneByUuid($uuid);
+                if ($org !== null && in_array($org->getId(), $organizationIds, true)) {
+                    $targetOrgIds = [$org->getId()];
+                } else {
+                    $targetOrgIds = [];
+                }
+            } catch (\InvalidArgumentException) {
+                $targetOrgIds = [];
+            }
+        }
+
+        $result = $this->rentRepository->findOverduePaginatedByOrganizationsAndCities(
+            organizationIds: $targetOrgIds,
+            cityIds: $cityIds,
+            page: $filter->page,
+            limit: $filter->limit,
+            sortBy: $filter->sortBy,
+            sortOrder: $filter->sortOrder
+        );
+
+        // Appliquer le contrôle d'accès par échéance
+        $items = array_filter($result['items'], function (Rent $rent): bool {
+            return $this->securityService->canAccessRent($rent, SecurityAction::VIEW_RENT);
+        });
+
+        $items = array_map(fn(Rent $r) => $this->rentMapper->toResponse($r), $items);
+
         return $feedback
             ->setData([
-                'items' => $items,
+                'items' => array_values($items),
                 'total' => count($items),
-                'page' => max(1, $page),
-                'limit' => $limit,
+                'page' => max(1, $filter->page),
+                'limit' => $filter->limit,
             ])
             ->setFlushDescription('Échéances en retard listées avec succès.')
             ->setStatus(200)

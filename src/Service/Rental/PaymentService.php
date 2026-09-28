@@ -222,38 +222,72 @@ final readonly class PaymentService
     /**
      * Liste paginée des paiements du périmètre autorisé.
      */
-    public function listPayments(int $page = 1, int $limit = 20, ?string $search = null): Feedback
+    public function listPayments(?PaymentFilterDto $filter = null): Feedback
     {
         $feedback = new Feedback();
 
+        $filter ??= new \App\Dto\Request\Rental\PaymentFilterDto();
+
+        // Récupérer les organisations et villes accessibles
         $organizations = $this->securityService->getCurrentUserOrganizations();
-        $items = [];
+        $organizationIds = array_map(fn($o) => $o->getId(), $organizations);
 
-        foreach ($organizations as $organization) {
-            if (!$this->securityService->canAccessOrganization($organization, SecurityAction::VIEW_PAYMENT)) {
-                continue;
-            }
-
-            $result = $this->paymentRepository->findPaginatedByOrganization(
-                $organization,
-                $page,
-                $limit,
-                $search
-            );
-
-            foreach ($result['items'] as $payment) {
-                if ($this->securityService->canAccessPayment($payment, SecurityAction::VIEW_PAYMENT)) {
-                    $items[] = $this->paymentMapper->toResponse($payment);
+        $cityIds = [];
+        foreach ($organizations as $org) {
+            $cities = $this->cityRepository->findActiveByOrganization($org);
+            foreach ($cities as $city) {
+                if ($this->securityService->canAccessCity($city, SecurityAction::VIEW_PAYMENT)) {
+                    $cityIds[] = $city->getId();
                 }
             }
         }
 
+        if ($cityIds === []) {
+            return $feedback
+                ->setData(['items' => [], 'total' => 0, 'page' => 1, 'limit' => 20])
+                ->setFlushDescription('Aucune ville accessible.')
+                ->setStatus(200)
+                ->autoInitFlush();
+        }
+
+        // Filtrage optionnel par organizationId
+        $targetOrgIds = $organizationIds;
+        if ($filter->organizationId !== null) {
+            try {
+                $uuid = \Symfony\Component\Uid\Uuid::fromString($filter->organizationId);
+                $org = $this->organizationRepository->findOneByUuid($uuid);
+                if ($org !== null && in_array($org->getId(), $organizationIds, true)) {
+                    $targetOrgIds = [$org->getId()];
+                } else {
+                    $targetOrgIds = [];
+                }
+            } catch (\InvalidArgumentException) {
+                $targetOrgIds = [];
+            }
+        }
+
+        $result = $this->paymentRepository->findPaginatedByOrganizationsAndCities(
+            organizationIds: $targetOrgIds,
+            cityIds: $cityIds,
+            page: $filter->page,
+            limit: $filter->limit,
+            sortBy: $filter->sortBy,
+            sortOrder: $filter->sortOrder
+        );
+
+        // Appliquer le contrôle d'accès par paiement
+        $items = array_filter($result['items'], function (Payment $payment): bool {
+            return $this->securityService->canAccessPayment($payment, SecurityAction::VIEW_PAYMENT);
+        });
+
+        $items = array_map(fn(Payment $p) => $this->paymentMapper->toResponse($p), $items);
+
         return $feedback
             ->setData([
-                'items' => $items,
+                'items' => array_values($items),
                 'total' => count($items),
-                'page' => max(1, $page),
-                'limit' => $limit,
+                'page' => max(1, $filter->page),
+                'limit' => $filter->limit,
             ])
             ->setFlushDescription('Paiements listés avec succès.')
             ->setStatus(200)

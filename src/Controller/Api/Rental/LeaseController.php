@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Controller\Api\Rental;
 
 use App\Dto\Feedback;
+use App\Dto\Request\Rental\LeaseFilterDto;
 use App\Dto\Request\Rental\LeaseRequest;
 use App\Dto\Request\Rental\LeaseTransitionRequest;
 use App\Service\Rental\LeaseService;
@@ -173,6 +174,32 @@ final class LeaseController extends AbstractController
         #[MapRequestPayload] ?LeaseTransitionRequest $request = null
     ): JsonResponse {
         $feedback = $this->leaseService->cancelLease($uuid, $request?->reason ?? '');
+
+        return $this->json($feedback, $feedback->getStatus());
+    }
+
+    #[Route('', name: 'list', methods: ['GET'])]
+    #[OA\Get(
+        path: '/api/v1/leases',
+        summary: 'Lister les baux avec pagination et filtres',
+        parameters: [
+            new OA\Parameter(name: 'organizationId', in: 'query', schema: new OA\Schema(type: 'string', format: 'uuid'), description: 'Filtrer par organisation (optionnel)'),
+            new OA\Parameter(name: 'unitId', in: 'query', schema: new OA\Schema(type: 'string', format: 'uuid'), description: 'Filtrer par unité (optionnel)'),
+            new OA\Parameter(name: 'tenantId', in: 'query', schema: new OA\Schema(type: 'string', format: 'uuid'), description: 'Filtrer par locataire (optionnel)'),
+            new OA\Parameter(name: 'status', in: 'query', schema: new OA\Schema(type: 'string', enum: \App\Enum\LeaseStatus::class), description: 'Filtrer par statut (optionnel)'),
+            new OA\Parameter(name: 'page', in: 'query', schema: new OA\Schema(type: 'integer', default: 1), description: 'Numéro de page'),
+            new OA\Parameter(name: 'limit', in: 'query', schema: new OA\Schema(type: 'integer', default: 20, minimum: 1, maximum: 100), description: 'Éléments par page'),
+            new OA\Parameter(name: 'sortBy', in: 'query', schema: new OA\Schema(type: 'string', default: 'startDate'), description: 'Champ de tri'),
+            new OA\Parameter(name: 'sortOrder', in: 'query', schema: new OA\Schema(type: 'string', enum: ['ASC', 'DESC'], default: 'DESC'), description: 'Ordre de tri'),
+        ],
+        responses: [
+            new OA\Response(response: 200, description: 'Liste paginée', content: new OA\JsonContent(ref: new Model(type: Feedback::class))),
+        ]
+    )]
+    public function list(
+        #[MapRequestPayload] LeaseFilterDto $filter
+    ): JsonResponse {
+        $feedback = $this->leaseService->listLeases($filter);
 
         return $this->json($feedback, $feedback->getStatus());
     }
