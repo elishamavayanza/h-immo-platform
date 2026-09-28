@@ -1,9 +1,10 @@
 
 services:
 ###> doctrine/doctrine-bundle ###
-  database:
-    ports:
-      - "5432"
+  # Aucun bloc `ports` ici : `compose.yaml` publie déjà 3306:3306, ce qui
+  # correspond à `DATABASE_URL`. Ce fichier exposait 5432, le port de
+  # PostgreSQL, sur un hôte au hasard — donc ni la version MariaDB, ni
+  # une adresse stable pour l'API.
 ###< doctrine/doctrine-bundle ###
 
 ###> symfony/mailer ###

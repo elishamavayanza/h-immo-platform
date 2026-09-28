@@ -1,22 +1,42 @@
-
 services:
 ###> doctrine/doctrine-bundle ###
+  # MariaDB est le SGBD du projet. Les migrations écrivent une syntaxe
+  # MySQL/MariaDB (AUTO_INCREMENT, BINARY(16), LONGTEXT, utf8mb4) et deux
+  # requêtes de rapport s'appuient sur DATE_FORMAT(), absente de
+  # PostgreSQL. Le conteneur doit donc rester aligné sur ce choix : un
+  # PostgreSQL ici ferait échouer la première migration.
   database:
-    image: postgres:${POSTGRES_VERSION:-16}-alpine
+    image: mariadb:${MARIADB_VERSION:-11.8}
     environment:
-      POSTGRES_DB: ${POSTGRES_DB:-app}
-      # You should definitely change the password in production
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-!ChangeMe!}
-      POSTGRES_USER: ${POSTGRES_USER:-app}
+      MARIADB_DATABASE: ${MARIADB_DATABASE:-app}
+      MARIADB_USER: ${MARIADB_USER:-app}
+      MARIADB_PASSWORD: ${MARIADB_PASSWORD:-!ChangeMe!}
+      # L'image MariaDB refuse de démarrer sans mot de passe root, ou sans
+      # MARIADB_RANDOM_ROOT_PASSWORD explicite. Le declaring evite un
+      # conteneur qui s'arrête en boucle avec une erreur peu parlante.
+      MARIADB_ROOT_PASSWORD: ${MARIADB_ROOT_PASSWORD:-!ChangeMe!}
+      # Les colonnes de texte sont plus rapides en utf8mb4 qu'en utf8mb3,
+      # et un emoji dans un nom de tenant doit pouvoir être stocké.
+      MARIADB_INIT_COMMAND: >-
+        --character-set-server=utf8mb4
+        --collation-server=utf8mb4_unicode_ci
+    # Publié sur la boucle locale : `DATABASE_URL` pointe 127.0.0.1:3306,
+    # sans quoi l'API attend une connexion que rien n'écoute.
+    ports:
+      - "${MARIADB_PORT:-3306}:3306"
+    # `healthcheck.sh` est l'outil prévu par l'image : il teste un vrai
+    # login, là où `mysqladmin ping` répond OK même en refusing les
+    # connexions tant que l'initialisation n'est pas terminée.
     healthcheck:
-      test: ["CMD", "pg_isready", "-d", "${POSTGRES_DB:-app}", "-U", "${POSTGRES_USER:-app}"]
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 5s
       timeout: 5s
-      retries: 5
-      start_period: 60s
+      retries: 12
+      start_period: 30s
     volumes:
-      - database_data:/var/lib/postgresql/data:rw
-      # You may use a bind-mounted host directory instead, so that it is harder to accidentally remove the volume and lose all your data!
-      # - ./docker/db/data:/var/lib/postgresql/data:rw
+      - database_data:/var/lib/mysql:rw
+      # Pour des données persistées hors du conteneur :
+      # - ./docker/db/data:/var/lib/mysql:rw
 ###< doctrine/doctrine-bundle ###
 
 volumes:

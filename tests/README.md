@@ -22,10 +22,11 @@ php tests/verify-api-doc.php
 php tests/verify-super-admin.php
 php tests/verify-password-reset.php
 php tests/verify-api-token.php
+php tests/verify-mariadb.php
 node tests/verify-reset-password-form.ts
 ```
 
-Les sept premiers scripts s'exécutent avec PHP. Le dernier est un script
+Les huit premiers scripts s'exécutent avec PHP. Le dernier est un script
 Node : il vérifie la logique pure du formulaire React
 (`assets/app/password-form.ts`), que Node 24 exécute nativement sans
 transpiler. Il exige l'API démarrée sur le port 8000 uniquement pour
@@ -44,6 +45,7 @@ contrôle est ignoré et les autres restent exécutés.
 | `verify-password-reset.php` | Flux « mot de passe oublié » complet : création du jeton, condensat SHA-256, expiration, usage unique, anti-énumération, refus des jetons expirés/inconnus/consommés et connexion avec le nouveau mot de passe. |
 | `verify-api-token.php` | Émission du jeton (`accessToken`, `tokenType`, `expiresIn`, structure JWT en trois segments, en-tête `alg: HS256`) et contenu de ses revendications (`sub`, `jti`, `email`, `platformRole`, `roles`, `cityScope`, `organizations`, `exp`), puis son refus quand la signature, la charge utile ou l'expiration sont falsifiées, quand il est en `alg: none`, quand le compte a disparu, et après une déconnexion. Également : en-tête `WWW-Authenticate` et absence de trace d'exécution sur un 401, charge utile de `POST /api/auth/login` et `GET /api/auth/me` (rôles Symfony, rôles métier par Organization triés, villes accessibles avec exclusion des villes inactives, `cityScope` `platform`/`assigned`/`none`, horodatage ISO-8601), absence de fuite de secret, et schéma de sécurité `bearer` sans résidu de cookie. |
 | `verify-reset-password-form.ts` | Formulaire de réinitialisation côté client : extraction du jeton depuis l'URL, validation des deux champs (mot de passe + confirmation), cohérence de la longueur minimale avec le schéma OpenAPI de l'API. |
+| `verify-mariadb.php` | Cible SGBD : plateforme DBAL et serveur réellement MariaDB, base en `utf8mb4`, absence de PostgreSQL dans `compose.yaml`, `compose.override.yaml`, `.env` et `config/packages/doctrine.yaml`, présence de toutes les tables attendues, absence de version de migration orpheline, et exécution des deux agrégats mensuels qui s'appuient sur `DATE_FORMAT()`. |
 
 
 ## Prérequis
