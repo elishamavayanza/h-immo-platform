@@ -19,6 +19,7 @@ php tests/verify-tenant-isolation.php
 php tests/verify-http-mapping.php
 php tests/verify-auth.php
 php tests/verify-api-doc.php
+php tests/verify-super-admin.php
 ```
 
 ## Contrôles
@@ -29,6 +30,7 @@ php tests/verify-api-doc.php
 | `verify-http-mapping.php` | Cohérence des verbes HTTP, des codes de statut et des routes entre contrôleurs et services. |
 | `verify-auth.php` | Ouverture de session, cookie de session, accès authentifié, refus des comptes désactivés, 401 anonyme, limitation des tentatives, déconnexion et révocation de session. |
 | `verify-api-doc.php` | Génération de la spécification OpenAPI : classes de modèles résolues, paramètres de requête, corps de requête et réponses référencées. |
+| `verify-super-admin.php` | Amorçage de la plateforme : création du compte `SUPER_ADMIN` par défaut, hachage du mot de passe, connexion réelle via `POST /api/auth/login`, réinitialisation du mot de passe et garde-fous de la commande. |
 
 ## Prérequis
 
