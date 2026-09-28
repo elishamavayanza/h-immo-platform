@@ -7,6 +7,7 @@ namespace App\Controller\Api\Rental;
 use App\Dto\Feedback;
 use App\Dto\Request\Rental\RentOverdueFilterDto;
 use App\Dto\Request\Rental\RentRequest;
+use App\Entity\Identity\User;
 use App\Service\Rental\RentService;
 use App\Trait\FeedbackTrait;
 use Nelmio\ApiDocBundle\Attribute\Model;
@@ -59,7 +60,7 @@ final class RentController extends AbstractController
     public function create(
         #[MapRequestPayload] RentRequest $request
     ): JsonResponse {
-        $feedback = $this->rentService->createRent($request);
+        $feedback = $this->rentService->createRent($request, $this->getUser());
 
         return $this->json($feedback, $feedback->getStatus());
     }
@@ -94,7 +95,7 @@ final class RentController extends AbstractController
         string $uuid,
         #[MapRequestPayload] RentRequest $request
     ): JsonResponse {
-        $feedback = $this->rentService->updateRent($uuid, $request);
+        $feedback = $this->rentService->updateRent($uuid, $request, $this->getUser());
 
         return $this->json($feedback, $feedback->getStatus());
     }

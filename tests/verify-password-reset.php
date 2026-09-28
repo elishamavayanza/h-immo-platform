@@ -42,7 +42,7 @@ final class PasswordResetKernel extends App\Kernel
         $container->addCompilerPass(new class implements CompilerPassInterface {
             public function process(ContainerBuilder $container): void
             {
-                foreach (['security.token_storage', 'cache.rate_limiter'] as $id) {
+                foreach (['security.token_storage', 'cache.rate_limiter', 'App\\Service\\System\\AuditLogService'] as $id) {
                     if ($container->hasDefinition($id)) {
                         $container->getDefinition($id)->setPublic(true);
                     }

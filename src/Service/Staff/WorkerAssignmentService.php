@@ -25,6 +25,7 @@ use App\Repository\Staff\WorkerAssignmentRepository;
 use App\Repository\Staff\WorkerRepository;
 use App\Security\SecurityAction;
 use App\Security\SecurityServiceInterface;
+use App\Service\System\AuditLogService;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\Uid\Uuid;
 use Symfony\Component\Validator\Validator\ValidatorInterface;
@@ -55,7 +56,8 @@ final readonly class WorkerAssignmentService
         private WorkerAssignmentMapper $assignmentMapper,
         private SecurityServiceInterface $securityService,
         private EntityManagerInterface $entityManager,
-        private ValidatorInterface $validator
+        private ValidatorInterface $validator,
+        private AuditLogService $auditLogService
     ) {
     }
 
@@ -124,6 +126,24 @@ final readonly class WorkerAssignmentService
 
         $this->entityManager->persist($assignment);
         $this->entityManager->flush();
+
+        // Log d'audit : création de l'affectation
+        $this->auditLogService->log(
+            action: 'CREATE_WORKER_ASSIGNMENT',
+            entityType: WorkerAssignment::class,
+            entityId: $assignment->getId(),
+            organization: $organization,
+            user: $currentUser,
+            oldValues: null,
+            newValues: [
+                'workerUuid' => $worker->getUuid()->toRfc4122(),
+                'cityUuid' => $city->getUuid()->toRfc4122(),
+                'role' => $assignment->getRole()->value,
+                'monthlySalary' => $assignment->getMonthlySalary(),
+                'currency' => $assignment->getCurrency()->value,
+                'startDate' => $assignment->getStartDate()->format('Y-m-d'),
+            ],
+        );
 
         return $feedback
             ->setData($this->assignmentMapper->toResponse($assignment))

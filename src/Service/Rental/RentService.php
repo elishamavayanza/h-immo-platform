@@ -6,6 +6,7 @@ namespace App\Service\Rental;
 
 use App\Dto\Feedback;
 use App\Dto\Request\Rental\RentRequest;
+use App\Entity\Identity\User;
 use App\Entity\Rental\Lease;
 use App\Entity\Rental\Rent;
 use App\Mapper\Rental\RentMapper;
@@ -14,6 +15,7 @@ use App\Repository\Rental\PaymentRepository;
 use App\Repository\Rental\RentRepository;
 use App\Security\SecurityAction;
 use App\Security\SecurityServiceInterface;
+use App\Service\System\AuditLogService;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\Uid\Uuid;
 use Symfony\Component\Validator\Validator\ValidatorInterface;
@@ -38,11 +40,12 @@ final readonly class RentService
         private RentMapper $rentMapper,
         private SecurityServiceInterface $securityService,
         private EntityManagerInterface $entityManager,
-        private ValidatorInterface $validator
+        private ValidatorInterface $validator,
+        private AuditLogService $auditLogService
     ) {
     }
 
-    public function createRent(RentRequest $request): Feedback
+    public function createRent(RentRequest $request, User $currentUser): Feedback
     {
         $feedback = new Feedback();
 
@@ -80,6 +83,23 @@ final readonly class RentService
         $this->entityManager->persist($rent);
         $this->entityManager->flush();
 
+        // Log d'audit : création de l'échéance
+        $this->auditLogService->log(
+            action: 'CREATE_RENT',
+            entityType: Rent::class,
+            entityId: $rent->getId(),
+            organization: $lease->getOrganization(),
+            user: $currentUser,
+            oldValues: null,
+            newValues: [
+                'period' => $rent->getPeriod()->format('Y-m-d'),
+                'dueDate' => $rent->getDueDate()->format('Y-m-d'),
+                'amount' => $rent->getAmount(),
+                'currency' => $rent->getCurrency()->value,
+                'leaseUuid' => $rent->getLease()->getUuid()->toRfc4122(),
+            ],
+        );
+
         return $feedback
             ->setData($this->rentMapper->toResponse($rent))
             ->setFlushDescription('L\'échéance de loyer a été créée avec succès.')
@@ -87,7 +107,7 @@ final readonly class RentService
             ->autoInitFlush();
     }
 
-    public function updateRent(string $uuid, RentRequest $request): Feedback
+    public function updateRent(string $uuid, RentRequest $request, User $currentUser): Feedback
     {
         $feedback = new Feedback();
 
@@ -136,6 +156,22 @@ final readonly class RentService
         $rent->syncStatus($this->paymentRepository->sumAmountByRent($rent));
 
         $this->entityManager->flush();
+
+        // Log d'audit : mise à jour de l'échéance
+        $this->auditLogService->log(
+            action: 'UPDATE_RENT',
+            entityType: Rent::class,
+            entityId: $rent->getId(),
+            organization: $rent->getLease()->getOrganization(),
+            user: $currentUser,
+            oldValues: null,
+            newValues: [
+                'period' => $rent->getPeriod()->format('Y-m-d'),
+                'dueDate' => $rent->getDueDate()->format('Y-m-d'),
+                'amount' => $rent->getAmount(),
+                'currency' => $rent->getCurrency()->value,
+            ],
+        );
 
         return $feedback
             ->setData($this->rentMapper->toResponse($rent))
