@@ -63,6 +63,9 @@ final readonly class LeaseResponse
         #[OA\Property(description: 'Notes ou clauses particulières', example: 'Paiement avant le 05 de chaque mois', nullable: true)]
         public ?string $notes,
 
+        #[OA\Property(description: 'Clauses contractuelles et conditions particulières du bail', nullable: true)]
+        public ?string $terms,
+
         #[OA\Property(description: 'Horodatage de création', format: 'date-time', example: '2026-01-01T09:00:00Z')]
         public \DateTimeImmutable $createdAt,
 
@@ -88,6 +91,7 @@ final readonly class LeaseResponse
             terminationDate: $lease->getTerminationDate(),
             terminationReason: $lease->getTerminationReason(),
             notes: $lease->getNotes(),
+            terms: $lease->getTerms(),
             createdAt: $lease->getCreatedAt(),
             updatedAt: $lease->getUpdatedAt(),
         );

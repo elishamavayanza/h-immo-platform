@@ -167,8 +167,10 @@ final readonly class OrganizationUserService
     /**
      * Modifie le rôle d'un utilisateur au sein d'une organisation.
      * Recherche la relation par son UUID public et applique le nouveau privilège.
+     * Nettoie UserCity si le rôle change depuis/vers ADMIN_VILLE.
+     * Protège le dernier PATRON de l'organisation.
      */
-    public function updateRole(string $uuid, OrganizationUserRequest $request): Feedback
+    public function updateRole(string $uuid, OrganizationUserRequest $request, User $currentUser): Feedback
     {
         $feedback = new Feedback();
         $orgUser = $this->orgUserRepository->findOneBy(['uuid' => $uuid]);
@@ -181,8 +183,12 @@ final readonly class OrganizationUserService
                 ->autoInitFlush();
         }
 
+        $organization = $orgUser->getOrganization();
+        $user = $orgUser->getUser();
+        $oldRole = $orgUser->getRole();
+
         $this->security->checkOrganizationAccess(
-            $orgUser->getOrganization(),
+            $organization,
             SecurityAction::MANAGE_USERS
         );
 
@@ -195,8 +201,30 @@ final readonly class OrganizationUserService
                 ->autoInitFlush();
         }
 
-        if ($request->role !== null) {
-            $orgUser->setRole($request->role);
+        $newRole = $request->role;
+        if ($newRole !== null && $newRole !== $oldRole) {
+            // Protection du dernier PATRON : on ne peut pas rétrograder
+            // le dernier PATRON de l'organisation
+            if ($oldRole === OrganizationRole::PATRON) {
+                $patronCount = $this->orgUserRepository->countByOrganizationAndRole($organization, OrganizationRole::PATRON);
+                if ($patronCount <= 1) {
+                    return $feedback
+                        ->addError('role', 'Impossible de changer le rôle du dernier PATRON de l\'organisation.')
+                        ->setErrorFlushDescription('Une organisation doit conserver au moins un PATRON.')
+                        ->setStatus(409)
+                        ->autoInitFlush();
+                }
+            }
+
+            // Nettoyer UserCity si on change depuis ADMIN_VILLE
+            if ($oldRole === OrganizationRole::ADMIN_VILLE) {
+                $this->userCityRepository->deleteByUser($orgUser->getUser());
+                $this->em->flush();
+            }
+
+            // Note: si on passe à ADMIN_VILLE, les villes devront être assignées séparément
+
+            $orgUser->setRole($newRole);
             $this->em->flush();
         }
 
@@ -210,6 +238,8 @@ final readonly class OrganizationUserService
     /**
      * Retire l'accès d'un utilisateur à une organisation spécifique.
      * Supprime physiquement l'enregistrement de liaison entre l'utilisateur et le tenant.
+     * Nettoie aussi les attributions UserCity si l'utilisateur était ADMIN_VILLE.
+     * Protège le dernier PATRON de l'organisation.
      */
     public function revokeUser(string $uuid): Feedback
     {
@@ -224,8 +254,36 @@ final readonly class OrganizationUserService
                 ->autoInitFlush();
         }
 
+        $organization = $orgUser->getOrganization();
+        $user = $orgUser->getUser();
+        $currentRole = $orgUser->getRole();
+
         $this->security->checkOrganizationAccess(
-            $orgUser->getOrganization(),
+            $organization,
+            SecurityAction::MANAGE_USERS
+        );
+
+        // Protection du dernier PATRON : on ne peut pas révoquer/dégrader
+        // le dernier PATRON de l'organisation
+        if ($currentRole === OrganizationRole::PATRON) {
+            $patronCount = $this->orgUserRepository->countByOrganizationAndRole($organization, OrganizationRole::PATRON);
+            if ($patronCount <= 1) {
+                return $feedback
+                    ->addError('uuid', 'Impossible de révoquer le dernier PATRON de l\'organisation.')
+                    ->setErrorFlushDescription('Une organisation doit conserver au moins un PATRON.')
+                    ->setStatus(409)
+                    ->autoInitFlush();
+            }
+        }
+
+        // Nettoyer les UserCity si l'utilisateur était ADMIN_VILLE
+        if ($currentRole === OrganizationRole::ADMIN_VILLE) {
+            $this->userCityRepository->deleteByUser($user);
+            $this->em->flush();
+        }
+
+        $this->security->checkOrganizationAccess(
+            $organization,
             SecurityAction::MANAGE_USERS
         );
 

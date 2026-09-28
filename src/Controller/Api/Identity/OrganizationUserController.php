@@ -8,6 +8,7 @@ use App\Dto\Feedback;
 use App\Dto\Request\Identity\CreateAdminRequest;
 use App\Dto\Request\Identity\OrganizationUserRequest;
 use App\Dto\Request\PaginationQuery;
+use App\Entity\Identity\User;
 use App\Service\Identity\OrganizationUserService;
 use App\Trait\FeedbackTrait;
 use Nelmio\ApiDocBundle\Attribute\Model;
@@ -77,7 +78,7 @@ final class OrganizationUserController extends AbstractController
         string $uuid,
         #[MapRequestPayload] OrganizationUserRequest $request
     ): JsonResponse {
-        $feedback = $this->orgUserService->updateRole($uuid, $request);
+        $feedback = $this->orgUserService->updateRole($uuid, $request, $this->getUser());
 
         return $this->json($feedback, $feedback->getStatus());
     }

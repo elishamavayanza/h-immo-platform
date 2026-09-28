@@ -70,6 +70,18 @@ final readonly class LeaseService
             return $feedback->autoInitFlush();
         }
 
+        // Vérifier la cohérence organisationnelle : l'unité et le locataire
+        // doivent appartenir à la même Organization. Sans ce contrôle,
+        // un utilisateur multi-organisations ou un SUPER_ADMIN pourrait
+        // créer un bail croisé entre organisations.
+        if ($unit->getBuilding()->getParcel()->getCity()->getOrganization() !== $tenant->getOrganization()) {
+            return $feedback
+                ->addError('unitUuid', 'L\'unité ne appartient pas à la même organisation que le locataire.')
+                ->setFlushDescriptionWithError('L\'unité et le locataire doivent appartenir à la même organisation.')
+                ->setStatus(422)
+                ->autoInitFlush();
+        }
+
         // L'organization du bail est celle du locataire : on ne la déduit
         // pas du client, elle découle de l'entité déjà autorisée.
         $organization = $tenant->getOrganization();
