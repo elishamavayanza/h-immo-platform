@@ -721,8 +721,8 @@ $rentSynthese = (new Rent())
 
 check(
     'un loyer sans paiement et échu devient OVERDUE (dérivé de la date)',
-    $rentSynthese->syncStatus('0.00') === RentStatus::OVERDUE,
-    'statut=' . $rentSynthese->getStatus()->value
+    $rentSynthese->syncStatus('0.00') && $rentSynthese->getComputedStatus('0.00') === RentStatus::OVERDUE,
+    'statut=' . $rentSynthese->getComputedStatus('0.00')->value
 );
 
 check(

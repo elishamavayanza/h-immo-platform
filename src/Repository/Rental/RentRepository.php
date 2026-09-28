@@ -9,6 +9,7 @@ use App\Entity\Rental\Lease;
 use App\Entity\Rental\Rent;
 use App\Repository\PaginatedResultTrait;
 use App\Repository\UuidParameterTrait;
+use App\Enum\LeaseStatus;
 use App\Enum\RentStatus;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\Persistence\ManagerRegistry;
@@ -90,6 +91,58 @@ class RentRepository extends ServiceEntityRepository
     }
 
     /**
+     * Liste paginée des échéances EN RETARD selon les organisations et villes autorisées.
+     *
+     * Une échéance est en retard si sa dueDate < aujourd'hui ET son statut n'est pas PAID.
+     * On utilise le statut calculé (computed) qui inclut OVERDUE.
+     *
+     * @param list<int>|null $organizationIds
+     * @param list<int>|null $cityIds
+     *
+     * @return array{items: list<Rent>, total: int}
+     */
+    public function findOverduePaginatedByOrganizationsAndCities(
+        ?array $organizationIds = null,
+        ?array $cityIds = null,
+        int $page = 1,
+        int $limit = 20,
+        ?string $sortBy = 'dueDate',
+        ?string $sortOrder = 'ASC'
+    ): array {
+        // Whitelist des champs de tri
+        $allowedSortFields = ['dueDate', 'period', 'amount', 'createdAt'];
+        $sortBy = in_array($sortBy, $allowedSortFields, true) ? $sortBy : 'dueDate';
+        $sortOrder = strtoupper($sortOrder) === 'ASC' ? 'ASC' : 'DESC';
+
+        $today = new \DateTimeImmutable('today');
+
+        $qb = $this->createQueryBuilder('r')
+            ->innerJoin('r.lease', 'l')
+            ->andWhere('r.dueDate < :today')
+            ->andWhere('r.status IN (:openStatuses)')
+            ->andWhere('r.deletedAt IS NULL')
+            ->setParameter('today', $today)
+            ->setParameter('openStatuses', [\App\Enum\RentStatus::PENDING, \App\Enum\RentStatus::PARTIALLY_PAID, \App\Enum\RentStatus::OVERDUE])
+            ->orderBy("r.$sortBy", $sortOrder);
+
+        if ($organizationIds !== null && !empty($organizationIds)) {
+            $qb->andWhere('l.organization IN (:orgs)')
+                ->setParameter('orgs', $organizationIds);
+        }
+
+        if ($cityIds !== null && !empty($cityIds)) {
+            $qb->innerJoin('l.unit', 'u')
+                ->innerJoin('u.building', 'b')
+                ->innerJoin('b.parcel', 'par')
+                ->innerJoin('par.city', 'c')
+                ->andWhere('c.id IN (:cities)')
+                ->setParameter('cities', $cityIds);
+        }
+
+        return $this->fetchPaginated($qb, $page, $limit);
+    }
+
+    /**
      * Liste les échéances en retard de paiement d'une organisation
      * (date d'échéance dépassée et statut non soldé).
      *
@@ -149,5 +202,58 @@ class RentRepository extends ServiceEntityRepository
             ->setLockMode(\Doctrine\DBAL\LockMode::PESSIMISTIC_WRITE)
             ->getQuery()
             ->getOneOrNullResult();
+    }
+
+    /**
+     * Somme des montants des loyers ATTENDUS (somme des Rent.amount)
+     * pour les baux actifs, groupés par période (mois) et devise.
+     *
+     * Utilisé pour le résumé financier : comparer attendu vs encaissé.
+     *
+     * @param list<int>|null $organizationIds
+     * @param list<int>|null $cityIds
+     *
+     * @return list<array{period: string, total: string, currency: string}>
+     */
+    public function getExpectedRentsSummary(
+        ?array $organizationIds = null,
+        ?array $cityIds = null,
+        ?\DateTimeImmutable $periodFrom = null,
+        ?\DateTimeImmutable $periodTo = null
+    ): array {
+        $qb = $this->createQueryBuilder('r')
+            ->select('DATE_FORMAT(r.period, \'%Y-%m\') as period, SUM(r.amount) as total, r.currency')
+            ->innerJoin('r.lease', 'l')
+            ->andWhere('l.status = :activeStatus')
+            ->andWhere('l.deletedAt IS NULL')
+            ->setParameter('activeStatus', \App\Enum\LeaseStatus::ACTIVE)
+            ->groupBy('period, r.currency')
+            ->orderBy('period', 'ASC');
+
+        if ($organizationIds !== null && !empty($organizationIds)) {
+            $qb->andWhere('l.organization IN (:orgs)')
+                ->setParameter('orgs', $organizationIds);
+        }
+
+        if ($cityIds !== null && !empty($cityIds)) {
+            $qb->innerJoin('l.unit', 'u')
+                ->innerJoin('u.building', 'b')
+                ->innerJoin('b.parcel', 'par')
+                ->innerJoin('par.city', 'c')
+                ->andWhere('c.id IN (:cities)')
+                ->setParameter('cities', $cityIds);
+        }
+
+        if ($periodFrom !== null) {
+            $qb->andWhere('r.period >= :periodFrom')
+                ->setParameter('periodFrom', $periodFrom);
+        }
+
+        if ($periodTo !== null) {
+            $qb->andWhere('r.period <= :periodTo')
+                ->setParameter('periodTo', $periodTo);
+        }
+
+        return $qb->getQuery()->getResult();
     }
 }

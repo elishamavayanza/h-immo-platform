@@ -6,6 +6,7 @@ namespace App\Controller\Api\Rental;
 
 use App\Dto\Feedback;
 use App\Dto\Request\Rental\PaymentCancelRequest;
+use App\Dto\Request\Rental\PaymentFilterDto;
 use App\Dto\Request\Rental\PaymentRequest;
 use App\Entity\Identity\User;
 use App\Service\Rental\PaymentService;
@@ -126,6 +127,29 @@ final class PaymentController extends AbstractController
         }
 
         $feedback = $this->paymentService->cancelPayment($uuid, $request->reason, $user);
+
+        return $this->json($feedback, $feedback->getStatus());
+    }
+
+    #[Route('', name: 'list', methods: ['GET'])]
+    #[OA\Get(
+        path: '/api/v1/payments',
+        summary: 'Lister les paiements avec pagination',
+        parameters: [
+            new OA\Parameter(name: 'organizationId', in: 'query', schema: new OA\Schema(type: 'string', format: 'uuid'), description: 'Filtrer par organisation (optionnel)'),
+            new OA\Parameter(name: 'page', in: 'query', schema: new OA\Schema(type: 'integer', default: 1), description: 'Numéro de page'),
+            new OA\Parameter(name: 'limit', in: 'query', schema: new OA\Schema(type: 'integer', default: 20, minimum: 1, maximum: 100), description: 'Éléments par page'),
+            new OA\Parameter(name: 'sortBy', in: 'query', schema: new OA\Schema(type: 'string', default: 'paymentDate'), description: 'Champ de tri'),
+            new OA\Parameter(name: 'sortOrder', in: 'query', schema: new OA\Schema(type: 'string', enum: ['ASC', 'DESC'], default: 'DESC'), description: 'Ordre de tri'),
+        ],
+        responses: [
+            new OA\Response(response: 200, description: 'Liste paginée', content: new OA\JsonContent(ref: new Model(type: Feedback::class))),
+        ]
+    )]
+    public function list(
+        #[MapRequestPayload] PaymentFilterDto $filter
+    ): JsonResponse {
+        $feedback = $this->paymentService->listPayments($filter);
 
         return $this->json($feedback, $feedback->getStatus());
     }

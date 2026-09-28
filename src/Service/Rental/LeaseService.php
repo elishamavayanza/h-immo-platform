@@ -214,33 +214,104 @@ final readonly class LeaseService
     /**
      * Liste paginée des baux du périmètre autorisé.
      */
-    public function listLeases(int $page = 1, int $limit = 20, ?string $search = null): Feedback
+    public function listLeases(?LeaseFilterDto $filter = null): Feedback
     {
         $feedback = new Feedback();
 
+        $filter ??= new \App\Dto\Request\Rental\LeaseFilterDto();
+
+        // Récupérer les organisations et villes accessibles
         $organizations = $this->securityService->getCurrentUserOrganizations();
-        $items = [];
+        $organizationIds = array_map(fn($o) => $o->getId(), $organizations);
 
-        foreach ($organizations as $organization) {
-            if (!$this->securityService->canAccessOrganization($organization, SecurityAction::VIEW_LEASE)) {
-                continue;
-            }
-
-            $result = $this->leaseRepository->findPaginatedByOrganization($organization, $page, $limit, $search);
-
-            foreach ($result['items'] as $lease) {
-                if ($this->securityService->canAccessLease($lease, SecurityAction::VIEW_LEASE)) {
-                    $items[] = $this->leaseMapper->toResponse($lease);
+        $cityIds = [];
+        foreach ($organizations as $org) {
+            $cities = $this->cityRepository->findActiveByOrganization($org);
+            foreach ($cities as $city) {
+                if ($this->securityService->canAccessCity($city, SecurityAction::VIEW_LEASE)) {
+                    $cityIds[] = $city->getId();
                 }
             }
         }
 
+        // Si l'utilisateur est ADMIN_VILLE, il a déjà des cityIds restreints
+        // Sinon, on utilise toutes les villes de ses organizations
+        if ($cityIds === []) {
+            // Pas de ville accessible = pas de bail visible
+            return $feedback
+                ->setData(['items' => [], 'total' => 0, 'page' => 1, 'limit' => 20])
+                ->setFlushDescription('Aucune ville accessible.')
+                ->setStatus(200)
+                ->autoInitFlush();
+        }
+
+        // Filtrage optionnel par organizationId si fourni
+        $targetOrgIds = $organizationIds;
+        if ($filter->organizationId !== null) {
+            try {
+                $uuid = \Symfony\Component\Uid\Uuid::fromString($filter->organizationId);
+                $org = $this->organizationRepository->findOneByUuid($uuid);
+                if ($org !== null && in_array($org->getId(), $organizationIds, true)) {
+                    $targetOrgIds = [$org->getId()];
+                } else {
+                    $targetOrgIds = []; // Organisation non accessible
+                }
+            } catch (\InvalidArgumentException) {
+                $targetOrgIds = [];
+            }
+        }
+
+        // Filtrage optionnel par unitId, tenantId, status
+        // Note: ces filtres ne sont pas encore supportés par le repository,
+        // ils sont appliqués en post-traitement pour l'instant.
+        // TODO: les ajouter dans le repository pour éviter le sur-fetching.
+
+        $result = $this->leaseRepository->findPaginatedByOrganizationsAndCities(
+            organizationIds: $targetOrgIds,
+            cityIds: $cityIds,
+            page: $filter->page,
+            limit: $filter->limit,
+            sortBy: $filter->sortBy,
+            sortOrder: $filter->sortOrder
+        );
+
+        // Appliquer les filtres post-répertoire (unitId, tenantId, status)
+        $items = array_filter($result['items'], function (Lease $lease) use ($filter): bool {
+            if ($filter->unitId !== null) {
+                try {
+                    if ($lease->getUnit()->getUuid()->toRfc4122() !== $filter->unitId) {
+                        return false;
+                    }
+                } catch (\Throwable) {
+                    return false;
+                }
+            }
+            if ($filter->tenantId !== null) {
+                try {
+                    if ($lease->getTenant()->getUuid()->toRfc4122() !== $filter->tenantId) {
+                        return false;
+                    }
+                } catch (\Throwable) {
+                    return false;
+                }
+            }
+            if ($filter->status !== null) {
+                if ($lease->getStatus()->value !== $filter->status) {
+                    return false;
+                }
+            }
+            // Vérification d'accès finale
+            return $this->securityService->canAccessLease($lease, SecurityAction::VIEW_LEASE);
+        });
+
+        $items = array_map(fn(Lease $l) => $this->leaseMapper->toResponse($l), $items);
+
         return $feedback
             ->setData([
-                'items' => $items,
-                'total' => count($items),
-                'page' => max(1, $page),
-                'limit' => $limit,
+                'items' => array_values($items),
+                'total' => count($items), // Note: total après filtres post-répertoire
+                'page' => max(1, $filter->page),
+                'limit' => $filter->limit,
             ])
             ->setFlushDescription('Baux listés avec succès.')
             ->setStatus(200)

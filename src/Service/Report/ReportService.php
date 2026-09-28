@@ -259,55 +259,94 @@ final readonly class ReportService
         \DateTimeImmutable $periodFrom,
         \DateTimeImmutable $periodTo
     ): array {
-        $results = $this->expenseRepository->getFinancialSummary(
+        // Récupérer les dépenses groupées par période et devise
+        $expenseResults = $this->expenseRepository->getFinancialSummary(
             $organizationId ? [$organizationId] : null,
             $cityIds ?: null,
             $periodFrom,
             $periodTo
         );
 
-        $byPeriod = [];
-        foreach ($results as $row) {
-            $period = $row['period'];
-            $currency = $row['currency'];
-            $total = $row['total'];
+        // Récupérer les revenus (paiements) groupés par période et devise
+        $revenueResults = $this->paymentRepository->getFinancialSummary(
+            $organizationId ? [$organizationId] : null,
+            $cityIds ?: null,
+            $periodFrom,
+            $periodTo
+        );
 
-            if (!isset($byPeriod[$period])) {
-                $byPeriod[$period] = ['revenues' => '0.00', 'expenses' => '0.00', 'currency' => $currency];
+        // Récupérer les loyers attendus (somme des montants des échéances)
+        // pour la période, groupés par période et devise
+        $expectedResults = $this->rentRepository->getExpectedRentsSummary(
+            $organizationId ? [$organizationId] : null,
+            $cityIds ?: null,
+            $periodFrom,
+            $periodTo
+        );
+
+        // Agréger par clé "période|devise" pour ne pas mélanger les devises
+        $byPeriodCurrency = [];
+
+        foreach ($expenseResults as $row) {
+            $currencyKey = $row['currency'] instanceof \BackedEnum ? $row['currency']->value : (string) $row['currency'];
+            $key = $row['period'] . '|' . $currencyKey;
+            if (!isset($byPeriodCurrency[$key])) {
+                $byPeriodCurrency[$key] = [
+                    'period' => $row['period'],
+                    'currency' => $currencyKey,
+                    'revenues' => '0.00',
+                    'expenses' => '0.00',
+                    'expected' => '0.00',
+                ];
             }
-            $byPeriod[$period]['expenses'] = bcadd($byPeriod[$period]['expenses'], $total, 2);
+            $byPeriodCurrency[$key]['expenses'] = bcadd($byPeriodCurrency[$key]['expenses'], $row['total'], 2);
         }
 
-        // Ajouter les revenus (paiements)
-        $revenues = $this->paymentRepository->getFinancialSummary(
-            $organizationId ? [$organizationId] : null,
-            $cityIds ?: null,
-            $periodFrom,
-            $periodTo
-        );
-
-        foreach ($revenues as $row) {
-            $period = $row['period'];
-            $currency = $row['currency'];
-            $total = $row['total'];
-
-            if (!isset($byPeriod[$period])) {
-                $byPeriod[$period] = ['revenues' => '0.00', 'expenses' => '0.00', 'currency' => $currency];
+        foreach ($revenueResults as $row) {
+            $currencyKey = $row['currency'] instanceof \BackedEnum ? $row['currency']->value : (string) $row['currency'];
+            $key = $row['period'] . '|' . $currencyKey;
+            if (!isset($byPeriodCurrency[$key])) {
+                $byPeriodCurrency[$key] = [
+                    'period' => $row['period'],
+                    'currency' => $currencyKey,
+                    'revenues' => '0.00',
+                    'expenses' => '0.00',
+                    'expected' => '0.00',
+                ];
             }
-            $byPeriod[$period]['revenues'] = bcadd($byPeriod[$period]['revenues'], $total, 2);
+            $byPeriodCurrency[$key]['revenues'] = bcadd($byPeriodCurrency[$key]['revenues'], $row['total'], 2);
+        }
+
+        foreach ($expectedResults as $row) {
+            $currencyKey = $row['currency'] instanceof \BackedEnum ? $row['currency']->value : (string) $row['currency'];
+            $key = $row['period'] . '|' . $currencyKey;
+            if (!isset($byPeriodCurrency[$key])) {
+                $byPeriodCurrency[$key] = [
+                    'period' => $row['period'],
+                    'currency' => $currencyKey,
+                    'revenues' => '0.00',
+                    'expenses' => '0.00',
+                    'expected' => '0.00',
+                ];
+            }
+            $byPeriodCurrency[$key]['expected'] = bcadd($byPeriodCurrency[$key]['expected'], $row['total'], 2);
         }
 
         $items = [];
-        foreach ($byPeriod as $period => $data) {
+        foreach ($byPeriodCurrency as $data) {
             $net = bcsub($data['revenues'], $data['expenses'], 2);
             $items[] = new FinancialSummaryItem(
-                period: $period,
+                period: $data['period'],
                 revenues: $data['revenues'],
                 expenses: $data['expenses'],
+                expected: $data['expected'],
                 netResult: $net,
-                currency: $data['currency'],
+                currency: \App\Enum\Currency::from($data['currency']),
             );
         }
+
+        // Trier par période
+        usort($items, fn($a, $b) => strcmp($a->period, $b->period));
 
         return $items;
     }
@@ -445,10 +484,55 @@ final readonly class ReportService
     /** @return list<OccupancyItem> */
     private function buildOccupancyEvolution(array $cityIds, \DateTimeImmutable $from, \DateTimeImmutable $to): array
     {
-        // Simplifié : retourne l'occupation actuelle par mois (nécessiterait une table d'historique pour être précis)
-        return $this->buildOccupancyByCity(
-            array_filter($this->cityRepository->findAllActive(), fn(City $c) => in_array($c->getId(), $cityIds, true))
-        );
+        // Générer l'évolution de l'occupation mois par mois
+        $items = [];
+        $current = $from->modify('first day of this month');
+        $endMonth = $to->modify('first day of this month');
+
+        while ($current <= $endMonth) {
+            $totalUnits = 0;
+            $occupiedUnits = 0;
+
+            $cities = $this->cityRepository->findInOrganization($this->cityRepository->find($cityIds[0])->getOrganization());
+
+            foreach ($cities as $city) {
+                if (!in_array($city->getId(), $cityIds, true)) {
+                    continue;
+                }
+                $parcels = $this->parcelRepository->findByCity($city);
+
+                foreach ($parcels as $parcel) {
+                    $buildings = $this->buildingRepository->findByParcel($parcel);
+
+                    foreach ($buildings as $building) {
+                        $units = $this->unitRepository->findByBuilding($building);
+                        $totalUnits += count($units);
+
+                        foreach ($units as $unit) {
+                            // Un bail est actif pour ce mois si sa période le couvre
+                            $activeLease = $this->leaseRepository->findActiveLeaseForUnitAtDate($unit, $current);
+                            if ($activeLease !== null) {
+                                $occupiedUnits++;
+                            }
+                        }
+                    }
+                }
+            }
+
+            $items[] = new OccupancyItem(
+                level: 'month',
+                levelUuid: $current->format('Y-m'),
+                label: $current->format('F Y'),
+                totalUnits: $totalUnits,
+                occupiedUnits: $occupiedUnits,
+                availableUnits: $totalUnits - $occupiedUnits,
+                occupancyRate: $totalUnits > 0 ? round(($occupiedUnits / $totalUnits) * 100, 2) : 0.0,
+            );
+
+            $current = $current->modify('+1 month');
+        }
+
+        return $items;
     }
 
     /** @return list<ArrearsItem> */
@@ -720,8 +804,37 @@ final readonly class ReportService
 
     private function getMainCurrency(?int $organizationId, array $cityIds): string
     {
-        // Retourne la devise la plus utilisée (simplifié : CDF par défaut)
-        return 'CDF';
+        // Compter les devises utilisées dans les paiements et dépenses du périmètre
+        $currencyCounts = [];
+
+        $payments = $this->paymentRepository->getFinancialSummary(
+            $organizationId ? [$organizationId] : null,
+            $cityIds ?: null,
+            new \DateTimeImmutable('first day of January this year'),
+            new \DateTimeImmutable('last day of December this year')
+        );
+        foreach ($payments as $row) {
+            $currencyKey = $row['currency'] instanceof \BackedEnum ? $row['currency']->value : (string) $row['currency'];
+            $currencyCounts[$currencyKey] = ($currencyCounts[$currencyKey] ?? 0) + 1;
+        }
+
+        $expenses = $this->expenseRepository->getFinancialSummary(
+            $organizationId ? [$organizationId] : null,
+            $cityIds ?: null,
+            new \DateTimeImmutable('first day of January this year'),
+            new \DateTimeImmutable('last day of December this year')
+        );
+        foreach ($expenses as $row) {
+            $currencyKey = $row['currency'] instanceof \BackedEnum ? $row['currency']->value : (string) $row['currency'];
+            $currencyCounts[$currencyKey] = ($currencyCounts[$currencyKey] ?? 0) + 1;
+        }
+
+        if (empty($currencyCounts)) {
+            return \App\Enum\Currency::CDF->value; // fallback
+        }
+
+        arsort($currencyCounts);
+        return array_key_first($currencyCounts);
     }
 
     /**

@@ -13,6 +13,10 @@ use OpenApi\Attributes as OA;
  * RentResponse
  *
  * Package : Rental Management — DTO de réponse
+ *
+ * Le champ `status` reflète le statut CALCULÉ (computed) incluant
+ * OVERDUE évalué à la volée. Le statut persistant en base ne contient
+ * jamais OVERDUE.
  */
 #[OA\Schema(
     title: 'RentResponse',
@@ -39,8 +43,11 @@ final readonly class RentResponse
         #[OA\Property(description: 'Devise monétaire', type: 'string', example: 'USD', enum: Currency::class)]
         public Currency $currency,
 
-        #[OA\Property(description: 'Statut du loyer (PAID, PENDING, OVERDUE, PARTIAL)', type: 'string', example: 'PAID', enum: RentStatus::class)]
+        #[OA\Property(description: 'Statut du loyer (PAID, PENDING, OVERDUE, PARTIALLY_PAID) — calculé à la volée', type: 'string', example: 'OVERDUE', enum: RentStatus::class)]
         public RentStatus $status,
+
+        #[OA\Property(description: 'Indique si l\'échéance est en retard (impayée) à la date du jour', example: true)]
+        public bool $isOverdue,
 
         #[OA\Property(description: 'Horodatage de création de l\'échéance', format: 'date-time', example: '2026-03-01T00:05:00Z')]
         public \DateTimeImmutable $createdAt,
@@ -50,7 +57,7 @@ final readonly class RentResponse
     ) {
     }
 
-    public static function fromEntity(Rent $rent): self
+    public static function fromEntity(Rent $rent, ?string $paidAmount = null): self
     {
         return new self(
             id: (string) $rent->getUuid(),
@@ -59,7 +66,8 @@ final readonly class RentResponse
             dueDate: $rent->getDueDate(),
             amount: $rent->getAmount(),
             currency: $rent->getCurrency(),
-            status: $rent->getStatus(),
+            status: $rent->getComputedStatus(),
+            isOverdue: $rent->isOverdue(),
             createdAt: $rent->getCreatedAt(),
             updatedAt: $rent->getUpdatedAt(),
         );
