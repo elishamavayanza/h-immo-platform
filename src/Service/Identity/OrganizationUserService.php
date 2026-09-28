@@ -19,7 +19,7 @@ use App\Repository\Identity\UserRepository;
 use App\Repository\Identity\UserCityRepository;
 use App\Security\SecurityAction;
 use App\Security\SecurityServiceInterface;
-use App\Service\Identity\PasswordResetService;
+use App\Service\System\AuditLogService;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\Validator\Validator\ValidatorInterface;
 
@@ -53,7 +53,8 @@ final readonly class OrganizationUserService
         private OrganizationUserMapper $mapper,
         private ValidatorInterface $validator,
         private SecurityServiceInterface $security,
-        private PasswordResetService $passwordResetService
+        private PasswordResetService $passwordResetService,
+        private AuditLogService $auditLogService
     ) {
     }
 

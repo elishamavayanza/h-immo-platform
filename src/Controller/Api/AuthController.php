@@ -14,6 +14,7 @@ use App\Service\Identity\PasswordResetService;
 use App\Dto\Response\Identity\SessionUserResponse;
 use App\Service\Identity\SessionUserResponseFactory;
 use App\Service\Identity\TokenManager;
+use App\Service\System\AuditLogService;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
@@ -51,6 +52,7 @@ final class AuthController extends AbstractController
         private readonly SessionUserResponseFactory $sessionUserResponseFactory,
         private readonly TokenManager $tokenManager,
         private readonly RevokedTokenRepository $revokedTokenRepository,
+        private readonly AuditLogService $auditLogService,
     ) {
     }
 
@@ -108,6 +110,19 @@ final class AuthController extends AbstractController
         $sessionUser = $this->sessionUserResponseFactory->create($user);
         $issued = $this->tokenManager->issue($sessionUser);
 
+        // Log d'audit : connexion utilisateur
+        $this->auditLogService->log(
+            action: 'LOGIN',
+            entityType: User::class,
+            entityId: $user->getId(),
+            organization: null,
+            user: $user,
+            oldValues: null,
+            newValues: [
+                'email' => $user->getEmail(),
+            ],
+        );
+
         // Aucun cookie : le pare-feu est `stateless`. Le jeton ne transite
         // que dans le corps de cette réponse.
         return new JsonResponse([
@@ -134,6 +149,8 @@ final class AuthController extends AbstractController
     )]
     public function logout(Request $request): JsonResponse
     {
+        $user = $this->getUser();
+
         $this->tokenStorage->setToken(null);
 
         // Le pare-feu est `stateless` : il n'y a aucune session à
@@ -141,6 +158,21 @@ final class AuthController extends AbstractController
         // la déconnexion réelle, et elle repose sur le `jti` porté par le
         // jeton que le client présente.
         $revoked = $this->revokePresentedToken($request);
+
+        // Log d'audit : déconnexion utilisateur
+        if ($user instanceof User) {
+            $this->auditLogService->log(
+                action: 'LOGOUT',
+                entityType: User::class,
+                entityId: $user->getId(),
+                organization: null,
+                user: $user,
+                oldValues: null,
+                newValues: [
+                    'tokenRevoked' => $revoked,
+                ],
+            );
+        }
 
         return new JsonResponse([
             'message' => 'Déconnexion effectuée.',
@@ -255,6 +287,19 @@ final class AuthController extends AbstractController
     ): JsonResponse {
         $feedback = $this->passwordResetService->requestReset($request->email);
 
+        // Log d'audit : demande de réinitialisation de mot de passe
+        $this->auditLogService->log(
+            action: 'FORGOT_PASSWORD',
+            entityType: User::class,
+            entityId: 0, // L'utilisateur peut ne pas exister (anti-énumération)
+            organization: null,
+            user: null,
+            oldValues: null,
+            newValues: [
+                'email' => $request->email,
+            ],
+        );
+
         return $this->json($feedback, $feedback->getStatus());
     }
 
@@ -283,6 +328,20 @@ final class AuthController extends AbstractController
         #[MapRequestPayload] ResetPasswordRequest $request
     ): JsonResponse {
         $feedback = $this->passwordResetService->resetPassword($request->token, $request->newPassword);
+
+        // Log d'audit : réinitialisation de mot de passe
+        // Note: on ne peut pas récupérer l'utilisateur ici car le service ne le retourne pas
+        $this->auditLogService->log(
+            action: 'RESET_PASSWORD',
+            entityType: User::class,
+            entityId: 0,
+            organization: null,
+            user: null,
+            oldValues: null,
+            newValues: [
+                'tokenUsed' => true,
+            ],
+        );
 
         return $this->json($feedback, $feedback->getStatus());
     }

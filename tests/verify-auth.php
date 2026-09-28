@@ -42,7 +42,7 @@ final class AuthKernel extends App\Kernel
                 // appels indépendants : on réutilise le même objet Token
                 // entre deux requêtes, comme le ferait le navigateur via
                 // son cookie de session.
-                foreach (['security.token_storage', 'cache.rate_limiter'] as $id) {
+                foreach (['security.token_storage', 'cache.rate_limiter', 'App\Service\System\AuditLogService'] as $id) {
                     if ($container->hasDefinition($id)) {
                         $container->getDefinition($id)->setPublic(true);
                     }
@@ -89,6 +89,9 @@ $repository = $em->getRepository(User::class);
 $existing = $repository->findOneBy(['email' => $email]);
 
 if ($existing instanceof User) {
+    // Supprimer d'abord les logs d'audit qui référencent cet utilisateur
+    // pour éviter la violation de contrainte de clé étrangère
+    $em->getConnection()->executeStatement('DELETE FROM audit_log WHERE user_id = :uid', ['uid' => $existing->getId()]);
     $em->remove($existing);
     $em->flush();
 }

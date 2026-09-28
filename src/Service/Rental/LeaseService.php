@@ -6,6 +6,7 @@ namespace App\Service\Rental;
 
 use App\Dto\Feedback;
 use App\Dto\Request\Rental\LeaseRequest;
+use App\Entity\Identity\User;
 use App\Entity\Property\Unit;
 use App\Entity\Rental\Lease;
 use App\Entity\Rental\Tenant;
@@ -17,6 +18,7 @@ use App\Repository\Rental\LeaseRepository;
 use App\Repository\Rental\TenantRepository;
 use App\Security\SecurityAction;
 use App\Security\SecurityServiceInterface;
+use App\Service\System\AuditLogService;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\Uid\Uuid;
 use Symfony\Component\Validator\Validator\ValidatorInterface;
@@ -41,11 +43,12 @@ final readonly class LeaseService
         private LeaseMapper $leaseMapper,
         private SecurityServiceInterface $securityService,
         private EntityManagerInterface $entityManager,
-        private ValidatorInterface $validator
+        private ValidatorInterface $validator,
+        private AuditLogService $auditLogService
     ) {
     }
 
-    public function createLease(LeaseRequest $request): Feedback
+    public function createLease(LeaseRequest $request, User $currentUser): Feedback
     {
         $feedback = new Feedback();
 
@@ -82,6 +85,25 @@ final readonly class LeaseService
             return $feedback->autoInitFlush();
         }
 
+        // Log d'audit : création du bail
+        $this->auditLogService->log(
+            action: 'CREATE_LEASE',
+            entityType: Lease::class,
+            entityId: $lease->getId(),
+            organization: $tenant->getOrganization(),
+            user: $currentUser,
+            oldValues: null,
+            newValues: [
+                'reference' => $lease->getReference(),
+                'startDate' => $lease->getStartDate()->format('Y-m-d'),
+                'endDate' => $lease->getEndDate()?->format('Y-m-d'),
+                'monthlyRent' => $lease->getMonthlyRent(),
+                'currency' => $lease->getCurrency()->value,
+                'tenantUuid' => $tenant->getUuid()->toRfc4122(),
+                'unitUuid' => $lease->getUnit()->getUuid()->toRfc4122(),
+            ],
+        );
+
         return $feedback
             ->setData($this->leaseMapper->toResponse($lease))
             ->setFlushDescription('Le contrat de bail a été créé avec succès.')
@@ -89,7 +111,7 @@ final readonly class LeaseService
             ->autoInitFlush();
     }
 
-    public function updateLease(string $uuid, LeaseRequest $request): Feedback
+    public function updateLease(string $uuid, LeaseRequest $request, User $currentUser): Feedback
     {
         $feedback = new Feedback();
 
@@ -150,6 +172,23 @@ final readonly class LeaseService
             return $feedback->autoInitFlush();
         }
 
+        // Log d'audit : mise à jour du bail
+        $this->auditLogService->log(
+            action: 'UPDATE_LEASE',
+            entityType: Lease::class,
+            entityId: $lease->getId(),
+            organization: $lease->getOrganization(),
+            user: $currentUser,
+            oldValues: null, // Pourrait être enrichi avec les valeurs avant modification
+            newValues: [
+                'reference' => $lease->getReference(),
+                'startDate' => $lease->getStartDate()->format('Y-m-d'),
+                'endDate' => $lease->getEndDate()?->format('Y-m-d'),
+                'monthlyRent' => $lease->getMonthlyRent(),
+                'currency' => $lease->getCurrency()->value,
+            ],
+        );
+
         return $feedback
             ->setData($this->leaseMapper->toResponse($lease))
             ->setFlushDescription('Le contrat de bail a été mis à jour avec succès.')
@@ -179,7 +218,7 @@ final readonly class LeaseService
      * Terminaison d'un bail : le statut passe à TERMINATED et la date de
      * rupture est mémorisée, ce qui libère l'unité pour un nouveau bail.
      */
-    public function terminateLease(string $uuid, string $reason): Feedback
+    public function terminateLease(string $uuid, string $reason, User $currentUser): Feedback
     {
         $feedback = new Feedback();
 
@@ -203,6 +242,23 @@ final readonly class LeaseService
         $lease->setTerminationReason($reason !== '' ? $reason : null);
 
         $this->entityManager->flush();
+
+        // Log d'audit : résiliation du bail
+        $this->auditLogService->log(
+            action: 'TERMINATE_LEASE',
+            entityType: Lease::class,
+            entityId: $lease->getId(),
+            organization: $lease->getOrganization(),
+            user: $currentUser,
+            oldValues: [
+                'status' => 'ACTIVE',
+            ],
+            newValues: [
+                'status' => 'TERMINATED',
+                'terminationDate' => $lease->getTerminationDate()->format('Y-m-d'),
+                'terminationReason' => $lease->getTerminationReason(),
+            ],
+        );
 
         return $feedback
             ->setData($this->leaseMapper->toResponse($lease))
@@ -384,7 +440,7 @@ final readonly class LeaseService
      * L'exclusivité est vérifiée comme à la création : l'unité ne peut
      * porter qu'un bail actif, et la vérification doit rester atomique.
      */
-    public function activateLease(string $uuid): Feedback
+    public function activateLease(string $uuid, User $currentUser): Feedback
     {
         $feedback = new Feedback();
 
@@ -414,9 +470,25 @@ final readonly class LeaseService
             return $feedback->autoInitFlush();
         }
 
+        // Log d'audit : activation du bail
+        $this->auditLogService->log(
+            action: 'ACTIVATE_LEASE',
+            entityType: Lease::class,
+            entityId: $lease->getId(),
+            organization: $lease->getOrganization(),
+            user: $currentUser,
+            oldValues: [
+                'status' => 'DRAFT',
+            ],
+            newValues: [
+                'status' => 'ACTIVE',
+            ],
+        );
+
         return $feedback
             ->setData($this->leaseMapper->toResponse($lease))
             ->setFlushDescription('Le bail a été activé.')
+            ->setStatus(200)
             ->autoInitFlush();
     }
 
@@ -427,7 +499,7 @@ final readonly class LeaseService
      * s'annule pas, il se résilie, ce qui laisse une trace et libère
      * l'unité dans le même geste.
      */
-    public function cancelLease(string $uuid, string $reason): Feedback
+    public function cancelLease(string $uuid, string $reason, User $currentUser): Feedback
     {
         $feedback = new Feedback();
 
@@ -455,9 +527,27 @@ final readonly class LeaseService
 
         $this->entityManager->flush();
 
+        // Log d'audit : annulation du bail
+        $this->auditLogService->log(
+            action: 'CANCEL_LEASE',
+            entityType: Lease::class,
+            entityId: $lease->getId(),
+            organization: $lease->getOrganization(),
+            user: $currentUser,
+            oldValues: [
+                'status' => 'DRAFT',
+            ],
+            newValues: [
+                'status' => 'CANCELLED',
+                'terminationDate' => $lease->getTerminationDate()->format('Y-m-d'),
+                'terminationReason' => $lease->getTerminationReason(),
+            ],
+        );
+
         return $feedback
             ->setData($this->leaseMapper->toResponse($lease))
             ->setFlushDescription('Le bail a été annulé.')
+            ->setStatus(200)
             ->autoInitFlush();
     }
 

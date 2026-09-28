@@ -16,6 +16,7 @@ use App\Repository\Property\CityRepository;
 use App\Repository\Staff\WorkerRepository;
 use App\Security\SecurityAction;
 use App\Security\SecurityServiceInterface;
+use App\Service\System\AuditLogService;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\Uid\Uuid;
 use Symfony\Component\Validator\Validator\ValidatorInterface;
@@ -43,7 +44,8 @@ final readonly class WorkerService
         private WorkerMapper $workerMapper,
         private SecurityServiceInterface $securityService,
         private EntityManagerInterface $entityManager,
-        private ValidatorInterface $validator
+        private ValidatorInterface $validator,
+        private AuditLogService $auditLogService
     ) {
     }
 
@@ -90,6 +92,22 @@ final readonly class WorkerService
         $this->entityManager->persist($worker);
         $this->entityManager->flush();
 
+        // Log d'audit : création du travailleur
+        $this->auditLogService->log(
+            action: 'CREATE_WORKER',
+            entityType: Worker::class,
+            entityId: $worker->getId(),
+            organization: $organization,
+            user: $currentUser,
+            oldValues: null,
+            newValues: [
+                'fullName' => $worker->getFullName(),
+                'phone' => $worker->getPhone(),
+                'email' => $worker->getEmail(),
+                'nationalId' => $worker->getNationalId(),
+            ],
+        );
+
         return $feedback
             ->setData($this->workerMapper->toResponse($worker))
             ->setFlushDescription('Le travailleur a été créé avec succès.')
@@ -135,6 +153,24 @@ final readonly class WorkerService
         $this->workerMapper->copyToEntity($request, $worker);
 
         $this->entityManager->flush();
+
+        // Log d'audit : mise à jour du travailleur
+        $this->auditLogService->log(
+            action: 'UPDATE_WORKER',
+            entityType: Worker::class,
+            entityId: $worker->getId(),
+            organization: $worker->getOrganization(),
+            user: $currentUser,
+            oldValues: null,
+            newValues: [
+                'fullName' => $worker->getFullName(),
+                'phone' => $worker->getPhone(),
+                'email' => $worker->getEmail(),
+                'nationalId' => $worker->getNationalId(),
+                'address' => $worker->getAddress(),
+                'notes' => $worker->getNotes(),
+            ],
+        );
 
         return $feedback
             ->setData($this->workerMapper->toResponse($worker))

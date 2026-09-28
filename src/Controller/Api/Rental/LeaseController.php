@@ -8,6 +8,7 @@ use App\Dto\Feedback;
 use App\Dto\Request\Rental\LeaseFilterDto;
 use App\Dto\Request\Rental\LeaseRequest;
 use App\Dto\Request\Rental\LeaseTransitionRequest;
+use App\Entity\Identity\User;
 use App\Service\Rental\LeaseService;
 use App\Trait\FeedbackTrait;
 use Nelmio\ApiDocBundle\Attribute\Model;
@@ -65,7 +66,7 @@ final class LeaseController extends AbstractController
     public function create(
         #[MapRequestPayload] LeaseRequest $request
     ): JsonResponse {
-        $feedback = $this->leaseService->createLease($request);
+        $feedback = $this->leaseService->createLease($request, $this->getUser());
 
         return $this->json($feedback, $feedback->getStatus());
     }
@@ -100,7 +101,7 @@ final class LeaseController extends AbstractController
         string $uuid,
         #[MapRequestPayload] LeaseRequest $request
     ): JsonResponse {
-        $feedback = $this->leaseService->updateLease($uuid, $request);
+        $feedback = $this->leaseService->updateLease($uuid, $request, $this->getUser());
 
         return $this->json($feedback, $feedback->getStatus());
     }
@@ -127,7 +128,7 @@ final class LeaseController extends AbstractController
     )]
     public function activate(string $uuid): JsonResponse
     {
-        $feedback = $this->leaseService->activateLease($uuid);
+        $feedback = $this->leaseService->activateLease($uuid, $this->getUser());
 
         return $this->json($feedback, $feedback->getStatus());
     }
@@ -150,7 +151,7 @@ final class LeaseController extends AbstractController
         string $uuid,
         #[MapRequestPayload] ?LeaseTransitionRequest $request = null
     ): JsonResponse {
-        $feedback = $this->leaseService->terminateLease($uuid, $request?->reason ?? '');
+        $feedback = $this->leaseService->terminateLease($uuid, $request?->reason ?? '', $this->getUser());
 
         return $this->json($feedback, $feedback->getStatus());
     }
@@ -173,7 +174,7 @@ final class LeaseController extends AbstractController
         string $uuid,
         #[MapRequestPayload] ?LeaseTransitionRequest $request = null
     ): JsonResponse {
-        $feedback = $this->leaseService->cancelLease($uuid, $request?->reason ?? '');
+        $feedback = $this->leaseService->cancelLease($uuid, $request?->reason ?? '', $this->getUser());
 
         return $this->json($feedback, $feedback->getStatus());
     }

@@ -15,6 +15,7 @@ use App\Repository\Rental\PaymentRepository;
 use App\Repository\Rental\RentRepository;
 use App\Security\SecurityAction;
 use App\Security\SecurityServiceInterface;
+use App\Service\System\AuditLogService;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\Uid\Uuid;
 use Symfony\Component\Validator\Validator\ValidatorInterface;
@@ -48,7 +49,8 @@ final readonly class PaymentService
         private PaymentMapper $paymentMapper,
         private SecurityServiceInterface $securityService,
         private EntityManagerInterface $entityManager,
-        private ValidatorInterface $validator
+        private ValidatorInterface $validator,
+        private AuditLogService $auditLogService
     ) {
     }
 
@@ -113,6 +115,24 @@ final readonly class PaymentService
                 $this->paymentMapper->copyToEntity($request, $payment);
 
                 $this->entityManager->persist($payment);
+
+                // Log d'audit : création du paiement
+                $this->auditLogService->log(
+                    action: 'CREATE_PAYMENT',
+                    entityType: Payment::class,
+                    entityId: $payment->getId(),
+                    organization: $lockedRent->getLease()->getOrganization(),
+                    user: $currentUser,
+                    oldValues: null,
+                    newValues: [
+                        'amount' => $payment->getAmount(),
+                        'currency' => $payment->getCurrency()->value,
+                        'paymentDate' => $payment->getPaymentDate()->format('Y-m-d\TH:i:s'),
+                        'method' => $payment->getMethod()->value,
+                        'rentUuid' => $lockedRent->getUuid()->toRfc4122(),
+                        'reference' => $payment->getReference(),
+                    ],
+                );
 
                 // Le flush unique ici persiste le paiement ET met à jour le statut
                 // via refreshRentStatus appelé après.
@@ -352,6 +372,25 @@ final readonly class PaymentService
         $correction->setNotes("Annulation du paiement {$payment->getReference()} : {$reason}");
 
         $this->entityManager->persist($correction);
+
+        // Log d'audit : annulation du paiement
+        $this->auditLogService->log(
+            action: 'CANCEL_PAYMENT',
+            entityType: Payment::class,
+            entityId: $payment->getId(),
+            organization: $rent->getLease()->getOrganization(),
+            user: $currentUser,
+            oldValues: [
+                'amount' => $payment->getAmount(),
+                'reference' => $payment->getReference(),
+            ],
+            newValues: [
+                'amount' => $correction->getAmount(),
+                'reference' => $correction->getReference(),
+                'notes' => $correction->getNotes(),
+            ],
+        );
+
         $this->refreshRentStatus($rent);
         $this->entityManager->flush();
 

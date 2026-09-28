@@ -25,6 +25,7 @@ use App\Repository\Property\UnitRepository;
 use App\Repository\Staff\WorkerRepository;
 use App\Security\SecurityAction;
 use App\Security\SecurityServiceInterface;
+use App\Service\System\AuditLogService;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\Uid\Uuid;
 use Symfony\Component\Validator\Validator\ValidatorInterface;
@@ -57,7 +58,8 @@ final readonly class ExpenseService
         private ExpenseMapper $expenseMapper,
         private SecurityServiceInterface $securityService,
         private EntityManagerInterface $entityManager,
-        private ValidatorInterface $validator
+        private ValidatorInterface $validator,
+        private AuditLogService $auditLogService
     ) {
     }
 
@@ -142,6 +144,24 @@ final readonly class ExpenseService
 
         $this->entityManager->persist($expense);
         $this->entityManager->flush();
+
+        // Log d'audit : création de la dépense
+        $this->auditLogService->log(
+            action: 'CREATE_EXPENSE',
+            entityType: Expense::class,
+            entityId: $expense->getId(),
+            organization: $organization,
+            user: $currentUser,
+            oldValues: null,
+            newValues: [
+                'category' => $expense->getCategory()->value,
+                'amount' => $expense->getAmount(),
+                'currency' => $expense->getCurrency()->value,
+                'expenseDate' => $expense->getExpenseDate()->format('Y-m-d'),
+                'cityUuid' => $city->getUuid()->toRfc4122(),
+                'reference' => $expense->getReference(),
+            ],
+        );
 
         return $feedback
             ->setData($this->expenseMapper->toResponse($expense))
@@ -251,6 +271,22 @@ final readonly class ExpenseService
 
         $this->entityManager->flush();
 
+        // Log d'audit : mise à jour de la dépense
+        $this->auditLogService->log(
+            action: 'UPDATE_EXPENSE',
+            entityType: Expense::class,
+            entityId: $expense->getId(),
+            organization: $expense->getOrganization(),
+            user: $currentUser,
+            oldValues: null,
+            newValues: [
+                'category' => $expense->getCategory()->value,
+                'amount' => $expense->getAmount(),
+                'currency' => $expense->getCurrency()->value,
+                'expenseDate' => $expense->getExpenseDate()->format('Y-m-d'),
+            ],
+        );
+
         return $feedback
             ->setData($this->expenseMapper->toResponse($expense))
             ->setFlushDescription('La dépense a été mise à jour avec succès.')
@@ -359,6 +395,26 @@ final readonly class ExpenseService
 
         $this->entityManager->persist($cancellation);
         $this->entityManager->flush();
+
+        // Log d'audit : annulation de la dépense
+        $this->auditLogService->log(
+            action: 'CANCEL_EXPENSE',
+            entityType: Expense::class,
+            entityId: $expense->getId(),
+            organization: $expense->getOrganization(),
+            user: $currentUser,
+            oldValues: [
+                'category' => $expense->getCategory()->value,
+                'amount' => $expense->getAmount(),
+                'reference' => $expense->getReference(),
+            ],
+            newValues: [
+                'category' => 'OTHER',
+                'amount' => $cancellation->getAmount(),
+                'reference' => $cancellation->getReference(),
+                'notes' => $cancellation->getNotes(),
+            ],
+        );
 
         return $feedback
             ->setData($this->expenseMapper->toResponse($cancellation))
