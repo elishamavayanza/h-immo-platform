@@ -114,6 +114,16 @@ class Lease extends SoftDeletableEntity
     #[ORM\Column(type: Types::TEXT, nullable: true)]
     private ?string $notes = null;
 
+    /**
+     * Clauses contractuelles et conditions particulières du bail.
+     *
+     * Ce champ contient les termes et conditions contractuels détaillés
+     * (ex: indexation, travaux, sous-location, assurance, etc.)
+     * conformément au modèle LOOP validé.
+     */
+    #[ORM\Column(type: Types::TEXT, nullable: true)]
+    private ?string $terms = null;
+
     public function getOrganization(): Organization
     {
         return $this->organization;
@@ -266,6 +276,18 @@ class Lease extends SoftDeletableEntity
     public function setNotes(?string $notes): static
     {
         $this->notes = $notes;
+
+        return $this;
+    }
+
+    public function getTerms(): ?string
+    {
+        return $this->terms;
+    }
+
+    public function setTerms(?string $terms): static
+    {
+        $this->terms = $terms;
 
         return $this;
     }

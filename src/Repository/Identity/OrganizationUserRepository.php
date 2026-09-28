@@ -151,4 +151,21 @@ class OrganizationUserRepository extends ServiceEntityRepository
             'total' => (int) $countQb->getQuery()->getSingleScalarResult(),
         ];
     }
+
+    /**
+     * Compte le nombre de rattachements pour une organisation et un rôle donnés.
+     *
+     * Utilisé pour protéger le dernier PATRON d'une organisation.
+     */
+    public function countByOrganizationAndRole(Organization $organization, OrganizationRole $role): int
+    {
+        return (int) $this->createQueryBuilder('ou')
+            ->select('COUNT(ou.id)')
+            ->andWhere('ou.organization = :organization')
+            ->andWhere('ou.role = :role')
+            ->setParameter('organization', $organization)
+            ->setParameter('role', $role)
+            ->getQuery()
+            ->getSingleScalarResult();
+    }
 }

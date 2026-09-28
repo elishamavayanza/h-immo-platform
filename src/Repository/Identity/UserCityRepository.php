@@ -111,4 +111,20 @@ class UserCityRepository extends ServiceEntityRepository
             'total' => (int) $countQb->getQuery()->getSingleScalarResult(),
         ];
     }
+
+    /**
+     * Supprime toutes les affectations de villes d'un utilisateur.
+     *
+     * Utilisé lors de la révocation d'un ADMIN_VILLE ou du changement
+     * de son rôle vers un rôle sans gestion de ville.
+     */
+    public function deleteByUser(User $user): int
+    {
+        return $this->createQueryBuilder('uc')
+            ->delete()
+            ->andWhere('uc.user = :user')
+            ->setParameter('user', $user)
+            ->getQuery()
+            ->execute();
+    }
 }

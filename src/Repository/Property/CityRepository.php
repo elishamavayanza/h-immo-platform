@@ -148,6 +148,33 @@ class CityRepository extends ServiceEntityRepository
     }
 
     /**
+     * Villes explicitement attribuées à un utilisateur DANS UNE ORGANISATION.
+     *
+     * Similaire à `findAssignedToUser` mais borné à une organization.
+     * Nécessaire pour distinguer les villes d'un ADMIN_VILLE par org.
+     *
+     * @return list<City>
+     */
+    public function findAssignedToUserInOrganization(User $user, Organization $organization): array
+    {
+        return $this->createQueryBuilder('c')
+            ->andWhere('c.organization = :organization')
+            ->andWhere('c.deletedAt IS NULL')
+            ->andWhere(
+                'EXISTS (
+                    SELECT 1
+                    FROM App\Entity\Identity\UserCity uc
+                    WHERE uc.city = c AND uc.user = :user
+                )'
+            )
+            ->setParameter('user', $user)
+            ->setParameter('organization', $organization)
+            ->orderBy('c.name', 'ASC')
+            ->getQuery()
+            ->getResult();
+    }
+
+    /**
      * Toutes les villes d'une organization, sans filtre de statut.
      *
      * Utilisé pour étendre le périmètre d'un PATRON ou d'un

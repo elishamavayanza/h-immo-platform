@@ -426,9 +426,13 @@ final class SecurityService implements SecurityServiceInterface
             return;
         }
 
-        $this->checkOrganizationAccess($city->getOrganization(), $action);
+        $organization = $city->getOrganization();
+        $this->checkOrganizationAccess($organization, $action);
 
-        if ($this->isAdminVille() && !$this->isCityAllowed($this->getCurrentUser(), $city)) {
+        // Vérifier le rôle DANS CETTE ORGANISATION spécifiquement
+        $role = $this->getOrganizationRole($this->getCurrentUser(), $organization);
+
+        if ($role === OrganizationRole::ADMIN_VILLE && !$this->isCityAllowed($this->getCurrentUser(), $city)) {
             throw new AccessDeniedException(
                 sprintf('Vous n\'êtes pas autorisé sur la ville "%s".', $city->getName())
             );
@@ -468,20 +472,25 @@ final class SecurityService implements SecurityServiceInterface
         }
 
         $user = $this->getCurrentUser();
-
-        if ($this->isAdminVille()) {
-            return $this->cityRepository->findAssignedToUser($user);
-        }
-
         $cities = [];
 
         foreach ($this->getCurrentUserOrganizations() as $organization) {
-            foreach ($this->cityRepository->findInOrganization($organization) as $city) {
-                $cities[] = $city;
+            $role = $this->getOrganizationRole($user, $organization);
+
+            if ($role === OrganizationRole::ADMIN_VILLE) {
+                // ADMIN_VILLE : uniquement ses villes attribuées dans CETTE org
+                foreach ($this->cityRepository->findAssignedToUserInOrganization($user, $organization) as $city) {
+                    $cities[] = $city;
+                }
+            } else {
+                // PATRON, ADMIN_IMMOBILIER, SUPER_ADMIN (mais pas ici) : toutes les villes de l'org
+                foreach ($this->cityRepository->findInOrganization($organization) as $city) {
+                    $cities[] = $city;
+                }
             }
         }
 
-        return $cities;
+        return $cities === [] ? null : $cities;
     }
 
     /**
