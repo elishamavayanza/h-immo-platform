@@ -24,6 +24,9 @@ final class AdminVilleReportResponse
         #[OA\Property(description: 'Période couverte', example: '2026-01-01 to 2026-12-31')]
         public string $periodCovered,
 
+        #[OA\Property(description: 'Généré le', format: 'date-time')]
+        public \DateTimeImmutable $generatedAt,
+
         /**
          * @var list<OccupancyItem>
          */
@@ -65,9 +68,6 @@ final class AdminVilleReportResponse
 
         #[OA\Property(description: 'Devise principale', example: 'CDF')]
         public string $currency = 'CDF',
-
-        #[OA\Property(description: 'Généré le', format: 'date-time')]
-        public \DateTimeImmutable $generatedAt,
     ) {
     }
 }

@@ -6,13 +6,13 @@ namespace App\Controller\Api\System;
 
 use App\Dto\Feedback;
 use App\Service\System\FileUploadService;
+use App\Service\System\MediaService;
 use App\Trait\FeedbackTrait;
 use Nelmio\ApiDocBundle\Attribute\Model;
 use OpenApi\Attributes as OA;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
-use Symfony\Component\HttpKernel\Attribute\MapRequestPayload;
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
 
@@ -21,20 +21,29 @@ use Symfony\Component\Security\Http\Attribute\IsGranted;
  *
  * Package : System & Audit
  *
- * Gestion des médias (photos, logos, documents) pour les entités du système.
- * Les fichiers sont stockés dans public/uploads/{type}/ et accessibles via /uploads/{type}/{file}.
+ * Gestion des médias (photos de profil, logos, photos de parcelle).
  *
- * Authentification requise (ROLE_USER).
- * Les permissions fines (qui peut uploader quoi) sont vérifiées dans les services métier.
+ * Les fichiers sont stockés dans public/uploads/{type}/ et exposés via
+ * /uploads/{type}/{file}. Ce chemin est servi par le serveur web sans
+ * authentification : il ne contient donc QUE des images, jamais de pièces
+ * justificatives. Voir `FileUploadService` pour ce choix.
+ *
+ * L'entité ciblée est TOUJOURS résolue par son UUID puis soumise à
+ * `MediaService`, qui applique le contrôle d'accès et rattache le fichier
+ * en base. Aucun point d'entrée ne se contente de ROLE_USER : l'UUID
+ * présent dans l'URL n'est pas une autorisation, et un compte authentifié
+ * de n'importe quelle société pouvait déposer ou supprimer un fichier pour
+ * une entité qui n'est pas la sienne.
  */
 #[Route('/api/v1/media', name: 'api_media_')]
 #[IsGranted('ROLE_USER')]
-#[OA\Tag(name: 'Media', description: 'Gestion des médias (photos, logos, documents) pour les entités du système.')]
+#[OA\Tag(name: 'Media', description: 'Photos de profil, logos d\'organisation et photos de parcelle.')]
 final class MediaController extends AbstractController
 {
     use FeedbackTrait;
 
     public function __construct(
+        private readonly MediaService $mediaService,
         private readonly FileUploadService $fileUploadService,
     ) {
     }
@@ -45,7 +54,7 @@ final class MediaController extends AbstractController
     #[OA\Post(
         path: '/api/v1/media/users/{uuid}/photo',
         summary: 'Uploader la photo de profil d\'un utilisateur',
-        description: 'Remplace la photo existante. Types acceptés : JPEG, PNG, WebP, GIF. Max 10 Mo.',
+        description: 'Remplace la photo existante et l\'enregistre sur l\'utilisateur. Types acceptés : JPEG, PNG, WebP, GIF. Max 10 Mo.',
         parameters: [
             new OA\Parameter(name: 'uuid', in: 'path', required: true, schema: new OA\Schema(type: 'string', format: 'uuid')),
         ],
@@ -75,38 +84,37 @@ final class MediaController extends AbstractController
         $file = $request->files->get('file');
 
         if (!$file) {
-            $feedback = new Feedback();
             return $this->json(
-                $feedback->addError('file', 'Aucun fichier fourni.')->setErrorFlushDescription('Fichier requis.')->setStatus(422)->autoInitFlush(),
+                (new Feedback())->addError('file', 'Aucun fichier fourni.')->setErrorFlushDescription('Fichier requis.')->setStatus(422)->autoInitFlush(),
                 422
             );
         }
 
-        // TODO: Vérifier que l'utilisateur a le droit de modifier cette photo
-        // (soit c'est son propre profil, soit il a les droits d'admin)
+        $user = $this->mediaService->resolveUser($uuid);
+
+        if ($user === null) {
+            return $this->json(
+                (new Feedback())->setErrorFlushDescription('Utilisateur introuvable.')->setStatus(404)->autoInitFlush(),
+                404
+            );
+        }
 
         try {
-            // Récupérer l'ancien chemin pour suppression
-            // $oldPath = ... depuis l'entité User
-            $relativePath = $this->fileUploadService->upload($file, 'users');
+            $relativePath = $this->mediaService->replaceUserPhoto($user, $file);
+        } catch (\InvalidArgumentException $e) {
+            return $this->json(
+                (new Feedback())->addError('file', $e->getMessage())->setErrorFlushDescription($e->getMessage())->setStatus(422)->autoInitFlush(),
+                422
+            );
+        }
 
-            // TODO: Mettre à jour l'entité User avec le nouveau chemin
-            // $user->setProfilePhoto($relativePath);
-
-            $feedback = new Feedback();
-            $feedback->setData([
+        return $this->json(
+            (new Feedback())->setData([
                 'path' => $relativePath,
                 'url' => $this->fileUploadService->getPublicUrl($relativePath),
-            ])->setFlushDescription('Photo de profil mise à jour.')->setStatus(200)->autoInitFlush();
-
-            return $this->json($feedback, 200);
-        } catch (\InvalidArgumentException $e) {
-            $feedback = new Feedback();
-            return $this->json($feedback->addError('file', $e->getMessage())->setErrorFlushDescription($e->getMessage())->setStatus(422)->autoInitFlush(), 422);
-        } catch (\RuntimeException $e) {
-            $feedback = new Feedback();
-            return $this->json($feedback->setErrorFlushDescription('Erreur lors de l\'upload : ' . $e->getMessage())->setStatus(500)->autoInitFlush(), 500);
-        }
+            ])->setFlushDescription('Photo de profil mise à jour.')->setStatus(200)->autoInitFlush(),
+            200
+        );
     }
 
     #[Route('/users/{uuid}/photo', name: 'user_photo_delete', methods: ['DELETE'])]
@@ -124,12 +132,33 @@ final class MediaController extends AbstractController
     )]
     public function deleteUserPhoto(string $uuid): JsonResponse
     {
-        // TODO: Récupérer l'ancien chemin depuis l'entité User
-        // $this->fileUploadService->delete($oldPath);
-        // $user->setProfilePhoto(null);
+        $user = $this->mediaService->resolveUser($uuid);
+
+        if ($user === null) {
+            return $this->json(
+                (new Feedback())->setErrorFlushDescription('Utilisateur introuvable.')->setStatus(404)->autoInitFlush(),
+                404
+            );
+        }
+
+        $removed = $this->mediaService->removeUserPhoto($user);
 
         $feedback = new Feedback();
-        return $this->json($feedback->setFlushDescription('Photo supprimée (à implémenter).')->setStatus(200)->autoInitFlush(), 200);
+
+        if (!$removed) {
+            // 404 et non 200 : l'endpoint doit signaler qu'il n'y avait rien
+            // à supprimer, sinon un client ne peut pas distinguer une
+            // suppression réussie d'un appel sans effet.
+            return $this->json(
+                $feedback->setErrorFlushDescription('Aucune photo de profil à supprimer.')->setStatus(404)->autoInitFlush(),
+                404
+            );
+        }
+
+        return $this->json(
+            $feedback->setFlushDescription('Photo supprimée.')->setStatus(200)->autoInitFlush(),
+            200
+        );
     }
 
     // ==================== ORGANIZATION LOGO ====================
@@ -138,7 +167,7 @@ final class MediaController extends AbstractController
     #[OA\Post(
         path: '/api/v1/media/organizations/{uuid}/logo',
         summary: 'Uploader le logo d\'une organisation',
-        description: 'Remplace le logo existant. Types acceptés : JPEG, PNG, WebP, GIF. Max 10 Mo.',
+        description: 'Remplace le logo existant et l\'enregistre sur l\'organisation. Réservé au Patron. Types acceptés : JPEG, PNG, WebP, GIF. Max 10 Mo.',
         parameters: [
             new OA\Parameter(name: 'uuid', in: 'path', required: true, schema: new OA\Schema(type: 'string', format: 'uuid')),
         ],
@@ -168,34 +197,37 @@ final class MediaController extends AbstractController
         $file = $request->files->get('file');
 
         if (!$file) {
-            $feedback = new Feedback();
             return $this->json(
-                $feedback->addError('file', 'Aucun fichier fourni.')->setErrorFlushDescription('Fichier requis.')->setStatus(422)->autoInitFlush(),
+                (new Feedback())->addError('file', 'Aucun fichier fourni.')->setErrorFlushDescription('Fichier requis.')->setStatus(422)->autoInitFlush(),
                 422
             );
         }
 
-        // TODO: Vérifier droits (PATRON/ADMIN_IMMOBILIER de l'org)
+        $organization = $this->mediaService->resolveOrganization($uuid);
+
+        if ($organization === null) {
+            return $this->json(
+                (new Feedback())->setErrorFlushDescription('Organisation introuvable.')->setStatus(404)->autoInitFlush(),
+                404
+            );
+        }
 
         try {
-            $relativePath = $this->fileUploadService->upload($file, 'organizations');
+            $relativePath = $this->mediaService->replaceOrganizationLogo($organization, $file);
+        } catch (\InvalidArgumentException $e) {
+            return $this->json(
+                (new Feedback())->addError('file', $e->getMessage())->setErrorFlushDescription($e->getMessage())->setStatus(422)->autoInitFlush(),
+                422
+            );
+        }
 
-            // TODO: Mettre à jour Organization->logo
-
-            $feedback = new Feedback();
-            $feedback->setData([
+        return $this->json(
+            (new Feedback())->setData([
                 'path' => $relativePath,
                 'url' => $this->fileUploadService->getPublicUrl($relativePath),
-            ])->setFlushDescription('Logo mis à jour.')->setStatus(200)->autoInitFlush();
-
-            return $this->json($feedback, 200);
-        } catch (\InvalidArgumentException $e) {
-            $feedback = new Feedback();
-            return $this->json($feedback->addError('file', $e->getMessage())->setErrorFlushDescription($e->getMessage())->setStatus(422)->autoInitFlush(), 422);
-        } catch (\RuntimeException $e) {
-            $feedback = new Feedback();
-            return $this->json($feedback->setErrorFlushDescription('Erreur lors de l\'upload : ' . $e->getMessage())->setStatus(500)->autoInitFlush(), 500);
-        }
+            ])->setFlushDescription('Logo mis à jour.')->setStatus(200)->autoInitFlush(),
+            200
+        );
     }
 
     #[Route('/organizations/{uuid}/logo', name: 'org_logo_delete', methods: ['DELETE'])]
@@ -213,17 +245,39 @@ final class MediaController extends AbstractController
     )]
     public function deleteOrgLogo(string $uuid): JsonResponse
     {
+        $organization = $this->mediaService->resolveOrganization($uuid);
+
+        if ($organization === null) {
+            return $this->json(
+                (new Feedback())->setErrorFlushDescription('Organisation introuvable.')->setStatus(404)->autoInitFlush(),
+                404
+            );
+        }
+
+        $removed = $this->mediaService->removeOrganizationLogo($organization);
+
         $feedback = new Feedback();
-        return $this->json($feedback->setFlushDescription('Logo supprimé (à implémenter).')->setStatus(200)->autoInitFlush(), 200);
+
+        if (!$removed) {
+            return $this->json(
+                $feedback->setErrorFlushDescription('Aucun logo à supprimer.')->setStatus(404)->autoInitFlush(),
+                404
+            );
+        }
+
+        return $this->json(
+            $feedback->setFlushDescription('Logo supprimé.')->setStatus(200)->autoInitFlush(),
+            200
+        );
     }
 
-    // ==================== PARCEL PHOTOS/DOCUMENTS ====================
+    // ==================== PARCEL PHOTOS ====================
 
     #[Route('/parcels/{uuid}/photos', name: 'parcel_photos_upload', methods: ['POST'])]
     #[OA\Post(
         path: '/api/v1/media/parcels/{uuid}/photos',
-        summary: 'Uploader des photos/documents pour une parcelle',
-        description: 'Ajoute des photos ou documents. Types acceptés : JPEG, PNG, WebP, GIF, PDF. Max 10 Mo.',
+        summary: 'Uploader des photos pour une parcelle',
+        description: 'Ajoute des photos dans le dossier de la parcelle. Types acceptés : JPEG, PNG, WebP, GIF. Max 10 Mo.',
         parameters: [
             new OA\Parameter(name: 'uuid', in: 'path', required: true, schema: new OA\Schema(type: 'string', format: 'uuid')),
         ],
@@ -235,7 +289,7 @@ final class MediaController extends AbstractController
                 schema: new OA\Schema(
                     type: 'object',
                     properties: [
-                        new OA\Property(property: 'files', type: 'array', items: new OA\Items(type: 'string', format: 'binary'), description: 'Fichiers images ou PDF (max 10 Mo chacun)')
+                        new OA\Property(property: 'files', type: 'array', items: new OA\Items(type: 'string', format: 'binary'), description: 'Fichiers images (max 10 Mo chacun)')
                     ],
                     required: ['files']
                 )
@@ -253,30 +307,28 @@ final class MediaController extends AbstractController
         $files = $request->files->get('files');
 
         if (!$files || !is_array($files)) {
-            $feedback = new Feedback();
             return $this->json(
-                $feedback->addError('files', 'Aucun fichier fourni.')->setErrorFlushDescription('Fichiers requis.')->setStatus(422)->autoInitFlush(),
+                (new Feedback())->addError('files', 'Aucun fichier fourni.')->setErrorFlushDescription('Fichiers requis.')->setStatus(422)->autoInitFlush(),
                 422
             );
         }
 
-        // TODO: Vérifier droits
+        $parcel = $this->mediaService->resolveParcel($uuid);
+
+        if ($parcel === null) {
+            return $this->json(
+                (new Feedback())->setErrorFlushDescription('Parcelle introuvable.')->setStatus(404)->autoInitFlush(),
+                404
+            );
+        }
 
         $uploaded = [];
         $errors = [];
 
-        foreach ($files as $file) {
-            try {
-                $relativePath = $this->fileUploadService->upload($file, 'parcels');
-                $uploaded[] = [
-                    'path' => $relativePath,
-                    'url' => $this->fileUploadService->getPublicUrl($relativePath),
-                ];
-            } catch (\InvalidArgumentException $e) {
-                $errors[] = ['file' => $file->getClientOriginalName(), 'error' => $e->getMessage()];
-            } catch (\RuntimeException $e) {
-                $errors[] = ['file' => $file->getClientOriginalName(), 'error' => $e->getMessage()];
-            }
+        try {
+            $uploaded = $this->mediaService->addParcelPhotos($parcel, $files);
+        } catch (\InvalidArgumentException|\RuntimeException $e) {
+            $errors[] = ['file' => null, 'error' => $e->getMessage()];
         }
 
         $feedback = new Feedback();
@@ -285,7 +337,7 @@ final class MediaController extends AbstractController
             'errors' => $errors,
         ]);
 
-        if (empty($uploaded)) {
+        if ([] === $uploaded) {
             $feedback->setErrorFlushDescription('Aucun fichier uploadé.')->setStatus(422);
         } else {
             $feedback->setFlushDescription(sprintf('%d fichier(s) uploadé(s).', count($uploaded)))->setStatus(200);
@@ -297,7 +349,7 @@ final class MediaController extends AbstractController
     #[Route('/parcels/{uuid}/photos/{filename}', name: 'parcel_photo_delete', methods: ['DELETE'])]
     #[OA\Delete(
         path: '/api/v1/media/parcels/{uuid}/photos/{filename}',
-        summary: 'Supprimer une photo/document d\'une parcelle',
+        summary: 'Supprimer une photo d\'une parcelle',
         parameters: [
             new OA\Parameter(name: 'uuid', in: 'path', required: true, schema: new OA\Schema(type: 'string', format: 'uuid')),
             new OA\Parameter(name: 'filename', in: 'path', required: true, schema: new OA\Schema(type: 'string')),
@@ -310,10 +362,19 @@ final class MediaController extends AbstractController
     )]
     public function deleteParcelPhoto(string $uuid, string $filename): JsonResponse
     {
-        $relativePath = 'parcels/' . $filename;
-        $deleted = $this->fileUploadService->delete($relativePath);
+        $parcel = $this->mediaService->resolveParcel($uuid);
+
+        if ($parcel === null) {
+            return $this->json(
+                (new Feedback())->setErrorFlushDescription('Parcelle introuvable.')->setStatus(404)->autoInitFlush(),
+                404
+            );
+        }
+
+        $deleted = $this->mediaService->deleteParcelPhoto($parcel, $filename);
 
         $feedback = new Feedback();
+
         if ($deleted) {
             $feedback->setFlushDescription('Fichier supprimé.')->setStatus(200);
         } else {

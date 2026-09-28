@@ -10,6 +10,7 @@ use App\Entity\Rental\Lease;
 use App\Entity\Rental\Rent;
 use App\Mapper\Rental\RentMapper;
 use App\Repository\Rental\LeaseRepository;
+use App\Repository\Rental\PaymentRepository;
 use App\Repository\Rental\RentRepository;
 use App\Security\SecurityAction;
 use App\Security\SecurityServiceInterface;
@@ -33,6 +34,7 @@ final readonly class RentService
     public function __construct(
         private RentRepository $rentRepository,
         private LeaseRepository $leaseRepository,
+        private PaymentRepository $paymentRepository,
         private RentMapper $rentMapper,
         private SecurityServiceInterface $securityService,
         private EntityManagerInterface $entityManager,
@@ -73,6 +75,7 @@ final readonly class RentService
         $rent = new Rent();
         $rent->setLease($lease);
         $this->rentMapper->copyToEntity($request, $rent);
+        $rent->syncStatus($this->paymentRepository->sumAmountByRent($rent));
 
         $this->entityManager->persist($rent);
         $this->entityManager->flush();
@@ -126,6 +129,11 @@ final readonly class RentService
         }
 
         $this->rentMapper->copyToEntity($request, $rent);
+
+        // Changer le montant ou la date d'exigibilité change ce que doit
+        // être le statut : il est recalculé sur les paiements réellement
+        // enregistrés, jamais sur une valeur fournie par le client.
+        $rent->syncStatus($this->paymentRepository->sumAmountByRent($rent));
 
         $this->entityManager->flush();
 

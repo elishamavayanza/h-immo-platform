@@ -18,6 +18,9 @@ final class SuperAdminReportResponse
         #[OA\Property(description: 'Période couverte', example: '2026-01-01 to 2026-12-31')]
         public string $periodCovered,
 
+        #[OA\Property(description: 'Généré le', format: 'date-time')]
+        public \DateTimeImmutable $generatedAt,
+
         /**
          * @var list<OrganizationSummaryItem>
          */
@@ -32,9 +35,6 @@ final class SuperAdminReportResponse
 
         #[OA\Property(description: 'Total utilisateurs plateforme')]
         public int $totalUsers = 0,
-
-        #[OA\Property(description: 'Généré le', format: 'date-time')]
-        public \DateTimeImmutable $generatedAt,
     ) {
     }
 }

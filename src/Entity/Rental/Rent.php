@@ -133,4 +133,42 @@ class Rent extends TimestampedEntity
 
         return $this;
     }
+
+    /**
+     * Recalcule le statut à partir des paiements reçus et de la date
+     * d'exigibilité.
+     *
+     * Le statut n'est jamais posé par le client : il est le résultat d'un
+     * calcul. Laissé à la saisie, il se contredit — une échéance soldée
+     * pouvait redevenir « pending » parce qu'un PATCH avait renvoyé la
+     * valeur par défaut du DTO, et une échéance pouvait être déclarée
+     * « payée » sans qu'aucun paiement n'ait été enregistré.
+     *
+     * Un loyer soldé reste PAID même après sa date d'échéance : exiger
+     * l'inverse ferait réapparaître des impayés sur des baux réglés.
+     *
+     * @param string $paidAmount total encaissé, au format décimal
+     */
+    public function syncStatus(string $paidAmount, ?\DateTimeImmutable $today = null): RentStatus
+    {
+        $today ??= new \DateTimeImmutable('today');
+
+        $paid = (float) $paidAmount;
+        $due = (float) $this->amount;
+        // 0.005 : deux centimes d'arrondi ne doivent pas faire conclure
+        // qu'un solde de 499,995 sur 500 est partiel.
+        $settled = abs($paid - $due) < 0.005 || $paid + 0.005 >= $due;
+
+        if ($settled) {
+            $this->status = RentStatus::PAID;
+        } elseif ($paid > 0.0) {
+            $this->status = RentStatus::PARTIALLY_PAID;
+        } elseif ($this->dueDate < $today) {
+            $this->status = RentStatus::OVERDUE;
+        } else {
+            $this->status = RentStatus::PENDING;
+        }
+
+        return $this->status;
+    }
 }

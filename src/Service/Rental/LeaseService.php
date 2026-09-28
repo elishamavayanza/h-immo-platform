@@ -303,6 +303,93 @@ final readonly class LeaseService
         return $succeeded;
     }
 
+    /**
+     * Active un bail. Transition DRAFT -> ACTIVE.
+     *
+     * Elle est nécessaire parce que le statut n'est plus saisissable dans
+     * `LeaseRequest` : sans endpoint dédié, un bail resterait DRAFT en
+     * permanence et ne produirait ni échéance ni impayé.
+     *
+     * L'exclusivité est vérifiée comme à la création : l'unité ne peut
+     * porter qu'un bail actif, et la vérification doit rester atomique.
+     */
+    public function activateLease(string $uuid): Feedback
+    {
+        $feedback = new Feedback();
+
+        $lease = $this->findLease($uuid, $feedback);
+        if ($lease === null) {
+            return $feedback->autoInitFlush();
+        }
+
+        $this->securityService->checkLeaseAccess($lease, SecurityAction::ACTIVATE_LEASE);
+
+        if ($lease->getStatus() !== LeaseStatus::DRAFT) {
+            // `autoInitFlush()` réimpose 422 dès qu'il y a une erreur :
+            // le 409 doit être posé APRÈS, sinon il est perdu.
+            return $feedback
+                ->addError('status', 'Seul un bail à l\'état brouillon peut être activé.')
+                ->setFlushDescriptionWithError(sprintf(
+                    'Activation impossible : le bail est à l\'état %s.',
+                    $lease->getStatus()->value
+                ))
+                ->autoInitFlush()
+                ->setStatus(409);
+        }
+
+        $lease->setStatus(LeaseStatus::ACTIVE);
+
+        if (!$this->persistLeaseExclusively($lease, $lease, $feedback)) {
+            return $feedback->autoInitFlush();
+        }
+
+        return $feedback
+            ->setData($this->leaseMapper->toResponse($lease))
+            ->setFlushDescription('Le bail a été activé.')
+            ->autoInitFlush();
+    }
+
+    /**
+     * Annule un bail. Transition DRAFT -> CANCELLED.
+     *
+     * Réservé à un bail jamais activé : un bail qui a tourné ne
+     * s'annule pas, il se résilie, ce qui laisse une trace et libère
+     * l'unité dans le même geste.
+     */
+    public function cancelLease(string $uuid, string $reason): Feedback
+    {
+        $feedback = new Feedback();
+
+        $lease = $this->findLease($uuid, $feedback);
+        if ($lease === null) {
+            return $feedback->autoInitFlush();
+        }
+
+        $this->securityService->checkLeaseAccess($lease, SecurityAction::CANCEL_LEASE);
+
+        if ($lease->getStatus() !== LeaseStatus::DRAFT) {
+            return $feedback
+                ->addError('status', 'Seul un bail à l\'état brouillon peut être annulé.')
+                ->setFlushDescriptionWithError(sprintf(
+                    'Annulation impossible : le bail est à l\'état %s. Utilisez la résiliation.',
+                    $lease->getStatus()->value
+                ))
+                ->autoInitFlush()
+                ->setStatus(409);
+        }
+
+        $lease->setStatus(LeaseStatus::CANCELLED);
+        $lease->setTerminationDate(new \DateTimeImmutable());
+        $lease->setTerminationReason($reason !== '' ? $reason : null);
+
+        $this->entityManager->flush();
+
+        return $feedback
+            ->setData($this->leaseMapper->toResponse($lease))
+            ->setFlushDescription('Le bail a été annulé.')
+            ->autoInitFlush();
+    }
+
     private function resolveTenant(?string $uuid, SecurityAction $action, Feedback $feedback): ?Tenant
     {
         if ($uuid === null || $uuid === '') {

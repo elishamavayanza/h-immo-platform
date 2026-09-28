@@ -14,6 +14,12 @@ use Symfony\Component\Validator\Constraints as Assert;
 final class AdminImmobilierReportFilterDto extends ReportFilterDto
 {
     public function __construct(
+        #[OA\Property(
+            description: 'UUID public de l\'organisation concernée. OBLIGATOIRE : le rapport porte sur une organisation, et un compte peut appartenir à plusieurs. Sans cet identifiant, il faudrait en choisir une arbitrairement, et le compte verrait le rapport d\'une société qui n\'est pas la sienne.',
+            format: 'uuid',
+            example: '9b1deb4d-3b7d-4bad-9bdd-2b0d7b3dcb6d'
+        )]
+        public ?string $organizationUuid = null,
         ?\DateTimeImmutable $periodFrom = null,
         ?\DateTimeImmutable $periodTo = null,
         ?string $cityUuid = null,

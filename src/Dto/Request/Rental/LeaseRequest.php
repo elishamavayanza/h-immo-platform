@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace App\Dto\Request\Rental;
 
 use App\Enum\Currency;
-use App\Enum\LeaseStatus;
 use OpenApi\Attributes as OA;
 use Symfony\Component\Validator\Constraints as Assert;
 
@@ -15,6 +14,12 @@ use Symfony\Component\Validator\Constraints as Assert;
  * Package : Rental Management — DTO de requête
  *
  * Données entrantes pour la création/mise à jour d'un contrat de bail (Lease).
+ *
+ * Le statut, la date de résiliation et son motif en sont absents, et c'est
+ * délibéré : un bail naît DRAFT et change d'état par des transitions
+ * explicites (activer, résilier, annuler), chacune soumise à son propre
+ * contrôle d'accès. Les exposer en écriture permettait de repasser un bail
+ * ACTIVE en DRAFT en ne changeant que sa date de fin.
  */
 #[OA\Schema(
     title: 'LeaseRequest',
@@ -90,31 +95,6 @@ final readonly class LeaseRequest
         )]
         #[Assert\NotBlank(groups: ['create', 'update'])]
         public ?Currency $currency = null,
-
-        #[OA\Property(
-            description: 'Statut du contrat de bail',
-            type: 'string',
-            example: 'ACTIVE',
-            enum: LeaseStatus::class
-        )]
-        public LeaseStatus $status = LeaseStatus::DRAFT,
-
-        #[OA\Property(
-            description: 'Date de résiliation effective (en cas de rupture de contrat)',
-            format: 'date',
-            example: '2026-08-31',
-            nullable: true
-        )]
-        public ?\DateTimeImmutable $terminationDate = null,
-
-        #[OA\Property(
-            description: 'Motif de résiliation du bail',
-            example: 'Rupture anticipée à la demande du locataire',
-            nullable: true,
-            maxLength: 255
-        )]
-        #[Assert\Length(max: 255, groups: ['create', 'update'])]
-        public ?string $terminationReason = null,
 
         #[OA\Property(
             description: 'Notes ou clauses particulières',

@@ -221,22 +221,42 @@ final class ExpenseRepository extends ServiceEntityRepository
 
     /**
      * Somme des montants par ville dans le périmètre donné.
+     *
+     * Le périmètre est OBLIGATOIRE : `$cityIds` filtre sur les villes, et
+     * une ville appartient à une seule Organization, donc il borne déjà la
+     * requête à un tenant. Une liste vide ne doit pas se lire comme « pas
+     * de filtre » : elle signifie « aucune dépense visible » et renvoie
+     * donc un résultat vide. Sans cette garde, un appelant qui aurait
+     * perdu ses villes remontrerait toutes les dépenses de la plateforme.
+     *
+     * `e.city` est une association `to-one` : Doctrine l'hydrate en objet
+     * `City`, et non en identifiant. `$row['city']->getUuid()` est donc
+     * valide, contrairement à ce que suggère la lecture du `SELECT`.
+     *
+     * @param list<int> $cityIds
+     *
+     * @return list<array{city: City, cityName: string, total: string, currency: string}>
      */
     public function sumByCity(
-        ?array $organizationIds = null,
+        array $cityIds,
         ?\DateTimeImmutable $periodFrom = null,
         ?\DateTimeImmutable $periodTo = null
     ): array {
-        $qb = $this->createQueryBuilder('e')
-            ->select('e.city, SUM(e.amount) as total, e.currency')
-            ->innerJoin('e.city', 'c')
-            ->addSelect('c.name as cityName')
-            ->groupBy('e.city, e.currency, c.name');
-
-        if ($organizationIds !== null && !empty($organizationIds)) {
-            $qb->andWhere('e.organization IN (:orgs)')
-                ->setParameter('orgs', $organizationIds);
+        if ($cityIds === []) {
+            return [];
         }
+
+        // Ni `e.city` ni `e.city.uuid` ne sont sélectionnables ici : DQL
+        // refuse une association dans une requête groupée
+        // (« Invalid PathExpression »), et un chemin qui la traverse est
+        // résolu contre la classe racine, qui n'a pas de champ `uuid`. Le
+        // champ doit être lu par l'alias du join, `c.uuid`.
+        $qb = $this->createQueryBuilder('e')
+            ->select('c.uuid as cityUuid, c.name as cityName, SUM(e.amount) as total, e.currency')
+            ->innerJoin('e.city', 'c')
+            ->groupBy('c.uuid, c.name, e.currency')
+            ->andWhere('e.city IN (:cities)')
+            ->setParameter('cities', $cityIds);
 
         if ($periodFrom !== null) {
             $qb->andWhere('e.expenseDate >= :periodFrom')
