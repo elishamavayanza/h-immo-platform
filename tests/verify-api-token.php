@@ -3,19 +3,26 @@
 declare(strict_types=1);
 
 /**
- * Vérifie la charge utile de session renvoyée par /api/auth/login et
- * /api/auth/me.
+ * Vérifie le jeton d'API et la charge utile renvoyée par
+ * /api/auth/login et /api/auth/me.
  *
- * Le jeton de cette application est un cookie de session `HIMMOMPA`, pas
- * un JWT : il est illisible par le JavaScript de la page et ne peut donc
- * pas transporter d'information. L'identité et les droits sont renvoyés
- * dans le corps de la réponse, et c'est ce que ce script vérifie.
+ * Le jeton est un JWT HS256 renvoyé dans le corps de la réponse sous
+ * `accessToken`, puis renvoyé par le client dans l'en-tête
+ * `Authorization: Bearer <token>`. Il est auto-porteur : il porte
+ * l'identité et les droits, ce qui permet au client de connaître son
+ * état sans appel réseau supplémentaire.
+ *
+ * Ce qui est vérifié ici :
+ *   - la forme et le contenu du jeton (revendications, expiration) ;
+ *   - qu'un jeton falsifié, expiré, en `alg: none` ou révoqué est rejeté ;
+ *   - que la charge utile est cohérente entre le login et /me ;
+ *   - qu'aucun secret ne fuit dans le corps ni dans le jeton.
  *
  * Les requêtes passent par le vrai noyau HTTP (routage, firewall,
  * contrôleurs, listeners) avec un client sans état qui ne transporte que
- * les cookies.
+ * le jeton.
  *
- *   php tests/verify-session-payload.php
+ *   php tests/verify-api-token.php
  */
 
 use App\Entity\Identity\Organization;
@@ -36,7 +43,7 @@ ob_start();
 require dirname(__DIR__) . '/vendor/autoload.php';
 (new Symfony\Component\Dotenv\Dotenv())->bootEnv(dirname(__DIR__) . '/.env');
 
-final class SessionPayloadKernel extends App\Kernel
+final class ApiTokenKernel extends App\Kernel
 {
     protected function build(ContainerBuilder $container): void
     {
@@ -71,7 +78,7 @@ function check(string $label, bool $ok, string $detail = ''): void
     echo "  [FAIL] {$label}" . ($detail !== '' ? " -> {$detail}" : '') . "\n";
 }
 
-$kernel = new SessionPayloadKernel('dev', true);
+$kernel = new ApiTokenKernel('dev', true);
 $kernel->boot();
 $container = $kernel->getContainer();
 $em = $container->get('doctrine')->getManager();
@@ -174,23 +181,20 @@ $assign($adminVille, $villeInactive);
 
 $em->flush();
 
-$jar = [];
+// Le client ne transporte QUE le jeton : ni cookie, ni état conservé entre
+// les requêtes. C'est ce qui prouve que l'accès tient dans le jeton.
+$jeton = null;
+$cookiesEmis = 0;
 
-$request = static function (string $method, string $uri, ?array $json = null) use ($kernel, &$jar): array {
+$request = static function (string $method, string $uri, ?array $json = null) use ($kernel, &$jeton, &$cookiesEmis): array {
     $server = ['REQUEST_METHOD' => $method, 'REQUEST_URI' => $uri, 'HTTP_HOST' => 'localhost'];
 
-    if ($jar !== []) {
-        $pairs = [];
-
-        foreach ($jar as $name => $value) {
-            $pairs[] = $name . '=' . $value;
-        }
-
-        $server['HTTP_COOKIE'] = implode('; ', $pairs);
+    if ($jeton !== null) {
+        $server['HTTP_AUTHORIZATION'] = 'Bearer ' . $jeton;
     }
 
     $content = $json !== null ? json_encode($json, JSON_THROW_ON_ERROR) : null;
-    $req = Request::create($uri, $method, [], $jar, [], $server, $content);
+    $req = Request::create($uri, $method, [], [], [], $server, $content);
 
     if ($content !== null) {
         $req->headers->set('CONTENT_TYPE', 'application/json');
@@ -198,49 +202,183 @@ $request = static function (string $method, string $uri, ?array $json = null) us
 
     $response = $kernel->handle($req);
 
-    foreach ($response->headers->getCookies() as $cookie) {
-        if ($cookie->getValue() === null || $cookie->getValue() === '') {
-            unset($jar[$cookie->getName()]);
-
-            continue;
-        }
-
-        $jar[$cookie->getName()] = $cookie->getValue();
-    }
-
     $status = $response->getStatusCode();
     $raw = (string) $response->getContent();
-    $setCookieHeader = $response->headers->get('Set-Cookie');
+    $wwwAuthenticate = $response->headers->get('WWW-Authenticate');
+    $cookiesEmis = count($response->headers->getCookies());
     $kernel->terminate($req, $response);
 
-    return [$status, $raw, $setCookieHeader];
+    return [$status, $raw, $wwwAuthenticate];
 };
 
-$login = static fn (User $u): array => $request('POST', '/api/auth/login', [
-    'email' => $u->getEmail(),
-    'password' => 'MotDePasse!123',
-]);
+// Après un login réussi, le client conserve le jeton comme le ferait un
+// vrai front : c'est ce qui rend les assertions suivantes réalistes.
+$login = static function (User $u) use ($request, &$jeton): array {
+    $jeton = null;
+    [$status, $raw] = $request('POST', '/api/auth/login', [
+        'email' => $u->getEmail(),
+        'password' => 'MotDePasse!123',
+    ]);
 
-echo "\n=== Le jeton est bien un cookie, pas un corps JSON ===\n";
+    $payload = json_decode($raw, true);
+    $jeton = is_string($payload['accessToken'] ?? null) ? $payload['accessToken'] : null;
 
-$jar = [];
-[$status, $raw, $setCookie] = $login($superAdmin);
+    return [$status, $raw];
+};
+
+echo "\n=== Emission du jeton ===\n";
+
+[$status, $raw] = $login($superAdmin);
 check('POST /api/auth/login renvoie 200', $status === 200, "obtenu {$status}");
-check(
-    'le cookie de session HIMMOMPA est émis dans Set-Cookie',
-    is_string($setCookie) && str_contains($setCookie, 'HIMMOMPA='),
-    'aucun Set-Cookie',
-);
-check('le cookie est HttpOnly', is_string($setCookie) && str_contains(strtolower($setCookie), 'httponly'));
 
 $decoded = json_decode($raw, true);
 check('le corps JSON est décodable', is_array($decoded), $raw);
-check(
-    'aucun jeton n’est exposé dans le corps JSON',
-    !str_contains($raw, 'HIMMOMPA') && !str_contains(strtolower($raw), 'token'),
-    'jeton trouvé dans le corps',
-);
 check('le corps contient un objet user', isset($decoded['user']) && is_array($decoded['user']));
+check('tokenType vaut Bearer', ($decoded['tokenType'] ?? null) === 'Bearer', var_export($decoded['tokenType'] ?? null, true));
+check(
+    'expiresIn est un entier positif',
+    is_int($decoded['expiresIn'] ?? null) && $decoded['expiresIn'] > 0,
+    var_export($decoded['expiresIn'] ?? null, true),
+);
+check(
+    'accessToken est un JWT en trois segments',
+    is_string($decoded['accessToken'] ?? null) && substr_count($decoded['accessToken'], '.') === 2,
+    'jeton mal formé',
+);
+
+// Le pare-feu est `stateless` : aucun cookie ne doit être émis. Un cookie
+// permettrait au navigateur de rester connecté même après une révocation.
+check('aucun cookie n’est émis par le login', $cookiesEmis === 0, "{$cookiesEmis} cookie(s)");
+
+$base64UrlDecode = static function (string $segment): string {
+    $padded = strtr($segment, '-_', '+/');
+    $padded .= str_repeat('=', (4 - strlen($padded) % 4) % 4);
+
+    return (string) base64_decode($padded, true);
+};
+
+[$headerB64, $payloadB64, $signatureB64] = explode('.', $decoded['accessToken']);
+$header = json_decode($base64UrlDecode($headerB64), true);
+$claims = json_decode($base64UrlDecode($payloadB64), true);
+
+check('le header déclare HS256', ($header['alg'] ?? null) === 'HS256', json_encode($header));
+check('le header déclare le type JWT', ($header['typ'] ?? null) === 'JWT', json_encode($header));
+check('la signature est présente et non vide', $signatureB64 !== '');
+
+echo "\n=== Revendications du jeton ===\n";
+
+foreach (['iss', 'aud', 'sub', 'jti', 'iat', 'exp', 'email', 'platformRole', 'roles', 'cityScope', 'isActive', 'organizations'] as $claim) {
+    check("la revendication « {$claim} » est présente", array_key_exists($claim, $claims), implode(',', array_keys($claims)));
+}
+
+check(
+    'sub est l\'UUID du compte',
+    ($claims['sub'] ?? null) === ($decoded['user']['uuid'] ?? 'x'),
+    var_export($claims['sub'] ?? null, true),
+);
+check('jti est un hexadécimal de 32 caractères', is_string($claims['jti'] ?? null) && preg_match('/^[0-9a-f]{32}$/', $claims['jti']) === 1, var_export($claims['jti'] ?? null, true));
+check('email correspond au compte connecté', ($claims['email'] ?? null) === ($decoded['user']['email'] ?? 'x'), var_export($claims['email'] ?? null, true));
+check('platformRole correspond au corps', ($claims['platformRole'] ?? null) === ($decoded['user']['platformRole'] ?? 'x'), var_export($claims['platformRole'] ?? null, true));
+check('cityScope correspond au corps', ($claims['cityScope'] ?? null) === ($decoded['user']['cityScope'] ?? 'x'), var_export($claims['cityScope'] ?? null, true));
+check(
+    'exp est postérieur à iat',
+    is_int($claims['iat'] ?? null) && is_int($claims['exp'] ?? null) && $claims['exp'] > $claims['iat'],
+);
+check(
+    'l\'expiration correspond à expiresIn',
+    is_int($claims['iat'] ?? null) && is_int($claims['exp'] ?? null)
+        && ($claims['exp'] - $claims['iat']) === $decoded['expiresIn'],
+    'durée incohérente',
+);
+check('roles est un tableau', is_array($claims['roles'] ?? null));
+check('organizations est un tableau', is_array($claims['organizations'] ?? null));
+
+echo "\n=== Un jeton falsifié est refusé ===\n";
+
+// Signature : un caractère modifié doit invalider le jeton.
+//
+// Le changement se fait au DÉBUT et non à la fin : en base64url, le
+// dernier caractère d'une signature de 32 octets n'encode que 4 bits
+// utiles (256 = 6*42 + 4) et les 2 autres sont ignorés au décodage.
+// Modifier ce seul caractère produirait le PLUSIEURS FOIS la même
+// signature, et le test passerait à tort.
+$signatureFalsifiee = (substr($signatureB64, 0, 1) === 'A' ? 'B' : 'A') . substr($signatureB64, 1);
+$jetonSain = $jeton;
+$jeton = $headerB64 . '.' . $payloadB64 . '.' . $signatureFalsifiee;
+[$status] = $request('GET', '/api/auth/me');
+check('une signature falsifiée renvoie 401', $status === 401, "obtenu {$status}");
+
+// Charge utile : on AJOUTE une revendication en gardant la signature.
+// C'est la contre-mesure (« élévation de privilèges ») qu'un attaquant
+// tenterait : s'il passait, il pourrait se déclarer administrateur sans
+// jamais connaître la clé de signature.
+$chargesModifiees = $claims;
+$chargesModifiees['roles'] = ['ROLE_USER', 'ROLE_SUPER_ADMIN', 'ROLE_ADMIN'];
+$payloadFalsifie = rtrim(strtr(base64_encode((string) json_encode($chargesModifiees)), '+/', '-_'), '=');
+$jeton = $headerB64 . '.' . $payloadFalsifie . '.' . $signatureB64;
+[$status] = $request('GET', '/api/auth/me');
+check('une charge utile falsifiée renvoie 401', $status === 401, "obtenu {$status}");
+
+// Expiration dans le passé.
+$chargesExpirees = $claims;
+$chargesExpirees['exp'] = $claims['iat'] - 10;
+$payloadExpire = rtrim(strtr(base64_encode((string) json_encode($chargesExpirees)), '+/', '-_'), '=');
+$jeton = $headerB64 . '.' . $payloadExpire . '.' . $signatureB64;
+[$status] = $request('GET', '/api/auth/me');
+check('un jeton expiré renvoie 401', $status === 401, "obtenu {$status}");
+
+// « algorithm confusion » : un jeton non signé en `alg: none`.
+$headerNone = rtrim(strtr(base64_encode((string) json_encode(['typ' => 'JWT', 'alg' => 'none'])), '+/', '-_'), '=');
+$jeton = $headerNone . '.' . $payloadB64 . '.';
+[$status] = $request('GET', '/api/auth/me');
+check('un jeton en « alg: none » renvoie 401', $status === 401, "obtenu {$status}");
+
+// `sub` inexistant : la signature est valide, le compte ne l'est pas.
+$chargesInconnues = $claims;
+$chargesInconnues['sub'] = '00000000-0000-4000-8000-000000000000';
+$payloadInconnu = rtrim(strtr(base64_encode((string) json_encode($chargesInconnues)), '+/', '-_'), '=');
+$jeton = $headerB64 . '.' . $payloadInconnu . '.' . $signatureB64;
+[$status] = $request('GET', '/api/auth/me');
+check('un jeton dont le compte a disparu renvoie 401', $status === 401, "obtenu {$status}");
+
+$jeton = $jetonSain;
+[$status, $rawMe] = $request('GET', '/api/auth/me');
+check('le jeton authentique est toujours accepté', $status === 200, "obtenu {$status}");
+
+echo "\n=== Révocation à la déconnexion ===\n";
+
+// Sans révocation, un jeton intercepté resterait utilisable jusqu'à son
+// expiration : « se déconnecter » ne serait qu'un mot.
+[$status, $rawLogout] = $login($superAdmin);
+check('nouvelle connexion pour tester la révocation', $status === 200, "obtenu {$status}");
+$jetonRevocable = $jeton;
+
+[$status, $rawMeAvant] = $request('GET', '/api/auth/me');
+check('le jeton fonctionne avant déconnexion', $status === 200, "obtenu {$status}");
+
+[$status, $rawLogout] = $request('POST', '/api/auth/logout');
+check('POST /api/auth/logout renvoie 200', $status === 200, "obtenu {$status} : " . substr($rawLogout, 0, 120));
+check('la réponse confirme la révocation', str_contains($rawLogout, '"tokenRevoked":true'), substr($rawLogout, 0, 120));
+
+// On rejoue le jeton RÉVOQUÉ, pas le nouveau : c'est bien lui qui doit
+// devenir inutilisable.
+$jeton = $jetonRevocable;
+[$status] = $request('GET', '/api/auth/me');
+check('le jeton révoqué est refusé (401)', $status === 401, "obtenu {$status} : un jeton révoqué reste accepté");
+[$status] = $request('GET', '/api/v1/identity/organizations');
+check('le jeton révoqué est refusé aussi sur une route métier', $status === 401, "obtenu {$status}");
+
+echo "\n=== En-tête WWW-Authenticate ===\n";
+
+$jeton = null;
+[, $raw401, $wwwAuthenticate] = $request('GET', '/api/auth/me');
+check('sans jeton, /api/auth/me renvoie 401', $status === 401, "obtenu {$status}");
+check(
+    'le 401 indique le schéma Bearer',
+    is_string($wwwAuthenticate) && str_contains($wwwAuthenticate, 'Bearer'),
+    var_export($wwwAuthenticate, true),
+);
+check('le 401 ne fuit aucune trace d\'exécution', !str_contains($raw401, 'trace'), 'trace dans la réponse');
 
 echo "\n=== Charge utile de session enrichie ===\n";
 
@@ -280,7 +418,7 @@ check(
 
 echo "\n=== Rôles métier par Organization ===\n";
 
-$jar = [];
+$jeton = null;
 [$status, $raw] = $login($patron);
 check('POST /api/auth/login du patron renvoie 200', $status === 200, "obtenu {$status}");
 $patronUser = json_decode($raw, true)['user'] ?? [];
@@ -316,7 +454,7 @@ check('cities est vide pour un patron', ($patronUser['cities'] ?? null) === [], 
 
 echo "\n=== Villes accessibles (ADMIN_VILLE) ===\n";
 
-$jar = [];
+$jeton = null;
 [$status, $raw] = $login($adminVille);
 check('POST /api/auth/login de l\'admin de ville renvoie 200', $status === 200, "obtenu {$status}");
 $villeUser = json_decode($raw, true)['user'] ?? [];
@@ -345,14 +483,14 @@ check(
     'me=' . var_export($me['platformRole'] ?? 'CHAMP ABSENT', true) . ' login=' . var_export($villeUser['platformRole'] ?? 'CHAMP ABSENT', true),
 );
 
-$jar = [];
+$jeton = null;
 $request('POST', '/api/auth/login', ['email' => $inactif->getEmail(), 'password' => 'mauvais']);
 [$status] = $request('GET', '/api/auth/me');
-check('GET /api/auth/me sans session valide renvoie 401', $status === 401, "obtenu {$status}");
+check('GET /api/auth/me sans jeton valide renvoie 401', $status === 401, "obtenu {$status}");
 
 echo "\n=== Aucune fuite de secret ===\n";
 
-$jar = [];
+$jeton = null;
 [, $raw] = $login($superAdmin);
 check('le hash du mot de passe est absent', !str_contains($raw, '$2y$'), 'hash bcrypt present');
 check('le mot de passe en clair est absent', !str_contains($raw, 'MotDePasse!123'), 'mot de passe present');
@@ -362,16 +500,20 @@ echo "\n=== Schema de securite de la documentation ===\n";
 
 // Un second noyau : le generateur OpenAPI a besoin d'un conteneur neuf, le
 // precedant etant encore occupe par les requetes de la session.
-$docKernel = new SessionPayloadKernel('dev', true);
+$docKernel = new ApiTokenKernel('dev', true);
 $docKernel->boot();
 $doc = $docKernel->getContainer()->get('nelmio_api_doc.generator')->generate()->toJson();
 $decodedDoc = json_decode($doc, true);
 $docKernel->shutdown();
 
 $schemes = array_keys($decodedDoc['components']['securitySchemes'] ?? []);
-check('le schéma de sécurité est sessionCookie', in_array('sessionCookie', $schemes, true), json_encode($schemes));
-check('aucun schéma bearer/JWT résiduel', !in_array('bearer', $schemes, true), json_encode($schemes));
-check('le schéma déclare un cookie nommé HIMMOMPA', ($decodedDoc['components']['securitySchemes']['sessionCookie']['name'] ?? null) === 'HIMMOMPA');
+$schemaBearer = $decodedDoc['components']['securitySchemes']['bearer'] ?? [];
+check('le schéma de sécurité est bearer', in_array('bearer', $schemes, true), json_encode($schemes));
+check('aucun schéma de cookie résiduel', !in_array('sessionCookie', $schemes, true), json_encode($schemes));
+check('le schéma est de type http', ($schemaBearer['type'] ?? null) === 'http', json_encode($schemaBearer));
+check('le schéma déclare le schéma bearer', ($schemaBearer['scheme'] ?? null) === 'bearer', json_encode($schemaBearer));
+check('le schéma annonce un format JWT', ($schemaBearer['bearerFormat'] ?? null) === 'JWT', json_encode($schemaBearer));
+check('la sécurité globale s\'applique au bearer', ($decodedDoc['security'][0] ?? null) === ['bearer' => []], json_encode($decodedDoc['security'] ?? null));
 
 $prefix = '#/components/schemas/';
 // On analyse la sortie du générateur : `json_encode` réel échappe les '/'

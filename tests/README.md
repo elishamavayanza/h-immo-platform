@@ -21,11 +21,11 @@ php tests/verify-auth.php
 php tests/verify-api-doc.php
 php tests/verify-super-admin.php
 php tests/verify-password-reset.php
-php tests/verify-session-payload.php
+php tests/verify-api-token.php
 node tests/verify-reset-password-form.ts
 ```
 
-Les six premiers scripts s'exécutent avec PHP. Le dernier est un script
+Les sept premiers scripts s'exécutent avec PHP. Le dernier est un script
 Node : il vérifie la logique pure du formulaire React
 (`assets/app/password-form.ts`), que Node 24 exécute nativement sans
 transpiler. Il exige l'API démarrée sur le port 8000 uniquement pour
@@ -38,11 +38,11 @@ contrôle est ignoré et les autres restent exécutés.
 | --- | --- |
 | `verify-tenant-isolation.php` | Portée des données à l'Organization duPATRON pour les repositories, les services et les journaux d'audit, y compris un PATRON portant plusieurs Organizations. |
 | `verify-http-mapping.php` | Cohérence des verbes HTTP, des codes de statut et des routes entre contrôleurs et services. |
-| `verify-auth.php` | Ouverture de session, cookie de session, accès authentifié, refus des comptes désactivés, 401 anonyme, limitation des tentatives, déconnexion et révocation de session. |
+| `verify-auth.php` | Authentification par jeton : login, refus des mauvais identifiants, absence d'énumération de comptes, absence de cookie émis, réutilisation du jeton, déconnexion avec révocation, perte d'accès immédiate à la désactivation du compte, 401 anonyme et limitation des tentatives. |
 | `verify-api-doc.php` | Génération de la spécification OpenAPI : classes de modèles résolues, paramètres de requête, corps de requête et réponses référencées. |
-| `verify-super-admin.php` | Amorçage de la plateforme : création du compte `SUPER_ADMIN` par défaut, hachage du mot de passe, connexion réelle via `POST /api/auth/login`, réinitialisation du mot de passe et garde-fous de la commande. |
+| `verify-super-admin.php` | Amorçage de la plateforme : création du compte `SUPER_ADMIN` par défaut, hachage du mot de passe, connexion réelle via `POST /api/auth/login` puis accès authentifié via le jeton obtenu, réinitialisation du mot de passe et garde-fous de la commande. |
 | `verify-password-reset.php` | Flux « mot de passe oublié » complet : création du jeton, condensat SHA-256, expiration, usage unique, anti-énumération, refus des jetons expirés/inconnus/consommés et connexion avec le nouveau mot de passe. |
-| `verify-session-payload.php` | Charge utile de session renvoyée par `POST /api/auth/login` et `GET /api/auth/me` : le jeton est bien un cookie `HIMMOMPA` et n'apparaît pas dans le corps JSON, rôles Symfony, rôles métier par Organization (triés, stables), villes accessibles avec exclusion des villes inactives, `cityScope` (`platform`/`assigned`/`none`), horodatage ISO-8601 de la dernière connexion, absence de fuite de secret, et schéma de sécurité `sessionCookie` sans `bearer`/JWT résiduel. |
+| `verify-api-token.php` | Émission du jeton (`accessToken`, `tokenType`, `expiresIn`, structure JWT en trois segments, en-tête `alg: HS256`) et contenu de ses revendications (`sub`, `jti`, `email`, `platformRole`, `roles`, `cityScope`, `organizations`, `exp`), puis son refus quand la signature, la charge utile ou l'expiration sont falsifiées, quand il est en `alg: none`, quand le compte a disparu, et après une déconnexion. Également : en-tête `WWW-Authenticate` et absence de trace d'exécution sur un 401, charge utile de `POST /api/auth/login` et `GET /api/auth/me` (rôles Symfony, rôles métier par Organization triés, villes accessibles avec exclusion des villes inactives, `cityScope` `platform`/`assigned`/`none`, horodatage ISO-8601), absence de fuite de secret, et schéma de sécurité `bearer` sans résidu de cookie. |
 | `verify-reset-password-form.ts` | Formulaire de réinitialisation côté client : extraction du jeton depuis l'URL, validation des deux champs (mot de passe + confirmation), cohérence de la longueur minimale avec le schéma OpenAPI de l'API. |
 
 
@@ -50,3 +50,22 @@ contrôle est ignoré et les autres restent exécutés.
 
 La base de développement doit être à jour (`php bin/console doctrine:migrations:migrate`)
 et le cache Symfony être à jour (`php bin/console cache:clear`).
+
+## Variables d'environnement requises
+
+L'authentification est par jeton JWT signé en HS256. Deux variables doivent
+être définies dans `.env.local` (jamais dans un fichier versionné) :
+
+```bash
+JWT_SECRET=$(php -r 'echo bin2hex(random_bytes(32));')
+JWT_TTL=3600
+```
+
+`TokenManager` refuse de démarrer si `JWT_SECRET` est vide ou fait moins de
+32 caractères : une clé absente rendrait les jetons forables, et il vaut
+mieux une API en panne qu'une API compromise. `JWT_TTL` doit valoir au
+moins 60 secondes.
+
+La table `revoked_token` porte les jetons révoqués. Elle est purgée
+d'elle-même : une ligne dont l'échéance est dépassée est inutile, le
+jeton étant déjà refusé à la vérification.

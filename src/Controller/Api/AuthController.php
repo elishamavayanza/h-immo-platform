@@ -9,11 +9,14 @@ use App\Dto\Request\Auth\ForgotPasswordRequest;
 use App\Dto\Request\Auth\ResetPasswordRequest;
 use App\Dto\Response\HttpErrorResponsePayload;
 use App\Entity\Identity\User;
+use App\Repository\Identity\RevokedTokenRepository;
 use App\Service\Identity\PasswordResetService;
 use App\Dto\Response\Identity\SessionUserResponse;
 use App\Service\Identity\SessionUserResponseFactory;
+use App\Service\Identity\TokenManager;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
+use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpKernel\Attribute\MapRequestPayload;
 use Symfony\Component\Routing\Attribute\Route;
@@ -34,9 +37,9 @@ use Nelmio\ApiDocBundle\Attribute\Model;
  * - POST /api/auth/forgot-password : demande de réinitialisation
  * - POST /api/auth/reset-password  : validation jeton + nouveau mot de passe
  *
- * Endpoints protégés (firewall json_login) :
- * - POST /api/auth/login           : authentification (firewall)
- * - POST /api/auth/logout          : déconnexion
+ * Endpoints protégés (en-tête `Authorization: Bearer <jeton>`) :
+ * - POST /api/auth/login           : authentification (firewall `json_login`)
+ * - POST /api/auth/logout          : déconnexion (révoque le jeton)
  * - GET  /api/auth/me              : utilisateur courant
  */
 #[OA\Tag(name: 'Auth', description: 'Authentification, session et gestion des mots de passe.')]
@@ -46,6 +49,8 @@ final class AuthController extends AbstractController
         private readonly TokenStorageInterface $tokenStorage,
         private readonly PasswordResetService $passwordResetService,
         private readonly SessionUserResponseFactory $sessionUserResponseFactory,
+        private readonly TokenManager $tokenManager,
+        private readonly RevokedTokenRepository $revokedTokenRepository,
     ) {
     }
 
@@ -65,7 +70,7 @@ final class AuthController extends AbstractController
     #[OA\Post(
         path: '/api/auth/login',
         summary: 'Connexion par email et mot de passe',
-        description: 'Authentifie l\'utilisateur et retourne ses informations de session. Le jeton est un cookie de session `HIMMOMPA` (HttpOnly) émis dans l\'en-tête `Set-Cookie`, volontairement absent du corps JSON pour n\'être pas exposé au JavaScript de la page. Pour voir le cookie dans Swagger UI : onglet Application > Cookies du navigateur, Swagger ne peut pas afficher `Set-Cookie`.',
+        description: 'Authentifie l\'utilisateur et retourne un jeton d\'API (JWT HS256) ainsi que ses informations de session. Le jeton se transmet ensuite dans l\'en-tête `Authorization: Bearer <token>` ; il n\'est stocké ni dans un cookie ni dans une session serveur.',
         requestBody: new OA\RequestBody(
             required: true,
             content: new OA\JsonContent(
@@ -77,12 +82,16 @@ final class AuthController extends AbstractController
             )
         ),
         responses: [
-            new OA\Response(response: 200, description: 'Connexion réussie. Le cookie de session `HIMMOMPA` est émis dans `Set-Cookie`.', content: new OA\JsonContent(
+            new OA\Response(response: 200, description: 'Connexion réussie. Le jeton est renvoyé dans le corps de la réponse.', content: new OA\JsonContent(
                 properties: [
+                    new OA\Property(property: 'accessToken', type: 'string', description: 'Jeton à envoyer dans l\'en-tête Authorization: Bearer.'),
+                    new OA\Property(property: 'tokenType', type: 'string', example: 'Bearer'),
+                    new OA\Property(property: 'expiresIn', type: 'integer', description: 'Durée de validité en secondes.', example: 3600),
                     new OA\Property(property: 'user', ref: new Model(type: SessionUserResponse::class, name: 'SessionUserResponse')),
                 ]
             )),
             new OA\Response(response: 401, description: 'Identifiants invalides', content: new OA\JsonContent(ref: '#/components/schemas/Feedback')),
+            new OA\Response(response: 429, description: 'Trop de tentatives', content: new OA\JsonContent(ref: '#/components/schemas/Feedback')),
         ]
     )]
     public function login(): JsonResponse
@@ -96,8 +105,16 @@ final class AuthController extends AbstractController
             return $this->failure();
         }
 
+        $sessionUser = $this->sessionUserResponseFactory->create($user);
+        $issued = $this->tokenManager->issue($sessionUser);
+
+        // Aucun cookie : le pare-feu est `stateless`. Le jeton ne transite
+        // que dans le corps de cette réponse.
         return new JsonResponse([
-            'user' => $this->sessionUserResponseFactory->create($user),
+            'accessToken' => $issued['token'],
+            'tokenType' => 'Bearer',
+            'expiresIn' => $this->tokenManager->ttl(),
+            'user' => $sessionUser,
         ]);
     }
 
@@ -106,11 +123,63 @@ final class AuthController extends AbstractController
         name: 'api_logout',
         methods: ['POST'],
     )]
-    public function logout(): JsonResponse
+    #[OA\Post(
+        path: '/api/auth/logout',
+        summary: 'Déconnexion',
+        description: 'Révoque le jeton présenté : son `jti` est inscrit en table de révocation, ce qui le rend inutilisable même s\'il a été intercepté. Sans cet appel, un jeton volé resterait valide jusqu\'à son expiration.',
+        security: [['bearer' => []]],
+        responses: [
+            new OA\Response(response: 200, description: 'Déconnexion effectuée, jeton révoqué.'),
+        ]
+    )]
+    public function logout(Request $request): JsonResponse
     {
         $this->tokenStorage->setToken(null);
 
-        return new JsonResponse(['message' => 'Déconnexion effectuée.']);
+        // Le pare-feu est `stateless` : il n'y a aucune session à
+        // invalider. La révocation du jeton est le seul moyen de rendre
+        // la déconnexion réelle, et elle repose sur le `jti` porté par le
+        // jeton que le client présente.
+        $revoked = $this->revokePresentedToken($request);
+
+        return new JsonResponse([
+            'message' => 'Déconnexion effectuée.',
+            'tokenRevoked' => $revoked,
+        ]);
+    }
+
+    /**
+     * Inscrit le `jti` du jeton présenté dans la table de révocation.
+     *
+     * Un jeton absent, expiré ou déjà révoqué n'est pas une erreur de
+     * déconnexion : le client est déjà dans l'état voulu. Renvoie
+     * simplement `false`.
+     */
+    private function revokePresentedToken(Request $request): bool
+    {
+        $authorization = (string) $request->headers->get('Authorization');
+
+        if (!preg_match('/^Bearer\s+(.+)$/i', $authorization, $matches)) {
+            return false;
+        }
+
+        try {
+            $claims = $this->tokenManager->parse(trim($matches[1]));
+        } catch (\Throwable) {
+            return false;
+        }
+
+        $jti = $claims['jti'] ?? null;
+        $exp = $claims['exp'] ?? null;
+
+        if (!\is_string($jti) || !\is_int($exp)) {
+            return false;
+        }
+
+        return $this->revokedTokenRepository->revoke(
+            $jti,
+            (new \DateTimeImmutable())->setTimestamp($exp)
+        );
     }
 
     /**
@@ -126,7 +195,7 @@ final class AuthController extends AbstractController
         path: '/api/auth/me',
         summary: 'Utilisateur de la session courante',
         description: 'Retourne l\'identité et les droits de l\'utilisateur authentifié par le cookie de session. Permet à un client de restaurer son état au rechargement de la page sans relancer une connexion.',
-        security: [['sessionCookie' => []]],
+        security: [['bearer' => []]],
         responses: [
             new OA\Response(response: 200, description: 'Session courante', content: new OA\JsonContent(ref: new Model(type: SessionUserResponse::class, name: 'SessionUserResponse'))),
             new OA\Response(response: 401, description: 'Session absente ou expirée', content: new OA\JsonContent(ref: '#/components/schemas/Feedback')),

@@ -5,27 +5,41 @@ nelmio_api_doc:
             description: >
                 API REST pour la gestion immobilière.
 
-                L'authentification est **stateful** : le jeton est le cookie
-                de session `HIMMOMPA` (`HttpOnly`, `SameSite=Lax`, 24 h),
-                émis par le firewall dans l'en-tête `Set-Cookie`. Il n'y a
-                pas de JWT et aucun en-tête `Authorization` n'est attendu.
+                L'authentification est **sans état** : `POST /api/auth/login`
+                renvoie un jeton `JWT` (HS256) dans le corps de la réponse,
+                et chaque requête ultérieure le transmet dans l'en-tête
+                `Authorization: Bearer <token>`. Aucun cookie n'est émis et
+                aucune session n'est créée côté serveur.
 
-                Conséquence pour les clients non-navigateur : ils doivent
-                conserver le cookie et le renvoyer sur chaque requête
-                (`Cookie: HIMMOMPA=...`).
+                Le jeton est auto-porteur : il contient l'identifiant du
+                compte et ses droits, pour que le client puisse construire
+                son état sans appel réseau supplémentaire. Deux règles en
+                découlent :
+
+                - la durée de vie est courte (1 h par défaut) et le
+                  changement d'un droit ne s'applique qu'aux jetons émis
+                  ensuite ;
+                - le compte est néanmoins rechargé en base à chaque
+                  requête, donc la désactivation d'un compte prend effet
+                  immédiatement, sans attendre l'expiration.
+
+                `POST /api/auth/logout` révoque le jeton présenté : il
+                devient inutilisable même s'il a été intercepté.
             version: '1.0.0'
         components:
             securitySchemes:
-                # Déclaré en `cookie` et non en `bearer` : le mécanisme réel
-                # est le cookie de session. Un schéma `bearer`/JWT affichait
-                # un bouton « Authorize » dans Swagger qui ne servait à rien
-                # et suggérait un jeton inexistant.
-                sessionCookie:
-                    type: apiKey
-                    in: cookie
-                    name: HIMMOMPA
+                # Le schéma `bearer` décrit ici le mécanisme réellement
+                # en place : le bouton « Authorize » de Swagger UI saisit
+                # le jeton et l'envoie dans l'en-tête `Authorization`.
+                bearer:
+                    type: http
+                    scheme: bearer
+                    bearerFormat: JWT
+                    description: >
+                        Jeton renvoyé par `POST /api/auth/login` dans le
+                        champ `accessToken`.
         security:
-            - sessionCookie: []
+            - bearer: []
         models:
             names:
                 - type: 'App\Dto\Feedback'

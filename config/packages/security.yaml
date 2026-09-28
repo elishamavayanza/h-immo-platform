@@ -20,16 +20,34 @@ security:
 
         main:
             provider: app_user_provider
+            # API sans état : aucune session PHP n'est créée ni lue, aucun
+            # cookie n'est émis. Chaque requête prouve son accès par le
+            # jeton qu'elle présente dans l'en-tête `Authorization`.
+            stateless: true
             lazy: true
-            # `user_checker` reste configuré pour les authentificateurs qui
-            # le sollicitent. `json_login` ne le fait pas : c'est
-            # `AppUserProvider` qui refuse les comptes désactivés.
+            # `user_checker` refuse un compte désactivé. Il s'applique aux
+            # DEUX authentificateurs du pare-feu :
+            #   - `ApiTokenAuthenticator` recharge le compte en base à chaque
+            #     requête, donc un jeton émis avant une désactivation cesse
+            #     de fonctionner dès la requête suivante ;
+            #   - `json_login` l'utilise via `AppUserProvider`.
             user_checker: App\Security\AccountStateUserChecker
             # Limitation des tentatives : sans elle, le login accepte des
             # milliers d'essais de mot de passe par seconde.
             login_throttling:
                 max_attempts: 5
                 interval: '15 minutes'
+
+            # Authentification par jeton : c'est elle qui protège les
+            # endpoints métier. Le compte est rechargé en base (UserBadge)
+            # plutôt que déduit des revendications : le contenu du jeton
+            # n'est donc pas une autorité en matière d'autorisation.
+            custom_authenticators:
+                - App\Security\ApiTokenAuthenticator
+            # Sans cela, Symfony élirait `json_login` comme point d'entrée
+            # et renverrait une redirection vers un formulaire : une API
+            # doit répondre 401 + `WWW-Authenticate`, pas rediriger.
+            entry_point: App\Security\ApiTokenAuthenticator
 
             # Authentification JSON : le client envoie
             # { "email": "...", "password": "..." } sur /api/auth/login.
@@ -45,11 +63,9 @@ security:
                 # un blocage temporaire renvoie 429 plutôt que 401.
                 failure_handler: App\Security\JsonAuthenticationFailureHandler
 
-            logout:
-                path: api_logout
-                # Invalide réellement la session : sans cela, un jeton
-                # précédent resterait accepté après « déconnexion ».
-                invalidate_session: true
+            # La déconnexion est traitée par `AuthController::logout()` : sur
+            # un pare-feu `stateless` il n'y a aucune session à invalider,
+            # et le `logout` de Symfony ne saurait pas révoquer un JWT.
 
         # Générateur de jetons nocturne : routes AJAX uniquement. Sans
         # pare-feu dédié, ces routes exigeraient une authentification.
