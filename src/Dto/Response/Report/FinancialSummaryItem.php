@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Dto\Response\Report;
 
+use App\Enum\Currency;
 use OpenApi\Attributes as OA;
 
 /**
@@ -27,8 +28,8 @@ final class FinancialSummaryItem
         #[OA\Property(description: 'Résultat net', type: 'number', format: 'decimal')]
         public string $netResult,
 
-        #[OA\Property(description: 'Devise')]
-        public string $currency,
+        #[OA\Property(description: 'Devise', type: 'string', example: 'USD', enum: Currency::class)]
+        public Currency $currency,
     ) {
     }
 }

@@ -33,25 +33,27 @@ final class RentMapper
         if ($request->currency !== null) {
             $rent->setCurrency($request->currency);
         }
-        if ($request->status !== null) {
-            $rent->setStatus($request->status);
-        }
+
+        // Le statut n'est jamais copié : `RentRequest` ne le contient pas.
+        // Il se recalcule après coup (`Rent::syncStatus()`), car changer le
+        // montant ou la date d'exigibilité change ce que doit être le
+        // statut.
 
         return $rent;
     }
 
+    /**
+     * Délègue la projection Entité -> DTO à la fabrique statique du DTO de
+     * réponse, qui est l'unique source de vérité du mapping en lecture.
+     *
+     * Elle existait déjà et était correcte, alors que ce mapper construisait
+     * à la main un `RentResponse` en passant `uuid:` et `leaseUuid:` — des
+     * noms que le DTO ne connaît pas (`id` et `leaseId`). Résultat : toute
+     * lecture ou mise à jour d'un loyer renvoyait une erreur 500. La
+     * duplication était la cause du défaut.
+     */
     public function toResponse(Rent $rent): RentResponse
     {
-        return new RentResponse(
-            uuid: $rent->getUuid(),
-            leaseUuid: $rent->getLease()->getUuid(),
-            period: $rent->getPeriod(),
-            dueDate: $rent->getDueDate(),
-            amount: $rent->getAmount(),
-            currency: $rent->getCurrency(),
-            status: $rent->getStatus(),
-            createdAt: $rent->getCreatedAt(),
-            updatedAt: $rent->getUpdatedAt()
-        );
+        return RentResponse::fromEntity($rent);
     }
 }

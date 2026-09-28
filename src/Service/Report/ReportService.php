@@ -513,8 +513,17 @@ final readonly class ReportService
 
         $items = [];
         foreach ($results as $row) {
+            // `e.category` est mappée sur l'enum `ExpenseCategory` : Doctrine
+            // la rend comme telle, alors que le DTO attend une chaîne (il
+            // porte aussi la catégorie littérale 'ALL' pour les agrégats
+            // qui ne sont pas une catégorie). On normalise ici plutôt que
+            // de changer le type du DTO et de casser 'ALL'.
+            $category = $row['category'] instanceof \BackedEnum
+                ? (string) $row['category']->value
+                : (string) $row['category'];
+
             $items[] = new ExpenseSummaryItem(
-                category: $row['category'],
+                category: $category,
                 level: 'organization',
                 levelLabel: 'Organisation',
                 count: 0, // Would need separate count query
@@ -526,17 +535,29 @@ final readonly class ReportService
         return $items;
     }
 
-    /** @return list<ExpenseSummaryItem> */
+    /**
+     * Dépenses agrégées par ville, strictement bornées à `$cityIds`.
+     *
+     * `$cityIds` n'est jamais `null` : une liste vide renvoie un rapport
+     * vide. La fixer obligatoire dans `sumByCity()` empêche le cas
+     * historique où l'appelant passait `null` et obtenait la somme des
+     * dépenses de toutes les organisations, accompagnées des noms de leurs
+     * villes.
+     *
+     * @param list<int> $cityIds
+     *
+     * @return list<ExpenseSummaryItem>
+     */
     private function buildExpensesByCity(array $cityIds, \DateTimeImmutable $periodFrom, \DateTimeImmutable $periodTo): array
     {
-        $results = $this->expenseRepository->sumByCity(null, $periodFrom, $periodTo);
+        $results = $this->expenseRepository->sumByCity($cityIds, $periodFrom, $periodTo);
 
         $items = [];
         foreach ($results as $row) {
             $items[] = new ExpenseSummaryItem(
                 category: 'ALL',
                 level: 'city',
-                levelUuid: $row['city']->getUuid()->toRfc4122(),
+                levelUuid: (string) $row['cityUuid'],
                 levelLabel: $row['cityName'],
                 count: 0,
                 totalAmount: $row['total'],
@@ -701,21 +722,6 @@ final readonly class ReportService
     {
         // Retourne la devise la plus utilisée (simplifié : CDF par défaut)
         return 'CDF';
-    }
-
-    /**
-     * Trouve l'organisation de l'utilisateur courant (via ses adhésions).
-     */
-    public function getOrganizationForUser(\App\Entity\Identity\User $user): ?Organization
-    {
-        $memberships = $this->securityService->getCurrentUserOrganizations();
-
-        if (empty($memberships)) {
-            return null;
-        }
-
-        // Pour un PATRON/ADMIN_IMMOBILIER, il n'y a qu'une organisation
-        return $memberships[0];
     }
 
     /**

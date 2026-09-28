@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace App\Dto\Request\Rental;
 
 use App\Enum\Currency;
-use App\Enum\RentStatus;
 use OpenApi\Attributes as OA;
 use Symfony\Component\Validator\Constraints as Assert;
 
@@ -15,6 +14,12 @@ use Symfony\Component\Validator\Constraints as Assert;
  * Package : Rental Management — DTO de requête
  *
  * Données entrantes pour la création/mise à jour d'une échéance (Rent).
+ *
+ * Le statut n'y figure pas, et c'est délibéré : il se déduit des
+ * paiements reçus et de la date d'exigibilité (`Rent::syncStatus()`).
+ * L'exposer en écriture permettait deux corruptions silencieuses — remettre
+ * une échéance soldée à « pending » en ne changeant que sa date, et
+ * déclarer « payé » sans enregistrer le moindre paiement.
  */
 #[OA\Schema(
     title: 'RentRequest',
@@ -64,14 +69,6 @@ final readonly class RentRequest
         )]
         #[Assert\NotBlank(groups: ['create', 'update'])]
         public ?Currency $currency = null,
-
-        #[OA\Property(
-            description: 'Statut du loyer (PENDING, PAID, PARTIALLY_PAID, LATE, OVERDUE)',
-            type: 'string',
-            example: 'PENDING',
-            enum: RentStatus::class
-        )]
-        public RentStatus $status = RentStatus::PENDING,
     ) {
     }
 }

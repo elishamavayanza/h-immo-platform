@@ -51,18 +51,15 @@ final class LeaseMapper
         if ($dto->currency !== null) {
             $lease->setCurrency($dto->currency);
         }
-        if ($dto->status !== null) {
-            $lease->setStatus($dto->status);
-        }
-        if ($dto->terminationDate !== null) {
-            $lease->setTerminationDate($dto->terminationDate);
-        }
-        if ($dto->terminationReason !== null) {
-            $lease->setTerminationReason($dto->terminationReason);
-        }
         if ($dto->notes !== null) {
             $lease->setNotes($dto->notes);
         }
+
+        // Ni le statut ni la date de résiliation ne sont copiés. Le
+        // statut d'un bail ne se saisit pas : il résulte d'une transition
+        // (activer, résilier, annuler) qui en contrôle l'accès et ses
+        // conditions. La date de résiliation est posée par la résiliation
+        // elle-même, avec sa raison.
 
         return $lease;
     }

@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Controller\Api\Report;
 
+use InvalidArgumentException;
+
 use App\Dto\Feedback;
 use App\Dto\Request\Report\AdminImmobilierReportFilterDto;
 use App\Dto\Request\Report\AdminVilleReportFilterDto;
@@ -13,7 +15,12 @@ use App\Dto\Response\Report\AdminImmobilierReportResponse;
 use App\Dto\Response\Report\AdminVilleReportResponse;
 use App\Dto\Response\Report\PatronReportResponse;
 use App\Dto\Response\Report\SuperAdminReportResponse;
+use App\Entity\Identity\Organization;
 use App\Entity\Identity\User;
+use App\Enum\OrganizationRole;
+use App\Repository\Identity\OrganizationRepository;
+use App\Security\SecurityServiceInterface;
+use App\Security\SecurityAction;
 use App\Service\Report\ReportService;
 use App\Trait\FeedbackTrait;
 use Nelmio\ApiDocBundle\Attribute\Model;
@@ -21,9 +28,10 @@ use OpenApi\Attributes as OA;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Response;
-use Symfony\Component\HttpKernel\Attribute\MapRequestPayload;
+use Symfony\Component\HttpKernel\Attribute\MapQueryString;
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
+use Symfony\Component\Uid\Uuid;
 
 /**
  * ReportController
@@ -31,6 +39,14 @@ use Symfony\Component\Security\Http\Attribute\IsGranted;
  * Package : Report Management
  *
  * Endpoints de génération de rapports administratifs multi-niveaux.
+ *
+ * Les filtres sont lus par `#[MapQueryString]` et NON par un mapping de
+ * corps : ces routes sont en GET, et un mapping de corps ne trouve jamais
+ * de corps. Sans cet attribut, tous les filtres arrivaient à `null` — y
+ * compris la période demandée — et le rapport ignorait silencieusement ce
+ * que le client avait demandé. Le défaut était antérieur au correctif
+ * P0-1 ; il est devenu visible seulement quand `organizationUuid` est
+ * devenu obligatoire et a fait échouer la requête en 400.
  *
  * Chaque rôle dispose d'un rapport adapté à son périmètre de responsabilité :
  * - PATRON        : vision globale de son organisation (finances, occupation, impayés, dépenses)
@@ -52,6 +68,8 @@ final class ReportController extends AbstractController
 
     public function __construct(
         private readonly ReportService $reportService,
+        private readonly OrganizationRepository $organizationRepository,
+        private readonly SecurityServiceInterface $securityService,
     ) {
     }
 
@@ -64,6 +82,7 @@ final class ReportController extends AbstractController
         description: 'Retourne un rapport consolidé : finances, occupation, impayés, dépenses par ville/parcelle/immeuble.',
         security: [['bearer' => []]],
         parameters: [
+            new OA\Parameter(name: 'organizationUuid', in: 'query', required: true, schema: new OA\Schema(type: 'string', format: 'uuid'), description: 'UUID de l\'organisation concernée (obligatoire)'),
             new OA\Parameter(name: 'periodFrom', in: 'query', schema: new OA\Schema(type: 'string', format: 'date'), description: 'Date de début'),
             new OA\Parameter(name: 'periodTo', in: 'query', schema: new OA\Schema(type: 'string', format: 'date'), description: 'Date de fin'),
             new OA\Parameter(name: 'cityUuid', in: 'query', schema: new OA\Schema(type: 'string', format: 'uuid'), description: 'Filtrer par ville'),
@@ -71,11 +90,13 @@ final class ReportController extends AbstractController
         ],
         responses: [
             new OA\Response(response: 200, description: 'Rapport généré', content: new OA\JsonContent(ref: new Model(type: PatronReportResponse::class))),
+            new OA\Response(response: 400, description: 'Paramètre organizationUuid absent ou invalide', content: new OA\JsonContent(ref: new Model(type: Feedback::class))),
             new OA\Response(response: 403, description: 'Accès refusé', content: new OA\JsonContent(ref: new Model(type: Feedback::class))),
+            new OA\Response(response: 404, description: 'Organisation introuvable', content: new OA\JsonContent(ref: new Model(type: Feedback::class))),
             new OA\Response(response: 401, description: 'Non authentifié', content: new OA\JsonContent(ref: new Model(type: Feedback::class))),
         ]
     )]
-    public function patronReport(PatronReportFilterDto $filter): JsonResponse
+    public function patronReport(#[MapQueryString] PatronReportFilterDto $filter): JsonResponse
     {
         $user = $this->getUser();
 
@@ -86,13 +107,15 @@ final class ReportController extends AbstractController
             );
         }
 
-        $organization = $this->reportService->getOrganizationForUser($user);
+        [$organization, $error] = $this->resolveReportOrganization(
+            $filter->organizationUuid,
+            $user,
+            OrganizationRole::PATRON,
+            'Accès réservé au Patron de l\'organisation.'
+        );
 
-        if (!$this->isGranted('ROLE_PATRON', $organization)) {
-            return $this->json(
-                (new Feedback())->setErrorFlushDescription('Accès réservé au Patron de l\'organisation.')->setStatus(403)->autoInitFlush(),
-                403
-            );
+        if ($error !== null) {
+            return $error;
         }
 
         $report = $this->reportService->generatePatronReport($filter, $organization);
@@ -113,6 +136,7 @@ final class ReportController extends AbstractController
         description: 'Retourne occupation par parcelle/immeuble, impayés, dépenses liées aux biens, évolution occupation.',
         security: [['bearer' => []]],
         parameters: [
+            new OA\Parameter(name: 'organizationUuid', in: 'query', required: true, schema: new OA\Schema(type: 'string', format: 'uuid'), description: 'UUID de l\'organisation concernée (obligatoire)'),
             new OA\Parameter(name: 'periodFrom', in: 'query', schema: new OA\Schema(type: 'string', format: 'date'), description: 'Date de début'),
             new OA\Parameter(name: 'periodTo', in: 'query', schema: new OA\Schema(type: 'string', format: 'date'), description: 'Date de fin'),
             new OA\Parameter(name: 'cityUuid', in: 'query', schema: new OA\Schema(type: 'string', format: 'uuid'), description: 'Filtrer par ville'),
@@ -120,11 +144,13 @@ final class ReportController extends AbstractController
         ],
         responses: [
             new OA\Response(response: 200, description: 'Rapport généré', content: new OA\JsonContent(ref: new Model(type: AdminImmobilierReportResponse::class))),
+            new OA\Response(response: 400, description: 'Paramètre organizationUuid absent ou invalide', content: new OA\JsonContent(ref: new Model(type: Feedback::class))),
             new OA\Response(response: 403, description: 'Accès refusé', content: new OA\JsonContent(ref: new Model(type: Feedback::class))),
+            new OA\Response(response: 404, description: 'Organisation introuvable', content: new OA\JsonContent(ref: new Model(type: Feedback::class))),
             new OA\Response(response: 401, description: 'Non authentifié', content: new OA\JsonContent(ref: new Model(type: Feedback::class))),
         ]
     )]
-    public function adminImmobilierReport(AdminImmobilierReportFilterDto $filter): JsonResponse
+    public function adminImmobilierReport(#[MapQueryString] AdminImmobilierReportFilterDto $filter): JsonResponse
     {
         $user = $this->getUser();
 
@@ -135,13 +161,15 @@ final class ReportController extends AbstractController
             );
         }
 
-        $organization = $this->reportService->getOrganizationForUser($user);
+        [$organization, $error] = $this->resolveReportOrganization(
+            $filter->organizationUuid,
+            $user,
+            OrganizationRole::ADMIN_IMMOBILIER,
+            'Accès réservé à l\'Administrateur Immobilier.'
+        );
 
-        if (!$this->isGranted('ROLE_ADMIN_IMMOBILIER', $organization)) {
-            return $this->json(
-                (new Feedback())->setErrorFlushDescription('Accès réservé à l\'Administrateur Immobilier.')->setStatus(403)->autoInitFlush(),
-                403
-            );
+        if ($error !== null) {
+            return $error;
         }
 
         $report = $this->reportService->generateAdminImmobilierReport($filter, $organization);
@@ -174,7 +202,7 @@ final class ReportController extends AbstractController
             new OA\Response(response: 401, description: 'Non authentifié', content: new OA\JsonContent(ref: new Model(type: Feedback::class))),
         ]
     )]
-    public function adminVilleReport(string $cityUuid, AdminVilleReportFilterDto $filter): JsonResponse
+    public function adminVilleReport(string $cityUuid, #[MapQueryString] AdminVilleReportFilterDto $filter): JsonResponse
     {
         $user = $this->getUser();
 
@@ -194,13 +222,12 @@ final class ReportController extends AbstractController
             );
         }
 
-        // Vérifier que l'utilisateur a accès à cette ville
-        if (!$this->isGranted('ROLE_ADMIN_VILLE', $city)) {
-            return $this->json(
-                (new Feedback())->setErrorFlushDescription('Vous n\'êtes pas autorisé sur cette ville.')->setStatus(403)->autoInitFlush(),
-                403
-            );
-        }
+        // `checkCityAccess()` enchaîne l'appartenance à l'Organization, la
+        // matrice rôle x action, puis la restriction UserCity propre à
+        // l'ADMIN_VILLE. C'est le seul contrôle qui retire à un
+        // administrateur de ville l'accès à une ville de sa propre
+        // organization qu'il ne s'est pas vu attribuer.
+        $this->securityService->checkCityAccess($city, SecurityAction::VIEW_REPORT);
 
         $report = $this->reportService->generateAdminVilleReport($filter, $city);
 
@@ -230,7 +257,7 @@ final class ReportController extends AbstractController
             new OA\Response(response: 401, description: 'Non authentifié', content: new OA\JsonContent(ref: new Model(type: Feedback::class))),
         ]
     )]
-    public function superAdminReport(ReportFilterDto $filter): JsonResponse
+    public function superAdminReport(#[MapQueryString] ReportFilterDto $filter): JsonResponse
     {
         $user = $this->getUser();
 
@@ -241,12 +268,7 @@ final class ReportController extends AbstractController
             );
         }
 
-        if (!$this->isGranted('ROLE_SUPER_ADMIN')) {
-            return $this->json(
-                (new Feedback())->setErrorFlushDescription('Accès réservé au SUPER_ADMIN.')->setStatus(403)->autoInitFlush(),
-                403
-            );
-        }
+        $this->securityService->requirePlatformRole(\App\Enum\PlatformRole::SUPER_ADMIN);
 
         $report = $this->reportService->generateSuperAdminReport($filter);
 
@@ -255,6 +277,101 @@ final class ReportController extends AbstractController
         }
 
         return $this->json($report);
+    }
+
+    /**
+     * Résout l'Organization ciblée par la requête et vérifie que
+     * l'appelant y détient le rôle exigé.
+     *
+     * L'organisation vient TOUJOURS de la requête, jamais d'une
+     * appartenance choisie dans la liste du compte : un utilisateur peut
+     * appartenir à plusieurs Organizations, et la première renvoyée par la
+     * base n'a aucun rapport avec celle qu'il souhaite consulter. Sans
+     * identifiant explicite, un Patron multi-sociétés recevrait le rapport
+     * d'une entreprise qui n'est pas la sienne — ou se le refuserait
+     * injustement.
+     *
+     * Le rôle est résolu DANS cette Organization via
+     * `SecurityService::hasOrganizationRole()`, jamais via
+     * `isGranted('ROLE_...')` : `User::getRoles()` ne porte que ROLE_USER et
+     * ROLE_SUPER_ADMIN (les rôles métier vivent dans `organization_user`),
+     * il n'existe aucun Voter, et `security.yaml` ne déclare aucun
+     * `role_hierarchy`. Un `isGranted('ROLE_PATRON', $organization)` est
+     * donc refusé à tout le monde, y compris à un vrai Patron.
+     *
+     * @return array{0: ?Organization, 1: ?JsonResponse} l'Organization, ou
+     *                                                 la réponse d'erreur
+     */
+    private function resolveReportOrganization(
+        ?string $organizationUuid,
+        User $user,
+        OrganizationRole $requiredRole,
+        string $deniedMessage,
+    ): array {
+        if ($organizationUuid === null || $organizationUuid === '') {
+            return [
+                null,
+                $this->json(
+                    (new Feedback())
+                        ->addError('organizationUuid', 'Paramètre obligatoire.')
+                        ->setErrorFlushDescription('Le paramètre "organizationUuid" est obligatoire : le rapport porte sur une organisation précise.')
+                        ->setStatus(400)->autoInitFlush(),
+                    400
+                ),
+            ];
+        }
+
+        try {
+            $parsed = Uuid::fromString($organizationUuid);
+        } catch (InvalidArgumentException) {
+            return [
+                null,
+                $this->json(
+                    (new Feedback())
+                        ->addError('organizationUuid', 'UUID invalide.')
+                        ->setErrorFlushDescription('Le paramètre "organizationUuid" n\'est pas un UUID valide.')
+                        ->setStatus(400)->autoInitFlush(),
+                    400
+                ),
+            ];
+        }
+
+        $organization = $this->organizationRepository->findOneByUuid($parsed);
+
+        if ($organization === null) {
+            return [
+                null,
+                $this->json(
+                    (new Feedback())->setErrorFlushDescription('Organisation introuvable.')->setStatus(404)->autoInitFlush(),
+                    404
+                ),
+            ];
+        }
+
+        // Appartenance + statut ACTIVE de l'Organization : un compte
+        //Patron d'une organisation désactivée ne doit pas lire ses
+        // chiffres.
+        if (!$this->securityService->canAccessOrganization($organization, SecurityAction::VIEW)) {
+            return [
+                null,
+                $this->json(
+                    (new Feedback())->setErrorFlushDescription($deniedMessage)->setStatus(403)->autoInitFlush(),
+                    403
+                ),
+            ];
+        }
+
+        if (!$this->securityService->hasOrganizationRole($user, $organization, $requiredRole)) {
+            return [
+                null,
+                $this->json(
+                    (new Feedback())->setErrorFlushDescription($deniedMessage)->setStatus(403)->autoInitFlush(),
+                    403
+                ),
+            ];
+        }
+
+        return [$organization, null];
     }
 
     private function renderPdf(string $template, array $params): Response

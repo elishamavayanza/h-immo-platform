@@ -161,19 +161,7 @@ final readonly class PaymentService
      */
     private function refreshRentStatus(Rent $rent): void
     {
-        $paid = $this->paymentRepository->sumAmountByRent($rent);
-        $due = (float) $rent->getAmount();
-        $paidAmount = (float) $paid;
-
-        if ($paidAmount <= 0.0) {
-            return;
-        }
-
-        if ($paidAmount + 0.005 >= $due) {
-            $rent->setStatus(RentStatus::PAID);
-        } else {
-            $rent->setStatus(RentStatus::PARTIALLY_PAID);
-        }
+        $rent->syncStatus($this->paymentRepository->sumAmountByRent($rent));
 
         $this->entityManager->flush();
     }
