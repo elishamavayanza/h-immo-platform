@@ -63,6 +63,16 @@ security:
         - { path: ^/api/doc, roles: PUBLIC_ACCESS }
         - { path: ^/api/docs, roles: PUBLIC_ACCESS }
 
+        # Public : l'onboarding d'un compte (Organization + PATRON) se fait
+        # par email. Sans ces deux exceptions, les endpoints tomberaient
+        # sur la règle `^/api` ci-dessous et exigeraient une session déjà
+        # ouverte, ce qui rendrait le mot de passe oublié impossible à
+        # utiliser. `PasswordResetService` répond par ailleurs 200 et un
+        # message identique que l'email existe ou non : ces routes ne
+        # révèlent rien sur l'existence d'un compte.
+        - { path: ^/api/auth/forgot-password$, roles: PUBLIC_ACCESS }
+        - { path: ^/api/auth/reset-password$, roles: PUBLIC_ACCESS }
+
         # Authentification des opérations destructrices.
         - { path: ^/api/auth/logout$, roles: IS_AUTHENTICATED_FULLY }
 

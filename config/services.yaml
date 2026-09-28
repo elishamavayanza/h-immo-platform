@@ -9,6 +9,13 @@
 parameters:
     uploads_dir: '%kernel.project_dir%/public/uploads'
     uploads_base_url: '/uploads'
+    # URL du front React : cible des liens d'activation et de
+    # réinitialisation de mot de passe envoyés par email. Le second argument
+    # de `ParameterBagInterface::get()` étant ignoré par PHP sur une
+    # méthode d'interface, un paramètre non déclaré lève une exception :
+    # ces deux valeurs doivent donc exister dans le conteneur.
+    app.frontend_url: '%env(STRING:APP_FRONTEND_URL)%'
+    mailer.from: '%env(STRING:MAILER_FROM_ADDRESS)%'
 
 services:
     # default configuration for services in *this* file
