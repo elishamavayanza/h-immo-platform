@@ -138,39 +138,24 @@ check(
 check('Le rôle SUPER_ADMIN est bien exposé par getRoles()', in_array('ROLE_SUPER_ADMIN', $user->getRoles(), true), implode(',', $user->getRoles()));
 
 // --- 2. Connexion réelle via le pare-feu ----------------------------------
-$jar = [];
+// Le client ne conserve que le jeton renvoyé par le login.
+$jeton = null;
 
-$request = static function (string $method, string $uri, ?array $json = null) use ($kernel, &$jar): array {
+$request = static function (string $method, string $uri, ?array $json = null) use ($kernel, &$jeton): array {
     $server = ['REQUEST_METHOD' => $method, 'REQUEST_URI' => $uri, 'HTTP_HOST' => 'localhost'];
 
-    if ($jar !== []) {
-        $pairs = [];
-
-        foreach ($jar as $name => $value) {
-            $pairs[] = $name . '=' . $value;
-        }
-
-        $server['HTTP_COOKIE'] = implode('; ', $pairs);
+    if ($jeton !== null) {
+        $server['HTTP_AUTHORIZATION'] = 'Bearer ' . $jeton;
     }
 
     $content = $json !== null ? json_encode($json, JSON_THROW_ON_ERROR) : null;
-    $request = Request::create($uri, $method, [], $jar, [], $server, $content);
+    $request = Request::create($uri, $method, [], [], [], $server, $content);
 
     if ($content !== null) {
         $request->headers->set('CONTENT_TYPE', 'application/json');
     }
 
     $response = $kernel->handle($request);
-
-    foreach ($response->headers->getCookies() as $cookie) {
-        if ($cookie->getValue() === null || $cookie->getValue() === '') {
-            unset($jar[$cookie->getName()]);
-
-            continue;
-        }
-
-        $jar[$cookie->getName()] = $cookie->getValue();
-    }
 
     $status = $response->getStatusCode();
     $body = (string) $response->getContent();
@@ -186,6 +171,7 @@ echo "\n=== Connexion avec le compte administrateur par défaut ===\n";
 check('POST /api/auth/login renvoie 200', $status === 200, "obtenu {$status} : {$body}");
 
 $decoded = json_decode($body, true);
+$jeton = is_string($decoded['accessToken'] ?? null) ? $decoded['accessToken'] : null;
 
 check('La réponse expose l\'email du super admin', ($decoded['user']['email'] ?? null) === $email, $body);
 check(
@@ -194,11 +180,11 @@ check(
     $body
 );
 check('La réponse ne contient jamais le mot de passe', !str_contains($body, 'password'), $body);
-check('Une session est ouverte (cookie HIMMOMPA)', isset($jar['HIMMOMPA']), implode(',', array_keys($jar)) ?: 'aucun cookie');
+check('Un jeton d\'API est émis dans accessToken', $jeton !== null, 'accessToken absent');
 
-// La session doit être réutilisable : c'est elle qui porte le rôle.
+// Le jeton doit être réutilisable : c'est lui qui porte le rôle.
 [$status] = $request('GET', '/api/auth/me');
-check('GET /api/auth/me renvoie 200 avec la session', $status === 200, "obtenu {$status}");
+check('GET /api/auth/me renvoie 200 avec le jeton', $status === 200, "obtenu {$status}");
 
 // --- 3. Mauvais mot de passe refusé ---------------------------------------
 $container->get('cache.rate_limiter')->clear();

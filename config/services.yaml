@@ -44,3 +44,11 @@ services:
         arguments:
             $uploadsDir: '%uploads_dir%'
             $baseUrl: '%uploads_base_url%'
+
+    # La clé de signature et la durée de vie des jetons d'API.
+    # Le constructeur de `TokenManager` refuse de démarrer si la clé est
+    # absente ou trop courte : cela vaudrait des jetons forables.
+    App\Service\Identity\TokenManager:
+        arguments:
+            $jwtSecret: '%env(JWT_SECRET)%'
+            $jwtTtl: '%env(int:JWT_TTL)%'

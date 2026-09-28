@@ -107,31 +107,28 @@ $em->flush();
  *
  * @return array{0: int, 1: string}
  */
-// Le client est « sans état » entre les requêtes : il ne connaît que les
-// cookies. C'est ce qui prouve que la session est réellement persistée
-// par le serveur, et non portée par le TokenStorage du processus.
-$jar = [];
+// Le client est « sans état » entre les requêtes : il ne connaît que le
+// jeton reçu du login. C'est ce qui prouve que l'accès tient dans le jeton
+// lui-même, et non dans une session conservée par le processus PHP entre
+// deux appels.
+$jeton = null;
 
-$request = static function (string $method, string $uri, ?array $json = null) use ($kernel, &$jar): array {
+// Nombre de cookies émis par la DERNIÈRE réponse. Le pare-feu étant
+// `stateless`, ce compteur doit rester à zéro : c'est ce qui prouve
+// qu'aucune session ne se cache derrière le jeton.
+$cookiesEmis = 0;
+
+$request = static function (string $method, string $uri, ?array $json = null) use ($kernel, &$jeton, &$cookiesEmis): array {
     $server = ['REQUEST_METHOD' => $method, 'REQUEST_URI' => $uri, 'HTTP_HOST' => 'localhost'];
 
-    if ($jar !== []) {
-        $pairs = [];
-
-        foreach ($jar as $name => $value) {
-            $pairs[] = $name . '=' . $value;
-        }
-
-        $server['HTTP_COOKIE'] = implode('; ', $pairs);
-
+    if ($jeton !== null) {
+        // Un vrai client envoie le jeton dans cet en-tête, et lui seul.
+        $server['HTTP_AUTHORIZATION'] = 'Bearer ' . $jeton;
     }
 
     $content = $json !== null ? json_encode($json, JSON_THROW_ON_ERROR) : null;
 
-    // `Request::create()` n'analytise pas `HTTP_COOKIE` : les cookies
-    // doivent être fournis en 4e argument. Un client réel les reçoit dans
-    // l'en-tête, le noyau les retrouve dans `$request->cookies`.
-    $request = Request::create($uri, $method, [], $jar, [], $server, $content);
+    $request = Request::create($uri, $method, [], [], [], $server, $content);
 
     if ($content !== null) {
         $request->headers->set('CONTENT_TYPE', 'application/json');
@@ -139,28 +136,16 @@ $request = static function (string $method, string $uri, ?array $json = null) us
 
     $response = $kernel->handle($request);
 
-    foreach ($response->headers->getCookies() as $cookie) {
-        // Un cookie vidé par le serveur est une suppression : le navigateur
-        // le retire, il ne le renvoie pas avec une valeur nulle.
-        if ($cookie->getValue() === null || $cookie->getValue() === '') {
-            unset($jar[$cookie->getName()]);
-
-            continue;
-        }
-
-        $jar[$cookie->getName()] = $cookie->getValue();
-    }
-
     $status = $response->getStatusCode();
     $content = (string) $response->getContent();
+    $cookiesEmis = count($response->headers->getCookies());
     fwrite(STDERR, sprintf(
-        "[trace] %s %s -> %d | cookies: %s | id=%s | started=%s\n",
+        "[trace] %s %s -> %d | jeton: %s | cookies emis: %d\n",
         $method,
         $uri,
         $status,
-        implode(',', array_keys($jar)) ?: 'aucune',
-        var_export($request->getSession()->getId(), true) . ' / cookie ' . var_export($request->cookies->get('HIMMOMPA'), true),
-        var_export($request->getSession()->getId(), true)
+        $jeton === null ? 'aucun' : substr($jeton, 0, 16) . '...',
+        $cookiesEmis
     ));
     $kernel->terminate($request, $response);
 
@@ -171,10 +156,10 @@ echo "\n=== Authentification (firewall json_login) ===\n";
 
 // Route protégée, sans jeton : doit être refusée par access_control.
 [$status] = $request('GET', '/api/v1/identity/organizations');
-check('GET /api/v1/identity/organizations sans session renvoie 401', $status === 401, "obtenu {$status}");
+check('GET /api/v1/identity/organizations sans jeton renvoie 401', $status === 401, "obtenu {$status}");
 
 [$status] = $request('GET', '/api/auth/me');
-check('GET /api/auth/me sans session renvoie 401', $status === 401, "obtenu {$status}");
+check('GET /api/auth/me sans jeton renvoie 401', $status === 401, "obtenu {$status}");
 
 // Mots de passe erronés.
 [$status] = $request('POST', '/api/auth/login', ['email' => $email, 'password' => 'mauvais']);
@@ -199,9 +184,18 @@ check(
     "obtenu {$status} : " . substr($body, 0, 160)
 );
 
-// Le firewall doit avoirNobody installed un jeton dans le TokenStorage :
-// c'est lui qui rend la session exploitable par les requêtes suivantes.
+// `json_login` authentifie la requête de login ; c'est cette
+// authentification qui autorise le contrôleur à émettre un jeton.
 check('Le login installe bien un jeton d\'authentification', $tokenStorage->getToken() !== null);
+
+// Le pare-feu est `stateless` : aucun cookie ne doit être émis, sinon le
+// navigateur pourrait se réauthentifier sans le jeton, et un client
+// ignorant la révocation resterait connecté après « déconnexion ».
+check(
+    'Le login n\'émet aucun cookie de session',
+    $cookiesEmis === 0,
+    "{$cookiesEmis} cookie(s) émis"
+);
 
 if ($tokenStorage->getToken()?->getUser() instanceof User) {
     check(
@@ -212,28 +206,47 @@ if ($tokenStorage->getToken()?->getUser() instanceof User) {
     check('Le jeton porte bien l\'entité User attendue par SecurityService', false, 'utilisateur inattendu');
 }
 
-// Requête authentifiée : le contrôle d'accès de l'Organization doit
-// passer, et son contenu être celui de l'utilisateur connecté.
+// Le jeton émis doit être repris tel quel par les requêtes suivantes.
+$jeton = is_string($decoded['accessToken'] ?? null) ? $decoded['accessToken'] : null;
+check(
+    'Le login renvoie un jeton dans accessToken',
+    $jeton !== null && $jeton !== '',
+    'accessToken absent'
+);
+
 [$status, $body] = $request('GET', '/api/auth/me');
 check(
-    'GET /api/auth/me avec session renvoie 200 et le profil',
+    'GET /api/auth/me avec le jeton renvoie 200 et le profil',
     $status === 200 && str_contains($body, $email),
     "obtenu {$status} : " . substr($body, 0, 160)
 );
 
-// Déconnexion : le cookie de session doit être invalidé, sinon le client
-// resterait authentifié après avoir cliqué sur « se déconnecter ».
-$jar = [];
+// Déconnexion : le jeton doit être RÉVOQUÉ, sinon le client resterait
+// authentifié après avoir cliqué sur « se déconnecter ».
 $tokenStorage->setToken(null);
+[$status] = $request('POST', '/api/auth/logout');
+check('La déconnexion renvoie 200', $status === 200, "obtenu {$status}");
 
 [$status] = $request('GET', '/api/auth/me');
-check('Après déconnexion, /api/auth/me renvoie 401', $status === 401, "obtenu {$status}");
+check(
+    'Après déconnexion, le même jeton est refusé (401)',
+    $status === 401,
+    "obtenu {$status} : un jeton révoqué reste accepté"
+);
 
-// Un compte désactivé alors qu'une session est déjà ouverte doit perdre
-// l'accès immédiatement : c'est tout l'intérêt de contrôler dans le
-// provider plutôt qu'au seul moment du login.
-[$status] = $request('POST', '/api/auth/login', ['email' => $email, 'password' => $password]);
-check('Reconnexion pour tester la désactivation en cours de session', $status === 200, "obtenu {$status}");
+// Un compte désactivé alors qu'un jeton est déjà délivré doit perdre
+// l'accès immédiatement, sans attendre l'expiration : c'est tout
+// l'intérêt de recharger le compte en base à chaque requête plutôt que
+// de faire confiance aux revendications du jeton.
+$jeton = null;
+[$status, $corpsReconnexion] = $request('POST', '/api/auth/login', ['email' => $email, 'password' => $password]);
+$reconnexion = json_decode($corpsReconnexion, true);
+$jeton = is_string($reconnexion['accessToken'] ?? null) ? $reconnexion['accessToken'] : null;
+check(
+    'Reconnexion pour tester la désactivation en cours de validité du jeton',
+    $status === 200 && $jeton !== null,
+    "obtenu {$status}"
+);
 
 $em->clear();
 $enCours = $repository->findOneBy(['email' => $email]);
@@ -243,9 +256,9 @@ $tokenStorage->setToken(null);
 
 [$status] = $request('GET', '/api/auth/me');
 check(
-    'Une session ouverte perd l\'accès dès qu\'un compte est désactivé',
+    'Un jeton délivré perd l\'accès dès que le compte est désactivé',
     $status === 401,
-    "obtenu {$status}"
+    "obtenu {$status} : un jeton survit à la désactivation de son compte"
 );
 
 // Un compte désactivé ne peut plus se connecter.
@@ -287,14 +300,6 @@ if ($stale instanceof User) {
 }
 
 $em->close();
-
-// Les fichiers de session produits par ce script sont des déchets : sans
-// ce nettoyage, `var/sessions/dev` sature à chaque exécution.
-$sessionDir = $kernel->getProjectDir() . '/var/sessions/' . $kernel->getEnvironment();
-
-foreach (glob($sessionDir . '/sess_*') ?: [] as $fichier) {
-    @unlink($fichier);
-}
 
 echo "\n  Contrôles exécutés : {$checks}\n";
 echo '  Échecs : ' . count($failures) . "\n";

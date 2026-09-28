@@ -20,6 +20,7 @@ use Symfony\Component\HttpKernel\KernelInterface;
 use Symfony\Bundle\SecurityBundle\Security;
 use Symfony\Component\Security\Core\Exception\AccessDeniedException as SecurityAccessDeniedException;
 use Symfony\Component\Security\Core\Exception\AuthenticationException;
+use Symfony\Component\Security\Core\Exception\SecurityException;
 use Symfony\Component\Security\Core\Exception\TooManyLoginAttemptsAuthenticationException;
 use Symfony\Component\Serializer\SerializerInterface;
 use Symfony\Component\Validator\Exception\ValidationFailedException;
@@ -75,9 +76,23 @@ final readonly class ApiExceptionListener
             ]);
         }
 
-        // Construction des détails supplémentaires (uniquement en environnement de développement)
+        // Construction des détails supplémentaires (uniquement en environnement
+        // de développement, et jamais pour un échec de sécurité).
+        //
+        // `AccessDeniedException` n'hérite PAS de `SecurityException` : il
+        // l'implémente seulement via `ExceptionInterface` et dérive
+        // directement de `RuntimeException`. Les deux doivent donc être
+        // testés, sinon un refus d'accès continue de renvoyer une trace
+        // d'exécution complète.
+        //
+        // Un refus d'accès est un événement normal d'une API exposée sur
+        // Internet : le détail n'intéresse pas l'appelant, et publier
+        // l'arborescence du serveur n'aide que l'attaquant.
+        $isSecurityFailure = $exception instanceof SecurityException
+            || $exception instanceof SecurityAccessDeniedException;
+
         $details = null;
-        if ($this->kernel->getEnvironment() === 'dev') {
+        if ($this->kernel->getEnvironment() === 'dev' && !$isSecurityFailure) {
             $details = [
                 'exceptionClass' => get_class($exception),
                 'file' => $exception->getFile(),
@@ -105,6 +120,19 @@ final readonly class ApiExceptionListener
 
         // Remplacement de la réponse HTTP par notre JsonResponse
         $response = new JsonResponse($json, $statusCode, [], true);
+
+        // Un 401 doit indiquer comment s'authentifier. Sans cet en-tête,
+        // un client d'API ne peut pas distinguer « présente un jeton » de
+        // « tes identifiants sont mauvais » et ne sait pas quoi corriger.
+        //
+        // Ce listener intercepte l'AccessDeniedException AVANT l'entry
+        // point du pare-feu (priorité 10 contre -64), qui n'est donc jamais
+        // appelé : l'en-tête est posé ici, au seul endroit qui produit
+        // effectivement la réponse.
+        if ($statusCode === Response::HTTP_UNAUTHORIZED) {
+            $response->headers->set('WWW-Authenticate', 'Bearer');
+        }
+
         $event->setResponse($response);
     }
 

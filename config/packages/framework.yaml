@@ -2,7 +2,14 @@
 framework:
     secret: '%env(APP_SECRET)%'
 
-    # La session n'est démarrée que si le code la lit ou l'écrit.
+    # L'API est désormais sans état : le pare-feu `main` est `stateless`
+    # et l'authentification se fait par jeton Bearer. Aucune session PHP
+    # n'est donc créée, et le cookie `HIMMOMPA` ci-dessous n'est plus émis.
+    #
+    # Ce bloc est conservé pour deux raisons : il reste la configuration
+    # de repli si une authentication par session est réintroduite, et
+    # `save_path` évite que PHP n'écrive dans `/var/lib/php/sessions`,
+    # absent ou non inscriptible en conteneur.
     session:
         # `save_path` est fixé explicitement. Laissé vide, Symfony n'applique
         # rien et PHP écrit dans son réglage système — `/var/lib/php/sessions`

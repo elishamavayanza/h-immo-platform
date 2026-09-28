@@ -15,15 +15,12 @@ use OpenApi\Attributes as OA;
  *
  * Description complète de l'utilisateur qui vient de s'authentifier.
  *
- * L'authentification de ce projet est stateful : le « jeton » est le cookie
- * de session `HIMMOMPA`, illisible par le JavaScript de la page. Il ne peut
- * donc pas transporter d'information, et c'est volontaire : un cookie
- * `HttpOnly` ne peut pas être dérobé par un script injecté, contrairement à
- * un jeton stocké en localStorage.
- *
- * L'information d'identité et de droits est donc renvoyée dans le corps de
- * la réponse. Le client n'a plus besoin d'appeler `/api/auth/me` juste pour
- * savoir qui il est et ce qu'il peut faire.
+ * L'authentification de ce projet est par jeton Bearer. Le jeton est
+ * auto-porteur mais n'est pas lisible par le client : son contenu n'est
+ * pas une autorité, seule l'API décide. L'identité et les droits sont
+ * donc renvoyés en clair dans le corps de la réponse, et le client n'a
+ * pas besoin d'appeler `/api/auth/me` pour savoir qui il est et ce qu'il
+ * peut faire.
  *
  * Contenu, du plus stable au plus volatil :
  *   - identité : UUID, email, nom ;
