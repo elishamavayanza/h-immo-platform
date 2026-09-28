@@ -39,7 +39,7 @@ use Symfony\Component\Security\Http\Attribute\IsGranted;
  * - SUPER_ADMIN   : vue plateforme (organisations, utilisateurs, indicateurs globaux)
  *
  * Tous les endpoints supportent l'export PDF (`?format=pdf`) via dompdf.
- * L'authentification se fait par token Bearer (JWT).
+ * L'authentification se fait par cookie de session `HIMMOMPA`.
  *
  * @see ReportService pour la logique d'agrégation et d'isolation Organization → City.
  */
@@ -62,7 +62,7 @@ final class ReportController extends AbstractController
         path: '/api/v1/reports/patron',
         summary: 'Rapport global pour le Patron (niveau Organisation)',
         description: 'Retourne un rapport consolidé : finances, occupation, impayés, dépenses par ville/parcelle/immeuble.',
-        security: [['bearer' => []]],
+        security: [['sessionCookie' => []]],
         parameters: [
             new OA\Parameter(name: 'periodFrom', in: 'query', schema: new OA\Schema(type: 'string', format: 'date'), description: 'Date de début'),
             new OA\Parameter(name: 'periodTo', in: 'query', schema: new OA\Schema(type: 'string', format: 'date'), description: 'Date de fin'),
@@ -111,7 +111,7 @@ final class ReportController extends AbstractController
         path: '/api/v1/reports/admin-immobilier',
         summary: 'Rapport opérationnel pour l\'Administrateur Immobilier',
         description: 'Retourne occupation par parcelle/immeuble, impayés, dépenses liées aux biens, évolution occupation.',
-        security: [['bearer' => []]],
+        security: [['sessionCookie' => []]],
         parameters: [
             new OA\Parameter(name: 'periodFrom', in: 'query', schema: new OA\Schema(type: 'string', format: 'date'), description: 'Date de début'),
             new OA\Parameter(name: 'periodTo', in: 'query', schema: new OA\Schema(type: 'string', format: 'date'), description: 'Date de fin'),
@@ -160,7 +160,7 @@ final class ReportController extends AbstractController
         path: '/api/v1/reports/admin-ville/{cityUuid}',
         summary: 'Rapport pour l\'Administrateur de Ville',
         description: 'Retourne occupation, impayés, dépenses et personnel de la ville (limité aux villes attribuées à l\'utilisateur).',
-        security: [['bearer' => []]],
+        security: [['sessionCookie' => []]],
         parameters: [
             new OA\Parameter(name: 'cityUuid', in: 'path', required: true, schema: new OA\Schema(type: 'string', format: 'uuid'), description: 'UUID de la ville'),
             new OA\Parameter(name: 'periodFrom', in: 'query', schema: new OA\Schema(type: 'string', format: 'date'), description: 'Date de début'),
@@ -218,7 +218,7 @@ final class ReportController extends AbstractController
         path: '/api/v1/reports/super-admin',
         summary: 'Rapport global pour SUPER_ADMIN (plateforme entière)',
         description: 'Retourne la liste des organisations avec leurs indicateurs clés.',
-        security: [['bearer' => []]],
+        security: [['sessionCookie' => []]],
         parameters: [
             new OA\Parameter(name: 'periodFrom', in: 'query', schema: new OA\Schema(type: 'string', format: 'date'), description: 'Date de début'),
             new OA\Parameter(name: 'periodTo', in: 'query', schema: new OA\Schema(type: 'string', format: 'date'), description: 'Date de fin'),

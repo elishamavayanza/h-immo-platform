@@ -7,6 +7,7 @@ namespace App\Controller\Api\System;
 use App\Dto\Feedback;
 use App\Service\System\FileUploadService;
 use App\Trait\FeedbackTrait;
+use Nelmio\ApiDocBundle\Attribute\Model;
 use OpenApi\Attributes as OA;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
@@ -63,10 +64,10 @@ final class MediaController extends AbstractController
             )
         ),
         responses: [
-            new OA\Response(response: 200, description: 'Photo uploadée', content: new OA\JsonContent(ref: Feedback::class)),
-            new OA\Response(response: 403, description: 'Accès refusé', content: new OA\JsonContent(ref: Feedback::class)),
-            new OA\Response(response: 422, description: 'Fichier invalide', content: new OA\JsonContent(ref: Feedback::class)),
-            new OA\Response(response: 404, description: 'Utilisateur introuvable', content: new OA\JsonContent(ref: Feedback::class)),
+            new OA\Response(response: 200, description: 'Photo uploadée', content: new OA\JsonContent(ref: new Model(type: Feedback::class))),
+            new OA\Response(response: 403, description: 'Accès refusé', content: new OA\JsonContent(ref: new Model(type: Feedback::class))),
+            new OA\Response(response: 422, description: 'Fichier invalide', content: new OA\JsonContent(ref: new Model(type: Feedback::class))),
+            new OA\Response(response: 404, description: 'Utilisateur introuvable', content: new OA\JsonContent(ref: new Model(type: Feedback::class))),
         ]
     )]
     public function uploadUserPhoto(string $uuid, Request $request): JsonResponse
@@ -116,9 +117,9 @@ final class MediaController extends AbstractController
             new OA\Parameter(name: 'uuid', in: 'path', required: true, schema: new OA\Schema(type: 'string', format: 'uuid')),
         ],
         responses: [
-            new OA\Response(response: 200, description: 'Photo supprimée', content: new OA\JsonContent(ref: Feedback::class)),
-            new OA\Response(response: 403, description: 'Accès refusé', content: new OA\JsonContent(ref: Feedback::class)),
-            new OA\Response(response: 404, description: 'Utilisateur introuvable', content: new OA\JsonContent(ref: Feedback::class)),
+            new OA\Response(response: 200, description: 'Photo supprimée', content: new OA\JsonContent(ref: new Model(type: Feedback::class))),
+            new OA\Response(response: 403, description: 'Accès refusé', content: new OA\JsonContent(ref: new Model(type: Feedback::class))),
+            new OA\Response(response: 404, description: 'Utilisateur introuvable', content: new OA\JsonContent(ref: new Model(type: Feedback::class))),
         ]
     )]
     public function deleteUserPhoto(string $uuid): JsonResponse
@@ -156,10 +157,10 @@ final class MediaController extends AbstractController
             )
         ),
         responses: [
-            new OA\Response(response: 200, description: 'Logo uploadé', content: new OA\JsonContent(ref: Feedback::class)),
-            new OA\Response(response: 403, description: 'Accès refusé', content: new OA\JsonContent(ref: Feedback::class)),
-            new OA\Response(response: 422, description: 'Fichier invalide', content: new OA\JsonContent(ref: Feedback::class)),
-            new OA\Response(response: 404, description: 'Organisation introuvable', content: new OA\JsonContent(ref: Feedback::class)),
+            new OA\Response(response: 200, description: 'Logo uploadé', content: new OA\JsonContent(ref: new Model(type: Feedback::class))),
+            new OA\Response(response: 403, description: 'Accès refusé', content: new OA\JsonContent(ref: new Model(type: Feedback::class))),
+            new OA\Response(response: 422, description: 'Fichier invalide', content: new OA\JsonContent(ref: new Model(type: Feedback::class))),
+            new OA\Response(response: 404, description: 'Organisation introuvable', content: new OA\JsonContent(ref: new Model(type: Feedback::class))),
         ]
     )]
     public function uploadOrgLogo(string $uuid, Request $request): JsonResponse
@@ -205,9 +206,9 @@ final class MediaController extends AbstractController
             new OA\Parameter(name: 'uuid', in: 'path', required: true, schema: new OA\Schema(type: 'string', format: 'uuid')),
         ],
         responses: [
-            new OA\Response(response: 200, description: 'Logo supprimé', content: new OA\JsonContent(ref: Feedback::class)),
-            new OA\Response(response: 403, description: 'Accès refusé', content: new OA\JsonContent(ref: Feedback::class)),
-            new OA\Response(response: 404, description: 'Organisation introuvable', content: new OA\JsonContent(ref: Feedback::class)),
+            new OA\Response(response: 200, description: 'Logo supprimé', content: new OA\JsonContent(ref: new Model(type: Feedback::class))),
+            new OA\Response(response: 403, description: 'Accès refusé', content: new OA\JsonContent(ref: new Model(type: Feedback::class))),
+            new OA\Response(response: 404, description: 'Organisation introuvable', content: new OA\JsonContent(ref: new Model(type: Feedback::class))),
         ]
     )]
     public function deleteOrgLogo(string $uuid): JsonResponse
@@ -241,10 +242,10 @@ final class MediaController extends AbstractController
             )
         ),
         responses: [
-            new OA\Response(response: 200, description: 'Fichiers uploadés', content: new OA\JsonContent(ref: Feedback::class)),
-            new OA\Response(response: 403, description: 'Accès refusé', content: new OA\JsonContent(ref: Feedback::class)),
-            new OA\Response(response: 422, description: 'Fichier(s) invalide(s)', content: new OA\JsonContent(ref: Feedback::class)),
-            new OA\Response(response: 404, description: 'Parcelle introuvable', content: new OA\JsonContent(ref: Feedback::class)),
+            new OA\Response(response: 200, description: 'Fichiers uploadés', content: new OA\JsonContent(ref: new Model(type: Feedback::class))),
+            new OA\Response(response: 403, description: 'Accès refusé', content: new OA\JsonContent(ref: new Model(type: Feedback::class))),
+            new OA\Response(response: 422, description: 'Fichier(s) invalide(s)', content: new OA\JsonContent(ref: new Model(type: Feedback::class))),
+            new OA\Response(response: 404, description: 'Parcelle introuvable', content: new OA\JsonContent(ref: new Model(type: Feedback::class))),
         ]
     )]
     public function uploadParcelPhotos(string $uuid, Request $request): JsonResponse
@@ -302,9 +303,9 @@ final class MediaController extends AbstractController
             new OA\Parameter(name: 'filename', in: 'path', required: true, schema: new OA\Schema(type: 'string')),
         ],
         responses: [
-            new OA\Response(response: 200, description: 'Fichier supprimé', content: new OA\JsonContent(ref: Feedback::class)),
-            new OA\Response(response: 403, description: 'Accès refusé', content: new OA\JsonContent(ref: Feedback::class)),
-            new OA\Response(response: 404, description: 'Fichier introuvable', content: new OA\JsonContent(ref: Feedback::class)),
+            new OA\Response(response: 200, description: 'Fichier supprimé', content: new OA\JsonContent(ref: new Model(type: Feedback::class))),
+            new OA\Response(response: 403, description: 'Accès refusé', content: new OA\JsonContent(ref: new Model(type: Feedback::class))),
+            new OA\Response(response: 404, description: 'Fichier introuvable', content: new OA\JsonContent(ref: new Model(type: Feedback::class))),
         ]
     )]
     public function deleteParcelPhoto(string $uuid, string $filename): JsonResponse

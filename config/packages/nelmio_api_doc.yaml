@@ -2,16 +2,30 @@ nelmio_api_doc:
     documentation:
         info:
             title: 'H-Immo API'
-            description: 'API REST pour la gestion immobilière.'
+            description: >
+                API REST pour la gestion immobilière.
+
+                L'authentification est **stateful** : le jeton est le cookie
+                de session `HIMMOMPA` (`HttpOnly`, `SameSite=Lax`, 24 h),
+                émis par le firewall dans l'en-tête `Set-Cookie`. Il n'y a
+                pas de JWT et aucun en-tête `Authorization` n'est attendu.
+
+                Conséquence pour les clients non-navigateur : ils doivent
+                conserver le cookie et le renvoyer sur chaque requête
+                (`Cookie: HIMMOMPA=...`).
             version: '1.0.0'
         components:
             securitySchemes:
-                bearer:
-                    type: http
-                    scheme: bearer
-                    bearerFormat: JWT
+                # Déclaré en `cookie` et non en `bearer` : le mécanisme réel
+                # est le cookie de session. Un schéma `bearer`/JWT affichait
+                # un bouton « Authorize » dans Swagger qui ne servait à rien
+                # et suggérait un jeton inexistant.
+                sessionCookie:
+                    type: apiKey
+                    in: cookie
+                    name: HIMMOMPA
         security:
-            - bearer: []
+            - sessionCookie: []
         models:
             names:
                 - type: 'App\Dto\Feedback'

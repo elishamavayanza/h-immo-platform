@@ -9,6 +9,7 @@ use App\Dto\Request\Rental\PaymentRequest;
 use App\Entity\Identity\User;
 use App\Service\Rental\PaymentService;
 use App\Trait\FeedbackTrait;
+use Nelmio\ApiDocBundle\Attribute\Model;
 use OpenApi\Attributes as OA;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
@@ -54,12 +55,12 @@ final class PaymentController extends AbstractController
         description: 'Lie le montant versé à une échéance (Rent) existante. Le service '
             . 'vérifie que l\'échéance appartient à une organisation dans laquelle '
             . 'l\'utilisateur courant dispose du rôle requis.',
-        requestBody: new OA\RequestBody(content: new OA\JsonContent(ref: PaymentRequest::class)),
+        requestBody: new OA\RequestBody(content: new OA\JsonContent(ref: new Model(type: PaymentRequest::class))),
         responses: [
-            new OA\Response(response: 201, description: 'Paiement enregistré', content: new OA\JsonContent(ref: Feedback::class)),
-            new OA\Response(response: 403, description: 'Rôle insuffisant sur l\'organisation du bail', content: new OA\JsonContent(ref: Feedback::class)),
-            new OA\Response(response: 404, description: 'Échéance de loyer introuvable', content: new OA\JsonContent(ref: Feedback::class)),
-            new OA\Response(response: 422, description: 'Données de paiement invalides', content: new OA\JsonContent(ref: Feedback::class)),
+            new OA\Response(response: 201, description: 'Paiement enregistré', content: new OA\JsonContent(ref: new Model(type: Feedback::class))),
+            new OA\Response(response: 403, description: 'Rôle insuffisant sur l\'organisation du bail', content: new OA\JsonContent(ref: new Model(type: Feedback::class))),
+            new OA\Response(response: 404, description: 'Échéance de loyer introuvable', content: new OA\JsonContent(ref: new Model(type: Feedback::class))),
+            new OA\Response(response: 422, description: 'Données de paiement invalides', content: new OA\JsonContent(ref: new Model(type: Feedback::class))),
         ]
     )]
     public function create(
@@ -84,9 +85,9 @@ final class PaymentController extends AbstractController
         path: '/api/v1/payments/{uuid}',
         summary: 'Obtenir les détails d\'un paiement',
         responses: [
-            new OA\Response(response: 200, description: 'Détails du paiement', content: new OA\JsonContent(ref: Feedback::class)),
-            new OA\Response(response: 403, description: 'Accès refusé', content: new OA\JsonContent(ref: Feedback::class)),
-            new OA\Response(response: 404, description: 'Paiement introuvable', content: new OA\JsonContent(ref: Feedback::class)),
+            new OA\Response(response: 200, description: 'Détails du paiement', content: new OA\JsonContent(ref: new Model(type: Feedback::class))),
+            new OA\Response(response: 403, description: 'Accès refusé', content: new OA\JsonContent(ref: new Model(type: Feedback::class))),
+            new OA\Response(response: 404, description: 'Paiement introuvable', content: new OA\JsonContent(ref: new Model(type: Feedback::class))),
         ]
     )]
     public function show(string $uuid): JsonResponse

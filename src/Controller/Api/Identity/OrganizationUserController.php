@@ -4,11 +4,13 @@ declare(strict_types=1);
 
 namespace App\Controller\Api\Identity;
 
+use App\Dto\Feedback;
 use App\Dto\Request\Identity\CreateAdminRequest;
 use App\Dto\Request\Identity\OrganizationUserRequest;
 use App\Dto\Request\PaginationQuery;
 use App\Service\Identity\OrganizationUserService;
 use App\Trait\FeedbackTrait;
+use Nelmio\ApiDocBundle\Attribute\Model;
 use OpenApi\Attributes as OA;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
@@ -106,12 +108,12 @@ final class OrganizationUserController extends AbstractController
         path: '/api/v1/identity/organization-users/create-admin',
         summary: 'Créer un ADMIN_IMMOBILIER ou ADMIN_VILLE par le PATRON',
         description: 'Crée un administrateur sans mot de passe, envoie un email de configuration. Pour ADMIN_VILLE, nécessite des cityUuids.',
-        requestBody: new OA\RequestBody(content: new OA\JsonContent(ref: CreateAdminRequest::class)),
+        requestBody: new OA\RequestBody(content: new OA\JsonContent(ref: new Model(type: CreateAdminRequest::class))),
         responses: [
-            new OA\Response(response: 201, description: 'Administrateur créé, email envoyé', content: new OA\JsonContent(ref: Feedback::class)),
-            new OA\Response(response: 403, description: 'Seul le PATRON peut créer des admins', content: new OA\JsonContent(ref: Feedback::class)),
-            new OA\Response(response: 422, description: 'Données invalides', content: new OA\JsonContent(ref: Feedback::class)),
-            new OA\Response(response: 404, description: 'Organisation introuvable', content: new OA\JsonContent(ref: Feedback::class)),
+            new OA\Response(response: 201, description: 'Administrateur créé, email envoyé', content: new OA\JsonContent(ref: new Model(type: Feedback::class))),
+            new OA\Response(response: 403, description: 'Seul le PATRON peut créer des admins', content: new OA\JsonContent(ref: new Model(type: Feedback::class))),
+            new OA\Response(response: 422, description: 'Données invalides', content: new OA\JsonContent(ref: new Model(type: Feedback::class))),
+            new OA\Response(response: 404, description: 'Organisation introuvable', content: new OA\JsonContent(ref: new Model(type: Feedback::class))),
         ]
     )]
     public function createAdmin(

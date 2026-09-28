@@ -8,6 +8,7 @@ use App\Dto\Feedback;
 use App\Dto\Request\Rental\RentRequest;
 use App\Service\Rental\RentService;
 use App\Trait\FeedbackTrait;
+use Nelmio\ApiDocBundle\Attribute\Model;
 use OpenApi\Attributes as OA;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
@@ -48,10 +49,10 @@ final class RentController extends AbstractController
     #[OA\Post(
         path: '/api/v1/rents',
         summary: 'Générer une nouvelle échéance de loyer',
-        requestBody: new OA\RequestBody(content: new OA\JsonContent(ref: RentRequest::class)),
+        requestBody: new OA\RequestBody(content: new OA\JsonContent(ref: new Model(type: RentRequest::class))),
         responses: [
-            new OA\Response(response: 201, description: 'Échéance créée', content: new OA\JsonContent(ref: Feedback::class)),
-            new OA\Response(response: 422, description: 'Erreur de validation', content: new OA\JsonContent(ref: Feedback::class)),
+            new OA\Response(response: 201, description: 'Échéance créée', content: new OA\JsonContent(ref: new Model(type: Feedback::class))),
+            new OA\Response(response: 422, description: 'Erreur de validation', content: new OA\JsonContent(ref: new Model(type: Feedback::class))),
         ]
     )]
     public function create(
@@ -67,8 +68,8 @@ final class RentController extends AbstractController
         path: '/api/v1/rents/{uuid}',
         summary: 'Obtenir les détails d\'une échéance de loyer',
         responses: [
-            new OA\Response(response: 200, description: 'Détails de l\'échéance', content: new OA\JsonContent(ref: Feedback::class)),
-            new OA\Response(response: 404, description: 'Échéance introuvable', content: new OA\JsonContent(ref: Feedback::class)),
+            new OA\Response(response: 200, description: 'Détails de l\'échéance', content: new OA\JsonContent(ref: new Model(type: Feedback::class))),
+            new OA\Response(response: 404, description: 'Échéance introuvable', content: new OA\JsonContent(ref: new Model(type: Feedback::class))),
         ]
     )]
     public function show(string $uuid): JsonResponse
@@ -82,10 +83,10 @@ final class RentController extends AbstractController
     #[OA\Put(
         path: '/api/v1/rents/{uuid}',
         summary: 'Mettre à jour une échéance de loyer',
-        requestBody: new OA\RequestBody(content: new OA\JsonContent(ref: RentRequest::class)),
+        requestBody: new OA\RequestBody(content: new OA\JsonContent(ref: new Model(type: RentRequest::class))),
         responses: [
-            new OA\Response(response: 200, description: 'Échéance mise à jour', content: new OA\JsonContent(ref: Feedback::class)),
-            new OA\Response(response: 422, description: 'Erreur de validation', content: new OA\JsonContent(ref: Feedback::class)),
+            new OA\Response(response: 200, description: 'Échéance mise à jour', content: new OA\JsonContent(ref: new Model(type: Feedback::class))),
+            new OA\Response(response: 422, description: 'Erreur de validation', content: new OA\JsonContent(ref: new Model(type: Feedback::class))),
         ]
     )]
     public function update(

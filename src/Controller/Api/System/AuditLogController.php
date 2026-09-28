@@ -7,6 +7,7 @@ namespace App\Controller\Api\System;
 use App\Dto\Request\System\AuditLogFilterDto;
 use App\Dto\Response\System\AuditLogResponse;
 use App\Service\System\AuditLogService;
+use Nelmio\ApiDocBundle\Attribute\Model;
 use OpenApi\Attributes as OA;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
@@ -60,7 +61,7 @@ final class AuditLogController extends AbstractController
                 description: 'Liste paginée des entrées d\'audit',
                 content: new OA\JsonContent(
                     properties: [
-                        new OA\Property(property: 'items', type: 'array', items: new OA\Items(ref: AuditLogResponse::class)),
+                        new OA\Property(property: 'items', type: 'array', items: new OA\Items(ref: '#/components/schemas/AuditLogResponse')),
                         new OA\Property(property: 'total', type: 'integer', example: 120),
                         new OA\Property(property: 'page', type: 'integer', example: 1),
                         new OA\Property(property: 'pages', type: 'integer', example: 6),
@@ -99,7 +100,7 @@ final class AuditLogController extends AbstractController
             new OA\Response(
                 response: 200,
                 description: 'Détail du log d\'audit',
-                content: new OA\JsonContent(ref: AuditLogResponse::class)
+                content: new OA\JsonContent(ref: new Model(type: AuditLogResponse::class))
             ),
             new OA\Response(response: 404, description: 'Entrée introuvable'),
         ]

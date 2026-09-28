@@ -10,6 +10,8 @@ use App\Dto\Request\Auth\ResetPasswordRequest;
 use App\Dto\Response\HttpErrorResponsePayload;
 use App\Entity\Identity\User;
 use App\Service\Identity\PasswordResetService;
+use App\Dto\Response\Identity\SessionUserResponse;
+use App\Service\Identity\SessionUserResponseFactory;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Response;
@@ -17,6 +19,7 @@ use Symfony\Component\HttpKernel\Attribute\MapRequestPayload;
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Security\Core\Authentication\Token\Storage\TokenStorageInterface;
 use OpenApi\Attributes as OA;
+use Nelmio\ApiDocBundle\Attribute\Model;
 
 /**
  * Authentification de l'API.
@@ -42,6 +45,7 @@ final class AuthController extends AbstractController
     public function __construct(
         private readonly TokenStorageInterface $tokenStorage,
         private readonly PasswordResetService $passwordResetService,
+        private readonly SessionUserResponseFactory $sessionUserResponseFactory,
     ) {
     }
 
@@ -61,7 +65,7 @@ final class AuthController extends AbstractController
     #[OA\Post(
         path: '/api/auth/login',
         summary: 'Connexion par email et mot de passe',
-        description: 'Authentifie l\'utilisateur et retourne ses informations de session.',
+        description: 'Authentifie l\'utilisateur et retourne ses informations de session. Le jeton est un cookie de session `HIMMOMPA` (HttpOnly) émis dans l\'en-tête `Set-Cookie`, volontairement absent du corps JSON pour n\'être pas exposé au JavaScript de la page. Pour voir le cookie dans Swagger UI : onglet Application > Cookies du navigateur, Swagger ne peut pas afficher `Set-Cookie`.',
         requestBody: new OA\RequestBody(
             required: true,
             content: new OA\JsonContent(
@@ -73,14 +77,9 @@ final class AuthController extends AbstractController
             )
         ),
         responses: [
-            new OA\Response(response: 200, description: 'Connexion réussie', content: new OA\JsonContent(
+            new OA\Response(response: 200, description: 'Connexion réussie. Le cookie de session `HIMMOMPA` est émis dans `Set-Cookie`.', content: new OA\JsonContent(
                 properties: [
-                    new OA\Property(property: 'user', type: 'object', properties: [
-                        new OA\Property(property: 'uuid', type: 'string', format: 'uuid'),
-                        new OA\Property(property: 'email', type: 'string', format: 'email'),
-                        new OA\Property(property: 'fullName', type: 'string'),
-                        new OA\Property(property: 'platformRole', type: 'string', nullable: true),
-                    ])
+                    new OA\Property(property: 'user', ref: new Model(type: SessionUserResponse::class, name: 'SessionUserResponse')),
                 ]
             )),
             new OA\Response(response: 401, description: 'Identifiants invalides', content: new OA\JsonContent(ref: '#/components/schemas/Feedback')),
@@ -98,12 +97,7 @@ final class AuthController extends AbstractController
         }
 
         return new JsonResponse([
-            'user' => [
-                'uuid' => $user->getUuid()->toRfc4122(),
-                'email' => $user->getEmail(),
-                'fullName' => $user->getFullName(),
-                'platformRole' => $user->getPlatformRole()?->value,
-            ],
+            'user' => $this->sessionUserResponseFactory->create($user),
         ]);
     }
 
@@ -128,6 +122,16 @@ final class AuthController extends AbstractController
         name: 'api_me',
         methods: ['GET'],
     )]
+    #[OA\Get(
+        path: '/api/auth/me',
+        summary: 'Utilisateur de la session courante',
+        description: 'Retourne l\'identité et les droits de l\'utilisateur authentifié par le cookie de session. Permet à un client de restaurer son état au rechargement de la page sans relancer une connexion.',
+        security: [['sessionCookie' => []]],
+        responses: [
+            new OA\Response(response: 200, description: 'Session courante', content: new OA\JsonContent(ref: new Model(type: SessionUserResponse::class, name: 'SessionUserResponse'))),
+            new OA\Response(response: 401, description: 'Session absente ou expirée', content: new OA\JsonContent(ref: '#/components/schemas/Feedback')),
+        ]
+    )]
     public function me(): JsonResponse
     {
         $user = $this->getUser();
@@ -136,12 +140,7 @@ final class AuthController extends AbstractController
             return $this->failure();
         }
 
-        return new JsonResponse([
-            'uuid' => $user->getUuid()->toRfc4122(),
-            'email' => $user->getEmail(),
-            'fullName' => $user->getFullName(),
-            'platformRole' => $user->getPlatformRole()?->value,
-        ]);
+        return new JsonResponse($this->sessionUserResponseFactory->create($user));
     }
 
     private function failure(): JsonResponse
