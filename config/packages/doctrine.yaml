@@ -2,17 +2,38 @@ doctrine:
     dbal:
         url: '%env(resolve:DATABASE_URL)%'
 
-        # IMPORTANT: You MUST configure your server version,
-        # either here or in the DATABASE_URL env var (see .env file)
-        #server_version: '16'
+        # La version du serveur est portée par `DATABASE_URL`
+        # (`serverVersion=mariadb-11.8.6`). Elle n'est pas répétée ici :
+        # deux sources de vérité divergent silencieusement, et la
+        # divergence ne se voit qu'à la première migration exécutée sur
+        # l'autre base. La voir dans l'URL la rend lisible au même endroit
+        # que le reste de la chaîne de connexion.
+        #
+        # DBAL déduit de `serverVersion` la plateforme MariaDB, qui génère
+        # le SQL attendu par les migrations (AUTO_INCREMENT, BINARY(16),
+        # LONGTEXT, utf8mb4). Retirer la valeur ferait retomber DBAL sur
+        # sa détection automatique, qui ne connaît pas la version exacte
+        # du serveur et génère alors un SQL pessimiste.
 
         profiling_collect_backtrace: '%kernel.debug%'
     orm:
         validate_xml_mapping: true
         naming_strategy: doctrine.orm.naming_strategy.underscore
-        identity_generation_preferences:
-            Doctrine\DBAL\Platforms\PostgreSQLPlatform: identity
+        # Aucune entrée `identity_generation_preferences` : les entités
+        # déclarent `IDENTITY`, que MariaDB traduit par `AUTO_INCREMENT`,
+        # ce qui est le comportement par défaut. La plateforme PostgreSQL
+        # y figurait parce que PostgreSQL impose un type différent pour
+        # une séquence ; ce n'est plus le SGBD du projet et cette entrée
+        # ferait passer Doctrine en mode PostgreSQL.
         auto_mapping: true
+        dql:
+            # `DATE_FORMAT()` n'existe pas dans le DQL de Doctrine : sans
+            # cette déclaration, les agrégats mensuels des rapports de
+            # dépense et de paiement échouent au parsing avec « Expected
+            # known function ». La fonction transmet l'appel à MariaDB, qui
+            # sait formater une date en 'YYYY-MM'.
+            string_functions:
+                DATE_FORMAT: App\Doctrine\Dql\DateFormat
         mappings:
             App:
                 type: attribute
