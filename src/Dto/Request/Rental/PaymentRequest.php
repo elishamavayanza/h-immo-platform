@@ -33,11 +33,12 @@ final readonly class PaymentRequest
         public ?string $rentUuid = null,
 
         #[OA\Property(
-            description: 'Montant versé',
-            example: '500.00'
+            description: 'Montant versé (chiffres, max 2 décimales)',
+            example: '500.00',
+            pattern: '^\\d{1,10}(\\.\\d{1,2})?$'
         )]
         #[Assert\NotBlank(groups: ['create'])]
-        #[Assert\Positive(groups: ['create'])]
+        #[Assert\Regex(pattern: '/^\d{1,10}(\.\d{1,2})?$/', groups: ['create'], message: 'Le montant doit être un nombre positif avec au plus 2 décimales.')]
         public ?string $amount = null,
 
         #[OA\Property(
