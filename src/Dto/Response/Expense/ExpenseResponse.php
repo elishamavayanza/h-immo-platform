@@ -55,6 +55,15 @@ final readonly class ExpenseResponse
         #[OA\Property(description: 'Devise', type: 'string', example: 'USD', enum: Currency::class)]
         public Currency $currency,
 
+        #[OA\Property(description: 'Taux de change utilisé (1 devise_originale = X devise_dépense). Null si pas de conversion.', example: '2900.00000000', nullable: true)]
+        public ?string $exchangeRate,
+
+        #[OA\Property(description: 'Montant original dans la devise d\'origine. Null si pas de conversion.', example: '100.00', nullable: true)]
+        public ?string $originalAmount,
+
+        #[OA\Property(description: 'Devise d\'origine de la dépense. Null si pas de conversion.', type: 'string', example: 'USD', enum: Currency::class, nullable: true)]
+        public ?Currency $originalCurrency,
+
         #[OA\Property(description: 'Date de la dépense', format: 'date', example: '2026-03-15')]
         public \DateTimeImmutable $expenseDate,
 
@@ -101,6 +110,9 @@ final readonly class ExpenseResponse
             category: $expense->getCategory(),
             amount: $expense->getAmount(),
             currency: $expense->getCurrency(),
+            exchangeRate: $expense->getExchangeRate(),
+            originalAmount: $expense->getOriginalAmount(),
+            originalCurrency: $expense->getOriginalCurrency(),
             expenseDate: $expense->getExpenseDate(),
             periodStart: $expense->getPeriodStart(),
             periodEnd: $expense->getPeriodEnd(),

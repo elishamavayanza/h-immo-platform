@@ -134,6 +134,9 @@ final readonly class PaymentService
                     newValues: [
                         'amount' => $payment->getAmount(),
                         'currency' => $payment->getCurrency()->value,
+                        'exchangeRate' => $payment->getExchangeRate(),
+                        'originalAmount' => $payment->getOriginalAmount(),
+                        'originalCurrency' => $payment->getOriginalCurrency()?->value,
                         'paymentDate' => $this->dateTime->format($payment->getPaymentDate(), 'Y-m-d\TH:i:s'),
                         'method' => $payment->getMethod()->value,
                         'rentUuid' => $lockedRent->getUuid()->toRfc4122(),
@@ -188,26 +191,85 @@ final readonly class PaymentService
             ];
         }
 
-        // 3) Devise du paiement = devise de l'échéance
-        if ($request->currency !== $rent->getCurrency()) {
-            return [
-                'field' => 'currency',
-                'message' => 'La devise du paiement doit correspondre à celle de l\'échéance (' . $rent->getCurrency()->value . ').',
-                'status' => 422,
-            ];
+        // 3) Gestion des devises : si paiement cross-devises, exiger taux + montant original
+        $rentCurrency = $rent->getCurrency();
+        $paymentCurrency = $request->currency;
+        $sameCurrency = $paymentCurrency === $rentCurrency;
+
+        if (!$sameCurrency) {
+            // Paiement cross-devises : exiger taux de change, montant original, devise originale
+            if ($request->exchangeRate === null) {
+                return [
+                    'field' => 'exchangeRate',
+                    'message' => 'Un taux de change est obligatoire pour un paiement dans une devise différente de l\'échéance.',
+                    'status' => 422,
+                ];
+            }
+            if ($request->originalAmount === null) {
+                return [
+                    'field' => 'originalAmount',
+                    'message' => 'Le montant original dans la devise d\'origine est obligatoire pour un paiement cross-devises.',
+                    'status' => 422,
+                ];
+            }
+            if ($request->originalCurrency === null) {
+                return [
+                    'field' => 'originalCurrency',
+                    'message' => 'La devise d\'origine est obligatoire pour un paiement cross-devises.',
+                    'status' => 422,
+                ];
+            }
+            if ($request->originalCurrency !== $rentCurrency) {
+                return [
+                    'field' => 'originalCurrency',
+                    'message' => 'La devise d\'origine doit correspondre à la devise de l\'échéance (' . $rentCurrency->value . ').',
+                    'status' => 422,
+                ];
+            }
+
+            // Valider que le taux est positif
+            if (bccomp($request->exchangeRate, '0', 8) <= 0) {
+                return [
+                    'field' => 'exchangeRate',
+                    'message' => 'Le taux de change doit être strictement positif.',
+                    'status' => 422,
+                ];
+            }
+
+            // Vérifier la cohérence : montant_paiement = montant_original * taux (arrondi 2 décimales)
+            $expectedPaymentAmount = bcmul($request->originalAmount, $request->exchangeRate, 2);
+            if (bccomp($expectedPaymentAmount, $request->amount, 2) !== 0) {
+                return [
+                    'field' => 'amount',
+                    'message' => "Le montant du paiement ({$request->amount}) ne correspond pas au montant original ({$request->originalAmount}) converti au taux {$request->exchangeRate} (attendu : {$expectedPaymentAmount}).",
+                    'status' => 422,
+                ];
+            }
+
+            // Le montant à comparer au reste à payer est le montant dans la devise de l'échéance (request->amount)
+            $paymentAmountInRentCurrency = $request->amount;
+        } else {
+            // Même devise : pas de taux requis, le montant est déjà dans la devise de l'échéance
+            if ($request->exchangeRate !== null || $request->originalAmount !== null || $request->originalCurrency !== null) {
+                return [
+                    'field' => 'exchangeRate',
+                    'message' => 'Les champs de taux de change ne doivent pas être fournis pour un paiement dans la même devise que l\'échéance.',
+                    'status' => 422,
+                ];
+            }
+            $paymentAmountInRentCurrency = $request->amount;
         }
 
         // 4) Montant strictement positif (déjà validé par Assert\Regex dans le DTO)
-        // 5) Montant ne doit pas dépasser le reste à payer
+        // 5) Montant ne doit pas dépasser le reste à payer (comparaison en devise de l'échéance)
         $due = $rent->getAmount();
         $paid = $this->paymentRepository->sumAmountByRent($rent);
         $remaining = bcsub($due, $paid, 2);
-        $paymentAmount = $request->amount;
 
-        if (bccomp($paymentAmount, $remaining, 2) > 0) {
+        if (bccomp($paymentAmountInRentCurrency, $remaining, 2) > 0) {
             return [
                 'field' => 'amount',
-                'message' => "Le montant du paiement ({$paymentAmount}) dépasse le reste à payer ({$remaining}).",
+                'message' => "Le montant du paiement ({$paymentAmountInRentCurrency}) dépasse le reste à payer ({$remaining}).",
                 'status' => 422,
             ];
         }
@@ -403,10 +465,15 @@ final readonly class PaymentService
             user: $currentUser,
             oldValues: [
                 'amount' => $payment->getAmount(),
+                'currency' => $payment->getCurrency()->value,
+                'exchangeRate' => $payment->getExchangeRate(),
+                'originalAmount' => $payment->getOriginalAmount(),
+                'originalCurrency' => $payment->getOriginalCurrency()?->value,
                 'reference' => $payment->getReference(),
             ],
             newValues: [
                 'amount' => $correction->getAmount(),
+                'currency' => $correction->getCurrency()->value,
                 'reference' => $correction->getReference(),
                 'notes' => $correction->getNotes(),
             ],

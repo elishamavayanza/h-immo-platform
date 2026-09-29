@@ -101,6 +101,29 @@ final readonly class ExpenseRequest
         public ?Currency $currency = null,
 
         #[OA\Property(
+            description: 'Taux de change utilisé (1 devise_originale = X devise_dépense). Obligatoire si currency diffère de la devise de référence.',
+            example: '2900.00000000',
+            nullable: true
+        )]
+        public ?string $exchangeRate = null,
+
+        #[OA\Property(
+            description: 'Montant original dans la devise d\'origine (si conversion).',
+            example: '100.00',
+            nullable: true
+        )]
+        public ?string $originalAmount = null,
+
+        #[OA\Property(
+            description: 'Devise d\'origine de la dépense (si conversion).',
+            type: 'string',
+            example: 'USD',
+            enum: Currency::class,
+            nullable: true
+        )]
+        public ?Currency $originalCurrency = null,
+
+        #[OA\Property(
             description: 'Date à laquelle la dépense a été engagée ou réglée',
             format: 'date',
             example: '2026-03-15'

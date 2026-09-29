@@ -57,6 +57,27 @@ class Rent extends TimestampedEntity
     private Currency $currency;
 
     /**
+     * Taux de change utilisé si l'échéance a été convertie depuis une devise de référence.
+     * Null si pas de conversion (échéance dans la devise du bail).
+     */
+    #[ORM\Column(type: Types::DECIMAL, precision: 18, scale: 8, nullable: true)]
+    private ?string $exchangeRate = null;
+
+    /**
+     * Montant original dans la devise de référence (si conversion effectuée).
+     * Null si pas de conversion.
+     */
+    #[ORM\Column(type: Types::DECIMAL, precision: 12, scale: 2, nullable: true)]
+    private ?string $originalAmount = null;
+
+    /**
+     * Devise de référence originale (si conversion effectuée).
+     * Null si pas de conversion.
+     */
+    #[ORM\Column(type: Types::STRING, enumType: Currency::class, nullable: true)]
+    private ?Currency $originalCurrency = null;
+
+    /**
      * État actuel de l'échéance de loyer.
      */
     #[ORM\Column(type: Types::STRING, enumType: RentStatus::class)]
@@ -122,6 +143,42 @@ class Rent extends TimestampedEntity
         return $this;
     }
 
+    public function getExchangeRate(): ?string
+    {
+        return $this->exchangeRate;
+    }
+
+    public function setExchangeRate(?string $exchangeRate): static
+    {
+        $this->exchangeRate = $exchangeRate;
+
+        return $this;
+    }
+
+    public function getOriginalAmount(): ?string
+    {
+        return $this->originalAmount;
+    }
+
+    public function setOriginalAmount(?string $originalAmount): static
+    {
+        $this->originalAmount = $originalAmount;
+
+        return $this;
+    }
+
+    public function getOriginalCurrency(): ?Currency
+    {
+        return $this->originalCurrency;
+    }
+
+    public function setOriginalCurrency(?Currency $originalCurrency): static
+    {
+        $this->originalCurrency = $originalCurrency;
+
+        return $this;
+    }
+
     public function getStatus(): RentStatus
     {
         return $this->status;
@@ -158,15 +215,16 @@ class Rent extends TimestampedEntity
      */
     public function syncStatus(string $paidAmount): RentStatus
     {
-        $paid = (float) $paidAmount;
-        $due = (float) $this->amount;
+        // Utilisation de bcmath pour précision décimale exacte (pas de float)
+        $paid = $paidAmount;
+        $due = $this->amount;
         // 0.005 : deux centimes d'arrondi ne doivent pas faire conclure
         // qu'un solde de 499,995 sur 500 est partiel.
-        $settled = abs($paid - $due) < 0.005 || $paid + 0.005 >= $due;
+        $settled = bccomp($paid, $due, 2) === 0 || bccomp(bcadd($paid, '0.005', 2), $due, 2) >= 0;
 
         if ($settled) {
             $this->status = RentStatus::PAID;
-        } elseif ($paid > 0.0) {
+        } elseif (bccomp($paid, '0.00', 2) > 0) {
             $this->status = RentStatus::PARTIALLY_PAID;
         } else {
             $this->status = RentStatus::PENDING;
@@ -210,11 +268,9 @@ class Rent extends TimestampedEntity
             return $this->status !== \App\Enum\RentStatus::PAID;
         }
 
-        $paid = (float) $paidAmount;
-        $due = (float) $this->amount;
-
-        // Impayé si payé < dû (avec tolérance d'arrondi)
-        return $paid + 0.005 < $due;
+        // Utilisation de bcmath pour précision décimale exacte (pas de float)
+        // Impayé si payé < dû (avec tolérance d'arrondi de 0.005)
+        return bccomp(bcadd($paidAmount, '0.005', 2), $this->amount, 2) < 0;
     }
 
     /**

@@ -96,6 +96,19 @@ class WorkerAssignment extends SoftDeletableEntity
     private Currency $currency;
 
     /**
+     * Taux de change pour conversion du salaire vers devise de référence.
+     * Null si salaire déjà dans la devise de référence.
+     */
+    #[ORM\Column(type: Types::DECIMAL, precision: 18, scale: 8, nullable: true)]
+    private ?string $exchangeRate = null;
+
+    /**
+     * Devise de référence pour la conversion du salaire.
+     */
+    #[ORM\Column(type: Types::STRING, enumType: Currency::class, nullable: true)]
+    private ?Currency $referenceCurrency = null;
+
+    /**
      * Date de début de l'affectation.
      */
     #[ORM\Column(type: Types::DATE_IMMUTABLE)]
@@ -205,6 +218,30 @@ class WorkerAssignment extends SoftDeletableEntity
     public function setCurrency(Currency $currency): static
     {
         $this->currency = $currency;
+
+        return $this;
+    }
+
+    public function getExchangeRate(): ?string
+    {
+        return $this->exchangeRate;
+    }
+
+    public function setExchangeRate(?string $exchangeRate): static
+    {
+        $this->exchangeRate = $exchangeRate;
+
+        return $this;
+    }
+
+    public function getReferenceCurrency(): ?Currency
+    {
+        return $this->referenceCurrency;
+    }
+
+    public function setReferenceCurrency(?Currency $referenceCurrency): static
+    {
+        $this->referenceCurrency = $referenceCurrency;
 
         return $this;
     }

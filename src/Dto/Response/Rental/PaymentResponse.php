@@ -36,6 +36,15 @@ final readonly class PaymentResponse
         #[OA\Property(description: 'Devise monétaire de l\'encaissement', type: 'string', example: 'USD', enum: Currency::class)]
         public Currency $currency,
 
+        #[OA\Property(description: 'Taux de change utilisé (1 devise_originale = X devise_paiement). Null si pas de conversion.', example: '2900.00000000', nullable: true)]
+        public ?string $exchangeRate,
+
+        #[OA\Property(description: 'Montant original dans la devise d\'origine. Null si pas de conversion.', example: '100.00', nullable: true)]
+        public ?string $originalAmount,
+
+        #[OA\Property(description: 'Devise d\'origine du montant. Null si pas de conversion.', type: 'string', example: 'USD', enum: Currency::class, nullable: true)]
+        public ?Currency $originalCurrency,
+
         #[OA\Property(description: 'Date effectuation du paiement', format: 'date-time', example: '2026-03-02T10:15:00Z')]
         public \DateTimeImmutable $paymentDate,
 
@@ -64,6 +73,9 @@ final readonly class PaymentResponse
             createdById: (string) $payment->getCreatedBy()->getUuid(),
             amount: $payment->getAmount(),
             currency: $payment->getCurrency(),
+            exchangeRate: $payment->getExchangeRate(),
+            originalAmount: $payment->getOriginalAmount(),
+            originalCurrency: $payment->getOriginalCurrency(),
             paymentDate: $payment->getPaymentDate(),
             method: $payment->getMethod(),
             reference: $payment->getReference(),

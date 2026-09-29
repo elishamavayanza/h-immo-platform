@@ -119,6 +119,28 @@ class Expense extends TimestampedEntity
     private Currency $currency;
 
     /**
+     * Taux de change utilisé (1 devise_originale = X devise_dépense).
+     * Null si dépense dans la devise de référence de l'organisation.
+     * Figé au moment de l'enregistrement pour traçabilité historique.
+     */
+    #[ORM\Column(type: Types::DECIMAL, precision: 18, scale: 8, nullable: true)]
+    private ?string $exchangeRate = null;
+
+    /**
+     * Montant original dans la devise d'origine (si conversion effectuée).
+     * Null si pas de conversion.
+     */
+    #[ORM\Column(type: Types::DECIMAL, precision: 12, scale: 2, nullable: true)]
+    private ?string $originalAmount = null;
+
+    /**
+     * Devise d'origine de la dépense (si conversion effectuée).
+     * Null si pas de conversion.
+     */
+    #[ORM\Column(type: Types::STRING, enumType: Currency::class, nullable: true)]
+    private ?Currency $originalCurrency = null;
+
+    /**
      * Date à laquelle la dépense a été engagée ou réglée.
      */
     #[ORM\Column(type: Types::DATE_IMMUTABLE)]
@@ -285,6 +307,42 @@ class Expense extends TimestampedEntity
     public function setCurrency(Currency $currency): static
     {
         $this->currency = $currency;
+
+        return $this;
+    }
+
+    public function getExchangeRate(): ?string
+    {
+        return $this->exchangeRate;
+    }
+
+    public function setExchangeRate(?string $exchangeRate): static
+    {
+        $this->exchangeRate = $exchangeRate;
+
+        return $this;
+    }
+
+    public function getOriginalAmount(): ?string
+    {
+        return $this->originalAmount;
+    }
+
+    public function setOriginalAmount(?string $originalAmount): static
+    {
+        $this->originalAmount = $originalAmount;
+
+        return $this;
+    }
+
+    public function getOriginalCurrency(): ?Currency
+    {
+        return $this->originalCurrency;
+    }
+
+    public function setOriginalCurrency(?Currency $originalCurrency): static
+    {
+        $this->originalCurrency = $originalCurrency;
 
         return $this;
     }

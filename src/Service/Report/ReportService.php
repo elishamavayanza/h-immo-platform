@@ -31,6 +31,8 @@ use App\Entity\Staff\WorkerAssignment;
 use App\Enum\ExpenseCategory;
 use App\Enum\RentStatus;
 use App\Repository\Expense\ExpenseRepository;
+use App\Enum\Currency;
+use App\Repository\Financial\ExchangeRateRepository;
 use App\Repository\Identity\OrganizationRepository;
 use App\Repository\Identity\UserRepository;
 use App\Repository\Property\BuildingRepository;
@@ -73,6 +75,7 @@ final readonly class ReportService
         private UserRepository $userRepository,
         private SecurityServiceInterface $securityService,
         private DateTimeService $dateTime,
+        private ExchangeRateRepository $exchangeRateRepository,
     ) {
     }
 
@@ -693,6 +696,41 @@ final readonly class ReportService
         return $activeLease !== null;
     }
 
+    /**
+     * Convertit un montant d'une devise vers la devise de référence de l'organisation.
+     * Utilise le taux de change historique applicable à la date de l'opération.
+     * Si pas de taux trouvé, retourne le montant original (fallback).
+     */
+    private function convertToReferenceCurrency(string $amount, Currency $fromCurrency, Currency $toCurrency, \DateTimeImmutable $date): string
+    {
+        if ($fromCurrency === $toCurrency) {
+            return $amount;
+        }
+
+        $rate = $this->exchangeRateRepository->findRateForDate($fromCurrency, $toCurrency, $date);
+        if ($rate === null) {
+            // Fallback : essayer le taux inverse
+            $inverseRate = $this->exchangeRateRepository->findInverseRateForDate($fromCurrency, $toCurrency, $date);
+            if ($inverseRate !== null) {
+                return bcdiv($amount, $inverseRate->getRate(), 2);
+            }
+            // Pas de taux disponible : retourner le montant original (ne pas casser le rapport)
+            return $amount;
+        }
+
+        return $rate->convertBaseToQuote($amount);
+    }
+
+    /**
+     * Détermine la devise de référence pour une organisation.
+     * Utilise getMainCurrency comme fallback.
+     */
+    private function getReferenceCurrency(?int $organizationId, array $cityIds): Currency
+    {
+        $currencyCode = $this->getMainCurrency($organizationId, $cityIds);
+        return \App\Enum\Currency::from($currencyCode);
+    }
+
     private function sumRevenues(?int $organizationId, array $cityIds, \DateTimeImmutable $from, \DateTimeImmutable $to): string
     {
         $results = $this->paymentRepository->getFinancialSummary(
@@ -702,9 +740,12 @@ final readonly class ReportService
             $to
         );
 
+        $referenceCurrency = $this->getReferenceCurrency($organizationId, $cityIds);
         $total = '0.00';
         foreach ($results as $row) {
-            $total = bcadd($total, $row['total'], 2);
+            $currency = $row['currency'] instanceof \BackedEnum ? $row['currency']->value : (string) $row['currency'];
+            $converted = $this->convertToReferenceCurrency($row['total'], \App\Enum\Currency::from($currency), $referenceCurrency, $from);
+            $total = bcadd($total, $converted, 2);
         }
         return $total;
     }
@@ -718,9 +759,12 @@ final readonly class ReportService
             $to
         );
 
+        $referenceCurrency = $this->getReferenceCurrency($organizationId, $cityIds);
         $total = '0.00';
         foreach ($results as $row) {
-            $total = bcadd($total, $row['total'], 2);
+            $currency = $row['currency'] instanceof \BackedEnum ? $row['currency']->value : (string) $row['currency'];
+            $converted = $this->convertToReferenceCurrency($row['total'], \App\Enum\Currency::from($currency), $referenceCurrency, $from);
+            $total = bcadd($total, $converted, 2);
         }
         return $total;
     }
@@ -732,6 +776,7 @@ final readonly class ReportService
             $cityIds ?: null
         );
 
+        $referenceCurrency = $this->getReferenceCurrency($organizationId, $cityIds);
         $total = '0.00';
         foreach ($leases as $lease) {
             $rents = $this->rentRepository->findByLease($lease);
@@ -740,7 +785,8 @@ final readonly class ReportService
                     $due = $rent->getAmount();
                     $paid = $this->paymentRepository->sumAmountByRent($rent);
                     $arrears = bcsub($due, $paid, 2);
-                    $total = bcadd($total, $arrears, 2);
+                    $converted = $this->convertToReferenceCurrency($arrears, $rent->getCurrency(), $referenceCurrency, $asOfDate);
+                    $total = bcadd($total, $converted, 2);
                 }
             }
         }
