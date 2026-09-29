@@ -32,7 +32,7 @@ final readonly class BuildingResponse
         #[OA\Property(description: 'Nom usuel du bâtiment', example: 'Immeuble Matadi')]
         public string $name,
 
-        #[OA\Property(description: 'Type de bâtiment', type: 'string', example: 'RESIDENTIAL', enum: BuildingType::class)]
+        #[OA\Property(description: 'Type de bâtiment', type: 'string', example: 'apartment', enum: BuildingType::class)]
         public BuildingType $type,
 
         #[OA\Property(description: 'Nombre de niveaux / étages', example: 4, nullable: true)]

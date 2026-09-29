@@ -98,7 +98,7 @@ final readonly class OrganizationRequest
         #[OA\Property(
             description: 'Statut de l\'organisation (ACTIVE, SUSPENDED, INACTIVE)',
             type: 'string',
-            example: 'ACTIVE',
+            example: 'active',
             enum: [OrganizationStatus::ACTIVE, OrganizationStatus::SUSPENDED, OrganizationStatus::INACTIVE]
         )]
         public OrganizationStatus $status = OrganizationStatus::ACTIVE,

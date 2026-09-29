@@ -39,7 +39,7 @@ final readonly class PaymentResponse
         #[OA\Property(description: 'Date effectuation du paiement', format: 'date-time', example: '2026-03-02T10:15:00Z')]
         public \DateTimeImmutable $paymentDate,
 
-        #[OA\Property(description: 'Mode de règlement utilisé', type: 'string', example: 'MOBILE_MONEY', enum: PaymentMethod::class)]
+        #[OA\Property(description: 'Mode de règlement utilisé', type: 'string', example: 'mobile_money', enum: PaymentMethod::class)]
         public PaymentMethod $method,
 
         #[OA\Property(description: 'Référence de la transaction (ex: ID M-Pesa, n° de chèque)', example: 'MP260302.1015.C01', nullable: true)]

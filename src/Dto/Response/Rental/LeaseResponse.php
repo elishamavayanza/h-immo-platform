@@ -51,7 +51,7 @@ final readonly class LeaseResponse
         #[OA\Property(description: 'Devise monétaire du bail', type: 'string', example: 'USD', enum: Currency::class)]
         public Currency $currency,
 
-        #[OA\Property(description: 'Statut actuel du contrat de bail', type: 'string', example: 'ACTIVE', enum: LeaseStatus::class)]
+        #[OA\Property(description: 'Statut actuel du contrat de bail', type: 'string', example: 'active', enum: LeaseStatus::class)]
         public LeaseStatus $status,
 
         #[OA\Property(description: 'Date de résiliation anticipée ou effective', format: 'date-time', example: '2026-08-31T00:00:00Z', nullable: true)]

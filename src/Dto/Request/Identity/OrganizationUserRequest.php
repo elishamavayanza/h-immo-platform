@@ -45,7 +45,7 @@ final readonly class OrganizationUserRequest
         #[OA\Property(
             description: 'Rôle attribué au sein de l\'organisation',
             type: 'string',
-            example: 'ORG_ADMIN',
+            example: 'admin_immobilier',
             enum: OrganizationRole::class
         )]
         #[Assert\NotBlank(groups: ['create', 'update'])]

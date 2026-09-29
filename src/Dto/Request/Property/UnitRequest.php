@@ -6,6 +6,7 @@ namespace App\Dto\Request\Property;
 
 use App\Enum\Currency;
 use App\Enum\UnitType;
+use Symfony\Component\Serializer\Annotation\Groups;
 use OpenApi\Attributes as OA;
 use Symfony\Component\Validator\Constraints as Assert;
 
@@ -26,96 +27,107 @@ final readonly class UnitRequest
         #[OA\Property(
             description: 'UUID public du bâtiment contenant cette unité',
             format: 'uuid',
-            example: '9b1deb4d-3b7d-4bad-9bdd-2b0d7b3dcb6d'
+            example: '9b1deb4d-3b7d-4bad-9bdd-2b0d7b3dcb6d',
         )]
         #[Assert\NotBlank(groups: ['create'])]
         #[Assert\Uuid(groups: ['create'])]
+        #[Groups(['create'])]
         public ?string $buildingUuid = null,
 
         #[OA\Property(
             description: 'Référence ou numéro de porte/bureau',
             example: 'APT-102',
-            maxLength: 50
+            maxLength: 50,
         )]
         #[Assert\NotBlank(groups: ['create'])]
         #[Assert\Length(max: 50, groups: ['create', 'update'])]
+        #[Groups(['create', 'update'])]
         public ?string $reference = null,
 
         #[OA\Property(
-            description: 'Type d\'unité (APARTMENT, OFFICE, COMMERCIAL_STORE, WAREHOUSE, etc.)',
+            description: 'Type d\'unité (apartment, house, shop, office, restaurant, other)',
             type: 'string',
-            example: 'APARTMENT',
-            enum: UnitType::class
+            example: 'apartment',
+            enum: UnitType::class,
         )]
         #[Assert\NotBlank(groups: ['create', 'update'])]
+        #[Groups(['create', 'update'])]
         public ?UnitType $type = null,
 
         #[OA\Property(
             description: 'Numéro de l\'étage (0 pour le rez-de-chaussée)',
             example: 1,
-            minimum: 0
+            minimum: 0,
         )]
         #[Assert\NotBlank(groups: ['create', 'update'])]
         #[Assert\PositiveOrZero(groups: ['create', 'update'])]
+        #[Groups(['create', 'update'])]
         public ?int $floor = null,
 
         #[OA\Property(
             description: 'Surface habitable ou exploitable en m²',
-            example: '85.50'
+            example: '85.50',
         )]
         #[Assert\NotBlank(groups: ['create', 'update'])]
         #[Assert\Positive(groups: ['create', 'update'])]
+        #[Groups(['create', 'update'])]
         public ?string $surface = null,
 
         #[OA\Property(
             description: 'Nombre de chambres à coucher',
             example: 2,
             nullable: true,
-            minimum: 0
+            minimum: 0,
         )]
         #[Assert\PositiveOrZero(groups: ['create', 'update'])]
+        #[Groups(['create', 'update'])]
         public ?int $bedrooms = null,
 
         #[OA\Property(
             description: 'Nombre total de pièces principales',
             example: 4,
             nullable: true,
-            minimum: 0
+            minimum: 0,
         )]
         #[Assert\PositiveOrZero(groups: ['create', 'update'])]
+        #[Groups(['create', 'update'])]
         public ?int $rooms = null,
 
         #[OA\Property(
             description: 'Nombre de salles de bain / d\'eau',
             example: 2,
             nullable: true,
-            minimum: 0
+            minimum: 0,
         )]
         #[Assert\PositiveOrZero(groups: ['create', 'update'])]
+        #[Groups(['create', 'update'])]
         public ?int $bathrooms = null,
 
         #[OA\Property(
             description: 'Loyer mensuel hors charges',
-            example: '450.00'
+            example: '450.00',
         )]
         #[Assert\NotBlank(groups: ['create', 'update'])]
         #[Assert\Positive(groups: ['create', 'update'])]
+        #[Groups(['create', 'update'])]
         public ?string $monthlyRent = null,
 
         #[OA\Property(
-            description: 'Devise du loyer (USD, CDF, EUR)',
+            description: 'Devise du loyer (USD, CDF)',
             type: 'string',
             example: 'USD',
-            enum: Currency::class
+            enum: Currency::class,
         )]
         #[Assert\NotBlank(groups: ['create', 'update'])]
+        #[Groups(['create', 'update'])]
         public ?Currency $currency = null,
 
         #[OA\Property(
             description: 'Description détaillée du local et de ses équipements',
             example: 'Appartement lumineux avec balcons, cuisine équipée et compteur cash-power indépendant.',
-            nullable: true
+            nullable: true,
         )]
+        #[Groups(['create', 'update'])]
         public ?string $description = null,
     ) {
     }

@@ -70,7 +70,7 @@ final readonly class CityRequest
         #[OA\Property(
             description: 'Statut de la ville (ACTIVE, INACTIVE)',
             type: 'string',
-            example: 'ACTIVE',
+            example: 'active',
             enum: CityStatus::class
         )]
         public CityStatus $status = CityStatus::ACTIVE,

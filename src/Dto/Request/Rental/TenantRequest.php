@@ -34,7 +34,7 @@ final readonly class TenantRequest
         #[OA\Property(
             description: 'Type de locataire (INDIVIDUAL ou COMPANY)',
             type: 'string',
-            example: 'INDIVIDUAL',
+            example: 'individual',
             enum: TenantType::class
         )]
         #[Assert\NotBlank(groups: ['create', 'update'])]

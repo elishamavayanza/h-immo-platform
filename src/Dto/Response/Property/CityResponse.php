@@ -38,7 +38,7 @@ final readonly class CityResponse
         #[OA\Property(description: 'Nom du pays', example: 'République Démocratique du Congo', nullable: true)]
         public ?string $country,
 
-        #[OA\Property(description: 'Statut de la ville dans le système', type: 'string', example: 'ACTIVE', enum: CityStatus::class)]
+        #[OA\Property(description: 'Statut de la ville dans le système', type: 'string', example: 'active', enum: CityStatus::class)]
         public CityStatus $status,
 
         #[OA\Property(description: 'Horodatage de création', format: 'date-time', example: '2026-01-01T00:00:00Z')]

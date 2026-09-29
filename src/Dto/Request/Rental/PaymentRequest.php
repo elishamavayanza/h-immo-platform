@@ -61,7 +61,7 @@ final readonly class PaymentRequest
         #[OA\Property(
             description: 'Mode de paiement utilisé',
             type: 'string',
-            example: 'BANK_TRANSFER',
+            example: 'bank_transfer',
             enum: PaymentMethod::class
         )]
         #[Assert\NotBlank(groups: ['create'])]

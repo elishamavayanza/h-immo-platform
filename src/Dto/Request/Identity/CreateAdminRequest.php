@@ -36,10 +36,14 @@ final readonly class CreateAdminRequest
         public string $organizationUuid,
 
         #[OA\Property(
-            description: 'Rôle à attribuer (ADMIN_IMMOBILIER ou ADMIN_VILLE)',
+            // La liste est explicitement restreinte aux deux rôles qu'un PATRON
+            // peut déléguer : `enum: OrganizationRole::class` annoncerait aussi
+            // `patron`, que `Assert\Choice` refuse. « Try it out » proposerait
+            // donc une valeur rejetée en 422.
+            description: 'Rôle à attribuer (admin_immobilier ou admin_ville). Le rôle patron n\'est pas délégable.',
             type: 'string',
-            example: 'ADMIN_IMMOBILIER',
-            enum: OrganizationRole::class
+            example: 'admin_immobilier',
+            enum: [OrganizationRole::ADMIN_IMMOBILIER->value, OrganizationRole::ADMIN_VILLE->value]
         )]
         #[Assert\NotBlank]
         #[Assert\Choice(choices: [OrganizationRole::ADMIN_IMMOBILIER, OrganizationRole::ADMIN_VILLE])]

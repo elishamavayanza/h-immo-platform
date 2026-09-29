@@ -52,7 +52,7 @@ final readonly class BuildingRequest
         #[OA\Property(
             description: 'Type de bâtiment (COMMERCIAL, RESIDENTIAL, MIXED, etc.)',
             type: 'string',
-            example: 'RESIDENTIAL',
+            example: 'apartment',
             enum: BuildingType::class
         )]
         #[Assert\NotBlank(groups: ['create', 'update'])]

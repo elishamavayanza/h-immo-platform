@@ -43,7 +43,7 @@ final readonly class RentResponse
         #[OA\Property(description: 'Devise monétaire', type: 'string', example: 'USD', enum: Currency::class)]
         public Currency $currency,
 
-        #[OA\Property(description: 'Statut du loyer (PAID, PENDING, OVERDUE, PARTIALLY_PAID) — calculé à la volée', type: 'string', example: 'OVERDUE', enum: RentStatus::class)]
+        #[OA\Property(description: 'Statut du loyer (PAID, PENDING, OVERDUE, PARTIALLY_PAID) — calculé à la volée', type: 'string', example: 'overdue', enum: RentStatus::class)]
         public RentStatus $status,
 
         #[OA\Property(description: 'Indique si l\'échéance est en retard (impayée) à la date du jour', example: true)]

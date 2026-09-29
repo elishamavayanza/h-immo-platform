@@ -42,7 +42,7 @@ final readonly class UserResponse
         #[OA\Property(description: 'URL de la photo de profil', example: 'https://cdn.example.com/profiles/jean.jpg', nullable: true)]
         public ?string $profilePhoto,
 
-        #[OA\Property(description: 'Rôle global sur la plateforme', type: 'string', example: 'ROLE_USER', nullable: true, enum: PlatformRole::class)]
+        #[OA\Property(description: 'Rôle global sur la plateforme. `null` pour un compte d\'organisation ; seul `super_admin` est un rôle de plateforme.', type: 'string', example: null, nullable: true, enum: PlatformRole::class)]
         public ?PlatformRole $platformRole,
 
         #[OA\Property(description: 'État du compte utilisateur', example: true)]
