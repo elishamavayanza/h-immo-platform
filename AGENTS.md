@@ -325,6 +325,44 @@ interpolé.
 - Commandes CLI : `src/Command/` (arguments nommés, sortie lisible, pas de
   données sensibles en sortie).
 
+### Dates, heures et fuseaux
+
+Source unique de vérité : `src/Service/System/DateTimeService.php`. Règles :
+
+- **Toute date est un `DateTimeImmutable`.** Aucun `DateTime` mutable dans
+  `src/`. Les colonnes restent `DATE_IMMUTABLE` (dates métier) et
+  `datetime_immutable` (horodatages).
+- **Stockage et calculs en UTC**, via `DateTimeService::now()`, `today()`,
+  `startOfCurrentYear()`, `endOfCurrentYear()`. Chaque construction y est
+  explicitement épinglée sur `DateTimeService::STORAGE_TIMEZONE`, donc un
+  changement de `date.timezone` du serveur ne déplace plus ni échéances, ni
+  bornes de rapports, ni expirations de jetons.
+- **Conversion de fuseau = présentation uniquement**, via `toTimezone()` /
+  `format()`. `format()` conserve le fuseau de stockage par défaut : la sortie
+  est identique à l'ancien `$date->format(...)`, donc aucun changement de
+  contrat sur les réponses API. `PRESENTATION_TIMEZONE`
+  (`Africa/Kinshasa`) n'est appliquée que si l'appelant le demande
+  explicitement.
+- **Parsing d'une entrée client** : passer par `parseDate()` / `parseDateTime()`,
+  qui renvoient `null` sur une valeur invalide au lieu de lever une exception
+  (un `new \DateTimeImmutable($raw)` sur `?from=` malformé renvoyait 500).
+  Les entités ne font pas exception : `Rent::isOverdue()` et
+  `PasswordResetToken::isExpired()` acceptent une référence `$now` optionnelle,
+  que la couche service fournit depuis le service.
+- **Aucun `date()`, `time()` ou `strtotime()`** dans `src/`, et aucun
+  `new \DateTimeImmutable(...)` hors `DateTimeService` et hors constructeurs
+  d'entités : une entité est instanciée par Doctrine et ne peut pas recevoir
+  un service ; son horodatage de construction reste donc `new
+  \DateTimeImmutable()`, les entités n'étant le seul endroit qui ne fait qu'un
+  « maintenant » au moment de l'insertion.
+- `'last day of December this year'` résout à **minuit**, pas à 23:59:59 :
+  une requête « année en cours » qui doit inclure le 31 décembre combine
+  `endOfCurrentYear()` avec un comparateur `<` sur `startOfCurrentYear()` de
+  l'année suivante, ou explicite sa borne haute.
+
+Vérification : `php tests/verify-datetime-service.php` (25 contrôles, sans base
+ni conteneur).
+
 ### Ce qu'il ne faut pas introduire
 
 Pas de CQRS, pas d'Event Sourcing, pas d'Event Bus, pas de repository générique

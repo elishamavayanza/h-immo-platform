@@ -10,6 +10,7 @@ use App\Entity\Identity\User;
 use App\Repository\Identity\PasswordResetTokenRepository;
 use App\Repository\Identity\UserRepository;
 use App\Security\SecurityServiceInterface;
+use App\Service\System\DateTimeService;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\DependencyInjection\ParameterBag\ParameterBagInterface;
 use Symfony\Component\Mime\Email;
@@ -43,7 +44,8 @@ final readonly class PasswordResetService
         private \Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface $passwordHasher,
         private MailerInterface $mailer,
         private ParameterBagInterface $params,
-        private SecurityServiceInterface $security
+        private SecurityServiceInterface $security,
+        private DateTimeService $dateTime,
     ) {
     }
 
@@ -83,8 +85,8 @@ final readonly class PasswordResetService
         $rawToken = bin2hex(random_bytes(32));
         $tokenHash = hash('sha256', $rawToken);
 
-        // Expiration : 1 heure
-        $expiresAt = new \DateTimeImmutable('+1 hour');
+        // Expiration : 1 heure (épinglée en UTC via le service dates/heures)
+        $expiresAt = $this->dateTime->now()->modify('+1 hour');
 
         // Le jeton est immuable : il se construit complet, jamais par
         // setters successifs.

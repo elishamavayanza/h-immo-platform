@@ -7,6 +7,7 @@ namespace App\Controller\Api\System;
 use App\Dto\Request\System\AuditLogFilterDto;
 use App\Dto\Response\System\AuditLogResponse;
 use App\Service\System\AuditLogService;
+use App\Service\System\DateTimeService;
 use Nelmio\ApiDocBundle\Attribute\Model;
 use OpenApi\Attributes as OA;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
@@ -36,7 +37,8 @@ use Symfony\Component\Security\Http\Attribute\IsGranted;
 final class AuditLogController extends AbstractController
 {
     public function __construct(
-        private readonly AuditLogService $auditLogService
+        private readonly AuditLogService $auditLogService,
+        private readonly DateTimeService $dateTime,
     ) {
     }
 
@@ -80,8 +82,10 @@ final class AuditLogController extends AbstractController
             action: $request->query->get('action'),
             entityType: $request->query->get('entityType'),
             entityId: $request->query->has('entityId') ? (int) $request->query->get('entityId') : null,
-            from: $request->query->has('from') ? new \DateTimeImmutable($request->query->get('from')) : null,
-            to: $request->query->has('to') ? new \DateTimeImmutable($request->query->get('to')) : null,
+            // Le parsing passe par le service dates/heures : une valeur
+            // malformée renvoie `null` (filtre ignoré) au lieu d'une 500.
+            from: $request->query->has('from') ? $this->dateTime->parseDateTime((string) $request->query->get('from')) : null,
+            to: $request->query->has('to') ? $this->dateTime->parseDateTime((string) $request->query->get('to')) : null,
             page: max(1, $request->query->getInt('page', 1)),
             itemsPerPage: max(1, min(100, $request->query->getInt('itemsPerPage', 20)))
         );

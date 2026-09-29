@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Service\Identity;
 
 use App\Dto\Response\Identity\SessionUserResponse;
+use App\Service\System\DateTimeService;
 use Firebase\JWT\JWT;
 use Firebase\JWT\Key;
 
@@ -44,6 +45,7 @@ final class TokenManager
     public function __construct(
         string $jwtSecret,
         private readonly int $jwtTtl,
+        private readonly DateTimeService $dateTime,
     ) {
         // Une clé absente ou courte est le seul cas où une erreur de
         // configuration rend l'API silencieusement forçable : on refuse
@@ -82,7 +84,7 @@ final class TokenManager
      */
     public function issue(SessionUserResponse $user): array
     {
-        $issuedAt = new \DateTimeImmutable();
+        $issuedAt = $this->dateTime->now();
         $expiresAt = $issuedAt->add(new \DateInterval('PT' . $this->jwtTtl . 'S'));
 
         // `jti` identifie le jeton pour la révocation.

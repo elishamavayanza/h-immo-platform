@@ -57,7 +57,13 @@ final readonly class RentResponse
     ) {
     }
 
-    public static function fromEntity(Rent $rent, ?string $paidAmount = null): self
+    /**
+     * @param \DateTimeImmutable|null $today référence « aujourd'hui » fournie
+     *                                        par `DateTimeService::today()`
+     *                                        (UTC) : la couche API ne lit
+     *                                        jamais l'horloge du serveur
+     */
+    public static function fromEntity(Rent $rent, ?string $paidAmount = null, ?\DateTimeImmutable $today = null): self
     {
         return new self(
             id: (string) $rent->getUuid(),
@@ -66,8 +72,8 @@ final readonly class RentResponse
             dueDate: $rent->getDueDate(),
             amount: $rent->getAmount(),
             currency: $rent->getCurrency(),
-            status: $rent->getComputedStatus(),
-            isOverdue: $rent->isOverdue(),
+            status: $rent->getComputedStatus($paidAmount, $today),
+            isOverdue: $rent->isOverdue($paidAmount, $today),
             createdAt: $rent->getCreatedAt(),
             updatedAt: $rent->getUpdatedAt(),
         );

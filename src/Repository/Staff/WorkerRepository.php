@@ -7,6 +7,7 @@ namespace App\Repository\Staff;
 use App\Entity\Property\City;
 use App\Entity\Staff\Worker;
 use App\Entity\Staff\WorkerAssignment;
+use App\Service\System\DateTimeService;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\ORM\QueryBuilder;
 use Doctrine\Persistence\ManagerRegistry;
@@ -19,7 +20,7 @@ use Symfony\Component\Uid\Uuid;
  */
 final class WorkerRepository extends ServiceEntityRepository
 {
-    public function __construct(ManagerRegistry $registry)
+    public function __construct(ManagerRegistry $registry, private readonly DateTimeService $dateTime)
     {
         parent::__construct($registry, Worker::class);
     }
@@ -67,7 +68,7 @@ final class WorkerRepository extends ServiceEntityRepository
             ->andWhere('wa.city = :city')
             ->andWhere('wa.endDate IS NULL OR wa.endDate >= :now')
             ->setParameter('city', $city)
-            ->setParameter('now', new \DateTimeImmutable())
+            ->setParameter('now', $this->dateTime->now())
             ->distinct()
             ->getQuery()
             ->getResult();

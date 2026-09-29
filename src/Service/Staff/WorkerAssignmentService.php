@@ -26,6 +26,7 @@ use App\Repository\Staff\WorkerRepository;
 use App\Security\SecurityAction;
 use App\Security\SecurityServiceInterface;
 use App\Service\System\AuditLogService;
+use App\Service\System\DateTimeService;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\Uid\Uuid;
 use Symfony\Component\Validator\Validator\ValidatorInterface;
@@ -57,7 +58,8 @@ final readonly class WorkerAssignmentService
         private SecurityServiceInterface $securityService,
         private EntityManagerInterface $entityManager,
         private ValidatorInterface $validator,
-        private AuditLogService $auditLogService
+        private AuditLogService $auditLogService,
+        private DateTimeService $dateTime,
     ) {
     }
 
@@ -141,7 +143,7 @@ final readonly class WorkerAssignmentService
                 'role' => $assignment->getRole()->value,
                 'monthlySalary' => $assignment->getMonthlySalary(),
                 'currency' => $assignment->getCurrency()->value,
-                'startDate' => $assignment->getStartDate()->format('Y-m-d'),
+                'startDate' => $this->dateTime->format($assignment->getStartDate(), 'Y-m-d'),
             ],
         );
 

@@ -44,6 +44,7 @@ use App\Repository\Rental\TenantRepository;
 use App\Repository\Staff\WorkerAssignmentRepository;
 use App\Repository\Staff\WorkerRepository;
 use App\Security\SecurityServiceInterface;
+use App\Service\System\DateTimeService;
 
 /**
  * ReportService
@@ -71,6 +72,7 @@ final readonly class ReportService
         private OrganizationRepository $organizationRepository,
         private UserRepository $userRepository,
         private SecurityServiceInterface $securityService,
+        private DateTimeService $dateTime,
     ) {
     }
 
@@ -84,14 +86,14 @@ final readonly class ReportService
         $cities = $this->cityRepository->findActiveByOrganization($organization);
         $cityIds = array_map(fn(City $c) => $c->getId(), $cities);
 
-        $periodFrom = $filter->periodFrom ?? new \DateTimeImmutable('first day of January this year');
-        $periodTo = $filter->periodTo ?? new \DateTimeImmutable('last day of December this year');
+        $periodFrom = $filter->periodFrom ?? $this->dateTime->startOfCurrentYear();
+        $periodTo = $filter->periodTo ?? $this->dateTime->endOfCurrentYear();
 
         $response = new PatronReportResponse(
             organizationUuid: $organization->getUuid()->toRfc4122(),
             organizationName: $organization->getName(),
-            periodCovered: $periodFrom->format('Y-m-d') . ' to ' . $periodTo->format('Y-m-d'),
-            generatedAt: new \DateTimeImmutable(),
+            periodCovered: $this->dateTime->format($periodFrom, 'Y-m-d') . ' to ' . $this->dateTime->format($periodTo, 'Y-m-d'),
+            generatedAt: $this->dateTime->now(),
         );
 
         if ($filter->includeFinancials) {
@@ -131,14 +133,14 @@ final readonly class ReportService
         $cities = $this->cityRepository->findActiveByOrganization($organization);
         $cityIds = array_map(fn(City $c) => $c->getId(), $cities);
 
-        $periodFrom = $filter->periodFrom ?? new \DateTimeImmutable('first day of January this year');
-        $periodTo = $filter->periodTo ?? new \DateTimeImmutable('last day of December this year');
+        $periodFrom = $filter->periodFrom ?? $this->dateTime->startOfCurrentYear();
+        $periodTo = $filter->periodTo ?? $this->dateTime->endOfCurrentYear();
 
         $response = new AdminImmobilierReportResponse(
             organizationUuid: $organization->getUuid()->toRfc4122(),
             organizationName: $organization->getName(),
-            periodCovered: $periodFrom->format('Y-m-d') . ' to ' . $periodTo->format('Y-m-d'),
-            generatedAt: new \DateTimeImmutable(),
+            periodCovered: $this->dateTime->format($periodFrom, 'Y-m-d') . ' to ' . $this->dateTime->format($periodTo, 'Y-m-d'),
+            generatedAt: $this->dateTime->now(),
         );
 
         $response->occupancyByParcel = $this->buildOccupancyByParcel($cityIds);
@@ -175,14 +177,14 @@ final readonly class ReportService
         $this->securityService->checkCityAccess($city, \App\Security\SecurityAction::VIEW);
 
         $cityIds = [$city->getId()];
-        $periodFrom = $filter->periodFrom ?? new \DateTimeImmutable('first day of January this year');
-        $periodTo = $filter->periodTo ?? new \DateTimeImmutable('last day of December this year');
+        $periodFrom = $filter->periodFrom ?? $this->dateTime->startOfCurrentYear();
+        $periodTo = $filter->periodTo ?? $this->dateTime->endOfCurrentYear();
 
         $response = new AdminVilleReportResponse(
             cityUuid: $city->getUuid()->toRfc4122(),
             cityName: $city->getName(),
-            periodCovered: $periodFrom->format('Y-m-d') . ' to ' . $periodTo->format('Y-m-d'),
-            generatedAt: new \DateTimeImmutable(),
+            periodCovered: $this->dateTime->format($periodFrom, 'Y-m-d') . ' to ' . $this->dateTime->format($periodTo, 'Y-m-d'),
+            generatedAt: $this->dateTime->now(),
         );
 
         $response->occupancyByParcel = $this->buildOccupancyByParcel($cityIds);
@@ -214,8 +216,8 @@ final readonly class ReportService
      */
     public function generateSuperAdminReport(ReportFilterDto $filter): SuperAdminReportResponse
     {
-        $periodFrom = $filter->periodFrom ?? new \DateTimeImmutable('first day of January this year');
-        $periodTo = $filter->periodTo ?? new \DateTimeImmutable('last day of December this year');
+        $periodFrom = $filter->periodFrom ?? $this->dateTime->startOfCurrentYear();
+        $periodTo = $filter->periodTo ?? $this->dateTime->endOfCurrentYear();
 
         $organizations = $this->organizationRepository->findAllActive();
         $orgSummaries = [];
@@ -241,12 +243,12 @@ final readonly class ReportService
         $totalUsers = count($this->userRepository->findPaginatedAll(1, 10000)['items'] ?? []);
 
         return new SuperAdminReportResponse(
-            periodCovered: $periodFrom->format('Y-m-d') . ' to ' . $periodTo->format('Y-m-d'),
+            periodCovered: $this->dateTime->format($periodFrom, 'Y-m-d') . ' to ' . $this->dateTime->format($periodTo, 'Y-m-d'),
             organizations: $orgSummaries,
             totalOrganizations: count($organizations),
             activeOrganizations: count(array_filter($organizations, fn($o) => $o->getStatus()->value === 'ACTIVE')),
             totalUsers: $totalUsers,
-            generatedAt: new \DateTimeImmutable(),
+            generatedAt: $this->dateTime->now(),
         );
     }
 
@@ -521,8 +523,8 @@ final readonly class ReportService
 
             $items[] = new OccupancyItem(
                 level: 'month',
-                levelUuid: $current->format('Y-m'),
-                label: $current->format('F Y'),
+                levelUuid: $this->dateTime->format($current, 'Y-m'),
+                label: $this->dateTime->format($current, 'F Y'),
                 totalUnits: $totalUnits,
                 occupiedUnits: $occupiedUnits,
                 availableUnits: $totalUnits - $occupiedUnits,
@@ -810,8 +812,8 @@ final readonly class ReportService
         $payments = $this->paymentRepository->getFinancialSummary(
             $organizationId ? [$organizationId] : null,
             $cityIds ?: null,
-            new \DateTimeImmutable('first day of January this year'),
-            new \DateTimeImmutable('last day of December this year')
+            $this->dateTime->startOfCurrentYear(),
+            $this->dateTime->endOfCurrentYear()
         );
         foreach ($payments as $row) {
             $currencyKey = $row['currency'] instanceof \BackedEnum ? $row['currency']->value : (string) $row['currency'];
@@ -821,8 +823,8 @@ final readonly class ReportService
         $expenses = $this->expenseRepository->getFinancialSummary(
             $organizationId ? [$organizationId] : null,
             $cityIds ?: null,
-            new \DateTimeImmutable('first day of January this year'),
-            new \DateTimeImmutable('last day of December this year')
+            $this->dateTime->startOfCurrentYear(),
+            $this->dateTime->endOfCurrentYear()
         );
         foreach ($expenses as $row) {
             $currencyKey = $row['currency'] instanceof \BackedEnum ? $row['currency']->value : (string) $row['currency'];

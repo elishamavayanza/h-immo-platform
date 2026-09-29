@@ -19,6 +19,7 @@ use App\Repository\Rental\RentRepository;
 use App\Security\SecurityAction;
 use App\Security\SecurityServiceInterface;
 use App\Service\System\AuditLogService;
+use App\Service\System\DateTimeService;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\Uid\Uuid;
 use Symfony\Component\Validator\Validator\ValidatorInterface;
@@ -55,7 +56,8 @@ final readonly class PaymentService
         private SecurityServiceInterface $securityService,
         private EntityManagerInterface $entityManager,
         private ValidatorInterface $validator,
-        private AuditLogService $auditLogService
+        private AuditLogService $auditLogService,
+        private DateTimeService $dateTime,
     ) {
     }
 
@@ -132,7 +134,7 @@ final readonly class PaymentService
                     newValues: [
                         'amount' => $payment->getAmount(),
                         'currency' => $payment->getCurrency()->value,
-                        'paymentDate' => $payment->getPaymentDate()->format('Y-m-d\TH:i:s'),
+                        'paymentDate' => $this->dateTime->format($payment->getPaymentDate(), 'Y-m-d\TH:i:s'),
                         'method' => $payment->getMethod()->value,
                         'rentUuid' => $lockedRent->getUuid()->toRfc4122(),
                         'reference' => $payment->getReference(),
@@ -384,7 +386,7 @@ final readonly class PaymentService
         $correction->setCreatedBy($currentUser);
         $correction->setAmount($cancelAmount);
         $correction->setCurrency($payment->getCurrency());
-        $correction->setPaymentDate(new \DateTimeImmutable());
+        $correction->setPaymentDate($this->dateTime->now());
         $correction->setMethod($payment->getMethod());
         $correction->setReference('ANNUL-' . $payment->getReference());
         $correction->setReceiptNumber($payment->getReceiptNumber());

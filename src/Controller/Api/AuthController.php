@@ -15,6 +15,7 @@ use App\Dto\Response\Identity\SessionUserResponse;
 use App\Service\Identity\SessionUserResponseFactory;
 use App\Service\Identity\TokenManager;
 use App\Service\System\AuditLogService;
+use App\Service\System\DateTimeService;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
@@ -53,6 +54,7 @@ final class AuthController extends AbstractController
         private readonly TokenManager $tokenManager,
         private readonly RevokedTokenRepository $revokedTokenRepository,
         private readonly AuditLogService $auditLogService,
+        private readonly DateTimeService $dateTime,
     ) {
     }
 
@@ -210,7 +212,7 @@ final class AuthController extends AbstractController
 
         return $this->revokedTokenRepository->revoke(
             $jti,
-            (new \DateTimeImmutable())->setTimestamp($exp)
+            $this->dateTime->now()->setTimestamp($exp)
         );
     }
 
