@@ -15,6 +15,7 @@ use Nelmio\ApiDocBundle\Attribute\Model;
 use OpenApi\Attributes as OA;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
+use Symfony\Component\HttpKernel\Attribute\MapQueryString;
 use Symfony\Component\HttpKernel\Attribute\MapRequestPayload;
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
@@ -198,7 +199,7 @@ final class LeaseController extends AbstractController
         ]
     )]
     public function list(
-        #[MapRequestPayload] LeaseFilterDto $filter
+        #[MapQueryString] LeaseFilterDto $filter
     ): JsonResponse {
         $feedback = $this->leaseService->listLeases($filter);
 

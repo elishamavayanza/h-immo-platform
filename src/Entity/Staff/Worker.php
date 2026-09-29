@@ -88,6 +88,12 @@ class Worker extends SoftDeletableEntity
 
     public function __construct()
     {
+        // `parent::__construct()` génère l'UUID public dans `BaseEntity`.
+        // Sans cet appel, la colonne `uuid` reste NULL et l'insertion échoue
+        // sur la contrainte NOT NULL : aucun autre constructeur d'entité du
+        // projet ne s'en dispense.
+        parent::__construct();
+
         $this->assignments = new ArrayCollection();
     }
 

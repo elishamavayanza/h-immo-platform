@@ -120,7 +120,6 @@ class RentRepository extends ServiceEntityRepository
             ->innerJoin('r.lease', 'l')
             ->andWhere('r.dueDate < :today')
             ->andWhere('r.status IN (:openStatuses)')
-            ->andWhere('r.deletedAt IS NULL')
             ->setParameter('today', $today)
             ->setParameter('openStatuses', [\App\Enum\RentStatus::PENDING, \App\Enum\RentStatus::PARTIALLY_PAID, \App\Enum\RentStatus::OVERDUE])
             ->orderBy("r.$sortBy", $sortOrder);

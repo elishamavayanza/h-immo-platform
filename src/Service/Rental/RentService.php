@@ -5,11 +5,14 @@ declare(strict_types=1);
 namespace App\Service\Rental;
 
 use App\Dto\Feedback;
+use App\Dto\Request\Rental\RentOverdueFilterDto;
 use App\Dto\Request\Rental\RentRequest;
 use App\Entity\Identity\User;
 use App\Entity\Rental\Lease;
 use App\Entity\Rental\Rent;
 use App\Mapper\Rental\RentMapper;
+use App\Repository\Identity\OrganizationRepository;
+use App\Repository\Property\CityRepository;
 use App\Repository\Rental\LeaseRepository;
 use App\Repository\Rental\PaymentRepository;
 use App\Repository\Rental\RentRepository;
@@ -37,6 +40,8 @@ final readonly class RentService
         private RentRepository $rentRepository,
         private LeaseRepository $leaseRepository,
         private PaymentRepository $paymentRepository,
+        private CityRepository $cityRepository,
+        private OrganizationRepository $organizationRepository,
         private RentMapper $rentMapper,
         private SecurityServiceInterface $securityService,
         private EntityManagerInterface $entityManager,
@@ -243,6 +248,20 @@ final readonly class RentService
             } catch (\InvalidArgumentException) {
                 $targetOrgIds = [];
             }
+        }
+
+        // Un tableau d'identifiants vide doit signifier « aucun résultat », et non
+        // « pas de filtre » : les repositories traitent `null` comme l'absence de
+        // filtre, mais un `[]` arrivait jusqu'à eux et était ignoré via !empty(),
+        // ce qui renvoyait les lignes des organisations du périmètre de l'appelant
+        // au lieu d'une liste vide. Sans ce retour early, un `organizationId`
+        // hors périmètre se comportait comme si le filtre n'avait pas été fourni.
+        if ($targetOrgIds === []) {
+            return $feedback
+                ->setData(['items' => [], 'total' => 0, 'page' => max(1, $filter->page), 'limit' => $filter->limit])
+                ->setFlushDescription('Aucune organisation accessible pour ce filtre.')
+                ->setStatus(200)
+                ->autoInitFlush();
         }
 
         $result = $this->rentRepository->findOverduePaginatedByOrganizationsAndCities(

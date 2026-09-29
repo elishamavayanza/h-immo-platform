@@ -15,6 +15,7 @@ use Nelmio\ApiDocBundle\Attribute\Model;
 use OpenApi\Attributes as OA;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
+use Symfony\Component\HttpKernel\Attribute\MapQueryString;
 use Symfony\Component\HttpKernel\Attribute\MapRequestPayload;
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
@@ -147,7 +148,7 @@ final class PaymentController extends AbstractController
         ]
     )]
     public function list(
-        #[MapRequestPayload] PaymentFilterDto $filter
+        #[MapQueryString] PaymentFilterDto $filter
     ): JsonResponse {
         $feedback = $this->paymentService->listPayments($filter);
 
