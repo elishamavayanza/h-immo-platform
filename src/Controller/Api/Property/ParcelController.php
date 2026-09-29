@@ -51,7 +51,7 @@ final class ParcelController extends AbstractController
         summary: 'Créer une nouvelle parcelle cadastrale',
         description: 'Enregistre une nouvelle parcelle rattachée à une ville.'
     )]
-    #[OA\RequestBody(content: new OA\JsonContent(ref: new Model(type: ParcelRequest::class, groups: ['create'])))]
+    #[OA\RequestBody(content: new OA\JsonContent(ref: new Model(type: ParcelRequest::class)))]
     #[OA\Response(
         response: 201,
         description: 'Parcelle créée avec succès',
@@ -115,7 +115,7 @@ final class ParcelController extends AbstractController
         summary: 'Mettre à jour une parcelle',
         description: 'Modifie les attributs d\'une parcelle cadastrale existante.'
     )]
-    #[OA\RequestBody(content: new OA\JsonContent(ref: new Model(type: ParcelRequest::class, groups: ['update'])))]
+    #[OA\RequestBody(content: new OA\JsonContent(ref: new Model(type: ParcelRequest::class)))]
     #[OA\Response(
         response: 200,
         description: 'Parcelle mise à jour',

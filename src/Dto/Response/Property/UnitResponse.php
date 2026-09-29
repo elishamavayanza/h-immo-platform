@@ -30,7 +30,7 @@ final readonly class UnitResponse
         #[OA\Property(description: 'Référence unique de l\'unité', example: 'APT-101')]
         public string $reference,
 
-        #[OA\Property(description: 'Type d\'unité locative', type: 'string', example: 'APARTMENT', enum: UnitType::class)]
+        #[OA\Property(description: 'Type d\'unité locative', type: 'string', example: 'apartment', enum: UnitType::class)]
         public UnitType $type,
 
         #[OA\Property(description: 'Numéro d\'étage (0 pour Rez-de-chaussée)', example: 1)]

@@ -34,7 +34,7 @@ final readonly class OrganizationUserResponse
         #[OA\Property(description: 'UUID public de l\'utilisateur', format: 'uuid', example: 'c3019a82-3ad4-4861-a53c-1123a1a3b110')]
         public string $userId,
 
-        #[OA\Property(description: 'Rôle attribué dans l\'organisation', type: 'string', example: 'ORG_ADMIN', enum: OrganizationRole::class)]
+        #[OA\Property(description: 'Rôle attribué dans l\'organisation', type: 'string', example: 'admin_immobilier', enum: OrganizationRole::class)]
         public OrganizationRole $role,
 
         #[OA\Property(description: 'Horodatage de création de l\'association', format: 'date-time', example: '2026-01-20T11:00:00Z')]

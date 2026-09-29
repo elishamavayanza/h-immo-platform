@@ -694,6 +694,18 @@ que l'agent ne construise pas sur une prémisse fausse.
   (catégorie/motif) plutôt qu'un montant négatif : le total cumulé n'est donc pas
   nécessairement décrémenté. À vérifier avant de s'appuyer sur un total
   d'encaissements nets.
+- **D13 — Exemples Swagger / schémas `UnitRequest` et `ParcelRequest`.** Ces deux
+  DTO sont les seuls mappés par `#[MapRequestPayload(validationGroups: […])]`.
+  Nelmio propage ces groupes comme contexte `serializer_groups` et `PropertyInfo`
+  (`SerializerExtractor`) ne rend alors **que** les propriétés portant un
+  `#[Groups]` Symfony, sans quoi le schéma OpenAPI généré est vide (`{}`) et
+  « Try it out » est inutilisable. Les `#[Groups]` ajoutés sur ces deux DTO
+  sont donc de la **métadonnée de documentation uniquement** : le
+  `RequestPayloadValueResolver` de Symfony ne passe aucun contexte `groups` à la
+  dénormalisation (seul `serializationContext`, vide par défaut), donc le
+  comportement runtime est inchangé. Attention : retirer un `#[Groups]` doit
+  coïncider avec le retrait du `validationGroups` du contrôleur, sinon le schéma
+  redevient vide.
 
 ---
 

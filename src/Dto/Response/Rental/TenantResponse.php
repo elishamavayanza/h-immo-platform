@@ -26,7 +26,7 @@ final readonly class TenantResponse
         #[OA\Property(description: 'UUID public de l\'organisation rattachée', format: 'uuid', example: '9b1deb4d-3b7d-4bad-9bdd-2b0d7b3dcb6d')]
         public string $organizationId,
 
-        #[OA\Property(description: 'Type de locataire (INDIVIDUAL ou COMPANY)', type: 'string', example: 'INDIVIDUAL', enum: TenantType::class)]
+        #[OA\Property(description: 'Type de locataire (INDIVIDUAL ou COMPANY)', type: 'string', example: 'individual', enum: TenantType::class)]
         public TenantType $type,
 
         #[OA\Property(description: 'Nom de famille (si personne physique)', example: 'Mukokoma', nullable: true)]

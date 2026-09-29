@@ -49,7 +49,7 @@ final readonly class OrganizationResponse
         #[OA\Property(description: 'Pays du siège social', example: 'RDC', nullable: true)]
         public ?string $country,
 
-        #[OA\Property(description: 'Statut de l\'organisation', type: 'string', example: 'ACTIVE', enum: OrganizationStatus::class)]
+        #[OA\Property(description: 'Statut de l\'organisation', type: 'string', example: 'active', enum: OrganizationStatus::class)]
         public OrganizationStatus $status,
 
         #[OA\Property(description: 'Horodatage de création', format: 'date-time', example: '2026-01-15T08:30:00Z')]

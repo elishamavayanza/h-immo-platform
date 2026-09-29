@@ -51,7 +51,7 @@ final class UnitController extends AbstractController
         summary: 'Créer une nouvelle unité locative',
         description: 'Enregistre un nouveau local (appartement, bureau, commerce) rattaché à un bâtiment.'
     )]
-    #[OA\RequestBody(content: new OA\JsonContent(ref: new Model(type: UnitRequest::class, groups: ['create'])))]
+    #[OA\RequestBody(content: new OA\JsonContent(ref: new Model(type: UnitRequest::class)))]
     #[OA\Response(
         response: 201,
         description: 'Unité locative créée avec succès',
@@ -115,7 +115,7 @@ final class UnitController extends AbstractController
         summary: 'Mettre à jour une unité locative',
         description: 'Modifie les attributs d\'une unité locative existante.'
     )]
-    #[OA\RequestBody(content: new OA\JsonContent(ref: new Model(type: UnitRequest::class, groups: ['update'])))]
+    #[OA\RequestBody(content: new OA\JsonContent(ref: new Model(type: UnitRequest::class)))]
     #[OA\Response(
         response: 200,
         description: 'Unité locative mise à jour',

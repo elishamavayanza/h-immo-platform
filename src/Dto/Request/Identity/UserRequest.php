@@ -81,9 +81,9 @@ final readonly class UserRequest
         public ?string $profilePhoto = null,
 
         #[OA\Property(
-            description: 'Rôle au niveau global de la plateforme',
+            description: 'Rôle au niveau global de la plateforme. Seul `super_admin` existe, et il est réservé à la plateforme : laisser `null` pour un compte d\'organisation.',
             type: 'string',
-            example: 'ROLE_USER',
+            example: null,
             nullable: true,
             enum: PlatformRole::class
         )]
