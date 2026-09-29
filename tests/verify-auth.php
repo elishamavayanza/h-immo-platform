@@ -19,6 +19,7 @@ declare(strict_types=1);
  */
 
 use App\Entity\Identity\User;
+use App\Entity\System\AuditLog;
 use Symfony\Component\DependencyInjection\Compiler\CompilerPassInterface;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
 use Symfony\Component\HttpFoundation\Request;
@@ -298,6 +299,15 @@ $em->clear();
 $stale = $repository->findOneBy(['email' => $email]);
 
 if ($stale instanceof User) {
+    // Les connections, deconnexions et tentatives de ce script ont ecrit des
+    // lignes de journal qui referencent l'utilisateur : sans ces DELETE, la
+    // suppression viole la contrainte audit_log.user_id -> user.id (1451) et
+    // le script s'arrete en erreur fatale au lieu de rendre la main.
+    foreach ([AuditLog::class] as $dependent) {
+        $em->createQuery('DELETE FROM ' . $dependent . ' d WHERE d.user = :user')
+            ->setParameter('user', $stale)
+            ->execute();
+    }
     $em->remove($stale);
     $em->flush();
 }

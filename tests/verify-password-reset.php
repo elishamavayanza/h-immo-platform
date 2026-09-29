@@ -25,6 +25,7 @@ declare(strict_types=1);
 
 use App\Entity\Identity\PasswordResetToken;
 use App\Entity\Identity\User;
+use App\Entity\System\AuditLog;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\DependencyInjection\Compiler\CompilerPassInterface;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
@@ -34,6 +35,14 @@ ob_start();
 
 require dirname(__DIR__) . '/vendor/autoload.php';
 (new Symfony\Component\Dotenv\Dotenv())->bootEnv(dirname(__DIR__) . '/.env');
+
+// `.env.local` pointe en general vers un maildev local (smtp://127.0.0.1:1025)
+// qui n'existe pas en CI ni sur un poste de dev sans conteneur : le transport
+// est neutralise pour que le script valide la logique metier (jeton, delai,
+// reponse generique) et non la disponibilite d'un serveur SMTP. On ecrase donc
+// le DSN *apres* bootEnv(), qui vient de charger .env.local.
+$_ENV['MAILER_DSN'] = $_SERVER['MAILER_DSN'] = 'null://null';
+putenv('MAILER_DSN=null://null');
 
 final class PasswordResetKernel extends App\Kernel
 {
@@ -134,6 +143,12 @@ $cleanup = static function () use ($em, $repository, $email): void {
 
     if ($user instanceof User) {
         $em->createQuery('DELETE FROM ' . PasswordResetToken::class . ' t WHERE t.user = :user')
+            ->setParameter('user', $user)
+            ->execute();
+        // Le journal d'audit référence l'utilisateur : sans ce DELETE, la
+        // suppression du compte viole la contrainte de clé étrangère
+        // audit_log.user_id -> user.id (1451) et le script s'arrête en 255.
+        $em->createQuery('DELETE FROM ' . AuditLog::class . ' a WHERE a.user = :user')
             ->setParameter('user', $user)
             ->execute();
         $em->remove($user);
