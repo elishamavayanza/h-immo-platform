@@ -610,6 +610,12 @@ final class SecurityService implements SecurityServiceInterface
      * Un Lease cumule deux portées : l'Organization (colonne dédiée) et,
      * transitivement, la ville de l'unité louée. Un ADMIN_VILLE ne peut
      * donc voir que les baux dont l'unité est dans une de SES villes.
+     *
+     * Le rôle est résolu dans l'Organization DU BAIL, jamais globalement :
+     * un utilisateur PATRON de l'organization A et ADMIN_VILLE de B doit
+     * conserver sur A la latitude d'un patron. `isAdminVille()` parcourt
+     * toutes les organisations et reviendrait à lui appliquer ici la
+     * restriction prévue pour B.
      */
     public function checkLeaseAccess(Lease $lease, SecurityAction $action): void
     {
@@ -617,9 +623,10 @@ final class SecurityService implements SecurityServiceInterface
             return;
         }
 
-        $this->checkOrganizationAccess($lease->getOrganization(), $action);
+        $organization = $lease->getOrganization();
+        $this->checkOrganizationAccess($organization, $action);
 
-        if ($this->isAdminVille()) {
+        if ($this->getOrganizationRole($this->getCurrentUser(), $organization) === OrganizationRole::ADMIN_VILLE) {
             $city = $lease->getUnit()->getBuilding()->getParcel()->getCity();
 
             if (!$this->isCityAllowed($this->getCurrentUser(), $city)) {
@@ -687,6 +694,10 @@ final class SecurityService implements SecurityServiceInterface
      * travailleur, faute de quoi il managingerait une personne relevant de
      * toute l'Organization. Il intervient sur ses effectifs par
      * WorkerAssignment, dont la ville est connue.
+     *
+     * Cette restriction ne vaut que si l'appelant est ADMIN_VILLE DANS
+     * L'ORGANIZATION DU TRAVAILLEUR : un PATRON de A et ADMIN_VILLE de B
+     * gère normalement le personnel de A.
      */
     public function checkWorkerAccess(Worker $worker, SecurityAction $action): void
     {
@@ -694,9 +705,10 @@ final class SecurityService implements SecurityServiceInterface
             return;
         }
 
-        $this->checkOrganizationAccess($worker->getOrganization(), $action);
+        $organization = $worker->getOrganization();
+        $this->checkOrganizationAccess($organization, $action);
 
-        if ($this->isAdminVille()) {
+        if ($this->getOrganizationRole($this->getCurrentUser(), $organization) === OrganizationRole::ADMIN_VILLE) {
             throw new AccessDeniedException(
                 'Accès refusé : la gestion du personnel s\'effectue par affectation à une ville, '
                 . 'la fiche du travailleur n\'étant pas rattachée à une ville.'

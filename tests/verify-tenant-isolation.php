@@ -366,6 +366,35 @@ $em->persist($rentA);
 
 $em->flush();
 
+// -------------------------------------------------------------------------
+// Cas multi-rôles : PATRON dans A, ADMIN_VILLE (une seule ville) dans B.
+// C'est le cas qui distingue une résolution de rôle « dans l'organization de
+// la ressource » d'un prédicat global `isAdminVille()` : ce dernier trouve un
+// rôle quelque part et applique à tort la restriction de B sur A.
+// -------------------------------------------------------------------------
+$patronEtAdminVille = $makeUser('mixte.a-b@orga.test', 'Patron A / Admin Ville B', null);
+$membership($patronEtAdminVille, $orgA, OrganizationRole::PATRON);
+$membership($patronEtAdminVille, $orgB, OrganizationRole::ADMIN_VILLE);
+
+$userCityMixte = new \App\Entity\Identity\UserCity();
+$userCityMixte->setUser($patronEtAdminVille);
+$userCityMixte->setCity($cityB1);
+$em->persist($userCityMixte);
+
+$workerA = new \App\Entity\Staff\Worker();
+$workerA->setFullName('Travailleur A');
+$workerA->setPhone('+000');
+$workerA->setOrganization($orgA);
+$em->persist($workerA);
+
+$workerB = new \App\Entity\Staff\Worker();
+$workerB->setFullName('Travailleur B');
+$workerB->setPhone('+000');
+$workerB->setOrganization($orgB);
+$em->persist($workerB);
+
+$em->flush();
+
 echo "  Jeu de données créé.\n";
 
 // ---------------------------------------------------------------------
@@ -771,6 +800,75 @@ try {
     );
 } catch (\Throwable $e) {
     check('SUPER_ADMIN : périmètre plateforme complet', false, $e->getMessage());
+}
+
+$tokenStorage->setToken(null);
+
+// ---------------------------------------------------------------------
+// P2-1 résiduel : le rôle se résout dans l'Organization de la ressource
+// ---------------------------------------------------------------------
+section('P2-1 : rôle résolu dans l\'Organization de la ressource (bail, personnel)');
+
+$tokenMixte = new \Symfony\Component\Security\Core\Authentication\Token\UsernamePasswordToken(
+    $patronEtAdminVille,
+    'main',
+    $patronEtAdminVille->getRoles()
+);
+
+$tokenStorage->setToken($tokenMixte);
+
+try {
+    $security->checkLeaseAccess($leaseA, \App\Security\SecurityAction::VIEW_LEASE);
+    check(
+        'PATRON de A + ADMIN_VILLE de B : accès au bail de A (non restreint par le rôle de B)',
+        true
+    );
+} catch (\Throwable $e) {
+    check(
+        'PATRON de A + ADMIN_VILLE de B : accès au bail de A (non restreint par le rôle de B)',
+        false,
+        get_class($e) . ': ' . $e->getMessage()
+    );
+}
+
+try {
+    $security->checkWorkerAccess($workerA, \App\Security\SecurityAction::VIEW_WORKER);
+    check(
+        'PATRON de A + ADMIN_VILLE de B : accès au personnel de A (non restreint par le rôle de B)',
+        true
+    );
+} catch (\Throwable $e) {
+    check(
+        'PATRON de A + ADMIN_VILLE de B : accès au personnel de A (non restreint par le rôle de B)',
+        false,
+        get_class($e) . ': ' . $e->getMessage()
+    );
+}
+
+try {
+    // En B il est bien ADMIN_VILLE, et B1 lui est attribuée : le bail de B
+    // reste lisible. La correction ne doit pas inverser la matrice de rôles.
+    $security->checkLeaseAccess($leaseB, \App\Security\SecurityAction::VIEW_LEASE);
+    check('PATRON de A + ADMIN_VILLE de B : le bail de B reste lisible (B1 lui est attribuée)', true);
+} catch (\Throwable $e) {
+    check(
+        'PATRON de A + ADMIN_VILLE de B : le bail de B reste lisible (B1 lui est attribuée)',
+        false,
+        get_class($e) . ': ' . $e->getMessage()
+    );
+}
+
+try {
+    $security->checkWorkerAccess($workerB, \App\Security\SecurityAction::VIEW_WORKER);
+    check('PATRON de A + ADMIN_VILLE de B : le personnel de B reste refusé', false, 'aucune exception levée');
+} catch (\App\Exception\AccessDeniedException) {
+    check('PATRON de A + ADMIN_VILLE de B : le personnel de B reste refusé', true);
+} catch (\Throwable $e) {
+    check(
+        'PATRON de A + ADMIN_VILLE de B : le personnel de B reste refusé',
+        false,
+        get_class($e) . ': ' . $e->getMessage()
+    );
 }
 
 $tokenStorage->setToken(null);
