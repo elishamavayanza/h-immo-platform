@@ -9,6 +9,7 @@ use App\Entity\Rental\Rent;
 use App\Enum\LeaseStatus;
 use App\Repository\Rental\LeaseRepository;
 use App\Repository\Rental\RentRepository;
+use App\Service\System\DateTimeService;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
@@ -44,7 +45,8 @@ final class GenerateRentsCommand extends Command
     public function __construct(
         private LeaseRepository $leaseRepository,
         private RentRepository $rentRepository,
-        private EntityManagerInterface $em
+        private EntityManagerInterface $em,
+        private DateTimeService $dateTime,
     ) {
         parent::__construct();
     }
@@ -99,16 +101,18 @@ HELP);
         // Date de fin : mois courant par défaut
         $endDateStr = $input->getOption('end-date');
         if ($endDateStr !== null) {
-            try {
-                $endDate = new \DateTimeImmutable($endDateStr);
-                // Normaliser au 1er du mois
-                $endDate = $endDate->modify('first day of this month');
-            } catch (\Throwable) {
+            // Parsing strict : `--end-date=2026-13-45` ou `2026-3-5` est
+            // refusé explicitement au lieu d'être normalisé silencieusement.
+            $endDate = $this->dateTime->parseDate((string) $endDateStr);
+            if ($endDate === null) {
                 $io->error('Format de date invalide pour --end-date. Attendu : Y-m-d (ex: 2026-12-01).');
                 return Command::FAILURE;
             }
+
+            // Normaliser au 1er du mois
+            $endDate = $endDate->modify('first day of this month');
         } else {
-            $endDate = new \DateTimeImmutable('first day of this month');
+            $endDate = $this->dateTime->now()->modify('first day of this month');
         }
 
         $leaseUuid = $input->getOption('lease');

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\EventListener;
 
 use App\Entity\Identity\User;
+use App\Service\System\DateTimeService;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\EventDispatcher\EventSubscriberInterface;
 use Symfony\Component\Security\Http\Event\LoginSuccessEvent;
@@ -31,6 +32,7 @@ final class LastLoginSubscriber implements EventSubscriberInterface
 {
     public function __construct(
         private readonly EntityManagerInterface $entityManager,
+        private readonly DateTimeService $dateTime,
     ) {
     }
 
@@ -49,7 +51,7 @@ final class LastLoginSubscriber implements EventSubscriberInterface
             return;
         }
 
-        $user->setLastLoginAt(new \DateTimeImmutable());
+        $user->setLastLoginAt($this->dateTime->now());
         $this->entityManager->flush();
     }
 }

@@ -8,6 +8,7 @@ use App\Entity\Identity\PasswordResetToken;
 use App\Entity\Identity\User;
 use DateTimeImmutable;
 use App\Repository\UuidParameterTrait;
+use App\Service\System\DateTimeService;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\Persistence\ManagerRegistry;
 
@@ -27,7 +28,7 @@ use Doctrine\Persistence\ManagerRegistry;
 class PasswordResetTokenRepository extends ServiceEntityRepository
 {
     use UuidParameterTrait;
-    public function __construct(ManagerRegistry $registry)
+    public function __construct(ManagerRegistry $registry, private readonly DateTimeService $dateTime)
     {
         parent::__construct($registry, PasswordResetToken::class);
     }
@@ -51,7 +52,7 @@ class PasswordResetTokenRepository extends ServiceEntityRepository
      */
     public function findUsableByTokenHash(string $tokenHash, ?DateTimeImmutable $now = null): ?PasswordResetToken
     {
-        $now ??= new DateTimeImmutable();
+        $now ??= $this->dateTime->now();
 
         return $this->createQueryBuilder('t')
             ->andWhere('t.tokenHash = :tokenHash')
@@ -72,7 +73,7 @@ class PasswordResetTokenRepository extends ServiceEntityRepository
      */
     public function consumeAllForUser(User $user, ?DateTimeImmutable $now = null): int
     {
-        $now ??= new DateTimeImmutable();
+        $now ??= $this->dateTime->now();
 
         return (int) $this->createQueryBuilder('t')
             ->update()
@@ -93,7 +94,7 @@ class PasswordResetTokenRepository extends ServiceEntityRepository
      */
     public function purgeConsumedAndExpired(?DateTimeImmutable $now = null): int
     {
-        $now ??= new DateTimeImmutable();
+        $now ??= $this->dateTime->now();
 
         return (int) $this->createQueryBuilder('t')
             ->delete()

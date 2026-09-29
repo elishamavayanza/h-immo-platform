@@ -50,6 +50,7 @@ final readonly class FileUploadService
         private string $uploadsDir,
         private SluggerInterface $slugger,
         private string $baseUrl = '/uploads',
+        private readonly DateTimeService $dateTime,
     ) {
         // Créer les sous-dossiers s'ils n'existent pas
         $subdirs = ['users', 'organizations', 'parcels', 'buildings', 'units'];
@@ -82,7 +83,7 @@ final readonly class FileUploadService
         $originalName = pathinfo($file->getClientOriginalName(), PATHINFO_FILENAME);
         $safeName = $this->slugger->slug($originalName)->lower();
         $extension = strtolower($file->guessExtension() ?? 'bin');
-        $timestamp = (new \DateTimeImmutable())->format('YmdHis');
+        $timestamp = $this->dateTime->now()->format('YmdHis');
         $random = bin2hex(random_bytes(8));
         $filename = sprintf('%s_%s_%s.%s', $safeName, $timestamp, $random, $extension);
 

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Repository\Identity;
 
 use App\Entity\Identity\RevokedToken;
+use App\Service\System\DateTimeService;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\Persistence\ManagerRegistry;
 
@@ -15,7 +16,7 @@ use Doctrine\Persistence\ManagerRegistry;
  */
 class RevokedTokenRepository extends ServiceEntityRepository
 {
-    public function __construct(ManagerRegistry $registry)
+    public function __construct(ManagerRegistry $registry, private readonly DateTimeService $dateTime)
     {
         parent::__construct($registry, RevokedToken::class);
     }
@@ -65,7 +66,7 @@ class RevokedTokenRepository extends ServiceEntityRepository
         return (int) $this->createQueryBuilder('r')
             ->delete()
             ->andWhere('r.expiresAt < :now')
-            ->setParameter('now', new \DateTimeImmutable())
+            ->setParameter('now', $this->dateTime->now())
             ->getQuery()
             ->execute();
     }

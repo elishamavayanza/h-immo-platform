@@ -21,6 +21,7 @@ use App\Repository\Rental\TenantRepository;
 use App\Security\SecurityAction;
 use App\Security\SecurityServiceInterface;
 use App\Service\System\AuditLogService;
+use App\Service\System\DateTimeService;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\Uid\Uuid;
 use Symfony\Component\Validator\Validator\ValidatorInterface;
@@ -47,7 +48,8 @@ final readonly class LeaseService
         private SecurityServiceInterface $securityService,
         private EntityManagerInterface $entityManager,
         private ValidatorInterface $validator,
-        private AuditLogService $auditLogService
+        private AuditLogService $auditLogService,
+        private DateTimeService $dateTime,
     ) {
     }
 
@@ -110,7 +112,7 @@ final readonly class LeaseService
             oldValues: null,
             newValues: [
                 'reference' => $lease->getReference(),
-                'startDate' => $lease->getStartDate()->format('Y-m-d'),
+                'startDate' => $this->dateTime->format($lease->getStartDate(), 'Y-m-d'),
                 'endDate' => $lease->getEndDate()?->format('Y-m-d'),
                 'monthlyRent' => $lease->getMonthlyRent(),
                 'currency' => $lease->getCurrency()->value,
@@ -197,7 +199,7 @@ final readonly class LeaseService
             oldValues: null, // Pourrait être enrichi avec les valeurs avant modification
             newValues: [
                 'reference' => $lease->getReference(),
-                'startDate' => $lease->getStartDate()->format('Y-m-d'),
+                'startDate' => $this->dateTime->format($lease->getStartDate(), 'Y-m-d'),
                 'endDate' => $lease->getEndDate()?->format('Y-m-d'),
                 'monthlyRent' => $lease->getMonthlyRent(),
                 'currency' => $lease->getCurrency()->value,
@@ -253,7 +255,7 @@ final readonly class LeaseService
         }
 
         $lease->setStatus(LeaseStatus::TERMINATED);
-        $lease->setTerminationDate(new \DateTimeImmutable());
+        $lease->setTerminationDate($this->dateTime->now());
         $lease->setTerminationReason($reason !== '' ? $reason : null);
 
         $this->entityManager->flush();
@@ -270,7 +272,7 @@ final readonly class LeaseService
             ],
             newValues: [
                 'status' => 'TERMINATED',
-                'terminationDate' => $lease->getTerminationDate()->format('Y-m-d'),
+                'terminationDate' => $this->dateTime->format($lease->getTerminationDate(), 'Y-m-d'),
                 'terminationReason' => $lease->getTerminationReason(),
             ],
         );
@@ -551,7 +553,7 @@ final readonly class LeaseService
         }
 
         $lease->setStatus(LeaseStatus::CANCELLED);
-        $lease->setTerminationDate(new \DateTimeImmutable());
+        $lease->setTerminationDate($this->dateTime->now());
         $lease->setTerminationReason($reason !== '' ? $reason : null);
 
         $this->entityManager->flush();
@@ -568,7 +570,7 @@ final readonly class LeaseService
             ],
             newValues: [
                 'status' => 'CANCELLED',
-                'terminationDate' => $lease->getTerminationDate()->format('Y-m-d'),
+                'terminationDate' => $this->dateTime->format($lease->getTerminationDate(), 'Y-m-d'),
                 'terminationReason' => $lease->getTerminationReason(),
             ],
         );

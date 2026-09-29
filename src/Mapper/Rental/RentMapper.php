@@ -7,6 +7,7 @@ namespace App\Mapper\Rental;
 use App\Dto\Request\Rental\RentRequest;
 use App\Dto\Response\Rental\RentResponse;
 use App\Entity\Rental\Rent;
+use App\Service\System\DateTimeService;
 
 /**
  * RentMapper
@@ -19,6 +20,11 @@ use App\Entity\Rental\Rent;
  */
 final class RentMapper
 {
+    public function __construct(
+        private readonly DateTimeService $dateTime,
+    ) {
+    }
+
     public function copyToEntity(RentRequest $request, Rent $rent): Rent
     {
         if ($request->period !== null) {
@@ -54,6 +60,6 @@ final class RentMapper
      */
     public function toResponse(Rent $rent): RentResponse
     {
-        return RentResponse::fromEntity($rent);
+        return RentResponse::fromEntity($rent, null, $this->dateTime->today());
     }
 }

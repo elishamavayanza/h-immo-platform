@@ -9,6 +9,7 @@ use App\Entity\Rental\Lease;
 use App\Entity\Rental\Rent;
 use App\Repository\PaginatedResultTrait;
 use App\Repository\UuidParameterTrait;
+use App\Service\System\DateTimeService;
 use App\Enum\LeaseStatus;
 use App\Enum\RentStatus;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
@@ -28,7 +29,7 @@ class RentRepository extends ServiceEntityRepository
     use PaginatedResultTrait;
     use UuidParameterTrait;
 
-    public function __construct(ManagerRegistry $registry)
+    public function __construct(ManagerRegistry $registry, private readonly DateTimeService $dateTime)
     {
         parent::__construct($registry, Rent::class);
     }
@@ -114,7 +115,7 @@ class RentRepository extends ServiceEntityRepository
         $sortBy = in_array($sortBy, $allowedSortFields, true) ? $sortBy : 'dueDate';
         $sortOrder = strtoupper($sortOrder) === 'ASC' ? 'ASC' : 'DESC';
 
-        $today = new \DateTimeImmutable('today');
+        $today = $this->dateTime->today();
 
         $qb = $this->createQueryBuilder('r')
             ->innerJoin('r.lease', 'l')
@@ -155,7 +156,7 @@ class RentRepository extends ServiceEntityRepository
             ->andWhere('r.dueDate < :today')
             ->andWhere('r.status IN (:openStatuses)')
             ->setParameter('organization', $organization)
-            ->setParameter('today', new \DateTimeImmutable('today'))
+            ->setParameter('today', $this->dateTime->today())
             ->setParameter('openStatuses', [RentStatus::PENDING, RentStatus::PARTIALLY_PAID, RentStatus::OVERDUE])
             ->orderBy('r.dueDate', 'ASC')
             ->getQuery()

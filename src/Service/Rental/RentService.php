@@ -19,6 +19,7 @@ use App\Repository\Rental\RentRepository;
 use App\Security\SecurityAction;
 use App\Security\SecurityServiceInterface;
 use App\Service\System\AuditLogService;
+use App\Service\System\DateTimeService;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\Uid\Uuid;
 use Symfony\Component\Validator\Validator\ValidatorInterface;
@@ -46,7 +47,8 @@ final readonly class RentService
         private SecurityServiceInterface $securityService,
         private EntityManagerInterface $entityManager,
         private ValidatorInterface $validator,
-        private AuditLogService $auditLogService
+        private AuditLogService $auditLogService,
+        private DateTimeService $dateTime,
     ) {
     }
 
@@ -97,8 +99,8 @@ final readonly class RentService
             user: $currentUser,
             oldValues: null,
             newValues: [
-                'period' => $rent->getPeriod()->format('Y-m-d'),
-                'dueDate' => $rent->getDueDate()->format('Y-m-d'),
+                'period' => $this->dateTime->format($rent->getPeriod(), 'Y-m-d'),
+                'dueDate' => $this->dateTime->format($rent->getDueDate(), 'Y-m-d'),
                 'amount' => $rent->getAmount(),
                 'currency' => $rent->getCurrency()->value,
                 'leaseUuid' => $rent->getLease()->getUuid()->toRfc4122(),
@@ -171,8 +173,8 @@ final readonly class RentService
             user: $currentUser,
             oldValues: null,
             newValues: [
-                'period' => $rent->getPeriod()->format('Y-m-d'),
-                'dueDate' => $rent->getDueDate()->format('Y-m-d'),
+                'period' => $this->dateTime->format($rent->getPeriod(), 'Y-m-d'),
+                'dueDate' => $this->dateTime->format($rent->getDueDate(), 'Y-m-d'),
                 'amount' => $rent->getAmount(),
                 'currency' => $rent->getCurrency()->value,
             ],

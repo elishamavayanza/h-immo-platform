@@ -26,6 +26,7 @@ use App\Repository\Staff\WorkerRepository;
 use App\Security\SecurityAction;
 use App\Security\SecurityServiceInterface;
 use App\Service\System\AuditLogService;
+use App\Service\System\DateTimeService;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\Uid\Uuid;
 use Symfony\Component\Validator\Validator\ValidatorInterface;
@@ -59,7 +60,8 @@ final readonly class ExpenseService
         private SecurityServiceInterface $securityService,
         private EntityManagerInterface $entityManager,
         private ValidatorInterface $validator,
-        private AuditLogService $auditLogService
+        private AuditLogService $auditLogService,
+        private DateTimeService $dateTime,
     ) {
     }
 
@@ -157,7 +159,7 @@ final readonly class ExpenseService
                 'category' => $expense->getCategory()->value,
                 'amount' => $expense->getAmount(),
                 'currency' => $expense->getCurrency()->value,
-                'expenseDate' => $expense->getExpenseDate()->format('Y-m-d'),
+                'expenseDate' => $this->dateTime->format($expense->getExpenseDate(), 'Y-m-d'),
                 'cityUuid' => $city->getUuid()->toRfc4122(),
                 'reference' => $expense->getReference(),
             ],
@@ -283,7 +285,7 @@ final readonly class ExpenseService
                 'category' => $expense->getCategory()->value,
                 'amount' => $expense->getAmount(),
                 'currency' => $expense->getCurrency()->value,
-                'expenseDate' => $expense->getExpenseDate()->format('Y-m-d'),
+                'expenseDate' => $this->dateTime->format($expense->getExpenseDate(), 'Y-m-d'),
             ],
         );
 
@@ -383,7 +385,7 @@ final readonly class ExpenseService
         $cancellation->setCategory(ExpenseCategory::OTHER);
         $cancellation->setAmount($expense->getAmount());
         $cancellation->setCurrency($expense->getCurrency());
-        $cancellation->setExpenseDate(new \DateTimeImmutable());
+        $cancellation->setExpenseDate($this->dateTime->now());
         $cancellation->setReference('ANNUL-' . $expense->getReference());
         $cancellation->setNotes("Annulation de la dépense {$expense->getReference()} : {$reason}");
 

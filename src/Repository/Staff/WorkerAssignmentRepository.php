@@ -9,6 +9,7 @@ use App\Entity\Property\Parcel;
 use App\Entity\Property\Building;
 use App\Entity\Property\Unit;
 use App\Entity\Staff\WorkerAssignment;
+use App\Service\System\DateTimeService;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\Persistence\ManagerRegistry;
 use Symfony\Component\Uid\Uuid;
@@ -20,7 +21,7 @@ use Symfony\Component\Uid\Uuid;
  */
 final class WorkerAssignmentRepository extends ServiceEntityRepository
 {
-    public function __construct(ManagerRegistry $registry)
+    public function __construct(ManagerRegistry $registry, private readonly DateTimeService $dateTime)
     {
         parent::__construct($registry, WorkerAssignment::class);
     }
@@ -54,7 +55,7 @@ final class WorkerAssignmentRepository extends ServiceEntityRepository
 
     public function findByCity(City $city, ?\DateTimeImmutable $asOfDate = null): array
     {
-        $date = $asOfDate ?? new \DateTimeImmutable();
+        $date = $asOfDate ?? $this->dateTime->now();
 
         return $this->createQueryBuilder('wa')
             ->andWhere('wa.city = :city')
@@ -78,7 +79,7 @@ final class WorkerAssignmentRepository extends ServiceEntityRepository
 
     public function findByParcel(Parcel $parcel, ?\DateTimeImmutable $asOfDate = null): array
     {
-        $date = $asOfDate ?? new \DateTimeImmutable();
+        $date = $asOfDate ?? $this->dateTime->now();
 
         return $this->createQueryBuilder('wa')
             ->andWhere('wa.parcel = :parcel')
@@ -92,7 +93,7 @@ final class WorkerAssignmentRepository extends ServiceEntityRepository
 
     public function findByBuilding(Building $building, ?\DateTimeImmutable $asOfDate = null): array
     {
-        $date = $asOfDate ?? new \DateTimeImmutable();
+        $date = $asOfDate ?? $this->dateTime->now();
 
         return $this->createQueryBuilder('wa')
             ->andWhere('wa.building = :building')
@@ -106,7 +107,7 @@ final class WorkerAssignmentRepository extends ServiceEntityRepository
 
     public function findByUnit(Unit $unit, ?\DateTimeImmutable $asOfDate = null): array
     {
-        $date = $asOfDate ?? new \DateTimeImmutable();
+        $date = $asOfDate ?? $this->dateTime->now();
 
         return $this->createQueryBuilder('wa')
             ->andWhere('wa.unit = :unit')
@@ -127,7 +128,7 @@ final class WorkerAssignmentRepository extends ServiceEntityRepository
             return [];
         }
 
-        $date = $asOfDate ?? new \DateTimeImmutable();
+        $date = $asOfDate ?? $this->dateTime->now();
 
         return $this->createQueryBuilder('wa')
             ->andWhere('wa.city IN (:cities)')
@@ -157,7 +158,7 @@ final class WorkerAssignmentRepository extends ServiceEntityRepository
             ->setParameter('worker', $worker)
             ->setParameter('city', $city)
             ->setParameter('startCheck', $startDate)
-            ->setParameter('endCheck', $endDate ?? new \DateTimeImmutable('+100 years'));
+            ->setParameter('endCheck', $endDate ?? $this->dateTime->now()->modify('+100 years'));
 
         if ($exclude !== null) {
             $qb->andWhere('wa.uuid <> :excludeUuid')

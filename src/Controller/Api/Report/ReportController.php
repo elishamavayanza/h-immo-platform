@@ -22,6 +22,7 @@ use App\Repository\Identity\OrganizationRepository;
 use App\Security\SecurityServiceInterface;
 use App\Security\SecurityAction;
 use App\Service\Report\ReportService;
+use App\Service\System\DateTimeService;
 use App\Trait\FeedbackTrait;
 use Nelmio\ApiDocBundle\Attribute\Model;
 use OpenApi\Attributes as OA;
@@ -70,6 +71,7 @@ final class ReportController extends AbstractController
         private readonly ReportService $reportService,
         private readonly OrganizationRepository $organizationRepository,
         private readonly SecurityServiceInterface $securityService,
+        private readonly DateTimeService $dateTime,
     ) {
     }
 
@@ -388,7 +390,7 @@ final class ReportController extends AbstractController
             200,
             [
                 'Content-Type' => 'application/pdf',
-                'Content-Disposition' => 'attachment; filename="rapport-' . date('Y-m-d') . '.pdf"',
+                'Content-Disposition' => 'attachment; filename="rapport-' . $this->dateTime->format($this->dateTime->now(), 'Y-m-d') . '.pdf"',
             ]
         );
     }
