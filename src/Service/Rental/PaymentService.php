@@ -5,12 +5,15 @@ declare(strict_types=1);
 namespace App\Service\Rental;
 
 use App\Dto\Feedback;
+use App\Dto\Request\Rental\PaymentFilterDto;
 use App\Dto\Request\Rental\PaymentRequest;
 use App\Entity\Identity\User;
 use App\Entity\Rental\Payment;
 use App\Entity\Rental\Rent;
 use App\Enum\RentStatus;
 use App\Mapper\Rental\PaymentMapper;
+use App\Repository\Identity\OrganizationRepository;
+use App\Repository\Property\CityRepository;
 use App\Repository\Rental\PaymentRepository;
 use App\Repository\Rental\RentRepository;
 use App\Security\SecurityAction;
@@ -46,6 +49,8 @@ final readonly class PaymentService
     public function __construct(
         private PaymentRepository $paymentRepository,
         private RentRepository $rentRepository,
+        private CityRepository $cityRepository,
+        private OrganizationRepository $organizationRepository,
         private PaymentMapper $paymentMapper,
         private SecurityServiceInterface $securityService,
         private EntityManagerInterface $entityManager,
@@ -284,6 +289,20 @@ final readonly class PaymentService
             } catch (\InvalidArgumentException) {
                 $targetOrgIds = [];
             }
+        }
+
+        // Un tableau d'identifiants vide doit signifier « aucun résultat », et non
+        // « pas de filtre » : les repositories traitent `null` comme l'absence de
+        // filtre, mais un `[]` arrivait jusqu'à eux et était ignoré via !empty(),
+        // ce qui renvoyait les lignes des organisations du périmètre de l'appelant
+        // au lieu d'une liste vide. Sans ce retour early, un `organizationId`
+        // hors périmètre se comportait comme si le filtre n'avait pas été fourni.
+        if ($targetOrgIds === []) {
+            return $feedback
+                ->setData(['items' => [], 'total' => 0, 'page' => max(1, $filter->page), 'limit' => $filter->limit])
+                ->setFlushDescription('Aucune organisation accessible pour ce filtre.')
+                ->setStatus(200)
+                ->autoInitFlush();
         }
 
         $result = $this->paymentRepository->findPaginatedByOrganizationsAndCities(

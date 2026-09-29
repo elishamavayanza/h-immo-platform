@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Service\Rental;
 
 use App\Dto\Feedback;
+use App\Dto\Request\Rental\LeaseFilterDto;
 use App\Dto\Request\Rental\LeaseRequest;
 use App\Entity\Identity\User;
 use App\Entity\Property\Unit;
@@ -13,6 +14,7 @@ use App\Entity\Rental\Tenant;
 use App\Enum\LeaseStatus;
 use App\Mapper\Rental\LeaseMapper;
 use App\Repository\Identity\OrganizationRepository;
+use App\Repository\Property\CityRepository;
 use App\Repository\Property\UnitRepository;
 use App\Repository\Rental\LeaseRepository;
 use App\Repository\Rental\TenantRepository;
@@ -40,6 +42,7 @@ final readonly class LeaseService
         private OrganizationRepository $organizationRepository,
         private TenantRepository $tenantRepository,
         private UnitRepository $unitRepository,
+        private CityRepository $cityRepository,
         private LeaseMapper $leaseMapper,
         private SecurityServiceInterface $securityService,
         private EntityManagerInterface $entityManager,
@@ -333,6 +336,20 @@ final readonly class LeaseService
         // Note: ces filtres ne sont pas encore supportés par le repository,
         // ils sont appliqués en post-traitement pour l'instant.
         // TODO: les ajouter dans le repository pour éviter le sur-fetching.
+
+        // Un tableau d'identifiants vide doit signifier « aucun résultat », et non
+        // « pas de filtre » : les repositories traitent `null` comme l'absence de
+        // filtre, mais un `[]` arrivait jusqu'à eux et était ignoré via !empty(),
+        // ce qui renvoyait les lignes des organisations du périmètre de l'appelant
+        // au lieu d'une liste vide. Sans ce retour early, un `organizationId`
+        // hors périmètre se comportait comme si le filtre n'avait pas été fourni.
+        if ($targetOrgIds === []) {
+            return $feedback
+                ->setData(['items' => [], 'total' => 0, 'page' => max(1, $filter->page), 'limit' => $filter->limit])
+                ->setFlushDescription('Aucune organisation accessible pour ce filtre.')
+                ->setStatus(200)
+                ->autoInitFlush();
+        }
 
         $result = $this->leaseRepository->findPaginatedByOrganizationsAndCities(
             organizationIds: $targetOrgIds,
