@@ -19,6 +19,7 @@ declare(strict_types=1);
 
 use App\Command\CreateSuperAdminCommand;
 use App\Entity\Identity\User;
+use App\Entity\System\AuditLog;
 use App\Enum\PlatformRole;
 use Symfony\Bundle\FrameworkBundle\Console\Application;
 use Symfony\Component\Console\Tester\CommandTester;
@@ -303,6 +304,13 @@ foreach ([$email, $promoted->getEmail(), 'generated.test@plateforme.test'] as $a
     $toRemove = $repository->findOneBy(['email' => $address]);
 
     if ($toRemove instanceof User) {
+        // Les connexions et nominations de ce script ont écrit des lignes de
+        // journal qui référencent l'utilisateur : sans ce DELETE, la
+        // suppression viole audit_log.user_id -> user.id (1451) et le script
+        // s'arrête en erreur fatale au lieu de rendre la main.
+        $em->createQuery('DELETE FROM ' . AuditLog::class . ' a WHERE a.user = :user')
+            ->setParameter('user', $toRemove)
+            ->execute();
         $em->remove($toRemove);
     }
 }
