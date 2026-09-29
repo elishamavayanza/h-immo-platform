@@ -43,6 +43,15 @@ final readonly class RentResponse
         #[OA\Property(description: 'Devise monétaire', type: 'string', example: 'USD', enum: Currency::class)]
         public Currency $currency,
 
+        #[OA\Property(description: 'Taux de change si l\'échéance a été convertie. Null si pas de conversion.', example: '2900.00000000', nullable: true)]
+        public ?string $exchangeRate,
+
+        #[OA\Property(description: 'Montant original dans la devise de référence. Null si pas de conversion.', example: '450.00', nullable: true)]
+        public ?string $originalAmount,
+
+        #[OA\Property(description: 'Devise de référence originale. Null si pas de conversion.', type: 'string', example: 'USD', enum: Currency::class, nullable: true)]
+        public ?Currency $originalCurrency,
+
         #[OA\Property(description: 'Statut du loyer (PAID, PENDING, OVERDUE, PARTIALLY_PAID) — calculé à la volée', type: 'string', example: 'overdue', enum: RentStatus::class)]
         public RentStatus $status,
 
@@ -72,6 +81,9 @@ final readonly class RentResponse
             dueDate: $rent->getDueDate(),
             amount: $rent->getAmount(),
             currency: $rent->getCurrency(),
+            exchangeRate: $rent->getExchangeRate(),
+            originalAmount: $rent->getOriginalAmount(),
+            originalCurrency: $rent->getOriginalCurrency(),
             status: $rent->getComputedStatus($paidAmount, $today),
             isOverdue: $rent->isOverdue($paidAmount, $today),
             createdAt: $rent->getCreatedAt(),

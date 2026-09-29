@@ -33,6 +33,15 @@ final class ExpenseMapper
         if ($request->currency !== null) {
             $expense->setCurrency($request->currency);
         }
+        if ($request->exchangeRate !== null) {
+            $expense->setExchangeRate($request->exchangeRate);
+        }
+        if ($request->originalAmount !== null) {
+            $expense->setOriginalAmount($request->originalAmount);
+        }
+        if ($request->originalCurrency !== null) {
+            $expense->setOriginalCurrency($request->originalCurrency);
+        }
         if ($request->expenseDate !== null) {
             $expense->setExpenseDate($request->expenseDate);
         }

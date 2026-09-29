@@ -51,6 +51,29 @@ final readonly class PaymentRequest
         public ?Currency $currency = null,
 
         #[OA\Property(
+            description: 'Taux de change utilisé (1 devise_originale = X devise_paiement). Obligatoire si currency diffère de celle de l\'échéance.',
+            example: '2900.00000000',
+            nullable: true
+        )]
+        public ?string $exchangeRate = null,
+
+        #[OA\Property(
+            description: 'Montant original dans la devise d\'origine (si conversion).',
+            example: '100.00',
+            nullable: true
+        )]
+        public ?string $originalAmount = null,
+
+        #[OA\Property(
+            description: 'Devise d\'origine du montant (si conversion).',
+            type: 'string',
+            example: 'USD',
+            enum: Currency::class,
+            nullable: true
+        )]
+        public ?Currency $originalCurrency = null,
+
+        #[OA\Property(
             description: 'Date et heure de la transaction',
             format: 'date-time',
             example: '2026-09-05T14:30:00Z'

@@ -159,6 +159,9 @@ final readonly class ExpenseService
                 'category' => $expense->getCategory()->value,
                 'amount' => $expense->getAmount(),
                 'currency' => $expense->getCurrency()->value,
+                'exchangeRate' => $expense->getExchangeRate(),
+                'originalAmount' => $expense->getOriginalAmount(),
+                'originalCurrency' => $expense->getOriginalCurrency()?->value,
                 'expenseDate' => $this->dateTime->format($expense->getExpenseDate(), 'Y-m-d'),
                 'cityUuid' => $city->getUuid()->toRfc4122(),
                 'reference' => $expense->getReference(),
@@ -285,6 +288,9 @@ final readonly class ExpenseService
                 'category' => $expense->getCategory()->value,
                 'amount' => $expense->getAmount(),
                 'currency' => $expense->getCurrency()->value,
+                'exchangeRate' => $expense->getExchangeRate(),
+                'originalAmount' => $expense->getOriginalAmount(),
+                'originalCurrency' => $expense->getOriginalCurrency()?->value,
                 'expenseDate' => $this->dateTime->format($expense->getExpenseDate(), 'Y-m-d'),
             ],
         );
@@ -360,9 +366,10 @@ final readonly class ExpenseService
     /**
      * Annule une dépense par contre-écriture (traçabilité audit).
      *
-     * Crée une dépense opposée (même ville, même catégorie, montant négatif
-     * n'étant pas possible, on crée une dépense de catégorie OTHER avec
-     * montant positif et notes indiquant l'annulation).
+     * Crée une dépense de correction avec la MÊME catégorie que l'originale
+     * (pour préserver les agrégats par catégorie), même montant, même devise,
+     * même taux de change. Le montant n'est PAS négatif (DECIMAL unsigned),
+     * l'annulation est tracée par l'action CANCEL_EXPENSE et les notes.
      *
      * L'entité Expense n'est PAS supprimable (pas de soft delete).
      */
@@ -377,17 +384,20 @@ final readonly class ExpenseService
 
         $this->securityService->checkExpenseAccess($expense, SecurityAction::DELETE_EXPENSE);
 
-        // Créer la contre-écriture
+        // Créer la contre-écriture (même catégorie, même devise, même taux)
         $cancellation = new Expense();
         $cancellation->setOrganization($expense->getOrganization());
         $cancellation->setCity($expense->getCity());
         $cancellation->setCreatedBy($currentUser);
-        $cancellation->setCategory(ExpenseCategory::OTHER);
+        $cancellation->setCategory($expense->getCategory()); // MÊME catégorie
         $cancellation->setAmount($expense->getAmount());
         $cancellation->setCurrency($expense->getCurrency());
+        $cancellation->setExchangeRate($expense->getExchangeRate());
+        $cancellation->setOriginalAmount($expense->getOriginalAmount());
+        $cancellation->setOriginalCurrency($expense->getOriginalCurrency());
         $cancellation->setExpenseDate($this->dateTime->now());
         $cancellation->setReference('ANNUL-' . $expense->getReference());
-        $cancellation->setNotes("Annulation de la dépense {$expense->getReference()} : {$reason}");
+        $cancellation->setNotes("Annulation de la dépense {$expense->getReference()} (catégorie: {$expense->getCategory()->value}) : {$reason}");
 
         // Copier la cible et le worker si présents
         $cancellation->setParcel($expense->getParcel());
@@ -408,11 +418,17 @@ final readonly class ExpenseService
             oldValues: [
                 'category' => $expense->getCategory()->value,
                 'amount' => $expense->getAmount(),
+                'currency' => $expense->getCurrency()->value,
+                'exchangeRate' => $expense->getExchangeRate(),
+                'originalAmount' => $expense->getOriginalAmount(),
+                'originalCurrency' => $expense->getOriginalCurrency()?->value,
                 'reference' => $expense->getReference(),
             ],
             newValues: [
-                'category' => 'OTHER',
+                'category' => $cancellation->getCategory()->value, // même catégorie
                 'amount' => $cancellation->getAmount(),
+                'currency' => $cancellation->getCurrency()->value,
+                'exchangeRate' => $cancellation->getExchangeRate(),
                 'reference' => $cancellation->getReference(),
                 'notes' => $cancellation->getNotes(),
             ],

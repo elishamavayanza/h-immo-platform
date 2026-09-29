@@ -28,6 +28,15 @@ final class PaymentMapper
         if ($dto->currency !== null) {
             $payment->setCurrency($dto->currency);
         }
+        if ($dto->exchangeRate !== null) {
+            $payment->setExchangeRate($dto->exchangeRate);
+        }
+        if ($dto->originalAmount !== null) {
+            $payment->setOriginalAmount($dto->originalAmount);
+        }
+        if ($dto->originalCurrency !== null) {
+            $payment->setOriginalCurrency($dto->originalCurrency);
+        }
         if ($dto->paymentDate !== null) {
             $payment->setPaymentDate($dto->paymentDate);
         }

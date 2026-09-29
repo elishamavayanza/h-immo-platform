@@ -91,6 +91,19 @@ class Lease extends SoftDeletableEntity
     private Currency $currency;
 
     /**
+     * Taux de change de référence pour le bail (si différent de la devise de l'organisation).
+     * Permet de convertir les loyers/paiements vers la devise de référence.
+     */
+    #[ORM\Column(type: Types::DECIMAL, precision: 18, scale: 8, nullable: true)]
+    private ?string $exchangeRate = null;
+
+    /**
+     * Devise de référence pour la conversion (si exchangeRate non null).
+     */
+    #[ORM\Column(type: Types::STRING, enumType: Currency::class, nullable: true)]
+    private ?Currency $referenceCurrency = null;
+
+    /**
      * État actuel du contrat de bail.
      */
     #[ORM\Column(type: Types::STRING, enumType: LeaseStatus::class)]
@@ -228,6 +241,30 @@ class Lease extends SoftDeletableEntity
     public function setCurrency(Currency $currency): static
     {
         $this->currency = $currency;
+
+        return $this;
+    }
+
+    public function getExchangeRate(): ?string
+    {
+        return $this->exchangeRate;
+    }
+
+    public function setExchangeRate(?string $exchangeRate): static
+    {
+        $this->exchangeRate = $exchangeRate;
+
+        return $this;
+    }
+
+    public function getReferenceCurrency(): ?Currency
+    {
+        return $this->referenceCurrency;
+    }
+
+    public function setReferenceCurrency(?Currency $referenceCurrency): static
+    {
+        $this->referenceCurrency = $referenceCurrency;
 
         return $this;
     }

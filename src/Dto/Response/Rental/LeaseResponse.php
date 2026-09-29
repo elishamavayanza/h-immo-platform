@@ -51,6 +51,12 @@ final readonly class LeaseResponse
         #[OA\Property(description: 'Devise monétaire du bail', type: 'string', example: 'USD', enum: Currency::class)]
         public Currency $currency,
 
+        #[OA\Property(description: 'Taux de change de référence pour le bail. Null si pas de conversion.', example: '2900.00000000', nullable: true)]
+        public ?string $exchangeRate,
+
+        #[OA\Property(description: 'Devise de référence pour la conversion. Null si pas de conversion.', type: 'string', example: 'USD', enum: Currency::class, nullable: true)]
+        public ?Currency $referenceCurrency,
+
         #[OA\Property(description: 'Statut actuel du contrat de bail', type: 'string', example: 'active', enum: LeaseStatus::class)]
         public LeaseStatus $status,
 
@@ -87,6 +93,8 @@ final readonly class LeaseResponse
             monthlyRent: $lease->getMonthlyRent(),
             depositAmount: $lease->getDepositAmount(),
             currency: $lease->getCurrency(),
+            exchangeRate: $lease->getExchangeRate(),
+            referenceCurrency: $lease->getReferenceCurrency(),
             status: $lease->getStatus(),
             terminationDate: $lease->getTerminationDate(),
             terminationReason: $lease->getTerminationReason(),
