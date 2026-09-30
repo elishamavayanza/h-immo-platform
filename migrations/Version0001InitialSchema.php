@@ -12,11 +12,15 @@ use Doctrine\Migrations\AbstractMigration;
  *
  * Cette migration remplace les trois migrations supprimées lors du
  * squash : à elle seule, elle recrée les 17 tables métier. Elle est
- * volontairement antérieure à Version20260928120000, qui ajoute
+ * volontairement antérieure à Version0002RevokedToken, qui ajoute
  * `revoked_token`, pour que Doctrine les rejoue dans le bon ordre sur
  * une base vierge.
+ *
+ * Numérotation séquentielle (0001, 0002, …) et non horodatée : l'ordre
+ * d'application est ainsi lisible dans le nom du fichier, sans dépendre
+ * d'un tri alphabétique sur un timestamp.
  */
-final class Version20260928094835 extends AbstractMigration
+final class Version0001InitialSchema extends AbstractMigration
 {
     public function getDescription(): string
     {
