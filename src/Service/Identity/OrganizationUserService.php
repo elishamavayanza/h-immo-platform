@@ -12,6 +12,7 @@ use App\Entity\Identity\User;
 use App\Entity\Identity\UserCity;
 use App\Enum\OrganizationRole;
 use App\Mapper\Identity\OrganizationUserMapper;
+use App\Entity\Property\City;
 use App\Repository\Property\CityRepository;
 use App\Repository\Identity\OrganizationRepository;
 use App\Repository\Identity\OrganizationUserRepository;
@@ -392,41 +393,85 @@ final readonly class OrganizationUserService
             }
         }
 
-        // Créer l'utilisateur (sans mot de passe)
-        $user = new User();
-        $user->setEmail($email);
-        $user->setFullName($fullName);
-        $user->setPhone($phone);
-        $user->setIsActive(true);
-        $user->setPassword(''); // Sera défini via reset-password
-        $this->em->persist($user);
-        $this->em->flush();
+        // Créer l'utilisateur, son rôle et ses villes dans une seule
+        // transaction : avec des flushs intermédiaires, un échec sur
+        // l'étape suivante (contrainte d'unicité ville, erreur SQL)
+        // laissait un compte actif sans rôle, impossible à corriger
+        // depuis l'API.
+        $orgUser = null;
 
-        // Créer le lien OrganizationUser
-        $orgUser = new OrganizationUser();
-        $orgUser->setOrganization($this->em->getReference(Organization::class, $organization->getId()));
-        $orgUser->setUser($this->em->getReference(User::class, $user->getId()));
-        $orgUser->setRole($role);
-        $this->em->persist($orgUser);
-        $this->em->flush();
+        $this->em->wrapInTransaction(function () use ($organization, $role, $email, $fullName, $phone, $cities, &$orgUser): void {
+            $user = new User();
+            $user->setEmail($email);
+            $user->setFullName($fullName);
+            $user->setPhone($phone);
+            $user->setIsActive(true);
+            $user->setPassword(''); // Sera défini via reset-password
+            $this->em->persist($user);
 
-        // Pour ADMIN_VILLE, créer les UserCity
-        if ($role === OrganizationRole::ADMIN_VILLE) {
-            foreach ($cities as $city) {
-                $userCity = new UserCity();
-                $userCity->setUser($this->em->getReference(User::class, $user->getId()));
-                $userCity->setCity($this->em->getReference(City::class, $city->getId()));
-                $this->em->persist($userCity);
+            // Le lien direct suffit : sans flush intermédiaire, l'entité
+            // n'a pas d'id mais Doctrine la référence par son objet.
+            $orgUser = new OrganizationUser();
+            $orgUser->setOrganization($organization);
+            $orgUser->setUser($user);
+            $orgUser->setRole($role);
+            $this->em->persist($orgUser);
+
+            if ($role === OrganizationRole::ADMIN_VILLE) {
+                foreach ($cities as $city) {
+                    $userCity = new UserCity();
+                    $userCity->setUser($user);
+                    $userCity->setCity($city);
+                    $this->em->persist($userCity);
+                }
             }
-            $this->em->flush();
-        }
 
-        // Déclencher l'envoi de l'email de réinitialisation de mot de passe
-        $this->passwordResetService->requestReset($email);
+            $this->em->flush();
+        });
+
+        // L'envoi se fait APRÈS le commit : le mailer est un service
+        // externe, on ne veut pas qu'une panne SMTP annule la création
+        // déjà effectuée, ni qu'une transaction reste ouverte pendant
+        // l'échange réseau.
+        $emailSent = $this->passwordResetService->requestResetForNewUser($email);
+
+        $this->auditLogService->log(
+            action: 'CREATE_ADMIN',
+            entityType: OrganizationUser::class,
+            entityId: (int) $orgUser->getId(),
+            organization: $organization,
+            user: $currentUser,
+            oldValues: null,
+            newValues: [
+                'email' => $email,
+                'role' => $role->value,
+                'cityUuids' => array_map(
+                    static fn (City $city): string => $city->getUuid()->toRfc4122(),
+                    $cities
+                ),
+                // Trace si l'invitation est réellement partie : sans cet
+                // indicateur, le PATRON ne peut pas distinguer un email
+                // perdu d'une création complète.
+                'emailSent' => $emailSent,
+            ]
+        );
+
+        if (!$emailSent) {
+            return $feedback
+                ->setWarningFlushDescription(
+                    "L'administrateur {$role->value} a été créé, mais l'email de configuration du mot de passe n'a pas pu être envoyé. "
+                    .'Demandez à cet administrateur d\'utiliser « mot de passe oublié » pour définir son accès.'
+                )
+                ->addWarning('email', 'Email de configuration non envoyé.')
+                // `autoInitFlush()` doit précéder `setStatus()` : il écrase
+                // le statut à 200/422 selon la présence d'erreurs.
+                ->autoInitFlush()
+                ->setStatus(201);
+        }
 
         return $feedback
             ->setFlushDescription("L'administrateur {$role->value} a été créé. Un email de configuration du mot de passe a été envoyé.")
-            ->setStatus(201)
-            ->autoInitFlush();
+            ->autoInitFlush()
+            ->setStatus(201);
     }
 }

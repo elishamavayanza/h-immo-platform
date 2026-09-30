@@ -551,6 +551,7 @@ php tests/verify-api-token.php          # signature HS256, revendications, alté
 php tests/verify-api-doc.php            # génération OpenAPI
 php tests/verify-super-admin.php        # bootstrap SUPER_ADMIN
 php tests/verify-password-reset.php     # flux mot de passe oublié
+php tests/verify-admin-creation-email-failure.php # création compte + mailer en échec (201 + warning)
 php tests/verify-p0-security.php        # rapports, dépenses, médias, statuts
 php tests/verify-p0-7-list-endpoints.php # endpoints de liste rentals (200, pas de fuite)
 php tests/check-injected-dependencies.php # dépendances $this-> injectées (statique)
@@ -566,6 +567,16 @@ Règles :
   que l'appelant de A ne lit/écrit rien de B.
 - Un script de test ne doit jamais laisser de données : transaction annulée en
   sortie, y compris les lignes d'audit et les tokens révoqués.
+- **Un service externe dont l'échec est non bloquant ne doit jamais laisser
+  remonter son exception.** C'était le cas de `MailerInterface` dans
+  `PasswordResetService::sendResetEmail()` : l'appelait `createAdmin()` et
+  `OrganizationService::create()` *après* avoir commité le compte, si bien
+  qu'une panne SMTP renvoyait un 500 pour une création réussie. La règle :
+  « la persistance a réussi » et « la notification a réussi » sont deux
+  verdicts séparés — le premier est un `status` HTTP, le second un `warning`.
+  `requestReset()` (public) masque volontairement le résultat pour ne rien
+  révéler ; `requestResetForNewUser()` le rend aux appelants qui ont le droit
+  de savoir.
 - Contrôles d'intendance à passer avant de conclure :
 
 ```bash
@@ -754,6 +765,29 @@ que l'agent ne construise pas sur une prémisse fausse.
   comportement runtime est inchangé. Attention : retirer un `#[Groups]` doit
   coïncider avec le retrait du `validationGroups` du contrôleur, sinon le schéma
   redevient vide.
+- **D14 — `autoInitFlush()` écrase le statut HTTP.** `Feedback::autoInitFlush()`
+  fait `setStatus($this->isOk() ? 200 : 422)`. Tout appel de la forme
+  `->setStatus(201)->autoInitFlush()` renvoie donc **200**, et non 201, quel que
+  soit le nombre d'endpoints concernés (au moins une douzaine, d'`ExpenseService`
+  à `UserCityService`), alors que leurs schémas OpenAPI annoncent 201. Ce n'est
+  pas corrigé à ce jour : le correctif livré le fait pour `createAdmin()` et
+  `OrganizationService::create()` en inversant l'ordre
+  (`->autoInitFlush()->setStatus(201)`). **Corriger `Feedback` globalement
+  changerait le statut de toutes les créations de l'API** et demande sa propre
+  validation.
+- **D15 — Cas d'école du type non importé (§8) en production.**
+  `OrganizationUserService::createAdmin()` référençait `Organization::class`
+  sans importer la classe : dans le namespace `App\Service\Identity`, cela
+  résolvait vers `App\Service\Identity\Organization`, inexistante, et
+  `getReference()` levait un `MappingException`. L'endpoint `create-admin`
+  renvoyait donc **500 pour toute requête valide, sans jamais créer le compte,
+  le rôle, ni envoyer d'email**. Aucun test ne le couvrait, alors que
+  `createAdmin()` n'est pas un chemin marginal. Corrigé le 2026-09-30 en
+  liant directement les entités persistées (sans `getReference()`, inutile dès
+  qu'il n'y a plus de flush intermédiaire) et couvert par
+  `tests/verify-admin-creation-email-failure.php`. Le point à retenir : le
+  `500` observé était attribué au mailer dans le rapport initial, alors que la
+  cause réelle était antérieure et bloquait tout le chemin.
 
 ---
 

@@ -17,7 +17,7 @@ use App\Repository\Identity\OrganizationUserRepository;
 use App\Repository\Identity\UserRepository;
 use App\Security\SecurityAction;
 use App\Security\SecurityServiceInterface;
-use App\Service\Identity\PasswordResetService;
+use App\Service\System\AuditLogService;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\Validator\Validator\ValidatorInterface;
 
@@ -43,7 +43,8 @@ final readonly class OrganizationService
         private OrganizationMapper $mapper,
         private ValidatorInterface $validator,
         private SecurityServiceInterface $security,
-        private PasswordResetService $passwordResetService
+        private PasswordResetService $passwordResetService,
+        private AuditLogService $auditLogService
     ) {
     }
 
@@ -161,38 +162,74 @@ final readonly class OrganizationService
                 ->autoInitFlush();
         }
 
-        $organization = $this->mapper->copyToEntity($request, new Organization());
-        $this->em->persist($organization);
-        $this->em->flush();
+        $organization = null;
+        $patron = null;
+        $orgUser = null;
 
-        // Créer l'utilisateur PATRON
-        $patron = new User();
-        $patron->setEmail($request->patronEmail);
-        $patron->setFullName($request->patronFullName);
-        $patron->setPhone($request->patronPhone);
-        $patron->setIsActive(true);
-        // Le mot de passe sera défini via le flux "mot de passe oublié"
-        $patron->setPassword(''); // Sera mis à jour via reset-password
-        $this->em->persist($patron);
-        $this->em->flush();
+        // Transaction unique : le tenant, son PATRON et le rôle forment un
+        // tout. Trois flushs intermédiaires laissaient un tenant sans PATRON
+        // (donc inaccessible) si l'étape suivante échouait.
+        $this->em->wrapInTransaction(function () use ($request, &$organization, &$patron, &$orgUser): void {
+            $organization = $this->mapper->copyToEntity($request, new Organization());
+            $this->em->persist($organization);
 
-        // Créer le lien OrganizationUser avec rôle PATRON
-        $orgUser = new OrganizationUser();
-        $orgUser->setOrganization($organization);
-        $orgUser->setUser($patron);
-        $orgUser->setRole(OrganizationRole::PATRON);
-        $this->em->persist($orgUser);
-        $this->em->flush();
+            $patron = new User();
+            $patron->setEmail($request->patronEmail);
+            $patron->setFullName($request->patronFullName);
+            $patron->setPhone($request->patronPhone);
+            $patron->setIsActive(true);
+            // Le mot de passe sera défini via le flux "mot de passe oublié"
+            $patron->setPassword(''); // Sera mis à jour via reset-password
+            $this->em->persist($patron);
 
-        // Déclencher l'envoi de l'email de réinitialisation de mot de passe
-        // (le PATRON n'a pas de mot de passe, il doit en définir un via le lien)
-        $this->passwordResetService->requestReset($request->patronEmail);
+            $orgUser = new OrganizationUser();
+            $orgUser->setOrganization($organization);
+            $orgUser->setUser($patron);
+            $orgUser->setRole(OrganizationRole::PATRON);
+            $this->em->persist($orgUser);
 
-        return $feedback
-            ->setData($this->mapper->toResponse($organization))
+            $this->em->flush();
+        });
+
+        // L'envoi a lieu après le commit : une panne SMTP ne doit pas
+        // faire échouer la création d'un tenant, ni maintenir une
+        // transaction ouverte pendant l'échange réseau.
+        $emailSent = $this->passwordResetService->requestResetForNewUser($request->patronEmail);
+
+        $this->auditLogService->log(
+            action: 'CREATE_ORGANIZATION',
+            entityType: Organization::class,
+            entityId: (int) $organization->getId(),
+            organization: $organization,
+            user: null,
+            oldValues: null,
+            newValues: [
+                'name' => $request->name,
+                'code' => $request->code,
+                'patronEmail' => $request->patronEmail,
+                'emailSent' => $emailSent,
+            ]
+        );
+
+        $response = $feedback->setData($this->mapper->toResponse($organization));
+
+        if (!$emailSent) {
+            return $response
+                ->setWarningFlushDescription(
+                    'L\'organisation et son PATRON ont été créés, mais l\'email de configuration du mot de passe n\'a pas pu être envoyé. '
+                    .'Le PATRON doit utiliser « mot de passe oublié » pour définir son accès.'
+                )
+                ->addWarning('patronEmail', 'Email de configuration non envoyé.')
+                // `autoInitFlush()` doit précéder `setStatus()` : il écrase
+                // le statut à 200/422 selon la présence d'erreurs.
+                ->autoInitFlush()
+                ->setStatus(201);
+        }
+
+        return $response
             ->setFlushDescription('L\'organisation et son PATRON ont été créés. Un email de configuration du mot de passe a été envoyé au PATRON.')
-            ->setStatus(201)
-            ->autoInitFlush();
+            ->autoInitFlush()
+            ->setStatus(201);
     }
 
     /**

@@ -177,6 +177,10 @@ class Feedback implements \JsonSerializable
     /**
      * Génère automatiquement le titre du message (`flush`) et le code HTTP approprié
      * en fonction de la présence ou non d'erreurs.
+     *
+     * ATTENTION : cette méthode écrase le statut HTTP. Un
+     * `->setStatus(201)->autoInitFlush()` renvoie 200, pas 201. Pour un code
+     * de création, l'ordre correct est `->autoInitFlush()->setStatus(201)`.
      */
     public function autoInitFlush(): self
     {
