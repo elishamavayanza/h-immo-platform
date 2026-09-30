@@ -1,0 +1,192 @@
+// ============================================================
+// COMPOSANT — CARD
+// Fichier : components/UI/Card/_Card.scss
+// ------------------------------------------------------------
+// Rôle :
+//   Styles du composant <Card />.
+//   Gère : variantes (default / outlined / elevated / filled),
+//   paddings (none / small / medium / large), interactive,
+//   plein largeur, header, body, footer.
+//
+// Dépendances :
+//   - baseVariables/_variables.scss
+//   - baseVariables/_mixins.scss
+// ============================================================
+
+@use '../../baseVariables/variables' as *;
+@use '../../baseVariables/mixins' as *;
+
+
+// ============================================================
+// BASE
+// ============================================================
+
+.card {
+    display: flex;
+    flex-direction: column;
+    font-family: $font-family-base;
+    color: $color-text-primary;
+    background-color: $color-bg-card;
+    border: 1px solid $color-border;
+    border-radius: $radius-lg;
+    overflow: hidden;
+    transition:
+        background-color $transition-fast,
+        border-color $transition-fast,
+        transform $transition-fast,
+        box-shadow $transition-fast;
+}
+
+.card--full-width {
+    width: 100%;
+}
+
+
+// ============================================================
+// VARIANTES
+// ============================================================
+
+.card--default {
+    background-color: $color-bg-card;
+    border-color: $color-border;
+}
+
+.card--outlined {
+    background-color: transparent;
+    border-color: $color-border-light;
+}
+
+.card--elevated {
+    background-color: $color-bg-card;
+    border-color: transparent;
+    box-shadow: $shadow-md;
+}
+
+.card--filled {
+    background-color: $color-bg-elevated;
+    border-color: transparent;
+}
+
+
+// ============================================================
+// PADDINGS
+// ============================================================
+// Le padding s’applique aux sections internes (header / body /
+// footer) plutôt qu’au conteneur, pour permettre des bordures
+// pleine largeur entre les sections.
+// ============================================================
+
+.card--padding-none {
+    .card__header,
+    .card__body,
+    .card__footer {
+        padding: 0;
+    }
+}
+
+.card--padding-small {
+    .card__header,
+    .card__body,
+    .card__footer {
+        padding: $spacing-3;
+    }
+}
+
+.card--padding-medium {
+    .card__header,
+    .card__body,
+    .card__footer {
+        padding: $spacing-4 $spacing-5;
+    }
+}
+
+.card--padding-large {
+    .card__header,
+    .card__body,
+    .card__footer {
+        padding: $spacing-6 $spacing-8;
+    }
+}
+
+
+// ============================================================
+// HEADER
+// ============================================================
+
+.card__header {
+    flex-shrink: 0;
+    font-family: $font-family-heading;
+    font-size: $font-size-md;
+    font-weight: $font-weight-semibold;
+    color: $color-text-primary;
+    border-bottom: 1px solid $color-border;
+    line-height: $line-height-snug;
+}
+
+
+// ============================================================
+// BODY
+// ============================================================
+
+.card__body {
+    flex: 1;
+    min-height: 0;
+    font-size: $font-size-sm;
+    color: $color-text-secondary;
+    line-height: $line-height-normal;
+}
+
+
+// ============================================================
+// FOOTER
+// ============================================================
+
+.card__footer {
+    flex-shrink: 0;
+    font-size: $font-size-sm;
+    color: $color-text-muted;
+    border-top: 1px solid $color-border;
+}
+
+
+// ============================================================
+// INTERACTIVE (carte cliquable)
+// ============================================================
+
+.card--interactive {
+    cursor: pointer;
+
+    &:hover {
+        background-color: $color-bg-card-hover;
+        border-color: $color-border-light;
+        transform: translateY(-2px);
+        box-shadow: $shadow-md;
+    }
+
+    &:active {
+        transform: translateY(0);
+        background-color: $color-bg-card;
+    }
+
+    &:focus-visible {
+        outline: none;
+        border-color: $color-primary;
+        box-shadow: $shadow-focus;
+    }
+}
+
+
+// ============================================================
+// ACCESSIBILITÉ — RÉDUCTION DES ANIMATIONS
+// ============================================================
+
+@media (prefers-reduced-motion: reduce) {
+    .card,
+    .card--interactive {
+        transition: none;
+    }
+
+    .card--interactive:hover {
+        transform: none;
+    }
+}

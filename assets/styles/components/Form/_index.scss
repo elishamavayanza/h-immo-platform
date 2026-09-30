@@ -1,0 +1,24 @@
+// ============================================================
+// INDEX — DOSSIER Form
+// ============================================================
+@forward 'Form';
+@forward 'FormField';
+@forward 'ErrorMessage';
+@forward 'FileUpload';
+
+// Champs texte
+@forward 'Input';
+@forward 'Password';
+@forward 'SearchInput';
+@forward 'Textarea';
+
+// Contrôles
+@forward 'Checkbox';
+@forward 'Radio';
+@forward 'Switch';
+@forward 'Select';
+@forward 'SearchableSelect';
+
+// Dates & heures
+@forward 'DatePicker';
+@forward 'DateRangePicker';

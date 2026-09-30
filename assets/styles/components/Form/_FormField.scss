@@ -1,0 +1,170 @@
+// ============================================================
+// COMPOSANT — FORM FIELD
+// Fichier : components/Form/FormField/_FormField.scss
+// ------------------------------------------------------------
+// Rôle :
+//   Styles du composant <FormField /> (label + control + aide
+//   + erreur). Gère : variantes (default / error / success),
+//   required, plein largeur, help text, error text.
+//
+// Dépendances :
+//   - baseVariables/_variables.scss
+//   - baseVariables/_mixins.scss
+// ============================================================
+
+@use '../../baseVariables/variables' as *;
+@use '../../baseVariables/mixins' as *;
+
+
+// ============================================================
+// CONTENEUR
+// ============================================================
+
+.form-field {
+    @include flex(column, stretch, flex-start, $spacing-1);
+    font-family: $font-family-base;
+    width: fit-content;
+}
+
+.form-field--full-width {
+    width: 100%;
+}
+
+
+// ============================================================
+// LABEL
+// ============================================================
+
+.form-field__label {
+    @include flex(row, center, flex-start, 2px);
+    font-size: $font-size-sm;
+    font-weight: $font-weight-medium;
+    color: $color-text-secondary;
+    line-height: $line-height-snug;
+    user-select: none;
+}
+
+.form-field__required-star {
+    color: $color-danger;
+    font-weight: $font-weight-semibold;
+    margin-left: 2px;
+}
+
+
+// ============================================================
+// CONTRÔLE
+// ============================================================
+// Enveloppe l’input (ou n’importe quel contrôle enfant) pour
+// gérer l’espacement et la largeur pleine.
+// ============================================================
+
+.form-field__control {
+    display: block;
+    width: 100%;
+
+    // Force les enfants input/textarea/select à occuper la largeur
+    > input,
+    > select,
+    > textarea {
+        width: 100%;
+    }
+}
+
+
+// ============================================================
+// MESSAGE D’ERREUR
+// ============================================================
+
+.form-field__error {
+    @include flex(row, flex-start, flex-start, $spacing-1);
+    margin-top: 2px;
+    font-size: $font-size-xs;
+    font-weight: $font-weight-medium;
+    color: $color-danger;
+    line-height: $line-height-snug;
+
+    // Petit pictogramme optionnel via pseudo-élément
+    &::before {
+        content: '!';
+        @include flex-center;
+        flex-shrink: 0;
+        width: 14px;
+        height: 14px;
+        margin-top: 1px;
+        background-color: $color-danger;
+        color: $color-text-inverse;
+        border-radius: $radius-full;
+        font-size: 10px;
+        font-weight: $font-weight-bold;
+        line-height: 1;
+    }
+}
+
+
+// ============================================================
+// TEXTE D’AIDE
+// ============================================================
+
+.form-field__help {
+    margin-top: 2px;
+    font-size: $font-size-xs;
+    color: $color-text-muted;
+    line-height: $line-height-snug;
+}
+
+
+// ============================================================
+// VARIANTES
+// ============================================================
+
+.form-field--default {
+    // rien
+}
+
+.form-field--error {
+    .form-field__label {
+        color: $color-danger;
+    }
+
+    // Teinte des contrôles enfants si nécessaire
+    .form-field__control > input,
+    .form-field__control > textarea,
+    .form-field__control > select {
+        border-color: $color-danger;
+
+        &:focus,
+        &:focus-visible {
+            box-shadow: 0 0 0 3px rgba(239, 91, 120, 0.30);
+        }
+    }
+}
+
+.form-field--success {
+    .form-field__label {
+        color: $color-success;
+    }
+
+    .form-field__control > input,
+    .form-field__control > textarea,
+    .form-field__control > select {
+        border-color: $color-success;
+
+        &:focus,
+        &:focus-visible {
+            box-shadow: 0 0 0 3px rgba(101, 214, 165, 0.30);
+        }
+    }
+}
+
+
+// ============================================================
+// ACCESSIBILITÉ — RÉDUCTION DES ANIMATIONS
+// ============================================================
+
+@media (prefers-reduced-motion: reduce) {
+    .form-field__label,
+    .form-field__error,
+    .form-field__help {
+        transition: none;
+    }
+}

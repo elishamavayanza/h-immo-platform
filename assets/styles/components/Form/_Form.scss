@@ -1,0 +1,129 @@
+// ============================================================
+// COMPOSANT — FORM
+// Fichier : components/Form/Form/_Form.scss
+// ------------------------------------------------------------
+// Rôle :
+//   Styles du composant <Form /> (conteneur de formulaire).
+//   Gère : layouts (vertical / horizontal / inline),
+//   gaps (small / medium / large), plein largeur.
+//
+// Dépendances :
+//   - baseVariables/_variables.scss
+//   - baseVariables/_mixins.scss
+// ============================================================
+
+@use '../../baseVariables/variables' as *;
+@use '../../baseVariables/mixins' as *;
+
+
+// ============================================================
+// CONTENEUR PRINCIPAL
+// ============================================================
+
+.form {
+    display: flex;
+    font-family: $font-family-base;
+    color: $color-text-primary;
+    margin: 0;
+}
+
+
+// ============================================================
+// LAYOUTS
+// ============================================================
+
+// ----- Vertical : colonne, chaque champ l’un sous l’autre -----
+.form--vertical {
+    flex-direction: column;
+    align-items: stretch;
+
+    .form-field {
+        width: 100%;
+    }
+}
+
+// ----- Horizontal : label à gauche, contrôle à droite -----
+.form--horizontal {
+    flex-direction: column;
+    align-items: stretch;
+
+    .form-field {
+        flex-direction: row;
+        align-items: flex-start;
+        gap: $spacing-4;
+
+        .form-field__label {
+            flex: 0 0 auto;
+            min-width: 140px;
+            padding-top: $spacing-3; // alignement vertical avec l’input
+            margin-bottom: 0;
+        }
+
+        .form-field__control {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .form-field__error,
+        .form-field__help {
+            // alignés sous le contrôle
+            margin-left: calc(140px + #{$spacing-4});
+        }
+    }
+
+    @media (max-width: #{$breakpoint-tablet - 1px}) {
+        .form-field {
+            flex-direction: column;
+            gap: $spacing-1;
+
+            .form-field__label {
+                min-width: 0;
+                padding-top: 0;
+                margin-bottom: $spacing-1;
+            }
+
+            .form-field__error,
+            .form-field__help {
+                margin-left: 0;
+            }
+        }
+    }
+}
+
+// ----- Inline : champs côte à côte -----
+.form--inline {
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: flex-end;
+
+    .form-field {
+        width: auto;
+        flex: 0 0 auto;
+    }
+}
+
+
+// ============================================================
+// GAPS
+// ============================================================
+
+.form--gap-small {
+    gap: $spacing-2;
+}
+
+.form--gap-medium {
+    gap: $spacing-4;
+}
+
+.form--gap-large {
+    gap: $spacing-6;
+}
+
+
+// ============================================================
+// PLEIN LARGEUR
+// ============================================================
+
+.form--full-width {
+    width: 100%;
+}

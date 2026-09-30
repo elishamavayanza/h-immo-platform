@@ -1,0 +1,215 @@
+// ============================================================
+// COMPOSANT — FOOTER
+// Fichier : components/Navigation/Footer/_Footer.scss
+// ------------------------------------------------------------
+// Rôle :
+//   Styles du composant <Footer /> (pied de page).
+//   Gère : variantes (default / dark / colored), brand,
+//   sections avec liens, logo, bottom content.
+//
+// Dépendances :
+//   - baseVariables/_variables.scss
+//   - baseVariables/_mixins.scss
+// ============================================================
+
+@use '../../baseVariables/variables' as *;
+@use '../../baseVariables/mixins' as *;
+
+
+// ============================================================
+// CONTENEUR
+// ============================================================
+
+.footer {
+    width: 100%;
+    padding: $spacing-8 $spacing-6 $spacing-4;
+    font-family: $font-family-base;
+    font-size: $font-size-sm;
+    color: $color-text-secondary;
+    background-color: $color-bg-app;
+    border-top: 1px solid $color-border;
+
+    @include responsive(mobile) {
+        padding: $spacing-6 $spacing-4 $spacing-3;
+    }
+}
+
+
+// ============================================================
+// VARIANTES
+// ============================================================
+
+.footer--default {
+    background-color: $color-bg-app;
+    color: $color-text-secondary;
+}
+
+.footer--dark {
+    background-color: $color-bg-primary;
+    color: $color-text-secondary;
+    border-top-color: $color-border;
+}
+
+.footer--colored {
+    background-color: $color-primary;
+    color: rgba(255, 255, 255, 0.85);
+    border-top-color: $color-primary-hover;
+
+    .footer__section-title,
+    .footer__brand {
+        color: #ffffff;
+    }
+
+    .footer__link {
+        color: rgba(255, 255, 255, 0.85);
+
+        &:hover {
+            color: #ffffff;
+            background-color: rgba(255, 255, 255, 0.12);
+        }
+    }
+
+    .footer__bottom {
+        border-top-color: rgba(255, 255, 255, 0.20);
+        color: rgba(255, 255, 255, 0.75);
+    }
+}
+
+
+// ============================================================
+// INNER
+// ============================================================
+
+.footer__inner {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: $spacing-8;
+    max-width: 1440px;
+    margin: 0 auto;
+
+    @include responsive(tablet) {
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    }
+}
+
+
+// ============================================================
+// BRAND
+// ============================================================
+
+.footer__brand {
+    font-family: $font-family-heading;
+    font-size: $font-size-lg;
+    font-weight: $font-weight-semibold;
+    color: $color-text-primary;
+    line-height: $line-height-tight;
+    margin-bottom: $spacing-3;
+}
+
+
+// ============================================================
+// SECTION
+// ============================================================
+
+.footer__section {
+    min-width: 0;
+}
+
+.footer__section-title {
+    margin: 0 0 $spacing-3;
+    font-family: $font-family-heading;
+    font-size: $font-size-sm;
+    font-weight: $font-weight-semibold;
+    color: $color-text-primary;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+}
+
+
+// ============================================================
+// LIENS
+// ============================================================
+
+.footer__links {
+    @include flex(column, stretch, flex-start, $spacing-2);
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.footer__link {
+    @include flex(row, center, flex-start, $spacing-2);
+    padding: 2px 0;
+    font-size: $font-size-sm;
+    color: $color-text-secondary;
+    text-decoration: none;
+    border-radius: $radius-sm;
+    transition: color $transition-fast;
+
+    &:hover {
+        color: $color-primary;
+    }
+
+    &:focus-visible {
+        outline: none;
+        color: $color-primary;
+        box-shadow: 0 0 0 2px $color-primary;
+    }
+}
+
+.footer__link-icon {
+    @include flex-center;
+    flex-shrink: 0;
+    color: currentColor;
+
+    svg {
+        display: block;
+        width: 14px;
+        height: 14px;
+    }
+}
+
+
+// ============================================================
+// LOGO
+// ============================================================
+
+.footer__logo {
+    @include flex(row, center, flex-start, $spacing-2);
+    font-family: $font-family-heading;
+    font-size: $font-size-lg;
+    font-weight: $font-weight-semibold;
+    color: $color-text-primary;
+
+    svg {
+        display: block;
+    }
+}
+
+
+// ============================================================
+// BOTTOM
+// ============================================================
+// Bandeau bas (copyright, mentions légales, etc.).
+// ============================================================
+
+.footer__bottom {
+    max-width: 1440px;
+    margin: $spacing-8 auto 0;
+    padding-top: $spacing-4;
+    border-top: 1px solid $color-border;
+    font-size: $font-size-xs;
+    color: $color-text-muted;
+    text-align: center;
+}
+
+
+// ============================================================
+// ACCESSIBILITÉ — RÉDUCTION DES ANIMATIONS
+// ============================================================
+
+@media (prefers-reduced-motion: reduce) {
+    .footer__link {
+        transition: none;
+    }
+}

@@ -1,0 +1,184 @@
+// ============================================================
+// COMPOSANT — TEXTAREA
+// Fichier : components/Form/Textarea/_Textarea.scss
+// ------------------------------------------------------------
+// Rôle :
+//   Styles du composant <Textarea />.
+//   Gère : variantes (default / error / success),
+//   tailles (small / medium / large), plein largeur,
+//   désactivé, readonly, resize vertical uniquement.
+//
+// Dépendances :
+//   - baseVariables/_variables.scss
+//   - baseVariables/_mixins.scss
+// ============================================================
+
+@use '../../baseVariables/variables' as *;
+@use '../../baseVariables/mixins' as *;
+
+
+// ============================================================
+// TEXTAREA
+// ============================================================
+
+.textarea-field {
+    width: 100%;
+    font-family: $font-family-base;
+    font-weight: $font-weight-medium;
+    color: $color-text-primary;
+    background-color: $color-bg-input;
+    border: 1px solid $color-border;
+    border-radius: $radius-md;
+    outline: none;
+    appearance: none;
+    -webkit-appearance: none;
+
+    // Resize vertical uniquement (empêche de casser la mise en page)
+    resize: vertical;
+    min-height: 80px;
+    line-height: $line-height-normal;
+
+    @include scrollbar;
+
+    transition:
+        background-color $transition-fast,
+        border-color $transition-fast,
+        box-shadow $transition-fast,
+        color $transition-fast;
+
+    &::placeholder {
+        color: $color-text-muted;
+        font-weight: $font-weight-regular;
+    }
+
+    &:hover:not(:disabled):not(.textarea-field--disabled):not(.textarea-field--readonly) {
+        background-color: $color-bg-card-hover;
+        border-color: $color-border-light;
+    }
+
+    &:focus,
+    &:focus-visible {
+        border-color: $color-primary;
+        box-shadow: $shadow-focus;
+    }
+
+    // ----- Readonly -----
+    &.textarea-field--readonly,
+    &:read-only:not(:disabled) {
+        color: $color-text-secondary;
+        background-color: $color-bg-app;
+        cursor: default;
+
+        &:hover {
+            background-color: $color-bg-app;
+            border-color: $color-border;
+        }
+    }
+
+    // ----- Disabled -----
+    &:disabled,
+    &.textarea-field--disabled {
+        color: $color-text-disabled;
+        background-color: $color-bg-app;
+        border-color: $color-border;
+        cursor: not-allowed;
+        opacity: 0.7;
+        resize: none;
+
+        &::placeholder {
+            color: $color-text-disabled;
+        }
+    }
+}
+
+
+// ============================================================
+// TAILLES
+// ============================================================
+
+.textarea-field--small {
+    padding: $spacing-2 $spacing-3;
+    font-size: $font-size-sm;
+    border-radius: $radius-sm;
+    min-height: 64px;
+}
+
+.textarea-field--medium {
+    padding: $spacing-3 $spacing-4;
+    font-size: $font-size-md;
+    min-height: 80px;
+}
+
+.textarea-field--large {
+    padding: $spacing-4 $spacing-5;
+    font-size: $font-size-lg;
+    border-radius: $radius-lg;
+    min-height: 120px;
+}
+
+
+// ============================================================
+// VARIANTES
+// ============================================================
+
+.textarea-field--error {
+    border-color: $color-danger;
+
+    &:hover:not(:disabled):not(.textarea-field--disabled) {
+        border-color: $color-danger;
+        background-color: $color-danger-light;
+    }
+
+    &:focus,
+    &:focus-visible {
+        border-color: $color-danger;
+        box-shadow: 0 0 0 3px rgba(239, 91, 120, 0.30);
+    }
+}
+
+.textarea-field--success {
+    border-color: $color-success;
+
+    &:hover:not(:disabled):not(.textarea-field--disabled) {
+        border-color: $color-success;
+        background-color: $color-success-light;
+    }
+
+    &:focus,
+    &:focus-visible {
+        border-color: $color-success;
+        box-shadow: 0 0 0 3px rgba(101, 214, 165, 0.30);
+    }
+}
+
+
+// ============================================================
+// PLEIN LARGEUR
+// ============================================================
+
+.textarea-field--full-width {
+    width: 100%;
+    display: block;
+}
+
+
+// ============================================================
+// RESPONSIVE
+// ============================================================
+
+@include responsive(mobile) {
+    .textarea-field--medium {
+        min-height: 100px;
+    }
+}
+
+
+// ============================================================
+// ACCESSIBILITÉ — RÉDUCTION DES ANIMATIONS
+// ============================================================
+
+@media (prefers-reduced-motion: reduce) {
+    .textarea-field {
+        transition: none;
+    }
+}

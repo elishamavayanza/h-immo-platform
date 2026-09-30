@@ -1,0 +1,104 @@
+// ============================================================
+// COMPOSANT — OFFLINE BANNER
+// Fichier : components/UI/OfflineBanner/_OfflineBanner.scss
+// ------------------------------------------------------------
+// Rôle :
+//   Styles du composant <OfflineBanner /> (bannière globale
+//   affichée quand l'appareil perd la connexion réseau).
+//   Gère : apparition animée, point pulsant, responsive.
+//
+// Dépendances :
+//   - baseVariables/_variables.scss
+//   - baseVariables/_mixins.scss
+// ============================================================
+
+@use '../../../baseVariables/variables' as *;
+@use '../../../baseVariables/mixins' as *;
+
+
+// ============================================================
+// CONTENEUR
+// ============================================================
+// Bannière sticky sous le header, couleur warning ambrée pour
+// signaler l'état dégradé sans casser l'ambiance dark.
+// ============================================================
+
+.offline-banner {
+    @include flex(row, center, center, $spacing-3);
+    position: sticky;
+    top: 0;
+    z-index: $z-sticky;
+    width: 100%;
+    padding: $spacing-2 $spacing-4;
+    font-family: $font-family-base;
+    font-size: $font-size-sm;
+    font-weight: $font-weight-medium;
+    color: $color-warning;
+    background-color: $color-warning-light;
+    border-bottom: 1px solid rgba(243, 201, 105, 0.35);
+    line-height: $line-height-snug;
+    text-align: center;
+    animation: offline-banner-in $transition-normal both;
+
+    @include responsive(mobile) {
+        padding: $spacing-2 $spacing-3;
+        font-size: $font-size-xs;
+    }
+}
+
+@keyframes offline-banner-in {
+    from {
+        opacity: 0;
+        transform: translateY(-100%);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+
+// ============================================================
+// POINT PULSANT
+// ============================================================
+// Petit indicateur animé qui attire l'œil sans être agressif.
+// ============================================================
+
+.offline-banner__dot {
+    display: inline-block;
+    flex-shrink: 0;
+    width: 8px;
+    height: 8px;
+    background-color: $color-warning;
+    border-radius: $radius-full;
+    box-shadow: 0 0 0 0 rgba(243, 201, 105, 0.55);
+    animation: offline-banner-pulse 1.8s ease-in-out infinite;
+}
+
+@keyframes offline-banner-pulse {
+    0% {
+        box-shadow: 0 0 0 0 rgba(243, 201, 105, 0.55);
+    }
+    70% {
+        box-shadow: 0 0 0 8px rgba(243, 201, 105, 0);
+    }
+    100% {
+        box-shadow: 0 0 0 0 rgba(243, 201, 105, 0);
+    }
+}
+
+
+// ============================================================
+// ACCESSIBILITÉ — RÉDUCTION DES ANIMATIONS
+// ============================================================
+
+@media (prefers-reduced-motion: reduce) {
+    .offline-banner {
+        animation: none;
+    }
+
+    .offline-banner__dot {
+        animation: none;
+        box-shadow: none;
+    }
+}

@@ -1,0 +1,149 @@
+// ============================================================
+// COMPOSANT — PAGINATION
+// Fichier : components/Data/Pagination/_Pagination.scss
+// ------------------------------------------------------------
+// Rôle :
+//   Styles du composant <Pagination />.
+//   Gère : conteneur, boutons prev/next, numéros de page,
+//   page active, séparateur « … », état désactivé,
+//   accessibilité (aria-current, focus clavier).
+//
+// Dépendances :
+//   - baseVariables/_variables.scss
+//   - baseVariables/_mixins.scss
+// ============================================================
+
+@use '../../baseVariables/variables' as *;
+@use '../../baseVariables/mixins' as *;
+
+
+// ============================================================
+// CONTENEUR
+// ============================================================
+
+.pagination {
+    @include flex(row, center, center, $spacing-1);
+    flex-wrap: wrap;
+    padding: $spacing-2 0;
+    user-select: none;
+}
+
+
+// ============================================================
+// BOUTON DE PAGE (base)
+// ============================================================
+// Utilisé pour « Précédent », « Suivant » et les numéros.
+// ============================================================
+
+.pagination__button {
+    @include flex-center;
+    @include focus-ring;
+    min-width: 32px;
+    height: 32px;
+    padding: 0 $spacing-3;
+    font-family: $font-family-base;
+    font-size: $font-size-sm;
+    font-weight: $font-weight-medium;
+    color: $color-text-secondary;
+    background-color: transparent;
+    border: 1px solid $color-border;
+    border-radius: $radius-md;
+    cursor: pointer;
+    transition: background-color $transition-fast,
+    color $transition-fast,
+    border-color $transition-fast,
+    transform $transition-fast;
+
+    &:hover:not(:disabled):not(.pagination__button--active) {
+        background-color: $color-bg-card-hover;
+        border-color: $color-border-light;
+        color: $color-text-primary;
+    }
+
+    &:active:not(:disabled) {
+        transform: scale(0.95);
+    }
+
+    // Bouton désactivé (précédent sur page 1, suivant sur dernière page)
+    &:disabled {
+        color: $color-text-disabled;
+        border-color: $color-border;
+        background-color: transparent;
+        cursor: not-allowed;
+        opacity: 0.6;
+    }
+}
+
+
+// ============================================================
+// BOUTON ACTIF
+// ============================================================
+// Page courante : fond cyan, texte inversé.
+// ============================================================
+
+.pagination__button--active {
+    color: $color-text-inverse;
+    background-color: $color-primary;
+    border-color: $color-primary;
+    font-weight: $font-weight-semibold;
+
+    &:hover {
+        background-color: $color-primary-hover;
+        border-color: $color-primary-hover;
+        color: $color-text-inverse;
+    }
+
+    &:active {
+        transform: scale(0.95);
+    }
+}
+
+
+// ============================================================
+// SÉPARATEUR « … »
+// ============================================================
+
+.pagination__dots {
+    @include flex-center;
+    min-width: 32px;
+    height: 32px;
+    color: $color-text-muted;
+    font-size: $font-size-sm;
+    user-select: none;
+    pointer-events: none;
+}
+
+
+// ============================================================
+// RESPONSIVE
+// ============================================================
+// Sur mobile, on réduit la taille des boutons et le gap.
+// ============================================================
+
+@include responsive(mobile) {
+    .pagination {
+        gap: 2px;
+    }
+
+    .pagination__button {
+        min-width: 28px;
+        height: 28px;
+        padding: 0 $spacing-2;
+        font-size: $font-size-xs;
+    }
+}
+
+
+// ============================================================
+// ACCESSIBILITÉ — RÉDUCTION DES ANIMATIONS
+// ============================================================
+
+@media (prefers-reduced-motion: reduce) {
+    .pagination__button {
+        transition: none;
+    }
+
+    .pagination__button:active {
+        transform: none;
+    }
+}

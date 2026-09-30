@@ -15,7 +15,7 @@ import {
     MIN_PASSWORD_LENGTH,
     readTokenFromSearch,
     validatePasswordForm,
-} from '../assets/app/password-form.ts';
+} from '../assets/react/app/password-form.ts';
 
 let checks = 0;
 const failures: string[] = [];

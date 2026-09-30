@@ -1,0 +1,372 @@
+// ============================================================
+// SOFT-IMMO — DESIGN SYSTEM
+// Fichier : _mixins.scss
+// ------------------------------------------------------------
+// Rôle :
+//   Regroupe tous les mixins réutilisables du Design System.
+//
+// Utilisation :
+//   @use 'styles/variables' as *;
+//   @use 'styles/mixins' as *;
+//
+// Important :
+//   Aucun style de composant ne doit être écrit ici.
+// ============================================================
+
+@use 'variables' as *;
+
+
+// ============================================================
+// 1. FLEX
+// ============================================================
+// Rôle :
+//   Raccourci pour configurer un conteneur flex complet.
+//
+// Quand l'utiliser :
+//   Dès qu'un conteneur utilise `display: flex` avec des
+//   valeurs personnalisées (direction, align, justify, gap).
+//
+// Ce qu'il évite :
+//   Répéter 4 à 5 lignes de propriétés flex identiques.
+// ============================================================
+
+@mixin flex(
+    $direction: row,
+    $align: stretch,
+    $justify: flex-start,
+    $gap: 0
+) {
+    display: flex;
+    flex-direction: $direction;
+    align-items: $align;
+    justify-content: $justify;
+
+    @if $gap != 0 {
+        gap: $gap;
+    }
+}
+
+
+// ============================================================
+// 2. FLEX-CENTER
+// ============================================================
+// Rôle :
+//   Centrer un élément horizontalement ET verticalement.
+//
+// Quand l'utiliser :
+//   Pour centrer un contenu (icône, loader) dans une zone.
+//
+// Ce qu'il évite :
+//   Répéter `display: flex; align-items: center;
+//   justify-content: center;` en boucle.
+// ============================================================
+
+@mixin flex-center {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+
+// ============================================================
+// 3. FLEX-BETWEEN
+// ============================================================
+// Rôle :
+//   Aligner un contenu à gauche et un autre à droite sur la
+//   même ligne, verticalement centrés.
+//
+// Quand l'utiliser :
+//   Barres d'en-tête, lignes de listes, footers de cards.
+//
+// Ce qu'il évite :
+//   Répéter `justify-content: space-between` + alignement.
+// ============================================================
+
+@mixin flex-between {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+
+// ============================================================
+// 4. ABSOLUTE-CENTER
+// ============================================================
+// Rôle :
+//   Centrer parfaitement un élément positionné en `absolute`
+//   dans son parent.
+//
+// Quand l'utiliser :
+//   Overlays, badges centrés, loaders superposés.
+//
+// Ce qu'il évite :
+//   Répéter la combinaison `top/left/transform`.
+// ============================================================
+
+@mixin absolute-center {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+}
+
+
+// ============================================================
+// 5. TRUNCATE
+// ============================================================
+// Rôle :
+//   Tronquer proprement un texte sur une seule ligne avec `…`.
+//
+// Quand l'utiliser :
+//   Titres de cards, noms d'utilisateurs, libellés longs.
+//
+// Ce qu'il évite :
+//   Répéter `overflow / text-overflow / white-space`.
+// ============================================================
+
+@mixin truncate {
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+}
+
+
+// ============================================================
+// 6. LINE-CLAMP
+// ============================================================
+// Rôle :
+//   Limiter un texte à un nombre donné de lignes avec `…`.
+//
+// Quand l'utiliser :
+//   Descriptions, extraits, résumés dans les cards.
+//
+// Paramètre :
+//   $lines : nombre de lignes maximales (défaut : 2).
+// ============================================================
+
+@mixin line-clamp($lines: 2) {
+    display: -webkit-box;
+    -webkit-line-clamp: $lines;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+
+// ============================================================
+// 7. CARD
+// ============================================================
+// Rôle :
+//   Style de base d'une carte du dashboard (fond sombre,
+//   bordure fine, arrondi, padding, transition).
+//
+// Quand l'utiliser :
+//   Pour tous les blocs « carte » (stats, panneaux, widgets).
+//
+// Paramètre :
+//   $padding : padding interne (défaut : $spacing-5).
+// ============================================================
+
+@mixin card($padding: $spacing-5) {
+    background-color: $color-bg-card;
+    border: 1px solid $color-border;
+    border-radius: $radius-lg;
+    padding: $padding;
+    transition: background-color $transition-fast,
+    border-color $transition-fast,
+    transform $transition-fast,
+    box-shadow $transition-fast;
+}
+
+
+// ============================================================
+// 8. HOVER-LIFT
+// ============================================================
+// Rôle :
+//   Léger effet de soulèvement au survol d'une carte.
+//   Reste sobre pour ne pas casser l'ambiance dark.
+//
+// Quand l'utiliser :
+//   Sur les cards cliquables (navigation, sélection).
+//
+// Paramètre :
+//   $lift : distance de translation (défaut : -2px).
+// ============================================================
+
+@mixin hover-lift($lift: -2px) {
+    &:hover {
+        background-color: $color-bg-card-hover;
+        border-color: $color-border-light;
+        transform: translateY($lift);
+        box-shadow: $shadow-md;
+    }
+}
+
+
+// ============================================================
+// 9. FOCUS-RING
+// ============================================================
+// Rôle :
+//   État focus accessible, basé sur la couleur primaire.
+//
+// Quand l'utiliser :
+//   Sur tous les éléments interactifs (boutons, inputs, liens).
+//
+// Ce qu'il évite :
+//   Oublier `outline` et casser l'accessibilité clavier.
+// ============================================================
+
+@mixin focus-ring {
+    outline: none;
+
+    &:focus-visible {
+        box-shadow: $shadow-focus;
+        border-color: $color-primary;
+    }
+}
+
+
+// ============================================================
+// 10. SCROLLBAR
+// ============================================================
+// Rôle :
+//   Personnalise la scrollbar pour le thème dark.
+//
+// Quand l'utiliser :
+//   Sur les conteneurs scrollables (sidebar, listes, modales).
+//
+// Paramètre :
+//   $size : largeur de la scrollbar (défaut : 8px).
+// ============================================================
+
+@mixin scrollbar($size: 8px) {
+    &::-webkit-scrollbar {
+        width: $size;
+        height: $size;
+    }
+
+    &::-webkit-scrollbar-track {
+        background: transparent;
+    }
+
+    &::-webkit-scrollbar-thumb {
+        background-color: $color-border-light;
+        border-radius: $radius-full;
+
+        &:hover {
+            background-color: $color-border-strong;
+        }
+    }
+
+    // Firefox
+    scrollbar-width: thin;
+    scrollbar-color: $color-border-light transparent;
+}
+
+
+// ============================================================
+// 11. VISUALLY-HIDDEN
+// ============================================================
+// Rôle :
+//   Masque visuellement un élément tout en le gardant
+//   accessible aux lecteurs d'écran.
+//
+// Quand l'utiliser :
+//   Labels cachés, textes alternatifs, contenus a11y.
+// ============================================================
+
+@mixin visually-hidden {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+}
+
+
+// ============================================================
+// 12. RESPONSIVE
+// ============================================================
+// Rôle :
+//   Système simple de media queries mobile-first.
+//
+// Quand l'utiliser :
+//   Pour adapter les layouts aux tailles d'écran.
+//
+// Paramètres :
+//   $breakpoint : 'mobile' | 'tablet' | 'desktop' | 'large' | 'xlarge'.
+// ============================================================
+
+@mixin responsive($breakpoint) {
+    @if $breakpoint == mobile {
+        @media (min-width: $breakpoint-mobile) { @content; }
+    } @else if $breakpoint == tablet {
+        @media (min-width: $breakpoint-tablet) { @content; }
+    } @else if $breakpoint == desktop {
+        @media (min-width: $breakpoint-desktop) { @content; }
+    } @else if $breakpoint == large {
+        @media (min-width: $breakpoint-large) { @content; }
+    } @else if $breakpoint == xlarge {
+        @media (min-width: $breakpoint-xlarge) { @content; }
+    } @else {
+        @error "Breakpoint inconnu : #{$breakpoint}.";
+    }
+}
+
+
+// ============================================================
+// 13. BADGE / TAG
+// ============================================================
+// Rôle :
+//   Style compact pour les badges, tags et statuts.
+//
+// Quand l'utiliser :
+//   Statuts (« In progress », « Paused », « Bugs »…),
+//   compteurs, catégories.
+//
+// Paramètres :
+//   $bg    : couleur de fond (souvent une couleur `*-light`).
+//   $color : couleur du texte (souvent la couleur pleine).
+// ============================================================
+
+@mixin badge($bg, $color) {
+    display: inline-flex;
+    align-items: center;
+    gap: $spacing-1;
+    padding: $spacing-1 $spacing-3;
+    background-color: $bg;
+    color: $color;
+    font-size: $font-size-xs;
+    font-weight: $font-weight-medium;
+    border-radius: $radius-full;
+    line-height: 1;
+}
+
+
+// ============================================================
+// 14. ELEVATION
+// ============================================================
+// Rôle :
+//   Applique un niveau d'élévation standard (ombre + surface).
+//
+// Quand l'utiliser :
+//   Dropdowns, popovers, modales.
+//
+// Paramètre :
+//   $level : 'sm' | 'md' | 'lg' (défaut : 'md').
+// ============================================================
+
+@mixin elevation($level: md) {
+    @if $level == sm {
+        box-shadow: $shadow-sm;
+    } @else if $level == md {
+        box-shadow: $shadow-md;
+    } @else if $level == lg {
+        box-shadow: $shadow-lg;
+    } @else {
+        @error "Niveau d'élévation inconnu : #{$level}.";
+    }
+}

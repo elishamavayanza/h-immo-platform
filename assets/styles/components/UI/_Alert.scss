@@ -1,0 +1,150 @@
+// ============================================================
+// COMPOSANT — ALERT
+// Fichier : components/UI/Alert/_Alert.scss
+// ------------------------------------------------------------
+// Rôle :
+//   Styles du composant <Alert />.
+//   Gère : variantes (info / success / warning / error),
+//   icône, contenu, bouton de fermeture.
+//
+// Dépendances :
+//   - baseVariables/_variables.scss
+//   - baseVariables/_mixins.scss
+// ============================================================
+
+@use '../../baseVariables/variables' as *;
+@use '../../baseVariables/mixins' as *;
+
+
+// ============================================================
+// CONTENEUR
+// ============================================================
+// La couleur d’accent est pilotée par les variantes via une
+// variable CSS locale pour ne pas dupliquer les règles.
+// ============================================================
+
+.alert {
+    @include flex(row, flex-start, flex-start, $spacing-3);
+    position: relative;
+    padding: $spacing-3 $spacing-4;
+    border-radius: $radius-md;
+    border: 1px solid;
+    font-family: $font-family-base;
+    font-size: $font-size-sm;
+    line-height: $line-height-snug;
+
+    --alert-color: #{$color-info};
+    --alert-bg: #{$color-info-light};
+    --alert-border: #{rgba(37, 189, 232, 0.35)};
+
+    color: var(--alert-color);
+    background-color: var(--alert-bg);
+    border-color: var(--alert-border);
+}
+
+
+// ============================================================
+// ICÔNE
+// ============================================================
+
+.alert__icon {
+    @include flex-center;
+    flex-shrink: 0;
+    width: 20px;
+    height: 20px;
+    margin-top: 1px;
+    color: var(--alert-color);
+
+    svg {
+        display: block;
+        width: 100%;
+        height: 100%;
+    }
+}
+
+
+// ============================================================
+// CONTENU
+// ============================================================
+
+.alert__content {
+    flex: 1;
+    min-width: 0;
+    color: var(--alert-color);
+    word-break: break-word;
+}
+
+
+// ============================================================
+// BOUTON FERMER
+// ============================================================
+
+.alert__close {
+    @include flex-center;
+    flex-shrink: 0;
+    width: 24px;
+    height: 24px;
+    padding: 0;
+    background: transparent;
+    border: 1px solid transparent;
+    border-radius: $radius-sm;
+    color: currentColor;
+    font-size: $font-size-lg;
+    line-height: 1;
+    cursor: pointer;
+    opacity: 0.7;
+    transition:
+        background-color $transition-fast,
+        opacity $transition-fast;
+
+    &:hover {
+        opacity: 1;
+        background-color: rgba(255, 255, 255, 0.06);
+    }
+
+    &:focus-visible {
+        outline: none;
+        opacity: 1;
+        box-shadow: 0 0 0 2px var(--alert-color);
+    }
+}
+
+
+// ============================================================
+// VARIANTES
+// ============================================================
+
+.alert--info {
+    --alert-color: #{$color-info};
+    --alert-bg: #{$color-info-light};
+    --alert-border: #{rgba(37, 189, 232, 0.35)};
+}
+
+.alert--success {
+    --alert-color: #{$color-success};
+    --alert-bg: #{$color-success-light};
+    --alert-border: #{rgba(101, 214, 165, 0.35)};
+}
+
+.alert--warning {
+    --alert-color: #{$color-warning};
+    --alert-bg: #{$color-warning-light};
+    --alert-border: #{rgba(243, 201, 105, 0.35)};
+}
+
+.alert--error {
+    --alert-color: #{$color-danger};
+    --alert-bg: #{$color-danger-light};
+    --alert-border: #{rgba(239, 91, 120, 0.35)};
+}
+
+
+// ============================================================
+// ACCESSIBILITÉ — RÉDUCTION DES ANIMATIONS
+// ============================================================
+
+@media (prefers-reduced-motion: reduce) {
+    .alert__close {
+        transition: none;
+    }
+}

@@ -1,0 +1,191 @@
+// ============================================================
+// COMPOSANT — DRAWER
+// Fichier : components/UI/Drawer/_Drawer.scss
+// ------------------------------------------------------------
+// Rôle :
+//   Styles du composant <Drawer /> (panneau latéral modal).
+//   Gère : positions (left / right / top / bottom),
+//   tailles (small / medium / large / full), overlay,
+//   header / body / footer.
+//
+// Dépendances :
+//   - baseVariables/_variables.scss
+//   - baseVariables/_mixins.scss
+// ============================================================
+
+@use '../../baseVariables/variables' as *;
+@use '../../baseVariables/mixins' as *;
+
+
+// ============================================================
+// OVERLAY
+// ============================================================
+
+.drawer__overlay {
+    position: fixed;
+    inset: 0;
+    z-index: $z-modal;
+    background-color: rgba(0, 0, 0, 0.60);
+    backdrop-filter: blur(3px);
+    animation: drawer-overlay-in $transition-fast both;
+}
+
+@keyframes drawer-overlay-in {
+    from { opacity: 0; }
+    to   { opacity: 1; }
+}
+
+
+// ============================================================
+// PANNEAU
+// ============================================================
+
+.drawer {
+    @include flex(column, stretch, flex-start, 0);
+    position: absolute;
+    background-color: $color-bg-elevated;
+    border: 1px solid $color-border-light;
+    overflow: hidden;
+    font-family: $font-family-base;
+    color: $color-text-primary;
+}
+
+.drawer--open {
+    // Marqueur ; les animations sont déclenchées par position
+}
+
+
+// ============================================================
+// HEADER / BODY / FOOTER
+// ============================================================
+
+.drawer__header {
+    flex-shrink: 0;
+    padding: $spacing-4 $spacing-5;
+    font-family: $font-family-heading;
+    font-size: $font-size-lg;
+    font-weight: $font-weight-semibold;
+    color: $color-text-primary;
+    border-bottom: 1px solid $color-border;
+}
+
+.drawer__body {
+    @include scrollbar;
+    flex: 1;
+    min-height: 0;
+    padding: $spacing-4 $spacing-5;
+    overflow-y: auto;
+    font-size: $font-size-sm;
+    color: $color-text-secondary;
+    line-height: $line-height-normal;
+}
+
+.drawer__footer {
+    @include flex(row, center, flex-end, $spacing-2);
+    flex-shrink: 0;
+    padding: $spacing-3 $spacing-5;
+    border-top: 1px solid $color-border;
+    background-color: $color-bg-card;
+}
+
+
+// ============================================================
+// POSITIONS
+// ============================================================
+
+// ----- Left -----
+.drawer--left {
+    top: 0;
+    bottom: 0;
+    left: 0;
+    animation: drawer-slide-left $transition-normal both;
+
+    &.drawer--small  { width: 280px; max-width: 90vw; }
+    &.drawer--medium { width: 380px; max-width: 90vw; }
+    &.drawer--large  { width: 520px; max-width: 90vw; }
+    &.drawer--full   { width: 100vw; }
+}
+
+@keyframes drawer-slide-left {
+    from { transform: translateX(-100%); }
+    to   { transform: translateX(0); }
+}
+
+// ----- Right -----
+.drawer--right {
+    top: 0;
+    bottom: 0;
+    right: 0;
+    animation: drawer-slide-right $transition-normal both;
+
+    &.drawer--small  { width: 280px; max-width: 90vw; }
+    &.drawer--medium { width: 380px; max-width: 90vw; }
+    &.drawer--large  { width: 520px; max-width: 90vw; }
+    &.drawer--full   { width: 100vw; }
+}
+
+@keyframes drawer-slide-right {
+    from { transform: translateX(100%); }
+    to   { transform: translateX(0); }
+}
+
+// ----- Top -----
+.drawer--top {
+    top: 0;
+    left: 0;
+    right: 0;
+    animation: drawer-slide-top $transition-normal both;
+
+    &.drawer--small  { height: 25vh; }
+    &.drawer--medium { height: 40vh; }
+    &.drawer--large  { height: 60vh; }
+    &.drawer--full   { height: 100vh; }
+}
+
+@keyframes drawer-slide-top {
+    from { transform: translateY(-100%); }
+    to   { transform: translateY(0); }
+}
+
+// ----- Bottom -----
+.drawer--bottom {
+    bottom: 0;
+    left: 0;
+    right: 0;
+    animation: drawer-slide-bottom $transition-normal both;
+
+    &.drawer--small  { height: 25vh; }
+    &.drawer--medium { height: 40vh; }
+    &.drawer--large  { height: 60vh; }
+    &.drawer--full   { height: 100vh; }
+}
+
+@keyframes drawer-slide-bottom {
+    from { transform: translateY(100%); }
+    to   { transform: translateY(0); }
+}
+
+
+// ============================================================
+// RESPONSIVE
+// ============================================================
+
+@include responsive(mobile) {
+    .drawer--left,
+    .drawer--right {
+        width: 100vw !important;
+        max-width: 100vw;
+    }
+}
+
+
+// ============================================================
+// ACCESSIBILITÉ — RÉDUCTION DES ANIMATIONS
+// ============================================================
+
+@media (prefers-reduced-motion: reduce) {
+    .drawer,
+    .drawer__overlay {
+        animation: none;
+    }
+}

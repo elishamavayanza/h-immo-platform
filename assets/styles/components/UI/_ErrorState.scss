@@ -1,0 +1,394 @@
+```scss
+// ============================================================
+// COMPOSANT — ERROR STATE
+// Fichier : components/UI/ErrorState/_ErrorState.scss
+// ------------------------------------------------------------
+// Rôle :
+//   Styles complets du composant <ErrorState />.
+//
+// Fonctionnalités :
+//   - Taille automatique / pleine largeur
+//   - Mode compact
+//   - Tones : default / info / warning / danger
+//   - Icône
+//   - Titre
+//   - Message
+//   - Code HTTP
+//   - Actions multiples
+//   - Bouton « Réessayer »
+//   - Responsive
+//   - Accessibilité
+//   - Compatible avec ErrorBoundary
+//
+// Dépendances :
+//   - ../../baseVariables/_variables.scss
+//   - ../../baseVariables/_mixins.scss
+// ============================================================
+
+@use '../../baseVariables/variables' as *;
+@use '../../baseVariables/mixins' as *;
+
+
+// ============================================================
+// CONTENEUR PRINCIPAL
+// ============================================================
+
+.error-state {
+    @include flex(column, center, center, $spacing-4);
+
+    width: 100%;
+    max-width: 520px;
+    margin: 0 auto;
+    padding: $spacing-10 $spacing-6;
+
+    font-family: $font-family-base;
+    color: $color-text-secondary;
+    text-align: center;
+
+    background-color: $color-bg-card;
+    border: 1px solid $color-border;
+    border-radius: $radius-lg;
+
+    // Variables CSS locales permettant aux tones
+    // de modifier facilement les couleurs du composant.
+    --error-accent: #{$color-text-muted};
+    --error-accent-light: #{rgba(107, 112, 119, 0.10)};
+}
+
+
+// ============================================================
+// TAILLE — AUTO
+// ============================================================
+// Le composant prend uniquement la largeur nécessaire,
+// tout en conservant une largeur minimale confortable.
+// ============================================================
+
+.error-state--auto {
+    width: fit-content;
+    min-width: 320px;
+}
+
+
+// ============================================================
+// TAILLE — FULL
+// ============================================================
+// Utilisée notamment pour ErrorBoundary ou une page entière.
+// ============================================================
+
+.error-state--full {
+    width: 100%;
+    max-width: 100%;
+    min-height: 60vh;
+
+    padding: $spacing-12 $spacing-8;
+
+    border-color: $color-border-light;
+}
+
+
+// ============================================================
+// MODE COMPACT
+// ============================================================
+// Version réduite pour les petits espaces :
+// listes, cartes, widgets, tableaux, etc.
+// ============================================================
+
+.error-state--compact {
+    gap: $spacing-2;
+    padding: $spacing-5 $spacing-4;
+
+    .error-state__icon {
+        width: 40px;
+        height: 40px;
+        margin-bottom: $spacing-1;
+
+        svg {
+            width: 24px;
+            height: 24px;
+        }
+    }
+
+    .error-state__title {
+        font-size: $font-size-md;
+    }
+
+    .error-state__message {
+        font-size: $font-size-xs;
+    }
+
+    .error-state__actions {
+        margin-top: $spacing-1;
+    }
+
+    .error-state__retry {
+        padding: $spacing-2 $spacing-4;
+        font-size: $font-size-xs;
+    }
+}
+
+
+// ============================================================
+// ICÔNE
+// ============================================================
+
+.error-state__icon {
+    @include flex-center;
+
+    width: 96px;
+    height: 96px;
+
+    margin-bottom: $spacing-2;
+
+    color: var(--error-accent);
+    background-color: var(--error-accent-light);
+
+    border-radius: $radius-full;
+
+    transition:
+        background-color $transition-fast,
+        color $transition-fast;
+
+    svg {
+        display: block;
+        width: 56px;
+        height: 56px;
+    }
+}
+
+
+// ============================================================
+// TITRE
+// ============================================================
+
+.error-state__title {
+    max-width: 100%;
+    margin: 0;
+
+    font-family: $font-family-heading;
+    font-size: $font-size-xl;
+    font-weight: $font-weight-semibold;
+    line-height: $line-height-tight;
+
+    color: $color-text-primary;
+}
+
+
+// ============================================================
+// MESSAGE
+// ============================================================
+
+.error-state__message {
+    max-width: 100%;
+    margin: 0;
+
+    font-size: $font-size-sm;
+    line-height: $line-height-normal;
+
+    color: $color-text-secondary;
+}
+
+
+// ============================================================
+// CODE HTTP
+// ============================================================
+// Exemple :
+//   ERREUR 404
+//   ERREUR 500
+//   ERREUR 403
+// ============================================================
+
+.error-state__code {
+    @include inline-block;
+
+    padding: $spacing-1 $spacing-3;
+
+    font-family: $font-family-mono;
+    font-size: $font-size-xs;
+    font-weight: $font-weight-medium;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+
+    color: var(--error-accent);
+    background-color: var(--error-accent-light);
+
+    border: 1px solid var(--error-accent-light);
+    border-radius: $radius-full;
+
+    user-select: none;
+}
+
+
+// ============================================================
+// ACTIONS
+// ============================================================
+// Conteneur pour plusieurs actions :
+// - Réessayer
+// - Retour
+// - Accueil
+// - Connexion
+// - etc.
+// ============================================================
+
+.error-state__actions {
+    @include flex(row, center, center, $spacing-2);
+
+    flex-wrap: wrap;
+
+    margin-top: $spacing-3;
+}
+
+
+// ============================================================
+// BOUTON — RÉESSAYER
+// ============================================================
+
+.error-state__retry {
+    @include flex-center;
+    @include focus-ring;
+
+    margin-top: $spacing-2;
+    padding: $spacing-3 $spacing-6;
+
+    font-family: $font-family-base;
+    font-size: $font-size-sm;
+    font-weight: $font-weight-semibold;
+
+    color: $color-text-inverse;
+    background-color: $color-primary;
+
+    border: 1px solid $color-primary;
+    border-radius: $radius-md;
+
+    cursor: pointer;
+
+    transition:
+        background-color $transition-fast,
+        border-color $transition-fast,
+        transform $transition-fast;
+
+    &:hover {
+        background-color: $color-primary-hover;
+        border-color: $color-primary-hover;
+    }
+
+    &:active {
+        transform: scale(0.97);
+    }
+
+    &:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+        transform: none;
+    }
+}
+
+
+// ============================================================
+// TONES — DEFAULT
+// ============================================================
+
+.error-state--default {
+    --error-accent: #{$color-text-muted};
+    --error-accent-light: #{rgba(107, 112, 119, 0.10)};
+}
+
+
+// ============================================================
+// TONES — INFO
+// ============================================================
+
+.error-state--info {
+    --error-accent: #{$color-info};
+    --error-accent-light: #{$color-info-light};
+}
+
+
+// ============================================================
+// TONES — WARNING
+// ============================================================
+
+.error-state--warning {
+    --error-accent: #{$color-warning};
+    --error-accent-light: #{$color-warning-light};
+}
+
+
+// ============================================================
+// TONES — DANGER
+// ============================================================
+
+.error-state--danger {
+    --error-accent: #{$color-danger};
+    --error-accent-light: #{$color-danger-light};
+}
+
+
+// ============================================================
+// RESPONSIVE — MOBILE
+// ============================================================
+
+@include responsive(mobile) {
+    .error-state {
+        max-width: 100%;
+        padding: $spacing-6 $spacing-4;
+    }
+
+    .error-state--auto {
+        width: 100%;
+        min-width: 0;
+    }
+
+    .error-state--full {
+        min-height: 50vh;
+        padding: $spacing-8 $spacing-4;
+    }
+
+    .error-state__icon {
+        width: 72px;
+        height: 72px;
+
+        svg {
+            width: 40px;
+            height: 40px;
+        }
+    }
+
+    .error-state__title {
+        font-size: $font-size-lg;
+    }
+
+    .error-state__message {
+        font-size: $font-size-sm;
+    }
+
+    .error-state__actions {
+        width: 100%;
+        flex-direction: column;
+    }
+
+    .error-state__retry {
+        width: 100%;
+    }
+}
+
+
+// ============================================================
+// ACCESSIBILITÉ
+// ============================================================
+// Désactivation des transitions lorsque l'utilisateur demande
+// une réduction des animations.
+// ============================================================
+
+@media (prefers-reduced-motion: reduce) {
+    .error-state__icon {
+        transition: none;
+    }
+
+    .error-state__retry {
+        transition: none;
+
+        &:active {
+            transform: none;
+        }
+    }
+}

@@ -1,0 +1,216 @@
+// ============================================================
+// COMPOSANT — LINE CHART
+// Fichier : components/Data/_line-chart.scss
+// ------------------------------------------------------------
+// Rôle :
+//   Styles du composant <LineChart /> (SVG + tooltip + guide).
+//   Gère : conteneur, grille, axes, courbe, aire dégradée,
+//   points, point actif, guide vertical, tooltip, état vide.
+//
+// Dépendances :
+//   - baseVariables/_variables.scss
+//   - baseVariables/_mixins.scss
+// ============================================================
+
+@use '../../baseVariables/variables' as *;
+@use '../../baseVariables/mixins' as *;
+
+
+// ============================================================
+// CONTENEUR PRINCIPAL
+// ============================================================
+// Carte sombre. La hauteur est pilotée par le style inline.
+// Les <text fill="currentColor"> héritent de la couleur du
+// conteneur (secondary) pour rester discrets.
+// ============================================================
+
+.line-chart {
+    @include card($spacing-4);
+    position: relative;
+    width: 100%;
+    color: $color-text-secondary;
+    overflow: hidden;
+
+    svg {
+        display: block;
+        width: 100%;
+        height: 100%;
+    }
+}
+
+
+// ============================================================
+// GRILLE HORIZONTALE
+// ============================================================
+// Lignes de référence (max / mid / min). Très discrètes pour
+// ne pas polluer la lecture de la courbe.
+// ============================================================
+
+.line-chart__grid {
+    line {
+        stroke: $color-border;
+        stroke-width: 1;
+        stroke-dasharray: 3 4;
+        opacity: 0.7;
+    }
+}
+
+
+// ============================================================
+// AXES (X et Y)
+// ============================================================
+// Labels de valeurs et de dates. Couleur discrète, non
+// interactifs, police fine.
+// ============================================================
+
+.line-chart__axis {
+    color: $color-text-muted;
+
+    text {
+        font-family: $font-family-base;
+        font-weight: $font-weight-medium;
+        letter-spacing: 0.01em;
+        user-select: none;
+        pointer-events: none;
+    }
+}
+
+
+// ============================================================
+// COURBE
+// ============================================================
+// Tracé principal. On force un trait net avec
+// `vector-effect: non-scaling-stroke` pour rester lisible
+// même en SVG responsive.
+// ============================================================
+
+.line-chart__line {
+    fill: none;
+    stroke: $color-primary;
+    stroke-width: 2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    vector-effect: non-scaling-stroke;
+    filter: drop-shadow(0 2px 4px rgba(37, 189, 232, 0.18));
+}
+
+
+// ============================================================
+// POINTS
+// ============================================================
+// Chaque point est un cercle. Le rayon change au survol, ce
+// qui suffit à signaler le point actif sans surcharger.
+// ============================================================
+
+.line-chart__dot {
+    fill: $color-primary;
+    stroke: $color-bg-card;
+    stroke-width: 2;
+    transition: r $transition-fast, fill $transition-fast;
+    pointer-events: none;
+}
+
+.line-chart__dot--active {
+    fill: $color-primary-hover;
+    stroke: $color-bg-card;
+    filter: drop-shadow(0 0 6px rgba(37, 189, 232, 0.55));
+}
+
+
+// ============================================================
+// GUIDE VERTICAL
+// ============================================================
+// Ligne verticale au survol, alignée sur le point actif.
+// ============================================================
+
+.line-chart__guide {
+    stroke: $color-primary;
+    stroke-width: 1;
+    stroke-dasharray: 3 3;
+    opacity: 0.55;
+    pointer-events: none;
+}
+
+
+// ============================================================
+// TOOLTIP
+// ============================================================
+// Carte élevée, ancrée au point actif via `left` / `top`.
+// Position : au-dessus du point (translate -100%).
+// ============================================================
+
+.line-chart__tooltip {
+    @include elevation(lg);
+    position: absolute;
+    z-index: $z-tooltip;
+    min-width: 110px;
+    padding: $spacing-2 $spacing-3;
+    background-color: $color-bg-elevated;
+    border: 1px solid $color-border-light;
+    border-radius: $radius-md;
+    color: $color-text-primary;
+    font-family: $font-family-base;
+    font-size: $font-size-xs;
+    line-height: $line-height-snug;
+    text-align: center;
+    pointer-events: none;
+    transform: translate(-50%, -100%);
+    white-space: nowrap;
+    transition: opacity $transition-fast;
+
+    // Petite flèche vers le bas
+    &::after {
+        content: '';
+        position: absolute;
+        top: 100%;
+        left: 50%;
+        transform: translateX(-50%);
+        border: 6px solid transparent;
+        border-top-color: $color-bg-elevated;
+    }
+}
+
+.line-chart__tooltip-date {
+    margin-bottom: 2px;
+    color: $color-text-muted;
+    font-size: 0.7rem;
+    font-weight: $font-weight-medium;
+    letter-spacing: 0.02em;
+}
+
+.line-chart__tooltip-value {
+    color: $color-primary;
+    font-size: $font-size-sm;
+    font-weight: $font-weight-semibold;
+    font-variant-numeric: tabular-nums;
+}
+
+
+// ============================================================
+// ÉTAT VIDE
+// ============================================================
+// Affiché quand `data.length === 0`.
+// ============================================================
+
+.line-chart__empty {
+    @include flex-center;
+    @include card($spacing-6);
+    width: 100%;
+    min-height: 200px;
+    color: $color-text-muted;
+    font-size: $font-size-sm;
+    font-style: italic;
+    text-align: center;
+}
+
+
+// ============================================================
+// ACCESSIBILITÉ — RÉDUCTION DES ANIMATIONS
+// ============================================================
+
+@media (prefers-reduced-motion: reduce) {
+    .line-chart__dot,
+    .line-chart__tooltip {
+        transition: none;
+    }
+}

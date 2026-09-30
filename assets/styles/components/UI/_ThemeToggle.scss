@@ -1,0 +1,109 @@
+// ============================================================
+// COMPOSANT — THEME TOGGLE
+// Fichier : components/UI/ThemeToggle/_ThemeToggle.scss
+// ------------------------------------------------------------
+// Rôle :
+//   Styles du composant <ThemeToggle />.
+//   Gère : variantes compacte (icône seule) et étendue
+//   (icône + label), hover, focus clavier.
+//
+// Dépendances :
+//   - baseVariables/_variables.scss
+//   - baseVariables/_mixins.scss
+// ============================================================
+
+@use '../../baseVariables/variables' as *;
+@use '../../baseVariables/mixins' as *;
+
+
+// ============================================================
+// BASE
+// ============================================================
+
+.theme-toggle {
+    @include flex(row, center, center, $spacing-2);
+    @include focus-ring;
+    padding: $spacing-2 $spacing-3;
+    font-family: $font-family-base;
+    font-size: $font-size-sm;
+    font-weight: $font-weight-medium;
+    color: $color-text-secondary;
+    background-color: $color-bg-card;
+    border: 1px solid $color-border-light;
+    border-radius: $radius-md;
+    cursor: pointer;
+    user-select: none;
+    transition:
+        background-color $transition-fast,
+        border-color $transition-fast,
+        color $transition-fast,
+        transform $transition-fast;
+
+    svg {
+        display: block;
+        flex-shrink: 0;
+        transition: transform $transition-normal, color $transition-fast;
+    }
+
+    &:hover {
+        background-color: $color-bg-card-hover;
+        border-color: $color-border-strong;
+        color: $color-text-primary;
+
+        svg {
+            color: $color-primary;
+            transform: rotate(20deg);
+        }
+    }
+
+    &:active {
+        transform: scale(0.96);
+    }
+
+    &:focus-visible {
+        color: $color-primary;
+        border-color: $color-primary;
+    }
+}
+
+
+// ============================================================
+// LABEL (mode étendu)
+// ============================================================
+
+.theme-toggle__label {
+    line-height: 1;
+    font-size: $font-size-sm;
+    font-weight: $font-weight-medium;
+    color: currentColor;
+}
+
+
+// ============================================================
+// MODE COMPACT (icône seule)
+// ============================================================
+
+.theme-toggle:not(:has(.theme-toggle__label)) {
+    padding: $spacing-2;
+    aspect-ratio: 1 / 1;
+}
+
+
+// ============================================================
+// ACCESSIBILITÉ — RÉDUCTION DES ANIMATIONS
+// ============================================================
+
+@media (prefers-reduced-motion: reduce) {
+    .theme-toggle,
+    .theme-toggle svg {
+        transition: none;
+    }
+
+    .theme-toggle:hover svg {
+        transform: none;
+    }
+
+    .theme-toggle:active {
+        transform: none;
+    }
+}

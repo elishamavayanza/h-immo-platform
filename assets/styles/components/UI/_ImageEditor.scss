@@ -1,0 +1,264 @@
+// ============================================================
+// COMPOSANT — IMAGE EDITOR
+// Fichier : components/UI/ImageEditor/_ImageEditor.scss
+// ------------------------------------------------------------
+// Rôle :
+//   Styles du composant <ImageEditor /> (recadrage d’image
+//   avec zoom / rotation, format cercle ou carré).
+//   Gère : conteneur canvas, contrôles (zoom, rotation),
+//   boutons d’action (annuler / appliquer).
+//
+// Dépendances :
+//   - baseVariables/_variables.scss
+//   - baseVariables/_mixins.scss
+// ============================================================
+
+@use '../../baseVariables/variables' as *;
+@use '../../baseVariables/mixins' as *;
+
+
+// ============================================================
+// CONTENEUR
+// ============================================================
+
+.image-editor {
+    @include flex(column, stretch, flex-start, $spacing-4);
+    padding: $spacing-5;
+    background-color: $color-bg-elevated;
+    border: 1px solid $color-border-light;
+    border-radius: $radius-lg;
+    font-family: $font-family-base;
+    color: $color-text-primary;
+    max-width: 420px;
+    width: 100%;
+}
+
+
+// ============================================================
+// ZONE CANVAS
+// ============================================================
+
+.image-editor__canvas-container {
+    @include flex-center;
+    padding: $spacing-4;
+    background-color: $color-bg-app;
+    border: 1px dashed $color-border-light;
+    border-radius: $radius-md;
+    overflow: hidden;
+
+    canvas {
+        display: block;
+        background-color: $color-bg-card;
+        box-shadow: $shadow-md;
+        transition: border-radius $transition-fast;
+    }
+}
+
+
+// ============================================================
+// CONTRÔLES
+// ============================================================
+
+.image-editor__controls {
+    @include flex(column, stretch, flex-start, $spacing-3);
+}
+
+.image-editor__control {
+    @include flex(row, center, flex-start, $spacing-3);
+
+    label {
+        flex-shrink: 0;
+        min-width: 64px;
+        font-size: $font-size-sm;
+        font-weight: $font-weight-medium;
+        color: $color-text-secondary;
+        user-select: none;
+    }
+
+    // ----- Range (input[type="range"]) -----
+    input[type='range'] {
+        @include focus-ring;
+        flex: 1;
+        appearance: none;
+        -webkit-appearance: none;
+        height: 4px;
+        background-color: $color-bg-input;
+        border-radius: $radius-full;
+        outline: none;
+        cursor: pointer;
+
+        // Thumb WebKit
+        &::-webkit-slider-thumb {
+            appearance: none;
+            -webkit-appearance: none;
+            width: 16px;
+            height: 16px;
+            background-color: $color-primary;
+            border: 2px solid $color-bg-card;
+            border-radius: $radius-full;
+            cursor: pointer;
+            transition: background-color $transition-fast, transform $transition-fast;
+
+            &:hover {
+                background-color: $color-primary-hover;
+                transform: scale(1.1);
+            }
+
+            &:active {
+                transform: scale(0.95);
+            }
+        }
+
+        // Thumb Firefox
+        &::-moz-range-thumb {
+            width: 16px;
+            height: 16px;
+            background-color: $color-primary;
+            border: 2px solid $color-bg-card;
+            border-radius: $radius-full;
+            cursor: pointer;
+            transition: background-color $transition-fast, transform $transition-fast;
+
+            &:hover {
+                background-color: $color-primary-hover;
+                transform: scale(1.1);
+            }
+        }
+
+        &::-moz-range-track {
+            height: 4px;
+            background-color: $color-bg-input;
+            border-radius: $radius-full;
+        }
+    }
+
+    // ----- Boutons de rotation -----
+    button {
+        @include flex-center;
+        @include focus-ring;
+        padding: $spacing-2 $spacing-3;
+        font-family: $font-family-base;
+        font-size: $font-size-sm;
+        font-weight: $font-weight-medium;
+        color: $color-text-primary;
+        background-color: $color-bg-card;
+        border: 1px solid $color-border-light;
+        border-radius: $radius-md;
+        cursor: pointer;
+        transition:
+            background-color $transition-fast,
+            border-color $transition-fast,
+            transform $transition-fast;
+
+        &:hover {
+            background-color: $color-bg-card-hover;
+            border-color: $color-border-strong;
+        }
+
+        &:active {
+            transform: scale(0.96);
+        }
+    }
+}
+
+
+// ============================================================
+// ACTIONS (Annuler / Appliquer)
+// ============================================================
+
+.image-editor__actions {
+    @include flex(row, center, flex-end, $spacing-2);
+    padding-top: $spacing-3;
+    border-top: 1px solid $color-border;
+
+    button {
+        @include flex-center;
+        @include focus-ring;
+        padding: $spacing-3 $spacing-5;
+        font-family: $font-family-base;
+        font-size: $font-size-sm;
+        font-weight: $font-weight-semibold;
+        border-radius: $radius-md;
+        border: 1px solid transparent;
+        cursor: pointer;
+        transition:
+            background-color $transition-fast,
+            border-color $transition-fast,
+            color $transition-fast,
+            transform $transition-fast;
+
+        &:active {
+            transform: scale(0.97);
+        }
+
+        // ----- Bouton Annuler -----
+        &:first-child {
+            color: $color-text-secondary;
+            background-color: transparent;
+            border-color: $color-border-light;
+
+            &:hover {
+                color: $color-text-primary;
+                background-color: $color-bg-card-hover;
+                border-color: $color-border-strong;
+            }
+        }
+
+        // ----- Bouton Appliquer -----
+        &:last-child {
+            color: $color-text-inverse;
+            background-color: $color-primary;
+            border-color: $color-primary;
+
+            &:hover {
+                background-color: $color-primary-hover;
+                border-color: $color-primary-hover;
+            }
+        }
+    }
+}
+
+
+// ============================================================
+// RESPONSIVE
+// ============================================================
+
+@include responsive(mobile) {
+    .image-editor {
+        padding: $spacing-4;
+    }
+
+    .image-editor__control {
+        flex-wrap: wrap;
+    }
+
+    .image-editor__actions {
+        button {
+            flex: 1;
+        }
+    }
+}
+
+
+// ============================================================
+// ACCESSIBILITÉ — RÉDUCTION DES ANIMATIONS
+// ============================================================
+
+@media (prefers-reduced-motion: reduce) {
+    .image-editor,
+    .image-editor__control input[type='range'],
+    .image-editor__control button,
+    .image-editor__actions button {
+        transition: none;
+    }
+
+    .image-editor__control input[type='range']::-webkit-slider-thumb,
+    .image-editor__control input[type='range']::-moz-range-thumb {
+        transition: none;
+    }
+
+    .image-editor__control button:active,
+    .image-editor__actions button:active {
+        transform: none;
+    }
+}

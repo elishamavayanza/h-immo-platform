@@ -1,0 +1,259 @@
+// ============================================================
+// COMPOSANT — INPUT
+// Fichier : components/Form/Input/_Input.scss
+// ------------------------------------------------------------
+// Rôle :
+//   Styles du composant <Input /> (champ texte générique,
+//   avec icône optionnelle gauche / droite).
+//   Gère : variantes (default / error / success),
+//   tailles (small / medium / large), plein largeur,
+//   désactivé, readonly, icône gauche/droite.
+//
+// Dépendances :
+//   - baseVariables/_variables.scss
+//   - baseVariables/_mixins.scss
+// ============================================================
+
+@use '../../baseVariables/variables' as *;
+@use '../../baseVariables/mixins' as *;
+
+
+// ============================================================
+// WRAPPER
+// ============================================================
+
+.input-field__wrapper {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    width: fit-content;
+
+    &:has(.input-field--full-width) {
+        display: flex;
+        width: 100%;
+    }
+
+    // Focus visible : anneau primaire
+    &:focus-within .input-field {
+        border-color: $color-primary;
+        box-shadow: $shadow-focus;
+    }
+
+    &:focus-within .input-field--error {
+        border-color: $color-danger;
+        box-shadow: 0 0 0 3px rgba(239, 91, 120, 0.30);
+    }
+
+    &:focus-within .input-field--success {
+        border-color: $color-success;
+        box-shadow: 0 0 0 3px rgba(101, 214, 165, 0.30);
+    }
+}
+
+
+// ============================================================
+// ICÔNE (gauche / droite)
+// ============================================================
+
+.input-field__icon {
+    @include flex-center;
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    color: $color-text-muted;
+    pointer-events: none;
+    z-index: 1;
+    transition: color $transition-fast;
+
+    svg {
+        display: block;
+    }
+
+    &--left {
+        left: $spacing-3;
+    }
+
+    &--right {
+        right: $spacing-3;
+    }
+}
+
+.input-field__wrapper:focus-within .input-field__icon {
+    color: $color-primary;
+}
+
+
+// ============================================================
+// INPUT
+// ============================================================
+
+.input-field {
+    width: 100%;
+    font-family: $font-family-base;
+    font-weight: $font-weight-medium;
+    color: $color-text-primary;
+    background-color: $color-bg-input;
+    border: 1px solid $color-border;
+    border-radius: $radius-md;
+    outline: none;
+    appearance: none;
+    -webkit-appearance: none;
+    transition:
+        background-color $transition-fast,
+        border-color $transition-fast,
+        box-shadow $transition-fast,
+        color $transition-fast;
+
+    &::placeholder {
+        color: $color-text-muted;
+        font-weight: $font-weight-regular;
+    }
+
+    &:hover:not(:disabled):not(.input-field--disabled):not(.input-field--readonly) {
+        background-color: $color-bg-card-hover;
+        border-color: $color-border-light;
+    }
+
+    &:active:not(:disabled):not(.input-field--disabled) {
+        background-color: $color-bg-card;
+    }
+
+    &:focus-visible {
+        border-color: $color-primary;
+    }
+
+    // ----- Readonly -----
+    &.input-field--readonly,
+    &:read-only:not(:disabled) {
+        color: $color-text-secondary;
+        background-color: $color-bg-app;
+        cursor: default;
+
+        &:hover {
+            background-color: $color-bg-app;
+            border-color: $color-border;
+        }
+    }
+
+    // ----- Disabled -----
+    &:disabled,
+    &.input-field--disabled {
+        color: $color-text-disabled;
+        background-color: $color-bg-app;
+        border-color: $color-border;
+        cursor: not-allowed;
+        opacity: 0.7;
+
+        &::placeholder {
+            color: $color-text-disabled;
+        }
+    }
+}
+
+
+// ============================================================
+// TAILLES
+// ============================================================
+
+.input-field--small {
+    padding: $spacing-2 $spacing-3;
+    font-size: $font-size-sm;
+    min-height: 32px;
+    border-radius: $radius-sm;
+}
+
+.input-field--medium {
+    padding: $spacing-3 $spacing-4;
+    font-size: $font-size-md;
+    min-height: 40px;
+}
+
+.input-field--large {
+    padding: $spacing-4 $spacing-5;
+    font-size: $font-size-lg;
+    min-height: 48px;
+    border-radius: $radius-lg;
+}
+
+
+// ============================================================
+// DÉCALAGE POUR L’ICÔNE
+// ============================================================
+
+.input-field__wrapper:has(.input-field__icon) {
+    .input-field--with-icon-left.input-field--small   { padding-left: $spacing-8; }
+    .input-field--with-icon-left.input-field--medium  { padding-left: $spacing-10; }
+    .input-field--with-icon-left.input-field--large   { padding-left: $spacing-12; }
+
+    .input-field--with-icon-right.input-field--small  { padding-right: $spacing-8; }
+    .input-field--with-icon-right.input-field--medium { padding-right: $spacing-10; }
+    .input-field--with-icon-right.input-field--large  { padding-right: $spacing-12; }
+}
+
+
+// ============================================================
+// VARIANTES
+// ============================================================
+
+.input-field--error {
+    border-color: $color-danger;
+
+    &:hover:not(:disabled):not(.input-field--disabled) {
+        border-color: $color-danger;
+        background-color: $color-danger-light;
+    }
+
+    &:focus,
+    &:focus-visible {
+        border-color: $color-danger;
+        box-shadow: 0 0 0 3px rgba(239, 91, 120, 0.30);
+    }
+}
+
+.input-field--success {
+    border-color: $color-success;
+
+    &:hover:not(:disabled):not(.input-field--disabled) {
+        border-color: $color-success;
+        background-color: $color-success-light;
+    }
+
+    &:focus,
+    &:focus-visible {
+        border-color: $color-success;
+        box-shadow: 0 0 0 3px rgba(101, 214, 165, 0.30);
+    }
+}
+
+
+// ============================================================
+// PLEIN LARGEUR
+// ============================================================
+
+.input-field--full-width {
+    width: 100%;
+    display: block;
+}
+
+
+// ============================================================
+// RESPONSIVE
+// ============================================================
+
+@include responsive(mobile) {
+    .input-field--medium {
+        min-height: 44px;
+    }
+}
+
+
+// ============================================================
+// ACCESSIBILITÉ — RÉDUCTION DES ANIMATIONS
+// ============================================================
+
+@media (prefers-reduced-motion: reduce) {
+    .input-field,
+    .input-field__icon {
+        transition: none;
+    }
+}

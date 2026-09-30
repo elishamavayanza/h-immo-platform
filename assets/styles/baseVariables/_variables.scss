@@ -1,0 +1,264 @@
+// ============================================================
+// SOFT-IMMO — DESIGN SYSTEM
+// Fichier : _variables.scss
+// ------------------------------------------------------------
+// Rôle :
+//   Centralise toutes les variables globales du Design System.
+//   Palette dérivée de l'image de référence « Synerque »
+//   (dashboard dark moderne).
+//
+// Utilisation :
+//   @use 'styles/variables' as *;
+//
+// Important :
+//   Aucun style de composant ne doit être écrit ici.
+// ============================================================
+
+
+// ============================================================
+// COULEURS DE FOND
+// ============================================================
+// Palette dérivée de la couleur de base #0A0B0D extraite de
+// l'image. Chaque niveau d'élévation augmente légèrement en
+// luminosité pour créer une hiérarchie visuelle naturelle
+// en Dark Theme.
+// ============================================================
+
+$color-bg-base:         #0A0B0D; // Couleur de base (extraite de l'image)
+$color-bg-primary:      #000000; // Noir absolu (rare, arrière-plans profonds)
+$color-bg-app:          #0A0B0D; // Fond principal de l'application
+$color-bg-sidebar:      #0A0B0D; // Fond de la sidebar (fusionne avec l'app)
+$color-bg-card:         #15171A; // Fond des cartes / panneaux
+$color-bg-card-hover:   #1A1C1F; // Fond des cartes au survol
+$color-bg-elevated:     #202326; // Surfaces élevées (modales, dropdowns)
+$color-bg-input:        #101214; // Fond des champs de saisie
+
+
+// ============================================================
+// COULEURS DE TEXTE
+// ============================================================
+// Hiérarchie typographique par contraste, dérivée du blanc
+// du titre « Synerque » vers des gris de plus en plus discrets.
+// ============================================================
+
+$color-text-primary:    #F5F5F5; // Texte principal (blanc doux)
+$color-text-secondary:  #A5A8AD; // Texte secondaire (labels, aides)
+$color-text-muted:      #6B7077; // Métadonnées, dates, compteurs
+$color-text-disabled:   #45484C; // Texte désactivé
+$color-text-inverse:    #0A0B0D; // Texte sur fond clair (accent)
+
+
+// ============================================================
+// BORDURES
+// ============================================================
+// Bordures très fines pour séparer les surfaces sombres sans
+// casser l'ambiance. Les cartes de l'image utilisent une
+// bordure à peine visible.
+// ============================================================
+
+$color-border:          #262A2E; // Bordure par défaut
+$color-border-light:    #34383C; // Bordure plus claire (hover)
+$color-border-strong:   #45484C; // Bordure mise en avant (focus actif)
+
+
+// ============================================================
+// COULEUR PRIMAIRE (ACCENT)
+// ============================================================
+// Bleu-cyan utilisé pour :
+//   - les barres de progression (visible dans l'image) ;
+//   - les boutons primaires ;
+//   - les focus rings ;
+//   - les liens actifs.
+// ============================================================
+
+$color-primary:         #25BDE8;                  // Accent principal
+$color-primary-hover:   #42C7EC;                  // Accent au survol
+$color-primary-active:  #1AA6CC;                  // Accent pressé
+$color-primary-light:   rgba(37, 189, 232, 0.12); // Fond léger primaire
+$color-primary-soft:    rgba(37, 189, 232, 0.20); // Fond plus marqué
+
+
+// ============================================================
+// COULEURS SECONDAIRES (ACCENTS)
+// ============================================================
+// Palette d'accents issue des icônes colorées de l'image
+// (purple, mint, pink). Utilisées pour catégoriser
+// visuellement les éléments (tags, badges, graphiques).
+// ============================================================
+
+$color-purple:          #8C78F0;
+$color-purple-hover:    #9E8CF3;
+$color-purple-light:    rgba(140, 120, 240, 0.14);
+
+$color-mint:            #8AD8BC;
+$color-mint-hover:      #9DE0C8;
+$color-mint-light:      rgba(138, 216, 188, 0.14);
+
+$color-pink:            #DFA0E8;
+$color-pink-hover:      #E7B4EE;
+$color-pink-light:      rgba(223, 160, 232, 0.14);
+
+
+// ============================================================
+// COULEURS SÉMANTIQUES
+// ============================================================
+// Couleurs porteuses de sens métier : succès, avertissement,
+// erreur, information. Dérivées pour rester cohérentes avec
+// les accents et lisibles sur fond sombre.
+// ============================================================
+
+$color-success:         #65D6A5;
+$color-success-light:   rgba(101, 214, 165, 0.14);
+
+$color-warning:         #F3C969;
+$color-warning-light:   rgba(243, 201, 105, 0.14);
+
+$color-danger:          #EF5B78;
+$color-danger-light:    rgba(239, 91, 120, 0.14);
+
+$color-info:            #25BDE8;
+$color-info-light:      rgba(37, 189, 232, 0.14);
+
+
+// ============================================================
+// TYPOGRAPHIE — FAMILLES
+// ============================================================
+// Deux familles : une pour le corps, une pour les titres.
+// L'image utilise une sans-serif moderne et géométrique.
+// ============================================================
+
+$font-family-base:      'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
+$font-family-heading:   'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
+$font-family-mono:      'JetBrains Mono', 'Fira Code', monospace;
+
+
+// ============================================================
+// TYPOGRAPHIE — TAILLES
+// ============================================================
+// Échelle typographique cohérente. Utiliser ces variables
+// plutôt que des valeurs brutes dans les composants.
+// ============================================================
+
+$font-size-xs:          0.75rem;   // 12px
+$font-size-sm:          0.875rem;  // 14px
+$font-size-md:          1rem;      // 16px (base)
+$font-size-lg:          1.125rem;  // 18px
+$font-size-xl:          1.25rem;   // 20px
+$font-size-2xl:         1.5rem;    // 24px
+$font-size-3xl:         2rem;      // 32px
+
+
+// ============================================================
+// TYPOGRAPHIE — GRAISSES
+// ============================================================
+// Niveaux de graisse utilisés dans l'interface.
+// ============================================================
+
+$font-weight-regular:   400;
+$font-weight-medium:    500;
+$font-weight-semibold:  600;
+$font-weight-bold:      700;
+
+
+// ============================================================
+// TYPOGRAPHIE — INTERLIGNAGE
+// ============================================================
+// Hauteurs de ligne pour un rendu dense et lisible.
+// ============================================================
+
+$line-height-tight:     1.2;
+$line-height-snug:      1.35;
+$line-height-normal:    1.5;
+$line-height-relaxed:   1.7;
+
+
+// ============================================================
+// ESPACEMENTS
+// ============================================================
+// Échelle basée sur une grille de 4px, alignée avec l'espacement
+// observé dans l'image (cards compactes, paddings serrés).
+// ============================================================
+
+$spacing-1:             0.25rem;  // 4px
+$spacing-2:             0.5rem;   // 8px
+$spacing-3:             0.75rem;  // 12px
+$spacing-4:             1rem;     // 16px
+$spacing-5:             1.25rem;  // 20px
+$spacing-6:             1.5rem;   // 24px
+$spacing-8:             2rem;     // 32px
+$spacing-10:            2.5rem;   // 40px
+$spacing-12:            3rem;     // 48px
+$spacing-16:            4rem;     // 64px
+
+
+// ============================================================
+// BORDER RADIUS
+// ============================================================
+// L'image utilise des rayons modernes et cohérents
+// (cards ~12-16px, boutons ~10px, badges full).
+// ============================================================
+
+$radius-xs:             4px;
+$radius-sm:             6px;
+$radius-md:             10px;
+$radius-lg:             14px;
+$radius-xl:             20px;
+$radius-2xl:            24px;
+$radius-full:           9999px;
+
+
+// ============================================================
+// OMBRES
+// ============================================================
+// Ombres très discrètes : en Dark Theme, la séparation se fait
+// par contraste de surface, pas par ombre. Réservées aux
+// surfaces élevées (dropdowns, modales).
+// ============================================================
+
+$shadow-sm:             0 1px 2px rgba(0, 0, 0, 0.40);
+$shadow-md:             0 4px 12px rgba(0, 0, 0, 0.45);
+$shadow-lg:             0 12px 32px rgba(0, 0, 0, 0.55);
+$shadow-focus:          0 0 0 3px rgba(37, 189, 232, 0.30);
+
+
+// ============================================================
+// TRANSITIONS
+// ============================================================
+// Durées et courbes d'animation pour les interactions.
+// ============================================================
+
+$transition-fast:       150ms ease-in-out;
+$transition-normal:     250ms ease-in-out;
+$transition-slow:       400ms ease-in-out;
+$transition-bounce:     300ms cubic-bezier(0.34, 1.56, 0.64, 1);
+
+
+// ============================================================
+// Z-INDEX
+// ============================================================
+// Échelle évitant les valeurs magiques et les conflits
+// d'empilement dans l'interface.
+// ============================================================
+
+$z-dropdown:            1000;
+$z-sticky:              1020;
+$z-fixed:               1030;
+$z-modal-backdrop:      1040;
+$z-modal:               1050;
+$z-popover:             1060;
+$z-tooltip:             1080;
+$z-toast:               1090;
+
+
+// ============================================================
+// BREAKPOINTS (RESPONSIVE)
+// ============================================================
+// Points de rupture utilisés par le mixin `responsive`.
+// Mobile-first : les valeurs sont des `min-width`.
+// ============================================================
+
+$breakpoint-mobile:     480px;
+$breakpoint-tablet:     768px;
+$breakpoint-desktop:    1024px;
+$breakpoint-large:      1440px;
+$breakpoint-xlarge:     1920px;

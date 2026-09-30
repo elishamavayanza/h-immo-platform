@@ -1,0 +1,167 @@
+// ============================================================
+// COMPOSANT — AVATAR
+// Fichier : components/UI/Avatar/_Avatar.scss
+// ------------------------------------------------------------
+// Rôle :
+//   Styles du composant <Avatar />.
+//   Gère : tailles (small / medium / large / xlarge),
+//   formes (circle / square), image, initiales, icône,
+//   placeholder, status (online / offline / busy).
+//
+// Dépendances :
+//   - baseVariables/_variables.scss
+//   - baseVariables/_mixins.scss
+// ============================================================
+
+@use '../../baseVariables/variables' as *;
+@use '../../baseVariables/mixins' as *;
+
+
+// ============================================================
+// CONTENEUR
+// ============================================================
+
+.avatar {
+    @include flex-center;
+    position: relative;
+    flex-shrink: 0;
+    overflow: visible;
+    background-color: $color-bg-elevated;
+    color: $color-text-secondary;
+    font-family: $font-family-base;
+    font-weight: $font-weight-semibold;
+    user-select: none;
+
+    // Contour interne pour détacher l’avatar du fond
+    box-shadow: 0 0 0 1px $color-border;
+}
+
+
+// ============================================================
+// IMAGE
+// ============================================================
+
+.avatar__image {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+    border-radius: inherit;
+}
+
+
+// ============================================================
+// INITIALES
+// ============================================================
+
+.avatar__initials {
+    font-size: 0.42em;
+    letter-spacing: 0.03em;
+    color: $color-text-primary;
+    line-height: 1;
+}
+
+
+// ============================================================
+// ICÔNE
+// ============================================================
+
+.avatar__icon {
+    @include flex-center;
+    color: $color-text-secondary;
+
+    svg {
+        display: block;
+        width: 60%;
+        height: 60%;
+    }
+}
+
+
+// ============================================================
+// PLACEHOLDER
+// ============================================================
+
+.avatar__placeholder {
+    font-size: 0.5em;
+    color: $color-text-muted;
+    line-height: 1;
+}
+
+
+// ============================================================
+// TAILLES
+// ============================================================
+// Les tailles sont définies avec `font-size` pour que les
+// initiales scalent automatiquement via `em`.
+// ============================================================
+
+.avatar--small {
+    width: 28px;
+    height: 28px;
+    font-size: 28px;
+}
+
+.avatar--medium {
+    width: 40px;
+    height: 40px;
+    font-size: 40px;
+}
+
+.avatar--large {
+    width: 56px;
+    height: 56px;
+    font-size: 56px;
+}
+
+.avatar--xlarge {
+    width: 80px;
+    height: 80px;
+    font-size: 80px;
+}
+
+
+// ============================================================
+// FORMES
+// ============================================================
+
+.avatar--circle {
+    border-radius: $radius-full;
+}
+
+.avatar--square {
+    border-radius: $radius-md;
+}
+
+
+// ============================================================
+// STATUS
+// ============================================================
+// Pastille en bas à droite de l’avatar.
+// ============================================================
+
+.avatar__status {
+    position: absolute;
+    bottom: 0;
+    right: 0;
+    width: 28%;
+    height: 28%;
+    min-width: 10px;
+    min-height: 10px;
+    border-radius: $radius-full;
+    background-color: $color-text-muted;
+    border: 2px solid $color-bg-app;
+    box-sizing: content-box;
+}
+
+.avatar__status--online {
+    background-color: $color-success;
+}
+
+.avatar__status--offline {
+    background-color: $color-text-muted;
+}
+
+.avatar__status--busy {
+    background-color: $color-danger;
+}

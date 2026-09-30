@@ -1,0 +1,176 @@
+// ============================================================
+// COMPOSANT — CANDLESTICK CHART
+// Fichier : components/Data/_candlestick-chart.scss
+// ------------------------------------------------------------
+// Rôle :
+//   Styles du composant <CandlestickChart /> (SVG + tooltip).
+//   Gère : conteneur, axe X/Y, chandeliers (up/down),
+//   survol, tooltip, état vide.
+//
+// Dépendances :
+//   - baseVariables/_variables.scss
+//   - baseVariables/_mixins.scss
+// ============================================================
+
+@use '../../baseVariables/variables' as *;
+@use '../../baseVariables/mixins' as *;
+
+
+// ============================================================
+// CONTENEUR PRINCIPAL
+// ============================================================
+// Reprend le style « card » du Design System. La hauteur est
+// pilotée par le style inline (prop `height`).
+// La couleur du texte est utilisée par les <text> SVG (currentColor).
+// ============================================================
+
+.candlestick-chart {
+    @include card($spacing-4);
+    position: relative;
+    width: 100%;
+    color: $color-text-secondary; // utilisé par les <text fill="currentColor">
+    overflow: hidden;
+
+    svg {
+        display: block;
+        width: 100%;
+        height: 100%;
+    }
+}
+
+
+// ============================================================
+// AXES (X et Y)
+// ============================================================
+// Les labels utilisent `fill="currentColor"`. On contrôle
+// donc la couleur via le parent ou directement le <g>.
+// ============================================================
+
+.candlestick-chart__axis {
+    color: $color-text-muted;
+
+    text {
+        font-family: $font-family-base;
+        font-weight: $font-weight-medium;
+        letter-spacing: 0.01em;
+        user-select: none;
+        pointer-events: none;
+    }
+}
+
+
+// ============================================================
+// CHANDELIERS
+// ============================================================
+// Chaque groupe est interactif (onMouseEnter). On adoucit
+// l'interaction avec une transition sur l'opacité et un
+// léger éclaircissement au survol.
+// ============================================================
+
+.candlestick-chart__candle {
+    transition: opacity $transition-fast, filter $transition-fast;
+
+    line,
+    rect {
+        transition: opacity $transition-fast, filter $transition-fast;
+    }
+
+    &:hover {
+        filter: brightness(1.25);
+    }
+}
+
+// Atténue les autres chandeliers quand un seul est survolé
+.candlestick-chart:has(.candlestick-chart__candle:hover) {
+    .candlestick-chart__candle:not(:hover) {
+        opacity: 0.45;
+    }
+}
+
+
+// ============================================================
+// TOOLTIP
+// ============================================================
+// Positionné en absolute, ancré via les styles inline (left/top).
+// Utilise la variante `.tooltip--top` déjà existante dans
+// ton Design System (ou à créer si elle n'existe pas).
+// ============================================================
+
+.candlestick-chart__tooltip {
+    @include elevation(lg);
+    position: absolute;
+    z-index: $z-tooltip;
+    min-width: 140px;
+    padding: $spacing-3 $spacing-4;
+    background-color: $color-bg-elevated;
+    border: 1px solid $color-border-light;
+    border-radius: $radius-md;
+    color: $color-text-primary;
+    font-family: $font-family-base;
+    font-size: $font-size-xs;
+    line-height: $line-height-snug;
+    pointer-events: none;
+    transform: translate(-50%, -100%);
+    white-space: nowrap;
+
+    // Petite flèche en bas du tooltip
+    &::after {
+        content: '';
+        position: absolute;
+        top: 100%;
+        left: 50%;
+        transform: translateX(-50%);
+        border: 6px solid transparent;
+        border-top-color: $color-bg-elevated;
+    }
+
+    div {
+        display: flex;
+        justify-content: space-between;
+        gap: $spacing-3;
+
+        & + div {
+            margin-top: 2px;
+        }
+    }
+}
+
+.candlestick-chart__tooltip-date {
+    margin-bottom: $spacing-2;
+    padding-bottom: $spacing-2;
+    border-bottom: 1px solid $color-border;
+    font-weight: $font-weight-semibold;
+    color: $color-text-primary;
+    display: block !important;
+}
+
+
+// ============================================================
+// ÉTAT VIDE
+// ============================================================
+// Affiché quand `data.length === 0`.
+// ============================================================
+
+.candlestick-chart__empty {
+    @include flex-center;
+    @include card($spacing-6);
+    width: 100%;
+    min-height: 200px;
+    color: $color-text-muted;
+    font-size: $font-size-sm;
+    font-style: italic;
+    text-align: center;
+}
+
+
+// ============================================================
+// ACCESSIBILITÉ — RÉDUCTION DES ANIMATIONS
+// ============================================================
+
+@media (prefers-reduced-motion: reduce) {
+    .candlestick-chart__candle,
+    .candlestick-chart__candle line,
+    .candlestick-chart__candle rect {
+        transition: none;
+    }
+}

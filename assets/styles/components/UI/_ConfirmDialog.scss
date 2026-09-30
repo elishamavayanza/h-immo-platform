@@ -1,0 +1,232 @@
+// ============================================================
+// COMPOSANT — CONFIRM DIALOG
+// Fichier : components/UI/ConfirmDialog/_ConfirmDialog.scss
+// ------------------------------------------------------------
+// Rôle :
+//   Styles du composant <ConfirmDialog /> (modale de
+//   confirmation). Gère : overlay, panneau, tailles
+//   (small / medium / large), titre, message, actions.
+//
+// Dépendances :
+//   - baseVariables/_variables.scss
+//   - baseVariables/_mixins.scss
+// ============================================================
+
+@use '../../baseVariables/variables' as *;
+@use '../../baseVariables/mixins' as *;
+
+
+// ============================================================
+// OVERLAY
+// ============================================================
+
+.confirm-dialog__overlay {
+    @include flex-center;
+    position: fixed;
+    inset: 0;
+    z-index: $z-modal;
+    padding: $spacing-4;
+    background-color: rgba(0, 0, 0, 0.65);
+    backdrop-filter: blur(4px);
+    animation: confirm-overlay-in $transition-fast both;
+}
+
+@keyframes confirm-overlay-in {
+    from { opacity: 0; }
+    to   { opacity: 1; }
+}
+
+
+// ============================================================
+// PANNEAU
+// ============================================================
+
+.confirm-dialog {
+    @include elevation(lg);
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    background-color: $color-bg-elevated;
+    border: 1px solid $color-border-light;
+    border-radius: $radius-lg;
+    overflow: hidden;
+    animation: confirm-panel-in $transition-normal both;
+}
+
+@keyframes confirm-panel-in {
+    from { opacity: 0; transform: translateY(-8px) scale(0.98); }
+    to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+
+// ============================================================
+// TITRE
+// ============================================================
+
+.confirm-dialog__title {
+    padding: $spacing-5 $spacing-5 0;
+    font-family: $font-family-heading;
+    font-size: $font-size-lg;
+    font-weight: $font-weight-semibold;
+    color: $color-text-primary;
+    line-height: $line-height-tight;
+}
+
+
+// ============================================================
+// MESSAGE
+// ============================================================
+
+.confirm-dialog__message {
+    padding: $spacing-3 $spacing-5;
+    font-size: $font-size-sm;
+    color: $color-text-secondary;
+    line-height: $line-height-normal;
+}
+
+
+// ============================================================
+// ACTIONS
+// ============================================================
+
+.confirm-dialog__actions {
+    @include flex(row, center, flex-end, $spacing-2);
+    padding: $spacing-3 $spacing-5 $spacing-5;
+    border-top: 1px solid $color-border;
+    margin-top: $spacing-2;
+}
+
+
+// ============================================================
+// BOUTONS
+// ============================================================
+
+.confirm-dialog__button {
+    @include flex-center;
+    @include focus-ring;
+    padding: $spacing-3 $spacing-5;
+    font-family: $font-family-base;
+    font-size: $font-size-sm;
+    font-weight: $font-weight-semibold;
+    border-radius: $radius-md;
+    border: 1px solid transparent;
+    cursor: pointer;
+    transition:
+        background-color $transition-fast,
+        border-color $transition-fast,
+        color $transition-fast,
+        transform $transition-fast;
+
+    &:active {
+        transform: scale(0.97);
+    }
+}
+
+// ----- Annuler -----
+.confirm-dialog__button--cancel {
+    color: $color-text-secondary;
+    background-color: transparent;
+    border-color: $color-border-light;
+
+    &:hover {
+        color: $color-text-primary;
+        background-color: $color-bg-card-hover;
+        border-color: $color-border-strong;
+    }
+}
+
+// ----- Confirmer -----
+.confirm-dialog__button--confirm {
+    color: $color-text-inverse;
+    background-color: $color-primary;
+    border-color: $color-primary;
+
+    &:hover {
+        background-color: $color-primary-hover;
+        border-color: $color-primary-hover;
+    }
+}
+
+
+// ============================================================
+// TAILLES
+// ============================================================
+
+.confirm-dialog--small {
+    max-width: 360px;
+
+    .confirm-dialog__title {
+        font-size: $font-size-md;
+        padding: $spacing-4 $spacing-4 0;
+    }
+
+    .confirm-dialog__message {
+        padding: $spacing-2 $spacing-4;
+        font-size: $font-size-xs;
+    }
+
+    .confirm-dialog__actions {
+        padding: $spacing-3 $spacing-4 $spacing-4;
+    }
+
+    .confirm-dialog__button {
+        padding: $spacing-2 $spacing-4;
+        font-size: $font-size-xs;
+    }
+}
+
+.confirm-dialog--medium {
+    max-width: 480px;
+}
+
+.confirm-dialog--large {
+    max-width: 640px;
+
+    .confirm-dialog__title {
+        font-size: $font-size-xl;
+        padding: $spacing-6 $spacing-6 0;
+    }
+
+    .confirm-dialog__message {
+        padding: $spacing-4 $spacing-6;
+        font-size: $font-size-md;
+    }
+
+    .confirm-dialog__actions {
+        padding: $spacing-4 $spacing-6 $spacing-6;
+    }
+
+    .confirm-dialog__button {
+        padding: $spacing-4 $spacing-6;
+        font-size: $font-size-md;
+    }
+}
+
+
+// ============================================================
+// RESPONSIVE
+// ============================================================
+
+@include responsive(mobile) {
+    .confirm-dialog {
+        max-width: 100%;
+    }
+}
+
+
+// ============================================================
+// ACCESSIBILITÉ — RÉDUCTION DES ANIMATIONS
+// ============================================================
+
+@media (prefers-reduced-motion: reduce) {
+    .confirm-dialog__overlay,
+    .confirm-dialog,
+    .confirm-dialog__button {
+        animation: none;
+        transition: none;
+    }
+
+    .confirm-dialog__button:active {
+        transform: none;
+    }
+}

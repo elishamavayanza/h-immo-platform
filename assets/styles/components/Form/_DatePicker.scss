@@ -1,0 +1,257 @@
+// ============================================================
+// COMPOSANT — DATE PICKER
+// Fichier : components/Form/DatePicker/_DatePicker.scss
+// ------------------------------------------------------------
+// Rôle :
+//   Styles du composant <DatePicker /> (input type="date" +
+//   icône calendrier). Gère : variantes (default / error /
+//   success), tailles (small / medium / large), plein largeur,
+//   désactivé, état focus, indicateur natif Dark Theme.
+//
+// Dépendances :
+//   - baseVariables/_variables.scss
+//   - baseVariables/_mixins.scss
+// ============================================================
+
+@use '../../baseVariables/variables' as *;
+@use '../../baseVariables/mixins' as *;
+
+
+// ============================================================
+// WRAPPER
+// ============================================================
+
+.datepicker-field-wrapper {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    width: fit-content;
+
+    &:has(.datepicker-field--full-width) {
+        display: flex;
+        width: 100%;
+    }
+
+    &:focus-within .datepicker-field {
+        border-color: $color-primary;
+        box-shadow: $shadow-focus;
+    }
+
+    &:focus-within .datepicker-field--error {
+        border-color: $color-danger;
+        box-shadow: 0 0 0 3px rgba(239, 91, 120, 0.30);
+    }
+
+    &:focus-within .datepicker-field--success {
+        border-color: $color-success;
+        box-shadow: 0 0 0 3px rgba(101, 214, 165, 0.30);
+    }
+}
+
+
+// ============================================================
+// ICÔNE
+// ============================================================
+
+.datepicker-field__icon {
+    @include flex-center;
+    position: absolute;
+    left: $spacing-3;
+    top: 50%;
+    transform: translateY(-50%);
+    color: $color-text-muted;
+    pointer-events: none;
+    z-index: 1;
+    transition: color $transition-fast;
+
+    svg {
+        display: block;
+    }
+}
+
+.datepicker-field-wrapper:focus-within .datepicker-field__icon {
+    color: $color-primary;
+}
+
+
+// ============================================================
+// INPUT
+// ============================================================
+
+.datepicker-field {
+    width: 100%;
+    font-family: $font-family-base;
+    font-weight: $font-weight-medium;
+    color: $color-text-primary;
+    background-color: $color-bg-input;
+    border: 1px solid $color-border;
+    border-radius: $radius-md;
+    outline: none;
+    appearance: none;
+    -webkit-appearance: none;
+    color-scheme: dark;
+    transition:
+        background-color $transition-fast,
+        border-color $transition-fast,
+        box-shadow $transition-fast,
+        color $transition-fast;
+
+    &::-webkit-calendar-picker-indicator {
+        cursor: pointer;
+        opacity: 0.55;
+        padding: 0;
+        margin-left: $spacing-2;
+        transition: opacity $transition-fast;
+
+        &:hover {
+            opacity: 1;
+        }
+    }
+
+    &:hover:not(:disabled):not(.datepicker-field--disabled) {
+        background-color: $color-bg-card-hover;
+        border-color: $color-border-light;
+    }
+
+    &:active:not(:disabled):not(.datepicker-field--disabled) {
+        background-color: $color-bg-card;
+    }
+
+    &:focus-visible {
+        border-color: $color-primary;
+    }
+
+    &:disabled,
+    &.datepicker-field--disabled {
+        color: $color-text-disabled;
+        background-color: $color-bg-app;
+        border-color: $color-border;
+        cursor: not-allowed;
+        opacity: 0.7;
+
+        &::-webkit-calendar-picker-indicator {
+            cursor: not-allowed;
+            opacity: 0.3;
+        }
+    }
+}
+
+
+// ============================================================
+// TAILLES
+// ============================================================
+
+.datepicker-field--small {
+    padding: $spacing-2 $spacing-3;
+    font-size: $font-size-sm;
+    min-height: 32px;
+    border-radius: $radius-sm;
+
+    &::-webkit-calendar-picker-indicator {
+        width: 14px;
+        height: 14px;
+    }
+}
+
+.datepicker-field--medium {
+    padding: $spacing-3 $spacing-4;
+    font-size: $font-size-md;
+    min-height: 40px;
+
+    &::-webkit-calendar-picker-indicator {
+        width: 16px;
+        height: 16px;
+    }
+}
+
+.datepicker-field--large {
+    padding: $spacing-4 $spacing-5;
+    font-size: $font-size-lg;
+    min-height: 48px;
+    border-radius: $radius-lg;
+
+    &::-webkit-calendar-picker-indicator {
+        width: 18px;
+        height: 18px;
+    }
+}
+
+
+// ============================================================
+// DÉCALAGE POUR L’ICÔNE
+// ============================================================
+
+.datepicker-field-wrapper:has(.datepicker-field__icon) {
+    .datepicker-field--small   { padding-left: $spacing-8; }
+    .datepicker-field--medium  { padding-left: $spacing-10; }
+    .datepicker-field--large   { padding-left: $spacing-12; }
+}
+
+
+// ============================================================
+// VARIANTES
+// ============================================================
+
+.datepicker-field--error {
+    border-color: $color-danger;
+
+    &:hover:not(:disabled):not(.datepicker-field--disabled) {
+        border-color: $color-danger;
+        background-color: $color-danger-light;
+    }
+
+    &:focus,
+    &:focus-visible {
+        border-color: $color-danger;
+        box-shadow: 0 0 0 3px rgba(239, 91, 120, 0.30);
+    }
+}
+
+.datepicker-field--success {
+    border-color: $color-success;
+
+    &:hover:not(:disabled):not(.datepicker-field--disabled) {
+        border-color: $color-success;
+        background-color: $color-success-light;
+    }
+
+    &:focus,
+    &:focus-visible {
+        border-color: $color-success;
+        box-shadow: 0 0 0 3px rgba(101, 214, 165, 0.30);
+    }
+}
+
+
+// ============================================================
+// PLEIN LARGEUR
+// ============================================================
+
+.datepicker-field--full-width {
+    width: 100%;
+    display: block;
+}
+
+
+// ============================================================
+// RESPONSIVE
+// ============================================================
+
+@include responsive(mobile) {
+    .datepicker-field--medium {
+        min-height: 44px;
+    }
+}
+
+
+// ============================================================
+// ACCESSIBILITÉ — RÉDUCTION DES ANIMATIONS
+// ============================================================
+
+@media (prefers-reduced-motion: reduce) {
+    .datepicker-field,
+    .datepicker-field__icon,
+    .datepicker-field-wrapper {
+        transition: none;
+    }
+}

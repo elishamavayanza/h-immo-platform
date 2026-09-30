@@ -1,0 +1,235 @@
+// ============================================================
+// COMPOSANT — TABS
+// Fichier : components/Navigation/Tabs/_Tabs.scss
+// ------------------------------------------------------------
+// Rôle :
+//   Styles du composant <Tabs /> (onglets).
+//   Gère : variantes (default / pills / underline),
+//   état actif, état désactivé, icône, contenu.
+//
+// Dépendances :
+//   - baseVariables/_variables.scss
+//   - baseVariables/_mixins.scss
+// ============================================================
+
+@use '../../baseVariables/variables' as *;
+@use '../../baseVariables/mixins' as *;
+
+
+// ============================================================
+// CONTENEUR
+// ============================================================
+
+.tabs {
+    font-family: $font-family-base;
+    color: $color-text-primary;
+    width: 100%;
+}
+
+
+// ============================================================
+// LISTE DES ONGLETS
+// ============================================================
+
+.tabs__list {
+    @include flex(row, stretch, flex-start, $spacing-1);
+    position: relative;
+    flex-wrap: wrap;
+    border-bottom: 1px solid $color-border;
+    margin-bottom: $spacing-4;
+}
+
+
+// ============================================================
+// ONGLET (base)
+// ============================================================
+
+.tabs__tab {
+    @include flex(row, center, center, $spacing-2);
+    @include focus-ring;
+    position: relative;
+    padding: $spacing-3 $spacing-4;
+    font-family: $font-family-base;
+    font-size: $font-size-sm;
+    font-weight: $font-weight-medium;
+    color: $color-text-secondary;
+    background-color: transparent;
+    border: none;
+    cursor: pointer;
+    transition:
+        color $transition-fast,
+        background-color $transition-fast,
+        border-color $transition-fast;
+
+    &:hover:not(:disabled) {
+        color: $color-text-primary;
+        background-color: $color-bg-card-hover;
+    }
+
+    &:disabled {
+        color: $color-text-disabled;
+        cursor: not-allowed;
+        opacity: 0.55;
+    }
+}
+
+.tabs__icon {
+    @include flex-center;
+    flex-shrink: 0;
+
+    svg {
+        display: block;
+        width: 16px;
+        height: 16px;
+    }
+}
+
+
+// ============================================================
+// VARIANTE — DEFAULT (underline)
+// ============================================================
+// Onglets soulignés, traditionnels. La bordure cyan apparaît
+// sous l’onglet actif.
+// ============================================================
+
+.tabs--default {
+    .tabs__tab--active {
+        color: $color-primary;
+
+        &::after {
+            content: '';
+            position: absolute;
+            left: 0;
+            right: 0;
+            bottom: -1px;
+            height: 2px;
+            background-color: $color-primary;
+            border-radius: $radius-full $radius-full 0 0;
+        }
+
+        &:hover {
+            color: $color-primary-hover;
+            background-color: transparent;
+        }
+    }
+}
+
+
+// ============================================================
+// VARIANTE — UNDERLINE (même chose que default, alias)
+// ============================================================
+
+.tabs--underline {
+    .tabs__list {
+        border-bottom: 1px solid $color-border;
+    }
+
+    .tabs__tab--active {
+        color: $color-primary;
+
+        &::after {
+            content: '';
+            position: absolute;
+            left: 0;
+            right: 0;
+            bottom: -1px;
+            height: 2px;
+            background-color: $color-primary;
+            border-radius: $radius-full $radius-full 0 0;
+        }
+    }
+}
+
+
+// ============================================================
+// VARIANTE — PILLS
+// ============================================================
+// Onglets en forme de pastilles, encadrés, sans ligne de base.
+// ============================================================
+
+.tabs--pills {
+    .tabs__list {
+        border-bottom: none;
+        gap: $spacing-2;
+        padding: $spacing-1;
+        background-color: $color-bg-card;
+        border-radius: $radius-lg;
+        display: inline-flex;
+    }
+
+    .tabs__tab {
+        border-radius: $radius-md;
+        padding: $spacing-2 $spacing-4;
+
+        &:hover:not(:disabled):not(.tabs__tab--active) {
+            background-color: $color-bg-card-hover;
+        }
+    }
+
+    .tabs__tab--active {
+        background-color: $color-primary;
+        color: $color-text-inverse;
+        font-weight: $font-weight-semibold;
+
+        &:hover {
+            background-color: $color-primary-hover;
+            color: $color-text-inverse;
+        }
+    }
+}
+
+
+// ============================================================
+// CONTENU
+// ============================================================
+
+.tabs__content {
+    padding: $spacing-2 0;
+    color: $color-text-primary;
+    font-size: $font-size-sm;
+    line-height: $line-height-normal;
+    animation: tabs-content-fade $transition-fast both;
+}
+
+@keyframes tabs-content-fade {
+    from { opacity: 0; transform: translateY(4px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+
+
+// ============================================================
+// RESPONSIVE
+// ============================================================
+
+@include responsive(mobile) {
+    .tabs__list {
+        flex-wrap: nowrap;
+        overflow-x: auto;
+        @include scrollbar(4px);
+    }
+
+    .tabs__tab {
+        padding: $spacing-2 $spacing-3;
+        white-space: nowrap;
+    }
+
+    .tabs--pills .tabs__list {
+        display: flex;
+        overflow-x: auto;
+    }
+}
+
+
+// ============================================================
+// ACCESSIBILITÉ — RÉDUCTION DES ANIMATIONS
+// ============================================================
+
+@media (prefers-reduced-motion: reduce) {
+    .tabs__tab {
+        transition: none;
+    }
+
+    .tabs__content {
+        animation: none;
+    }
+}

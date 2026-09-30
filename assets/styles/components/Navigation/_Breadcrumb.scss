@@ -1,0 +1,179 @@
+// ============================================================
+// COMPOSANT — BREADCRUMB
+// Fichier : components/Navigation/Breadcrumb/_Breadcrumb.scss
+// ------------------------------------------------------------
+// Rôle :
+//   Styles du composant <Breadcrumb /> (fil d’Ariane).
+//   Gère : tailles (small / medium / large), liens, item
+//   courant, item désactivé, icône, séparateur.
+//
+// Dépendances :
+//   - baseVariables/_variables.scss
+//   - baseVariables/_mixins.scss
+// ============================================================
+
+@use '../../baseVariables/variables' as *;
+@use '../../baseVariables/mixins' as *;
+
+
+// ============================================================
+// CONTENEUR
+// ============================================================
+
+.breadcrumb {
+    font-family: $font-family-base;
+    color: $color-text-secondary;
+}
+
+.breadcrumb__list {
+    @include flex(row, center, flex-start, $spacing-2);
+    flex-wrap: wrap;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.breadcrumb__item {
+    @include flex(row, center, flex-start, $spacing-2);
+    min-width: 0;
+}
+
+
+// ============================================================
+// LIEN
+// ============================================================
+
+.breadcrumb__link {
+    @include flex(row, center, flex-start, $spacing-1);
+    padding: 2px 4px;
+    color: $color-text-secondary;
+    text-decoration: none;
+    border-radius: $radius-sm;
+    transition: color $transition-fast, background-color $transition-fast;
+
+    &:hover {
+        color: $color-primary;
+        background-color: $color-primary-light;
+    }
+
+    &:focus-visible {
+        outline: none;
+        color: $color-primary;
+        box-shadow: 0 0 0 2px $color-primary;
+    }
+}
+
+
+// ============================================================
+// LABEL (texte non cliquable)
+// ============================================================
+
+.breadcrumb__label {
+    @include flex(row, center, flex-start, $spacing-1);
+    padding: 2px 4px;
+    color: $color-text-secondary;
+    line-height: $line-height-snug;
+    @include truncate;
+    max-width: 240px;
+}
+
+// Item courant
+.breadcrumb__label--current {
+    color: $color-text-primary;
+    font-weight: $font-weight-semibold;
+    cursor: default;
+}
+
+// Item désactivé
+.breadcrumb__label--disabled {
+    color: $color-text-disabled;
+    cursor: not-allowed;
+    user-select: none;
+}
+
+
+// ============================================================
+// ICÔNE
+// ============================================================
+
+.breadcrumb__icon {
+    @include flex-center;
+    flex-shrink: 0;
+    color: currentColor;
+
+    svg {
+        display: block;
+    }
+}
+
+
+// ============================================================
+// SÉPARATEUR
+// ============================================================
+
+.breadcrumb__separator {
+    @include flex-center;
+    color: $color-text-muted;
+    user-select: none;
+    pointer-events: none;
+    line-height: 1;
+}
+
+
+// ============================================================
+// TAILLES
+// ============================================================
+
+.breadcrumb--small {
+    font-size: $font-size-xs;
+
+    .breadcrumb__icon svg {
+        width: 12px;
+        height: 12px;
+    }
+
+    .breadcrumb__list {
+        gap: $spacing-1;
+    }
+
+    .breadcrumb__item {
+        gap: $spacing-1;
+    }
+}
+
+.breadcrumb--medium {
+    font-size: $font-size-sm;
+
+    .breadcrumb__icon svg {
+        width: 14px;
+        height: 14px;
+    }
+}
+
+.breadcrumb--large {
+    font-size: $font-size-md;
+
+    .breadcrumb__icon svg {
+        width: 16px;
+        height: 16px;
+    }
+
+    .breadcrumb__list {
+        gap: $spacing-3;
+    }
+
+    .breadcrumb__item {
+        gap: $spacing-3;
+    }
+}
+
+
+// ============================================================
+// ACCESSIBILITÉ — RÉDUCTION DES ANIMATIONS
+// ============================================================
+
+@media (prefers-reduced-motion: reduce) {
+    .breadcrumb__link {
+        transition: none;
+    }
+}

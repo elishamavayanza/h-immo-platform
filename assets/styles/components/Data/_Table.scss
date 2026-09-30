@@ -1,0 +1,268 @@
+// ============================================================
+// COMPOSANT — TABLE
+// Fichier : components/Data/Table/_Table.scss
+// ------------------------------------------------------------
+// Rôle :
+//   Styles du composant <Table /> (variante simple, sans
+//   pagination ni mode serveur — voir DataTable pour ça).
+//   Gère : variantes (default / striped / bordered),
+//   tailles (small / medium / large), hoverable, stickyHeader,
+//   fullWidth, header triable, état vide.
+//
+// Dépendances :
+//   - baseVariables/_variables.scss
+//   - baseVariables/_mixins.scss
+// ============================================================
+
+@use '../../baseVariables/variables' as *;
+@use '../../baseVariables/mixins' as *;
+
+
+// ============================================================
+// CONTENEUR
+// ============================================================
+// Permet le scroll horizontal et applique la scrollbar dark.
+// ============================================================
+
+.table__wrapper {
+    @include scrollbar;
+    width: 100%;
+    overflow-x: auto;
+    border-radius: $radius-lg;
+}
+
+
+// ============================================================
+// TABLE — BASE
+// ============================================================
+
+.table {
+    width: 100%;
+    border-collapse: collapse;
+    border-spacing: 0;
+    font-family: $font-family-base;
+    font-size: $font-size-sm;
+    color: $color-text-primary;
+    background-color: $color-bg-card;
+
+    // Header
+    thead {
+        background-color: $color-bg-app;
+        border-bottom: 1px solid $color-border;
+    }
+
+    th {
+        padding: $spacing-3 $spacing-4;
+        text-align: left;
+        font-size: $font-size-xs;
+        font-weight: $font-weight-semibold;
+        color: $color-text-secondary;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        white-space: nowrap;
+        user-select: none;
+    }
+
+    td {
+        padding: $spacing-3 $spacing-4;
+        vertical-align: middle;
+        line-height: $line-height-snug;
+        color: $color-text-primary;
+    }
+
+    // Lignes
+    tbody tr {
+        border-bottom: 1px solid $color-border;
+        transition: background-color $transition-fast;
+
+        &:last-child {
+            border-bottom: none;
+        }
+    }
+}
+
+// Plein largeur (défaut)
+.table--full-width {
+    width: 100%;
+}
+
+
+// ============================================================
+// HEADER TRIABLE
+// ============================================================
+
+.table__th--sortable {
+    cursor: pointer;
+    transition: color $transition-fast, background-color $transition-fast;
+
+    &:hover {
+        color: $color-text-primary;
+        background-color: $color-bg-elevated;
+    }
+
+    &:active {
+        background-color: $color-bg-card;
+    }
+
+    &:focus-visible {
+        outline: none;
+        box-shadow: inset 0 0 0 2px $color-primary;
+    }
+}
+
+.table__th-content {
+    @include flex(row, center, flex-start, $spacing-2);
+    display: inline-flex;
+}
+
+.table__sort-icon {
+    @include flex-center;
+    font-size: 0.7em;
+    color: $color-text-muted;
+    transition: color $transition-fast;
+}
+
+.table__th--sortable:hover .table__sort-icon,
+.table__th--sortable[aria-sort='ascending'] .table__sort-icon,
+.table__th--sortable[aria-sort='descending'] .table__sort-icon {
+    color: $color-primary;
+}
+
+
+// ============================================================
+// VARIANTES
+// ============================================================
+
+// ----- Default -----
+.table--default {
+    // rien de spécial
+}
+
+// ----- Striped -----
+.table--striped {
+    tbody tr:nth-child(even) {
+        background-color: $color-bg-app;
+    }
+
+    tbody tr:hover {
+        background-color: $color-bg-card-hover;
+    }
+}
+
+// ----- Bordered -----
+.table--bordered {
+    border: 1px solid $color-border;
+    border-radius: $radius-lg;
+    overflow: hidden;
+
+    th,
+    td {
+        border-right: 1px solid $color-border;
+
+        &:last-child {
+            border-right: none;
+        }
+    }
+}
+
+
+// ============================================================
+// HOVERABLE
+// ============================================================
+// À combiner avec n'importe quelle variante pour activer le
+// surlignage au survol.
+// ============================================================
+
+.table--hoverable {
+    tbody tr {
+        transition: background-color $transition-fast;
+
+        &:hover {
+            background-color: $color-bg-card-hover;
+        }
+    }
+}
+
+
+// ============================================================
+// STICKY HEADER
+// ============================================================
+
+.table--sticky-header {
+    thead {
+        position: sticky;
+        top: 0;
+        z-index: $z-sticky;
+        background-color: $color-bg-app;
+
+        // Bordure inférieure visible sous le sticky header
+        box-shadow: inset 0 -1px 0 $color-border;
+    }
+}
+
+
+// ============================================================
+// TAILLES
+// ============================================================
+
+.table--small {
+    th,
+    td {
+        padding: $spacing-2 $spacing-3;
+        font-size: $font-size-xs;
+    }
+}
+
+.table--medium {
+    th,
+    td {
+        padding: $spacing-3 $spacing-4;
+        font-size: $font-size-sm;
+    }
+}
+
+.table--large {
+    th,
+    td {
+        padding: $spacing-4 $spacing-5;
+        font-size: $font-size-md;
+    }
+}
+
+
+// ============================================================
+// ÉTAT VIDE
+// ============================================================
+
+.table__empty {
+    padding: $spacing-8 $spacing-4 !important;
+    text-align: center;
+    color: $color-text-muted;
+    font-style: italic;
+    font-size: $font-size-sm;
+}
+
+
+// ============================================================
+// RESPONSIVE
+// ============================================================
+
+@include responsive(mobile) {
+    .table th,
+    .table td {
+        padding: $spacing-2 $spacing-3;
+    }
+}
+
+
+// ============================================================
+// ACCESSIBILITÉ — RÉDUCTION DES ANIMATIONS
+// ============================================================
+
+@media (prefers-reduced-motion: reduce) {
+    .table tbody tr,
+    .table__th--sortable,
+    .table__sort-icon {
+        transition: none;
+    }
+}

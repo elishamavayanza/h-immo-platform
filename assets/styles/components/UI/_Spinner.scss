@@ -1,0 +1,91 @@
+// ============================================================
+// COMPOSANT — SPINNER
+// Fichier : components/UI/Spinner/_Spinner.scss
+// ------------------------------------------------------------
+// Rôle :
+//   Styles du composant <Spinner /> (cercle animé).
+//   Gère : tailles (small / medium / large), variantes
+//   (primary / secondary / light), animation de rotation.
+//
+// Dépendances :
+//   - baseVariables/_variables.scss
+//   - baseVariables/_mixins.scss
+// ============================================================
+
+@use '../../baseVariables/variables' as *;
+@use '../../baseVariables/mixins' as *;
+
+
+// ============================================================
+// BASE
+// ============================================================
+
+.spinner {
+    display: inline-block;
+    width: 20px;
+    height: 20px;
+    border: 2px solid currentColor;
+    border-top-color: transparent;
+    border-radius: $radius-full;
+    animation: spinner-rotate 0.65s linear infinite;
+    vertical-align: middle;
+
+    // Variable locale pour piloter la couleur
+    --spinner-color: #{$color-primary};
+    color: var(--spinner-color);
+}
+
+@keyframes spinner-rotate {
+    to { transform: rotate(360deg); }
+}
+
+
+// ============================================================
+// TAILLES
+// ============================================================
+
+.spinner--small {
+    width: 14px;
+    height: 14px;
+    border-width: 2px;
+}
+
+.spinner--medium {
+    width: 20px;
+    height: 20px;
+    border-width: 2px;
+}
+
+.spinner--large {
+    width: 32px;
+    height: 32px;
+    border-width: 3px;
+}
+
+
+// ============================================================
+// VARIANTES (couleurs)
+// ============================================================
+
+.spinner--primary {
+    --spinner-color: #{$color-primary};
+}
+
+.spinner--secondary {
+    --spinner-color: #{$color-text-secondary};
+}
+
+.spinner--light {
+    --spinner-color: #{$color-text-inverse};
+}
+
+
+// ============================================================
+// ACCESSIBILITÉ — RÉDUCTION DES ANIMATIONS
+// ============================================================
+
+@media (prefers-reduced-motion: reduce) {
+    .spinner {
+        animation-duration: 1.6s;
+    }
+}

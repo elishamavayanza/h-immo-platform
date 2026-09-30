@@ -1,0 +1,300 @@
+// ============================================================
+// COMPOSANT — SEARCH INPUT
+// Fichier : components/Form/SearchInput/_SearchInput.scss
+// ------------------------------------------------------------
+// Rôle :
+//   Styles du composant <SearchInput />.
+//   Gère : variantes, tailles, plein largeur, désactivé,
+//   icône loupe à gauche, bouton clear à droite.
+//
+// Dépendances :
+//   - baseVariables/_variables.scss
+//   - baseVariables/_mixins.scss
+// ============================================================
+
+@use '../../baseVariables/variables' as *;
+@use '../../baseVariables/mixins' as *;
+
+
+// ============================================================
+// WRAPPER
+// ============================================================
+
+.search-input__wrapper {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    width: fit-content;
+
+    &:has(.search-input--full-width) {
+        display: flex;
+        width: 100%;
+    }
+
+    &:focus-within .search-input {
+        border-color: $color-primary;
+        box-shadow: $shadow-focus;
+    }
+
+    &:focus-within .search-input--error {
+        border-color: $color-danger;
+        box-shadow: 0 0 0 3px rgba(239, 91, 120, 0.30);
+    }
+
+    &:focus-within .search-input--success {
+        border-color: $color-success;
+        box-shadow: 0 0 0 3px rgba(101, 214, 165, 0.30);
+    }
+}
+
+
+// ============================================================
+// ICÔNE LOUPE
+// ============================================================
+
+.search-input__icon {
+    @include flex-center;
+    position: absolute;
+    left: $spacing-3;
+    top: 50%;
+    transform: translateY(-50%);
+    color: $color-text-muted;
+    pointer-events: none;
+    z-index: 1;
+    transition: color $transition-fast;
+
+    svg {
+        display: block;
+    }
+}
+
+.search-input__wrapper:focus-within .search-input__icon {
+    color: $color-primary;
+}
+
+
+// ============================================================
+// BOUTON CLEAR
+// ============================================================
+
+.search-input__clear {
+    @include flex-center;
+    position: absolute;
+    right: $spacing-2;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 28px;
+    height: 28px;
+    padding: 0;
+    background: transparent;
+    border: 1px solid transparent;
+    border-radius: $radius-sm;
+    color: $color-text-muted;
+    cursor: pointer;
+    transition:
+        color $transition-fast,
+        background-color $transition-fast,
+        border-color $transition-fast,
+        transform $transition-fast;
+
+    svg {
+        display: block;
+    }
+
+    &:hover {
+        color: $color-danger;
+        background-color: $color-danger-light;
+        border-color: $color-danger;
+    }
+
+    &:active {
+        transform: translateY(-50%) scale(0.92);
+    }
+}
+
+
+// ============================================================
+// INPUT
+// ============================================================
+
+.search-input {
+    width: 100%;
+    font-family: $font-family-base;
+    font-weight: $font-weight-medium;
+    color: $color-text-primary;
+    background-color: $color-bg-input;
+    border: 1px solid $color-border;
+    border-radius: $radius-md;
+    outline: none;
+    appearance: none;
+    -webkit-appearance: none;
+    padding-left: $spacing-10 !important;
+    padding-right: $spacing-10 !important;
+    transition:
+        background-color $transition-fast,
+        border-color $transition-fast,
+        box-shadow $transition-fast,
+        color $transition-fast;
+
+    &::placeholder {
+        color: $color-text-muted;
+        font-weight: $font-weight-regular;
+    }
+
+    // Neutralise l’icône native de `input[type="search"]`
+    &::-webkit-search-cancel-button,
+    &::-webkit-search-decoration {
+        -webkit-appearance: none;
+        appearance: none;
+    }
+
+    &:hover:not(:disabled):not(.search-input--disabled) {
+        background-color: $color-bg-card-hover;
+        border-color: $color-border-light;
+    }
+
+    &:focus-visible {
+        border-color: $color-primary;
+    }
+
+    &:disabled,
+    &.search-input--disabled {
+        color: $color-text-disabled;
+        background-color: $color-bg-app;
+        border-color: $color-border;
+        cursor: not-allowed;
+        opacity: 0.7;
+
+        &::placeholder {
+            color: $color-text-disabled;
+        }
+    }
+}
+
+
+// ============================================================
+// TAILLES
+// ============================================================
+
+.search-input--small {
+    padding: $spacing-2 $spacing-3;
+    font-size: $font-size-sm;
+    min-height: 32px;
+    border-radius: $radius-sm;
+
+    & + .search-input__icon {
+        left: $spacing-2;
+
+        svg {
+            width: 14px;
+            height: 14px;
+        }
+    }
+
+    & ~ .search-input__clear {
+        right: $spacing-1;
+        width: 24px;
+        height: 24px;
+    }
+}
+
+.search-input--medium {
+    padding: $spacing-3 $spacing-4;
+    font-size: $font-size-md;
+    min-height: 40px;
+}
+
+.search-input--large {
+    padding: $spacing-4 $spacing-5;
+    font-size: $font-size-lg;
+    min-height: 48px;
+    border-radius: $radius-lg;
+
+    & + .search-input__icon {
+        left: $spacing-4;
+
+        svg {
+            width: 20px;
+            height: 20px;
+        }
+    }
+
+    & ~ .search-input__clear {
+        right: $spacing-3;
+        width: 32px;
+        height: 32px;
+    }
+}
+
+
+// ============================================================
+// VARIANTES
+// ============================================================
+
+.search-input--error {
+    border-color: $color-danger;
+
+    &:hover:not(:disabled):not(.search-input--disabled) {
+        border-color: $color-danger;
+        background-color: $color-danger-light;
+    }
+
+    &:focus,
+    &:focus-visible {
+        border-color: $color-danger;
+        box-shadow: 0 0 0 3px rgba(239, 91, 120, 0.30);
+    }
+}
+
+.search-input--success {
+    border-color: $color-success;
+
+    &:hover:not(:disabled):not(.search-input--disabled) {
+        border-color: $color-success;
+        background-color: $color-success-light;
+    }
+
+    &:focus,
+    &:focus-visible {
+        border-color: $color-success;
+        box-shadow: 0 0 0 3px rgba(101, 214, 165, 0.30);
+    }
+}
+
+
+// ============================================================
+// PLEIN LARGEUR
+// ============================================================
+
+.search-input--full-width {
+    width: 100%;
+    display: block;
+}
+
+
+// ============================================================
+// RESPONSIVE
+// ============================================================
+
+@include responsive(mobile) {
+    .search-input--medium {
+        min-height: 44px;
+    }
+}
+
+
+// ============================================================
+// ACCESSIBILITÉ — RÉDUCTION DES ANIMATIONS
+// ============================================================
+
+@media (prefers-reduced-motion: reduce) {
+    .search-input,
+    .search-input__icon,
+    .search-input__clear {
+        transition: none;
+    }
+
+    .search-input__clear:active {
+        transform: translateY(-50%);
+    }
+}

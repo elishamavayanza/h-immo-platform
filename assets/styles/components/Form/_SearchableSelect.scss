@@ -1,0 +1,220 @@
+// ============================================================
+// COMPOSANT — SEARCHABLE SELECT
+// Fichier : components/Form/SearchableSelect/_SearchableSelect.scss
+// ------------------------------------------------------------
+// Rôle :
+//   Styles du composant <SearchableSelect /> (combobox avec
+//   recherche, sans dépendance externe).
+//   Gère : input, dropdown, options, option sélectionnée,
+//   état vide, clic extérieur (via JS), disabled.
+//
+// Dépendances :
+//   - baseVariables/_variables.scss
+//   - baseVariables/_mixins.scss
+// ============================================================
+
+@use '../../baseVariables/variables' as *;
+@use '../../baseVariables/mixins' as *;
+
+
+// ============================================================
+// CONTENEUR
+// ============================================================
+
+.searchable-select {
+    position: relative;
+    width: 100%;
+    font-family: $font-family-base;
+}
+
+
+// ============================================================
+// INPUT
+// ============================================================
+
+.searchable-select__input {
+    width: 100%;
+    padding: $spacing-3 $spacing-4;
+    padding-right: $spacing-10;
+    font-family: $font-family-base;
+    font-size: $font-size-md;
+    font-weight: $font-weight-medium;
+    color: $color-text-primary;
+    background-color: $color-bg-input;
+    border: 1px solid $color-border;
+    border-radius: $radius-md;
+    outline: none;
+    appearance: none;
+    -webkit-appearance: none;
+    cursor: pointer;
+    transition:
+        background-color $transition-fast,
+        border-color $transition-fast,
+        box-shadow $transition-fast,
+        color $transition-fast;
+
+    &::placeholder {
+        color: $color-text-muted;
+        font-weight: $font-weight-regular;
+    }
+
+    // Chevron affiché via pseudo-élément du parent
+    &:hover:not(:disabled) {
+        background-color: $color-bg-card-hover;
+        border-color: $color-border-light;
+    }
+
+    &:focus,
+    &:focus-visible {
+        border-color: $color-primary;
+        box-shadow: $shadow-focus;
+        cursor: text;
+    }
+
+    &:disabled {
+        color: $color-text-disabled;
+        background-color: $color-bg-app;
+        border-color: $color-border;
+        cursor: not-allowed;
+        opacity: 0.7;
+    }
+}
+
+// Chevron à droite de l’input
+.searchable-select::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    right: $spacing-4;
+    width: 8px;
+    height: 8px;
+    border-right: 2px solid $color-text-muted;
+    border-bottom: 2px solid $color-text-muted;
+    transform: translateY(-70%) rotate(45deg);
+    pointer-events: none;
+    transition: transform $transition-fast, border-color $transition-fast;
+}
+
+.searchable-select:focus-within::after {
+    border-color: $color-primary;
+}
+
+
+// ============================================================
+// DROPDOWN
+// ============================================================
+// Liste d’options affichée sous l’input, dans une carte
+// élevée avec scrollbar dark.
+// ============================================================
+
+.searchable-select__dropdown {
+    @include elevation(lg);
+    @include scrollbar;
+    position: absolute;
+    top: calc(100% + #{$spacing-1});
+    left: 0;
+    right: 0;
+    z-index: $z-dropdown;
+    max-height: 260px;
+    overflow-y: auto;
+    padding: $spacing-1;
+    background-color: $color-bg-elevated;
+    border: 1px solid $color-border-light;
+    border-radius: $radius-md;
+    animation: searchable-select-open $transition-fast both;
+}
+
+@keyframes searchable-select-open {
+    from {
+        opacity: 0;
+        transform: translateY(-4px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+
+// ============================================================
+// OPTION
+// ============================================================
+
+.searchable-select__option {
+    padding: $spacing-2 $spacing-3;
+    font-size: $font-size-sm;
+    font-weight: $font-weight-regular;
+    color: $color-text-primary;
+    border-radius: $radius-sm;
+    cursor: pointer;
+    transition:
+        background-color $transition-fast,
+        color $transition-fast;
+
+    &:hover {
+        background-color: $color-bg-card-hover;
+        color: $color-text-primary;
+    }
+
+    &:active {
+        background-color: $color-bg-card;
+    }
+}
+
+// Option sélectionnée
+.searchable-select__option--selected {
+    background-color: $color-primary-light;
+    color: $color-primary-hover;
+    font-weight: $font-weight-semibold;
+
+    &:hover {
+        background-color: $color-primary-soft;
+    }
+}
+
+
+// ============================================================
+// ÉTAT VIDE
+// ============================================================
+
+.searchable-select__empty {
+    padding: $spacing-6 $spacing-4;
+    text-align: center;
+    color: $color-text-muted;
+    font-size: $font-size-sm;
+    font-style: italic;
+}
+
+
+// ============================================================
+// RESPONSIVE
+// ============================================================
+
+@include responsive(mobile) {
+    .searchable-select__input {
+        min-height: 44px;
+        padding: $spacing-3;
+        padding-right: $spacing-10;
+    }
+
+    .searchable-select__dropdown {
+        max-height: 220px;
+    }
+}
+
+
+// ============================================================
+// ACCESSIBILITÉ — RÉDUCTION DES ANIMATIONS
+// ============================================================
+
+@media (prefers-reduced-motion: reduce) {
+    .searchable-select__input,
+    .searchable-select::after,
+    .searchable-select__option {
+        transition: none;
+    }
+
+    .searchable-select__dropdown {
+        animation: none;
+    }
+}

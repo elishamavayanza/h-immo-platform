@@ -1,0 +1,133 @@
+// ============================================================
+// COMPOSANT — ERROR MESSAGE
+// Fichier : components/Form/ErrorMessage/_ErrorMessage.scss
+// ------------------------------------------------------------
+// Rôle :
+//   Styles du composant <ErrorMessage /> (message d’erreur /
+//   warning / info / success inline).
+//   Gère : variantes (error / warning / info / success),
+//   tailles (small / medium / large), icône, texte.
+//
+// Dépendances :
+//   - baseVariables/_variables.scss
+//   - baseVariables/_mixins.scss
+// ============================================================
+
+@use '../../baseVariables/variables' as *;
+@use '../../baseVariables/mixins' as *;
+
+
+// ============================================================
+// CONTENEUR
+// ============================================================
+// Flex row, petite icône à gauche, texte à droite.
+// La couleur est pilotée par les variantes via une variable
+// CSS locale pour ne pas dupliquer les règles.
+// ============================================================
+
+.error-message {
+    @include flex(row, flex-start, flex-start, $spacing-2);
+    font-family: $font-family-base;
+    font-weight: $font-weight-medium;
+    line-height: $line-height-snug;
+
+    --error-message-color: #{$color-danger};
+    --error-message-bg: #{$color-danger-light};
+
+    color: var(--error-message-color);
+}
+
+
+// ============================================================
+// ICÔNE
+// ============================================================
+// Ne rétrécit jamais, alignée en haut pour bien coller aux
+// messages sur plusieurs lignes.
+// ============================================================
+
+.error-message__icon {
+    @include flex-center;
+    flex-shrink: 0;
+    width: 16px;
+    height: 16px;
+    margin-top: 1px;
+    color: var(--error-message-color);
+
+    svg {
+        display: block;
+        width: 100%;
+        height: 100%;
+    }
+}
+
+
+// ============================================================
+// TEXTE
+// ============================================================
+
+.error-message__text {
+    flex: 1;
+    min-width: 0;
+    color: var(--error-message-color);
+    word-break: break-word;
+}
+
+
+// ============================================================
+// VARIANTES
+// ============================================================
+
+.error-message--error {
+    --error-message-color: #{$color-danger};
+    --error-message-bg: #{$color-danger-light};
+}
+
+.error-message--warning {
+    --error-message-color: #{$color-warning};
+    --error-message-bg: #{$color-warning-light};
+}
+
+.error-message--info {
+    --error-message-color: #{$color-info};
+    --error-message-bg: #{$color-info-light};
+}
+
+.error-message--success {
+    --error-message-color: #{$color-success};
+    --error-message-bg: #{$color-success-light};
+}
+
+
+// ============================================================
+// TAILLES
+// ============================================================
+
+.error-message--small {
+    font-size: $font-size-xs;
+    gap: $spacing-1;
+
+    .error-message__icon {
+        width: 12px;
+        height: 12px;
+    }
+}
+
+.error-message--medium {
+    font-size: $font-size-sm;
+    gap: $spacing-2;
+
+    .error-message__icon {
+        width: 16px;
+        height: 16px;
+    }
+}
+
+.error-message--large {
+    font-size: $font-size-md;
+    gap: $spacing-3;
+
+    .error-message__icon {
+        width: 20px;
+        height: 20px;
+    }
+}
