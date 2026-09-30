@@ -14,7 +14,7 @@ use Doctrine\Migrations\AbstractMigration;
  * Une entrée = un taux valable sur une période [effectiveFrom, effectiveTo[.
  * Un changement de taux crée une nouvelle ligne, sans modifier les anciennes.
  */
-final class Version20260929104500 extends AbstractMigration
+final class Version0005ExchangeRate extends AbstractMigration
 {
     public function getDescription(): string
     {

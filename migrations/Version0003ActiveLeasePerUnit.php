@@ -16,7 +16,7 @@ use Doctrine\Migrations\AbstractMigration;
  * L'index unique sur cette colonne garantit qu'une unité ne peut avoir
  * qu'un seul bail ACTIVE.
  */
-final class Version20260928133550 extends AbstractMigration
+final class Version0003ActiveLeasePerUnit extends AbstractMigration
 {
     public function getDescription(): string
     {

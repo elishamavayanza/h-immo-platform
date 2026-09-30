@@ -8,13 +8,19 @@ use Doctrine\DBAL\Schema\Schema;
 use Doctrine\Migrations\AbstractMigration;
 
 /**
- * Auto-generated Migration: Please modify to your needs!
+ * Ajoute `lease.terms` et retire la contrainte d'unicité sur le bail actif.
+ *
+ * Cette migration annule partiellement Version0003ActiveLeasePerUnit :
+ * la colonne générée `active_unit_id` et l'index unique
+ * `uniq_active_lease_per_unit` sont supprimés, donc la garantie « un seul
+ * bail actif par unité » n'est plus portée par la base (contrôle en PHP
+ * uniquement). Le bail garde des conditions (`terms`) textuelles.
  */
-final class Version20260928135434 extends AbstractMigration
+final class Version0004LeaseTerms extends AbstractMigration
 {
     public function getDescription(): string
     {
-        return '';
+        return 'Ajoute lease.terms et retire la contrainte unique de bail actif par unité (annule Version0003)';
     }
 
     public function up(Schema $schema): void

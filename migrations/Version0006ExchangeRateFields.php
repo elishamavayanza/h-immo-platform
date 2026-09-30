@@ -14,7 +14,7 @@ use Doctrine\Migrations\AbstractMigration;
  * loyer, bail, affectation) et de conserver le montant original dans sa
  * devise d'origine pour la traçabilité historique.
  */
-final class Version20260929105536 extends AbstractMigration
+final class Version0006ExchangeRateFields extends AbstractMigration
 {
     public function getDescription(): string
     {

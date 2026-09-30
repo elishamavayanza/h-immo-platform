@@ -8,13 +8,17 @@ use Doctrine\DBAL\Schema\Schema;
 use Doctrine\Migrations\AbstractMigration;
 
 /**
- * Auto-generated Migration: Please modify to your needs!
+ * Aligne les noms d'index de `exchange_rate` sur le mapping Doctrine.
+ *
+ * Remplace l'index composite `idx_exchange_rate_lookup` par les noms
+ * d'index explicites déclarés dans l'entité, afin que le schéma reste
+ * synchronisé avec Doctrine.
  */
-final class Version20260929091914 extends AbstractMigration
+final class Version0007ExchangeRateIndexNames extends AbstractMigration
 {
     public function getDescription(): string
     {
-        return '';
+        return 'Aligne les noms d’index de exchange_rate sur le mapping Doctrine';
     }
 
     public function up(Schema $schema): void

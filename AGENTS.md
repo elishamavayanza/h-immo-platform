@@ -56,7 +56,7 @@ Règle qui prime sur toutes les autres :
 | Scripts | `yarn dev` (ou `dev-server`), `yarn build`, `yarn preview`, `yarn type-check` | `package.json` |
 
 **Emplacement réel :** il n'existe **pas** de dossier `frontend/`. Tout le front
-est dans `assets/app/` :
+est dans `assets/react/app` :
 
 ```text
 assets/app/
@@ -416,6 +416,16 @@ Migrations (`migrations/`, namespace `DoctrineMigrations`, répertoire déclaré
 - Elles contiennent du **SQL brut compatible MariaDB**, pas seulement du DDL
   abstrait : toute migration ajoutée doit être relue pour sa compatibilité
   MariaDB (pas de `SERIAL`, `JSONB`, `SERIAL`, `TIMESTAMPTZ`).
+- **Nommage séquentiel et lisible** : `Version<NNNN><SuffixeDescriptif>.php`, le
+  préfixe à 4 chiffres fixant l'ordre d'application et le suffixe décrivant le
+  changement (`Version0001InitialSchema`, `Version0005ExchangeRate`). Le nom de
+  la **classe doit être strictement identique au nom du fichier** : c'est lui
+  qui est enregistré dans `doctrine_migration_versions`. Conséquence : renommer
+  une migration déjà appliquée impose de mettre à jour les lignes de
+  `doctrine_migration_versions` sur chaque base existante, sinon Doctrine
+  rejoue le `up()` sur une base à jour.
+- Chaque migration porte un `getDescription()` explicite (pas de chaîne vide,
+  pas de commentaire « Auto-generated » laissé tel quel).
 - Toute modification du schéma exige une migration, un `up()` **et** un `down()`,
   et la mise à jour de `tests/verify-mariadb.php` si le nombre de tables change.
 - Après changement d'entité : `php bin/console doctrine:schema:validate` puis
@@ -577,7 +587,7 @@ yarn type-check
 - `strict: true` : **pas de `any`** sans justification écrite dans un commentaire
   adjacent. Préfère `unknown` + narrowing.
 - Séparer UI et logique : la logique testable sans navigateur vit dans un module
-  pur (exemple : `assets/app/password-form.ts`, vérifié par un script Node).
+  pur (exemple : `assets/react/app`, vérifié par un script Node).
 - Toute réponse d'API consommée par le front a un type TypeScript explicite et
   cohérent avec le schéma OpenAPI ; ne pas redéfinir les règles de métier en TS.
 - États de chargement et d'erreur gérés explicitement sur chaque appel réseau.
@@ -704,16 +714,16 @@ que l'agent ne construise pas sur une prémisse fausse.
   `Maintenance`, `Document`, `Notification` sont cités dans `README.md` /
   `CONTRIBUTING.md` sans entité, contrôleur, service ni migration correspondants.
 - **D7 — Dossiers annoncés mais absents.** `src/Utils/`, `src/Validator/`, et
-  `frontend/` n'existent pas (le front est dans `assets/app/`).
+  `frontend/` n'existent pas (le front est dans `assets/react/app`).
 - **D8 — `APP_SECRET` versionné.** `.env` est versionné et contient un
   `APP_SECRET` généré (non vide). C'est un secret de développement dans un
   fichier suivi : il est rotationné, jamais réutilisé en production. Les
   secrets réels (`JWT_SECRET`, mots de passe) restent, eux, dans
   `.env.local`, qui est ignoré par Git. Toute rotation doit être signalée.
 - **D9 — Contrainte d'unicité de bail actif annulée.** La migration
-  `Version20260928133550` crée `active_unit_id` (colonne générée) + index unique
-  `uniq_active_lease_per_unit`, mais la migration auto-générée
-  `Version20260928135434` fait `DROP INDEX uniq_active_lease_per_unit` et
+  `Version0003ActiveLeasePerUnit` crée `active_unit_id` (colonne générée) + index
+  unique `uniq_active_lease_per_unit`, mais la migration
+  `Version0004LeaseTerms` fait `DROP INDEX uniq_active_lease_per_unit` et
   `DROP active_unit_id` pour ajouter `Lease.terms`. **La garantie « un seul bail
   `active` par unité » n'est donc pas en base aujourd'hui** ; seules subsistent
   les contraintes de `Lease` (un bail actif reste contrôlé en PHP). Toute

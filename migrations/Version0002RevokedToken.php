@@ -14,7 +14,7 @@ use Doctrine\Migrations\AbstractMigration;
  * serveur, mais rien ne permet de le retirer avant son expiration. Cette
  * table rend la déconnexion effective.
  */
-final class Version20260928120000 extends AbstractMigration
+final class Version0002RevokedToken extends AbstractMigration
 {
     public function getDescription(): string
     {

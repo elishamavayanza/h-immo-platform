@@ -147,7 +147,10 @@ if ($metaTable) {
 
     $known = [];
     foreach (glob(dirname(__DIR__).'/migrations/Version*.php') ?: [] as $file) {
-        if (preg_match('/final class (Version\d+)/', (string) file_get_contents($file), $m) === 1) {
+        // Le nom de classe porte un numéro séquentiel suivi d'un suffixe
+        // descriptif (Version0001InitialSchema) : les deux font partie de
+        // l'identifiant de version enregistré par Doctrine.
+        if (preg_match('/final class (Version\d+[A-Za-z0-9_]*)/', (string) file_get_contents($file), $m) === 1) {
             $known[] = 'DoctrineMigrations\\'.$m[1];
         }
     }
