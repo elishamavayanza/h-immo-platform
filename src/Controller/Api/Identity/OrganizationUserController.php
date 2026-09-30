@@ -103,17 +103,22 @@ final class OrganizationUserController extends AbstractController
      * - Crée le lien OrganizationUser avec le rôle demandé
      * - Pour ADMIN_VILLE : attache les villes via UserCity
      * - Déclenche l'envoi d'email de configuration du mot de passe
+     *
+     * La création est transactionnelle. Si l'email ne part pas, le compte
+     * reste créé et la réponse est un 201 porteur d'un `warning` : le client
+     * doit alors renvoyer « mot de passe oublié » plutôt que de rejouer la
+     * création, qui échouerait sur l'unicité de l'email.
      */
     #[Route('/create-admin', name: 'create_admin', methods: ['POST'])]
     #[OA\Post(
         path: '/api/v1/identity/organization-users/create-admin',
         summary: 'Créer un ADMIN_IMMOBILIER ou ADMIN_VILLE par le PATRON',
-        description: 'Crée un administrateur sans mot de passe, envoie un email de configuration. Pour ADMIN_VILLE, nécessite des cityUuids.',
+        description: 'Crée un administrateur sans mot de passe, envoie un email de configuration. Pour ADMIN_VILLE, nécessite des cityUuids. Si l\'envoi de l\'email échoue, le compte reste créé et un warning est renvoyé en 201.',
         requestBody: new OA\RequestBody(content: new OA\JsonContent(ref: new Model(type: CreateAdminRequest::class))),
         responses: [
-            new OA\Response(response: 201, description: 'Administrateur créé, email envoyé', content: new OA\JsonContent(ref: new Model(type: Feedback::class))),
+            new OA\Response(response: 201, description: 'Administrateur créé. Un warning est présent si l\'email de configuration n\'a pas pu être envoyé.', content: new OA\JsonContent(ref: new Model(type: Feedback::class))),
             new OA\Response(response: 403, description: 'Seul le PATRON peut créer des admins', content: new OA\JsonContent(ref: new Model(type: Feedback::class))),
-            new OA\Response(response: 422, description: 'Données invalides', content: new OA\JsonContent(ref: new Model(type: Feedback::class))),
+            new OA\Response(response: 422, description: 'Données invalides, ou email déjà utilisé', content: new OA\JsonContent(ref: new Model(type: Feedback::class))),
             new OA\Response(response: 404, description: 'Organisation introuvable', content: new OA\JsonContent(ref: new Model(type: Feedback::class))),
         ]
     )]

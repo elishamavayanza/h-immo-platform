@@ -12,6 +12,7 @@ use App\Repository\Identity\UserRepository;
 use App\Security\SecurityServiceInterface;
 use App\Service\System\DateTimeService;
 use Doctrine\ORM\EntityManagerInterface;
+use Psr\Log\LoggerInterface;
 use Symfony\Component\DependencyInjection\ParameterBag\ParameterBagInterface;
 use Symfony\Component\Mime\Email;
 use Symfony\Component\Mailer\MailerInterface;
@@ -34,6 +35,11 @@ use Symfony\Component\Mailer\MailerInterface;
  *
  * L'envoi d'email utilise un service d'abstraction (MailerInterface)
  * pour permettre un mock en test et une vraie implémentation en prod.
+ *
+ * Un échec du mailer ne doit jamais remonter en exception : le compte
+ * appelant peut déjà être créé en base, et une 500 ferait croire au
+ * PATRON que rien n'a été écrit. L'échec est journalisé et remonté sous
+ * forme de booléen par `requestResetForNewUser()`.
  */
 final readonly class PasswordResetService
 {
@@ -46,6 +52,7 @@ final readonly class PasswordResetService
         private ParameterBagInterface $params,
         private SecurityServiceInterface $security,
         private DateTimeService $dateTime,
+        private LoggerInterface $logger,
     ) {
     }
 
@@ -63,19 +70,54 @@ final readonly class PasswordResetService
      */
     public function requestReset(string $email): Feedback
     {
+        // Le résultat de l'envoi est volontairement ignoré : ce point
+        // d'entrée est public et ne doit rien révéler de l'existence du
+        // compte ni de la santé du mailer.
+        $this->dispatchResetRequest($email);
+
         $feedback = new Feedback();
 
         // Toujours même réponse pour éviter l'énumération
         $genericMessage = 'Si cette adresse existe, un lien de réinitialisation a été envoyé.';
 
+        return $feedback
+            ->setFlushDescription($genericMessage)
+            ->setStatus(200)
+            ->autoInitFlush();
+    }
+
+    /**
+     * Chemin interne réservé aux appelants qui viennent de créer le compte.
+     *
+     * Contrairement à `requestReset()`, cette méthode ne masque pas le
+     * résultat de l'envoi : l'appelant a déjà écrit l'utilisateur en base
+     * et doit pouvoir l'avertir que l'invitation n'est pas partie, plutôt
+     * que de renvoyer une erreur qui laisserait croire à un échec total.
+     *
+     * @return bool true si l'email a été accepté par le mailer, false
+     *              si le compte n'était pas éligible ou si l'envoi a échoué
+     */
+    public function requestResetForNewUser(string $email): bool
+    {
+        return $this->dispatchResetRequest($email);
+    }
+
+    /**
+     * Crée le jeton puis tente l'envoi, en isolant les deux.
+     *
+     * Le jeton est invalidé puis recréé à chaque demande, donc un jeton
+     * laissé valide par un échec d'envoi ne peut pas être réutilisé : la
+     * demande suivante le consomme. Il expire de toute façon au bout d'une
+     * heure.
+     *
+     * @return bool true si l'email est parti
+     */
+    private function dispatchResetRequest(string $email): bool
+    {
         $user = $this->userRepository->findOneBy(['email' => $email]);
 
         if (!$user || !$user->isActive() || $user->isDeleted()) {
-            // Réponse identique même si utilisateur inexistant/inactif
-            return $feedback
-                ->setFlushDescription($genericMessage)
-                ->setStatus(200)
-                ->autoInitFlush();
+            return false;
         }
 
         // Invalider les jetons précédents de cet utilisateur
@@ -95,13 +137,7 @@ final readonly class PasswordResetService
         $this->em->persist($token);
         $this->em->flush();
 
-        // Envoyer l'email de réinitialisation
-        $this->sendResetEmail($user, $rawToken);
-
-        return $feedback
-            ->setFlushDescription($genericMessage)
-            ->setStatus(200)
-            ->autoInitFlush();
+        return $this->sendResetEmail($user, $rawToken);
     }
 
     /**
@@ -162,8 +198,15 @@ final readonly class PasswordResetService
 
     /**
      * Envoie l'email de réinitialisation avec le lien contenant le jeton brut.
+     *
+     * Le transport est un service externe : un DSN invalide, un SMTP
+     * indisponible ou un quota dépassé ne doit pas faire échouer
+     * l'opération métier appelante. L'erreur est journalisée et traduite
+     * en `false`.
+     *
+     * @return bool true si le mailer a accepté le message
      */
-    private function sendResetEmail(User $user, string $rawToken): void
+    private function sendResetEmail(User $user, string $rawToken): bool
     {
         $resetUrl = $this->params->get('app.frontend_url', 'http://localhost:3000')
             . '/reset-password?token=' . $rawToken;
@@ -175,7 +218,21 @@ final readonly class PasswordResetService
             ->html($this->buildResetEmailHtml($user->getFullName(), $resetUrl))
             ->text($this->buildResetEmailText($user->getFullName(), $resetUrl));
 
-        $this->mailer->send($email);
+        try {
+            $this->mailer->send($email);
+        } catch (\Throwable $exception) {
+            // Le jeton en clair n'apparaît jamais dans le log : il est
+            // à usage unique et constitue le seul moyen de prendre le compte.
+            $this->logger->error('Échec de l\'envoi de l\'email de réinitialisation de mot de passe.', [
+                'userId' => $user->getId(),
+                'email' => $user->getEmail(),
+                'exception' => $exception,
+            ]);
+
+            return false;
+        }
+
+        return true;
     }
 
     private function buildResetEmailHtml(string $fullName, string $resetUrl): string
