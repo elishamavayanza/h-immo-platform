@@ -1,6 +1,5 @@
 import React, { forwardRef } from 'react';
 import { useRadio, UseRadioProps } from '../../../hook-components/Forms/Radio';
-import { useI18n } from '@/react/i18n/I18nContext';
 
 export interface RadioProps extends React.InputHTMLAttributes<HTMLInputElement>, UseRadioProps {
     label?: React.ReactNode;
@@ -18,7 +17,6 @@ export const Radio = forwardRef<HTMLInputElement, RadioProps>(
         },
         ref
     ) => {
-        const { t } = useI18n();
         const { classes, ariaProps } = useRadio({
             variant,
             fieldSize,
@@ -37,7 +35,7 @@ export const Radio = forwardRef<HTMLInputElement, RadioProps>(
                     {...rest}
                 />
                 <span className="radio-field__visual" aria-hidden="true" />
-                {label && <span className="radio-field__label">{typeof label === 'string' ? t(label) : label}</span>}
+                {label && <span className="radio-field__label">{typeof label === 'string' ? (label) : label}</span>}
             </label>
         );
     }

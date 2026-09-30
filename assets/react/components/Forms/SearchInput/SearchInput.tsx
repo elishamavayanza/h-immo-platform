@@ -1,7 +1,5 @@
 import React, { forwardRef } from 'react';
 import { useSearchInput, UseSearchInputProps } from '../../../hook-components/Forms/SearchInput';
-import { useI18n } from '@/react/i18n/I18nContext';
-
 const SearchIcon = () => (
     <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2">
         <circle cx="11" cy="11" r="8" />
@@ -41,7 +39,6 @@ export const SearchInput = forwardRef<HTMLInputElement, SearchInputProps>(
         },
         ref
     ) => {
-        const { t } = useI18n();
         const { classes, value: currentValue, handleChange, handleClear } = useSearchInput({
             value,
             defaultValue,
@@ -75,7 +72,7 @@ export const SearchInput = forwardRef<HTMLInputElement, SearchInputProps>(
                         type="button"
                         className="search-input__clear"
                         onClick={handleClear}
-                        aria-label={t('Effacer la recherche')}
+                        aria-label={('Effacer la recherche')}
                     >
                         <ClearIcon />
                     </button>

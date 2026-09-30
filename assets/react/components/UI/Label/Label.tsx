@@ -1,6 +1,5 @@
 import React, { forwardRef } from 'react';
 import { useLabel, UseLabelProps } from '../../../hook-components/UI/Label';
-import { useI18n } from '@/react/i18n/I18nContext';
 
 export interface LabelProps extends React.LabelHTMLAttributes<HTMLLabelElement>, UseLabelProps {
     // Aucune prop supplémentaire nécessaire
@@ -22,7 +21,6 @@ export const Label = forwardRef<HTMLLabelElement, LabelProps>(
         },
         ref
     ) => {
-        const { t } = useI18n();
         const { classes, ariaProps } = useLabel({
             variant,
             size,
@@ -47,7 +45,7 @@ export const Label = forwardRef<HTMLLabelElement, LabelProps>(
             {icon}
           </span>
                 )}
-                {children && <span className="label__text">{typeof children === 'string' ? t(children) : children}</span>}
+                {children && <span className="label__text">{typeof children === 'string' ? (children) : children}</span>}
                 {required && (
                     <span className="label__required-star" aria-hidden="true">*</span>
                 )}

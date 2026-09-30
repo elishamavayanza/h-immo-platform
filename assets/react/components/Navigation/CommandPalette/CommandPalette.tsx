@@ -1,5 +1,4 @@
 import { useState, useMemo, useEffect, useRef } from 'react';
-import { useI18n } from '@/react/i18n/I18nContext';
 
 export interface CommandItem {
     id: string;
@@ -25,13 +24,12 @@ export function useCommandPalette({
                                       placeholder, //  Renommé en "placeholder" (plus de doublon)
                                       className = '',
                                   }: UseCommandPaletteProps) {
-    const { t } = useI18n();
     const [query, setQuery] = useState('');
     const [selectedIndex, setSelectedIndex] = useState(0);
     const inputRef = useRef<HTMLInputElement>(null);
 
     //  Une seule déclaration de effectivePlaceholder
-    const effectivePlaceholder = placeholder ?? t('Tapez une commande...');
+    const effectivePlaceholder = placeholder ?? ('Tapez une commande...');
 
     const filteredCommands = useMemo(() => {
         if (!query.trim()) return commands;

@@ -1,7 +1,31 @@
 import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { useRightSidebar, UseRightSidebarProps } from '../../../hook-components/Navigation/RightSidebar';
-import { useIsCompact } from '@/react/hooks/useIsCompact';   // ← mobile / tablette / portrait
-import { useI18n } from '@/react/i18n/I18nContext';
+
+// ============================================================
+// Hook local : détecte les écrans compacts (mobile / tablette)
+// ============================================================
+// Remplace `useIsCompact` en attendant que le hook officiel
+// soit disponible. Se met à jour au redimensionnement.
+// ============================================================
+function useIsCompact(breakpoint = 768): boolean {
+    const [isCompact, setIsCompact] = useState<boolean>(() =>
+        typeof window !== 'undefined' ? window.innerWidth < breakpoint : false
+    );
+
+    useEffect(() => {
+        const mq = window.matchMedia(`(max-width: ${breakpoint - 1}px)`);
+        const handle = (e: MediaQueryListEvent) => setIsCompact(e.matches);
+
+        // Sync initial
+        setIsCompact(mq.matches);
+
+        // Écoute les changements
+        mq.addEventListener('change', handle);
+        return () => mq.removeEventListener('change', handle);
+    }, [breakpoint]);
+
+    return isCompact;
+}
 
 const CollapseIcon = () => (
     <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2">
@@ -53,7 +77,6 @@ export function RightSidebar({
                                  collapsedWidth = 35,
                              }: RightSidebarProps) {
     const isCompact = useIsCompact();
-    const { t } = useI18n();
 
     // Ajustements mode compact (mobile / tablette / portrait)
     const effectiveMinWidth = isCompact ? 120 : minWidth;
@@ -189,14 +212,14 @@ export function RightSidebar({
                 />
             )}
 
-            {/* Bouton flottant (rond / chip) pour rouvrir le panneau fermé */}
+            {/* Bouton flottant pour rouvrir le panneau fermé */}
             {isCompact && isFullyCollapsed && (
                 <button
                     type="button"
                     className="right-sidebar__mobile-trigger"
                     onClick={handleToggle}
-                    aria-label={t('Ouvrir le panneau')}
-                    title={t('Ouvrir le panneau')}
+                    aria-label="Ouvrir le panneau"
+                    title="Ouvrir le panneau"
                 >
                     <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2">
                         <polyline points="9 18 15 12 9 6" />
@@ -214,10 +237,10 @@ export function RightSidebar({
                     <div
                         className="right-sidebar__collapsed-strip"
                         onMouseDown={startDragging}
-                        onClick={(e) => {
+                        onClick={() => {
                             if (!isDraggingRef.current) handleToggle();
                         }}
-                        title={t('Cliquer pour ouvrir ou glisser vers la gauche')}
+                        title="Cliquer pour ouvrir ou glisser vers la gauche"
                     >
                         <span className="right-sidebar__collapsed-text">{title || ''}</span>
                     </div>
@@ -226,7 +249,7 @@ export function RightSidebar({
                         <div
                             className="right-sidebar__resizer"
                             onMouseDown={startDragging}
-                            title={t('Glisser pour redimensionner')}
+                            title="Glisser pour redimensionner"
                         />
 
                         {header && <div className="right-sidebar__header">{header}</div>}
@@ -236,8 +259,8 @@ export function RightSidebar({
                                 type="button"
                                 className="right-sidebar__collapse"
                                 onClick={handleToggle}
-                                aria-label={t('Fermer le panneau')}
-                                title={t('Fermer le panneau')}
+                                aria-label="Fermer le panneau"
+                                title="Fermer le panneau"
                             >
                                 <CloseIcon />
                             </button>

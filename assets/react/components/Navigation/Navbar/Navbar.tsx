@@ -1,7 +1,5 @@
 import React from 'react';
 import {NavbarItem, useNavbar, UseNavbarProps} from '../../../hook-components/Navigation/Navbar';
-import { useI18n } from '@/react/i18n/I18nContext';
-
 const HamburgerIcon = ({ isOpen }: { isOpen: boolean }) => (
     <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" strokeWidth="2">
         {isOpen ? (
@@ -42,7 +40,6 @@ export function Navbar({
         mobileBreakpoint,
         className,
     });
-    const { t } = useI18n();
 
     const handleItemClick = (item: NavbarItem) => {
         onItemClick?.(item);
@@ -53,7 +50,7 @@ export function Navbar({
         <header className={classes}>
             <div className="navbar__inner">
                 {logo && <div className="navbar__brand">{logo}</div>}
-                <nav className="navbar__links" aria-label={t('Navigation principale')}>
+                <nav className="navbar__links" aria-label={('Navigation principale')}>
                     {items.map((item) => (
                         <a
                             key={item.id}
@@ -70,7 +67,7 @@ export function Navbar({
                 <button
                     className="navbar__toggle"
                     onClick={toggleMobileMenu}
-                    aria-label={t('Menu')}
+                    aria-label={('Menu')}
                     aria-expanded={isMobileMenuOpen}
                 >
                     <HamburgerIcon isOpen={isMobileMenuOpen} />

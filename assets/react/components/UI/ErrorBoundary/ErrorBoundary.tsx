@@ -1,6 +1,5 @@
 import React from 'react';
-import { ErrorState } from '@/react/components/UI/ErrorState';
-import { useI18n, TranslateFn } from '@/react/i18n/I18nContext';
+import { ErrorState } from '../ErrorState';
 
 interface ErrorBoundaryState {
     error: Error | null;
@@ -15,7 +14,7 @@ interface ErrorBoundaryProps {
  * React afin de ne jamais afficher de page blanche. L'utilisateur
  * voit un état d'erreur clair avec un bouton « Réessayer ».
  */
-class ErrorBoundaryImpl extends React.Component<ErrorBoundaryProps & { t: TranslateFn }, ErrorBoundaryState> {
+class ErrorBoundaryImpl extends React.Component<ErrorBoundaryProps, ErrorBoundaryState> {
     state: ErrorBoundaryState = { error: null };
 
     static getDerivedStateFromError(error: Error): ErrorBoundaryState {
@@ -32,7 +31,7 @@ class ErrorBoundaryImpl extends React.Component<ErrorBoundaryProps & { t: Transl
 
     render() {
         const { error } = this.state;
-        const { children, t } = this.props;
+        const { children } = this.props;
 
         if (error !== null) {
             return (
@@ -43,13 +42,14 @@ class ErrorBoundaryImpl extends React.Component<ErrorBoundaryProps & { t: Transl
                         alignItems: 'center',
                         justifyContent: 'center',
                         padding: '1rem',
-                        background: 'var(--color-background, #fff)',
+                        background: 'var(--color-bg-app, #0A0B0D)',
                     }}
                 >
                     <ErrorState
                         size="full"
-                        title={t('Une erreur inattendue est survenue')}
-                        message={t("Nous sommes désolés. Une erreur s'est produite pendant l'affichage de cette page. Vous pouvez réessayer.")}
+                        tone="danger"
+                        title="Une erreur inattendue est survenue"
+                        message="Nous sommes désolés. Une erreur s'est produite pendant l'affichage de cette page. Vous pouvez réessayer."
                         onRetry={this.handleRetry}
                     />
                 </div>
@@ -61,6 +61,5 @@ class ErrorBoundaryImpl extends React.Component<ErrorBoundaryProps & { t: Transl
 }
 
 export function ErrorBoundary({ children }: ErrorBoundaryProps) {
-    const { t } = useI18n();
-    return <ErrorBoundaryImpl t={t}>{children}</ErrorBoundaryImpl>;
+    return <ErrorBoundaryImpl>{children}</ErrorBoundaryImpl>;
 }

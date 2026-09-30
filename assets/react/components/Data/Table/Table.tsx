@@ -1,6 +1,5 @@
 import React from 'react';
 import { useTable, UseTableProps, TableColumn } from '../../../hook-components/Data/Table';
-import { useI18n } from '@/react/i18n/I18nContext';
 
 export interface TableProps<T> extends UseTableProps<T> {
     columns: TableColumn<T>[];
@@ -17,7 +16,6 @@ export function Table<T>({
                              fullWidth = true,
                          className,
                      }: TableProps<T>) {
-    const { t } = useI18n();
     const { classes, sortedData, sortKey, sortDirection, toggleSort } = useTable<T>({
         columns,
         data,
@@ -75,7 +73,7 @@ export function Table<T>({
                 ) : (
                     <tr>
                         <td colSpan={columns.length} className="table__empty">
-                            {t('Aucune donnée disponible.')}
+                            {('Aucune donnée disponible.')}
                         </td>
                     </tr>
                 )}

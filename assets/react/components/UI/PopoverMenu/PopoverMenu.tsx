@@ -1,6 +1,5 @@
 import React from 'react';
 import { PopoverMenuItem, usePopoverMenu, UsePopoverMenuProps } from '../../../hook-components/UI/PopoverMenu';
-import { useI18n } from '@/react/i18n/I18nContext';
 
 export interface PopoverMenuProps extends UsePopoverMenuProps {
     trigger: React.ReactNode;
@@ -27,8 +26,6 @@ export function PopoverMenu({
         classes,
         coords,
     } = usePopoverMenu({ items, placement, offset, closeOnClickItem, closeOnOutsideClick, closeOnEscape, className });
-
-    const { t } = useI18n();
 
     // Définir la transformation selon le placement
     const transform = () => {
@@ -95,7 +92,7 @@ export function PopoverMenu({
                                 tabIndex={-1}
                             >
                                 {item.icon && <span className="popover-menu__item-icon">{item.icon}</span>}
-                                <span className="popover-menu__item-label">{typeof item.label === 'string' ? t(item.label) : item.label}</span>
+                                <span className="popover-menu__item-label">{typeof item.label === 'string' ? (item.label) : item.label}</span>
                             </button>
                         );
                     })}

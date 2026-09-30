@@ -1,6 +1,5 @@
 import React from 'react';
 import { useList, UseListProps } from '../../../hook-components/Data/List';
-import { useI18n } from '@/react/i18n/I18nContext';
 
 export interface ListItem {
     id?: string | number;
@@ -27,7 +26,6 @@ export function List({
                          emptyContent,
                          renderItem,
                      }: ListProps) {
-    const { t } = useI18n();
     const { classes } = useList({
         variant,
         size,
@@ -39,7 +37,7 @@ export function List({
     if (items.length === 0) {
         return (
             <div className={`${classes}__empty`}>
-                {emptyContent || t('Aucun élément')}
+                {emptyContent || ('Aucun élément')}
             </div>
         );
     }

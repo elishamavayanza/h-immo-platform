@@ -1,6 +1,5 @@
 import React, { forwardRef } from 'react';
 import { useTooltip, UseTooltipProps } from '../../../hook-components/UI/Tooltip';
-import { useI18n } from '@/react/i18n/I18nContext';
 
 export interface TooltipProps extends UseTooltipProps {
     content: React.ReactNode;
@@ -8,7 +7,6 @@ export interface TooltipProps extends UseTooltipProps {
 }
 
 export function Tooltip({ content, children, position, trigger, delay, className }: TooltipProps) {
-    const { t } = useI18n();
     const { classes, show, hide, toggle } = useTooltip({ position, trigger, delay, className });
 
     const handleMouseEnter = () => show();
@@ -28,7 +26,7 @@ export function Tooltip({ content, children, position, trigger, delay, className
         >
       {children}
             <span className={classes} role="tooltip">
-        {typeof content === 'string' ? t(content) : content}
+        {typeof content === 'string' ? (content) : content}
       </span>
     </span>
     );
