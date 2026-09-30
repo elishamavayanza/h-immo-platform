@@ -1,0 +1,234 @@
+// ============================================================
+// COMPOSANT — DATA TABLE
+// Fichier : components/Data/DataTable/_DataTable.scss
+// ------------------------------------------------------------
+// Rôle :
+//   Styles du composant <DataTable /> : conteneur, header
+//   triable, lignes, hover, états vides / loading, pagination.
+//
+// Dépendances :
+//   - baseVariables/_variables.scss
+//   - baseVariables/_mixins.scss
+// ============================================================
+
+@use '../../baseVariables/variables' as *;
+@use '../../baseVariables/mixins' as *;
+
+
+// ============================================================
+// CONTENEUR PRINCIPAL
+// ============================================================
+// Carte sombre avec scroll interne horizontal si le tableau
+// dépasse la largeur du parent.
+// ============================================================
+
+.datatable {
+    @include card($spacing-0); // pas de padding : le wrapper s'en charge
+    padding: 0;
+    width: 100%;
+    overflow: hidden;
+}
+
+.datatable__wrapper {
+    @include scrollbar;
+    width: 100%;
+    overflow-x: auto;
+    border-radius: $radius-lg;
+}
+
+
+// ============================================================
+// TABLE
+// ============================================================
+// Table collapsée, typographie compacte, séparateurs fins.
+// ============================================================
+
+.datatable__table {
+    width: 100%;
+    border-collapse: collapse;
+    border-spacing: 0;
+    font-family: $font-family-base;
+    font-size: $font-size-sm;
+    color: $color-text-primary;
+    table-layout: auto;
+
+    // --------------------------------------------------------
+    // HEADER
+    // --------------------------------------------------------
+    thead {
+        background-color: $color-bg-app;
+        border-bottom: 1px solid $color-border;
+    }
+
+    th {
+        padding: $spacing-3 $spacing-4;
+        text-align: left;
+        font-size: $font-size-xs;
+        font-weight: $font-weight-semibold;
+        color: $color-text-secondary;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        white-space: nowrap;
+        user-select: none;
+    }
+
+    // --------------------------------------------------------
+    // LIGNES
+    // --------------------------------------------------------
+    tbody tr {
+        border-bottom: 1px solid $color-border;
+        transition: background-color $transition-fast;
+
+        &:last-child {
+            border-bottom: none;
+        }
+
+        &:hover {
+            background-color: $color-bg-card-hover;
+        }
+    }
+
+    td {
+        padding: $spacing-3 $spacing-4;
+        color: $color-text-primary;
+        font-size: $font-size-sm;
+        vertical-align: middle;
+        line-height: $line-height-snug;
+    }
+
+    // Alignement numérique cohérent : à activer via une classe
+    // (ex. <td className="datatable__cell--numeric">)
+    .datatable__cell--numeric {
+        text-align: right;
+        font-variant-numeric: tabular-nums;
+    }
+}
+
+
+// ============================================================
+// HEADER TRIABLE
+// ============================================================
+
+.datatable__th--sortable {
+    cursor: pointer;
+    transition: color $transition-fast, background-color $transition-fast;
+
+    &:hover {
+        color: $color-text-primary;
+        background-color: $color-bg-elevated;
+    }
+
+    &:active {
+        background-color: $color-bg-card;
+    }
+
+    // Focus clavier
+    &:focus-visible {
+        outline: none;
+        box-shadow: inset 0 0 0 2px $color-primary;
+    }
+}
+
+.datatable__th-content {
+    @include flex(row, center, flex-start, $spacing-2);
+    display: inline-flex;
+}
+
+.datatable__sort-icon {
+    @include flex-center;
+    font-size: 0.7em;
+    color: $color-text-muted;
+    transition: color $transition-fast;
+}
+
+.datatable__th--sortable:hover .datatable__sort-icon,
+.datatable__th--sortable[aria-sort='ascending'] .datatable__sort-icon,
+.datatable__th--sortable[aria-sort='descending'] .datatable__sort-icon {
+    color: $color-primary;
+}
+
+
+// ============================================================
+// ÉTATS — VIDE / LOADING
+// ============================================================
+
+.datatable__empty {
+    padding: $spacing-8 $spacing-4;
+    text-align: center;
+    color: $color-text-muted;
+    font-size: $font-size-sm;
+    font-style: italic;
+    background-color: transparent;
+}
+
+.datatable__loading {
+    color: $color-text-secondary;
+    font-style: normal;
+    font-weight: $font-weight-medium;
+
+    // Petit point cyan animé devant le texte
+    &::before {
+        content: '';
+        display: inline-block;
+        width: 8px;
+        height: 8px;
+        margin-right: $spacing-2;
+        border-radius: $radius-full;
+        background-color: $color-primary;
+        animation: datatable-loading-pulse 1.2s ease-in-out infinite;
+        vertical-align: middle;
+    }
+}
+
+@keyframes datatable-loading-pulse {
+    0%, 100% { opacity: 0.3; transform: scale(0.85); }
+    50%      { opacity: 1;   transform: scale(1.05); }
+}
+
+
+// ============================================================
+// PAGINATION
+// ============================================================
+// Conteneur de la pagination séparé du tableau.
+// ============================================================
+
+.datatable__pagination {
+    @include flex-between;
+    padding: $spacing-3 $spacing-4;
+    border-top: 1px solid $color-border;
+    background-color: $color-bg-app;
+}
+
+
+// ============================================================
+// RESPONSIVE
+// ============================================================
+// Sur mobile, padding des cellules réduit pour gagner en
+// densité d'affichage.
+// ============================================================
+
+@include responsive(mobile) {
+    .datatable__table {
+        th, td {
+            padding: $spacing-2 $spacing-3;
+        }
+    }
+}
+
+
+// ============================================================
+// ACCESSIBILITÉ — RÉDUCTION DES ANIMATIONS
+// ============================================================
+
+@media (prefers-reduced-motion: reduce) {
+    .datatable__table tbody tr,
+    .datatable__th--sortable,
+    .datatable__sort-icon {
+        transition: none;
+    }
+
+    .datatable__loading::before {
+        animation: none;
+        opacity: 1;
+    }
+}

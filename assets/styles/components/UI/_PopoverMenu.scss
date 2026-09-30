@@ -1,0 +1,212 @@
+// ============================================================
+// COMPOSANT — POPOVER MENU
+// Fichier : components/UI/PopoverMenu/_PopoverMenu.scss
+// ------------------------------------------------------------
+// Rôle :
+//   Styles du composant <PopoverMenu /> (menu flottant ancré
+//   à un trigger). Position absolute/fixed définie côté React.
+//   Gère : menu, items, séparateurs, item danger, item
+//   désactivé, trigger.
+//
+// Dépendances :
+//   - baseVariables/_variables.scss
+//   - baseVariables/_mixins.scss
+// ============================================================
+
+@use '../../baseVariables/variables' as *;
+@use '../../baseVariables/mixins' as *;
+
+
+// ============================================================
+// CONTENEUR (trigger)
+// ============================================================
+
+.popover-menu-container {
+    display: inline-block;
+    position: relative;
+}
+
+.popover-menu__trigger {
+    @include flex-center;
+    @include focus-ring;
+    display: inline-flex;
+    cursor: pointer;
+    user-select: none;
+    border-radius: $radius-md;
+    transition: background-color $transition-fast, color $transition-fast;
+
+    &:hover {
+        background-color: $color-bg-card-hover;
+    }
+}
+
+
+// ============================================================
+// MENU
+// ============================================================
+// Le positionnement est fait en inline (via `style` dans React),
+// ici on ne gère que l'apparence.
+// ============================================================
+
+.popover-menu {
+    @include elevation(lg);
+    min-width: 180px;
+    max-width: 280px;
+    padding: $spacing-1;
+    background-color: $color-bg-elevated;
+    border: 1px solid $color-border-light;
+    border-radius: $radius-md;
+    font-family: $font-family-base;
+    animation: popover-menu-in $transition-fast both;
+}
+
+@keyframes popover-menu-in {
+    from { opacity: 0; transform: translateY(-4px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+
+// Variante lorsqu’on ouvre vers le haut : inversion de l’animation
+.popover-menu--top {
+    animation-name: popover-menu-in-top;
+}
+
+@keyframes popover-menu-in-top {
+    from { opacity: 0; transform: translateY(4px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+
+
+// ============================================================
+// ITEM
+// ============================================================
+
+.popover-menu__item {
+    @include flex(row, center, flex-start, $spacing-3);
+    width: 100%;
+    padding: $spacing-2 $spacing-3;
+    font-family: $font-family-base;
+    font-size: $font-size-sm;
+    font-weight: $font-weight-regular;
+    color: $color-text-primary;
+    text-align: left;
+    background: transparent;
+    border: none;
+    border-radius: $radius-sm;
+    cursor: pointer;
+    transition:
+        background-color $transition-fast,
+        color $transition-fast;
+
+    &:hover:not(:disabled):not(.popover-menu__item--disabled) {
+        background-color: $color-bg-card-hover;
+    }
+
+    &:focus-visible {
+        outline: none;
+        background-color: $color-bg-card-hover;
+        box-shadow: 0 0 0 2px $color-primary;
+    }
+
+    &:active:not(:disabled) {
+        background-color: $color-bg-card;
+    }
+}
+
+
+// ============================================================
+// ICÔNE
+// ============================================================
+
+.popover-menu__item-icon {
+    @include flex-center;
+    flex-shrink: 0;
+    width: 16px;
+    height: 16px;
+    color: $color-text-muted;
+
+    svg {
+        display: block;
+        width: 100%;
+        height: 100%;
+    }
+}
+
+
+// ============================================================
+// LABEL
+// ============================================================
+
+.popover-menu__item-label {
+    flex: 1;
+    min-width: 0;
+    @include truncate;
+    line-height: $line-height-snug;
+}
+
+
+// ============================================================
+// ITEM — DANGER
+// ============================================================
+
+.popover-menu__item--danger {
+    color: $color-danger;
+
+    .popover-menu__item-icon {
+        color: $color-danger;
+    }
+
+    &:hover:not(:disabled) {
+        background-color: $color-danger-light;
+    }
+
+    &:active:not(:disabled) {
+        background-color: rgba(239, 91, 120, 0.22);
+    }
+}
+
+
+// ============================================================
+// ITEM — DÉSACTIVÉ
+// ============================================================
+
+.popover-menu__item--disabled,
+.popover-menu__item:disabled {
+    color: $color-text-disabled;
+    cursor: not-allowed;
+    opacity: 0.55;
+
+    .popover-menu__item-icon {
+        color: $color-text-disabled;
+    }
+
+    &:hover {
+        background-color: transparent;
+    }
+}
+
+
+// ============================================================
+// SÉPARATEUR
+// ============================================================
+
+.popover-menu__separator {
+    height: 1px;
+    margin: $spacing-1 0;
+    background-color: $color-border;
+}
+
+
+// ============================================================
+// ACCESSIBILITÉ — RÉDUCTION DES ANIMATIONS
+// ============================================================
+
+@media (prefers-reduced-motion: reduce) {
+    .popover-menu {
+        animation: none;
+    }
+
+    .popover-menu__item,
+    .popover-menu__trigger {
+        transition: none;
+    }
+}

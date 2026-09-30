@@ -1,0 +1,203 @@
+// ============================================================
+// COMPOSANT — EMPTY STATE
+// Fichier : components/Data/EmptyState/_EmptyState.scss
+// ------------------------------------------------------------
+// Rôle :
+//   Styles du composant <EmptyState />.
+//   Gère : variantes (default / info / success / warning / error),
+//   tailles (small / medium / large), plein largeur,
+//   icône (couleur contextuelle), titre, description, action.
+//
+// Dépendances :
+//   - baseVariables/_variables.scss
+//   - baseVariables/_mixins.scss
+// ============================================================
+
+@use '../../baseVariables/variables' as *;
+@use '../../baseVariables/mixins' as *;
+
+
+// ============================================================
+// CONTENEUR PRINCIPAL
+// ============================================================
+// Bloc centré, padding généreux, fond neutre.
+// La couleur d’accent est pilotée par les variantes.
+// ============================================================
+
+.empty-state {
+    @include flex(column, center, center, $spacing-4);
+    padding: $spacing-10 $spacing-6;
+    color: $color-text-secondary;
+    text-align: center;
+    background-color: $color-bg-card;
+    border: 1px solid $color-border;
+    border-radius: $radius-lg;
+
+    // Variable locale pour la couleur d’accent, redéfinie
+    // par chaque variante.
+    --empty-state-accent: #{$color-text-muted};
+    --empty-state-accent-light: #{rgba(165, 168, 173, 0.10)};
+}
+
+// Plein largeur (défaut)
+.empty-state--full-width {
+    width: 100%;
+}
+
+// Non pleine largeur
+.empty-state:not(.empty-state--full-width) {
+    width: fit-content;
+    max-width: 480px;
+}
+
+
+// ============================================================
+// ICÔNE
+// ============================================================
+// Cercle teinté autour de l’icône pour donner un point focal
+// visuel au bloc.
+// ============================================================
+
+.empty-state__icon {
+    @include flex-center;
+    width: 72px;
+    height: 72px;
+    background-color: var(--empty-state-accent-light);
+    color: var(--empty-state-accent);
+    border-radius: $radius-full;
+    margin-bottom: $spacing-2;
+
+    svg {
+        display: block;
+        width: 36px;
+        height: 36px;
+    }
+}
+
+
+// ============================================================
+// TITRE
+// ============================================================
+
+.empty-state__title {
+    margin: 0;
+    font-family: $font-family-heading;
+    font-size: $font-size-lg;
+    font-weight: $font-weight-semibold;
+    color: $color-text-primary;
+    line-height: $line-height-tight;
+}
+
+
+// ============================================================
+// DESCRIPTION
+// ============================================================
+
+.empty-state__description {
+    margin: 0;
+    max-width: 480px;
+    font-size: $font-size-sm;
+    color: $color-text-secondary;
+    line-height: $line-height-normal;
+}
+
+
+// ============================================================
+// ACTION
+// ============================================================
+// Conteneur du bouton ou lien d’action. Marge supérieure
+// pour le distinguer de la description.
+// ============================================================
+
+.empty-state__action {
+    @include flex-center;
+    gap: $spacing-2;
+    margin-top: $spacing-2;
+}
+
+
+// ============================================================
+// VARIANTES
+// ============================================================
+// Chaque variante redéfinit la couleur d’accent (icône + fond).
+// ============================================================
+
+.empty-state--default {
+    --empty-state-accent: #{$color-text-muted};
+    --empty-state-accent-light: #{rgba(107, 112, 119, 0.10)};
+}
+
+.empty-state--info {
+    --empty-state-accent: #{$color-info};
+    --empty-state-accent-light: #{$color-info-light};
+}
+
+.empty-state--success {
+    --empty-state-accent: #{$color-success};
+    --empty-state-accent-light: #{$color-success-light};
+}
+
+.empty-state--warning {
+    --empty-state-accent: #{$color-warning};
+    --empty-state-accent-light: #{$color-warning-light};
+}
+
+.empty-state--error {
+    --empty-state-accent: #{$color-danger};
+    --empty-state-accent-light: #{$color-danger-light};
+}
+
+
+// ============================================================
+// TAILLES
+// ============================================================
+
+.empty-state--small {
+    padding: $spacing-6 $spacing-4;
+    gap: $spacing-3;
+
+    .empty-state__icon {
+        width: 48px;
+        height: 48px;
+
+        svg {
+            width: 24px;
+            height: 24px;
+        }
+    }
+
+    .empty-state__title {
+        font-size: $font-size-md;
+    }
+
+    .empty-state__description {
+        font-size: $font-size-xs;
+    }
+}
+
+.empty-state--medium {
+    // valeurs par défaut, hérite du bloc `.empty-state`
+}
+
+.empty-state--large {
+    padding: $spacing-16 $spacing-8;
+    gap: $spacing-5;
+
+    .empty-state__icon {
+        width: 96px;
+        height: 96px;
+
+        svg {
+            width: 48px;
+            height: 48px;
+        }
+    }
+
+    .empty-state__title {
+        font-size: $font-size-2xl;
+    }
+
+    .empty-state__description {
+        font-size: $font-size-md;
+    }
+}

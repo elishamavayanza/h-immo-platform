@@ -1,0 +1,440 @@
+// ============================================================
+// COMPOSANT — TREE TABLE
+// Fichier : components/Data/_TreeTable.scss
+// ------------------------------------------------------------
+// Rôle :
+//   Styles du composant <TreeTable /> (tableau arborescent).
+//   Gère : variantes, tailles, hoverable, lignes (showLines),
+//   colonne arbre (chevron + icône + label + actions),
+//   header triable, sélection, état désactivé, état vide.
+//
+// Dépendances :
+//   - baseVariables/_variables.scss
+//   - baseVariables/_mixins.scss
+// ============================================================
+
+@use '../../baseVariables/variables' as *;
+@use '../../baseVariables/mixins' as *;
+
+
+// ============================================================
+// CONTENEUR
+// ============================================================
+
+.tree-table__wrapper {
+    @include scrollbar;
+    width: 100%;
+    overflow-x: auto;
+    border-radius: $radius-lg;
+}
+
+
+// ============================================================
+// TABLE — BASE
+// ============================================================
+
+.tree-table {
+    width: 100%;
+    border-collapse: collapse;
+    border-spacing: 0;
+    font-family: $font-family-base;
+    font-size: $font-size-sm;
+    color: $color-text-primary;
+    background-color: $color-bg-card;
+
+    // Header
+    thead {
+        background-color: $color-bg-app;
+        border-bottom: 1px solid $color-border;
+    }
+
+    th {
+        padding: $spacing-3 $spacing-4;
+        text-align: left;
+        font-size: $font-size-xs;
+        font-weight: $font-weight-semibold;
+        color: $color-text-secondary;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        white-space: nowrap;
+        user-select: none;
+    }
+
+    td {
+        padding: $spacing-3 $spacing-4;
+        vertical-align: middle;
+        line-height: $line-height-snug;
+        color: $color-text-primary;
+    }
+
+    // Lignes
+    tbody tr {
+        border-bottom: 1px solid $color-border;
+        transition: background-color $transition-fast;
+
+        &:last-child {
+            border-bottom: none;
+        }
+    }
+}
+
+
+// ============================================================
+// LIGNE — SÉLECTION / DÉSACTIVÉ
+// ============================================================
+
+.tree-table__row {
+    cursor: pointer;
+
+    &:hover {
+        background-color: $color-bg-card-hover;
+    }
+}
+
+.tree-table__row--selected {
+    background-color: $color-primary-light;
+
+    &:hover {
+        background-color: $color-primary-soft;
+    }
+
+    .tree-table__label {
+        color: $color-primary-hover;
+        font-weight: $font-weight-semibold;
+    }
+
+    .tree-table__icon {
+        color: $color-primary;
+    }
+}
+
+.tree-table__row--disabled {
+    color: $color-text-disabled;
+    cursor: not-allowed;
+    opacity: 0.55;
+
+    &:hover {
+        background-color: transparent;
+    }
+
+    .tree-table__label,
+    .tree-table__icon,
+    .tree-table__toggle {
+        color: $color-text-disabled;
+    }
+
+    .tree-table__toggle {
+        cursor: not-allowed;
+    }
+}
+
+
+// ============================================================
+// CELLULE ARBRE
+// ============================================================
+// Cellule qui contient chevron + icône + label + actions.
+// Le padding-left est piloté inline par le niveau.
+// ============================================================
+
+.tree-table__tree-cell {
+    // Padding-left défini inline par le composant
+}
+
+.tree-table__tree-content {
+    @include flex(row, center, flex-start, $spacing-2);
+    min-width: 0;
+}
+
+
+// ============================================================
+// TOGGLE (chevron)
+// ============================================================
+
+.tree-table__toggle {
+    @include flex-center;
+    flex-shrink: 0;
+    width: 20px;
+    height: 20px;
+    padding: 0;
+    background: transparent;
+    border: none;
+    color: $color-text-muted;
+    cursor: pointer;
+    transition: transform $transition-fast, color $transition-fast;
+
+    svg {
+        display: block;
+        transition: transform $transition-fast;
+    }
+
+    &:hover {
+        color: $color-text-primary;
+    }
+
+    &:focus-visible {
+        outline: none;
+        color: $color-primary;
+    }
+
+    &--expanded svg {
+        transform: rotate(90deg);
+    }
+}
+
+.tree-table__toggle-placeholder {
+    display: inline-block;
+    flex-shrink: 0;
+    width: 20px;
+    height: 20px;
+}
+
+
+// ============================================================
+// ICÔNE DU NŒUD
+// ============================================================
+
+.tree-table__icon {
+    @include flex-center;
+    flex-shrink: 0;
+    width: 20px;
+    height: 20px;
+    color: $color-text-muted;
+
+    svg {
+        display: block;
+    }
+}
+
+
+// ============================================================
+// LABEL
+// ============================================================
+
+.tree-table__label {
+    flex: 1;
+    min-width: 0;
+    color: $color-text-primary;
+    line-height: $line-height-snug;
+    @include truncate;
+}
+
+
+// ============================================================
+// ACTIONS DU NŒUD
+// ============================================================
+
+.tree-table__actions {
+    @include flex(row, center, flex-end, $spacing-1);
+    flex-shrink: 0;
+    margin-left: auto;
+    opacity: 0;
+    transition: opacity $transition-fast;
+
+    .tree-table__row:hover & {
+        opacity: 1;
+    }
+}
+
+
+// ============================================================
+// HEADER TRIABLE
+// ============================================================
+
+.tree-table__th--sortable {
+    cursor: pointer;
+    transition: color $transition-fast, background-color $transition-fast;
+
+    &:hover {
+        color: $color-text-primary;
+        background-color: $color-bg-elevated;
+    }
+
+    &:active {
+        background-color: $color-bg-card;
+    }
+
+    &:focus-visible {
+        outline: none;
+        box-shadow: inset 0 0 0 2px $color-primary;
+    }
+}
+
+.tree-table__th-content {
+    @include flex(row, center, flex-start, $spacing-2);
+    display: inline-flex;
+}
+
+.tree-table__sort-icon {
+    @include flex-center;
+    font-size: 0.7em;
+    color: $color-text-muted;
+    transition: color $transition-fast;
+}
+
+.tree-table__th--sortable:hover .tree-table__sort-icon,
+.tree-table__th--sortable[aria-sort='ascending'] .tree-table__sort-icon,
+.tree-table__th--sortable[aria-sort='descending'] .tree-table__sort-icon {
+    color: $color-primary;
+}
+
+
+// ============================================================
+// VARIANTES
+// ============================================================
+
+// ----- Default -----
+.tree-table--default {
+    // rien
+}
+
+// ----- Striped -----
+.tree-table--striped {
+    // Note : avec une structure arborescente, le striping
+    // par nth-child est contre-intuitif. On garde la variante
+    // définie mais on ne l'applique pas par défaut.
+    tbody > tr:nth-child(even) {
+        background-color: $color-bg-app;
+    }
+}
+
+// ----- Bordered -----
+.tree-table--bordered {
+    border: 1px solid $color-border;
+    border-radius: $radius-lg;
+    overflow: hidden;
+
+    th,
+    td {
+        border-right: 1px solid $color-border;
+
+        &:last-child {
+            border-right: none;
+        }
+    }
+}
+
+
+// ============================================================
+// HOVERABLE
+// ============================================================
+
+.tree-table--hoverable {
+    tbody tr:hover {
+        background-color: $color-bg-card-hover;
+    }
+}
+
+
+// ============================================================
+// TAILLES
+// ============================================================
+
+.tree-table--small {
+    th,
+    td {
+        padding: $spacing-2 $spacing-3;
+        font-size: $font-size-xs;
+    }
+
+    .tree-table__toggle,
+    .tree-table__toggle-placeholder,
+    .tree-table__icon {
+        width: 16px;
+        height: 16px;
+
+        svg {
+            width: 14px;
+            height: 14px;
+        }
+    }
+}
+
+.tree-table--medium {
+    // valeurs par défaut
+}
+
+.tree-table--large {
+    th,
+    td {
+        padding: $spacing-4 $spacing-5;
+        font-size: $font-size-md;
+    }
+
+    .tree-table__toggle,
+    .tree-table__toggle-placeholder,
+    .tree-table__icon {
+        width: 24px;
+        height: 24px;
+
+        svg {
+            width: 20px;
+            height: 20px;
+        }
+    }
+}
+
+
+// ============================================================
+// LIGNES DE HIÉRARCHIE (showLines)
+// ============================================================
+// Trait vertical discret pour matérialiser la profondeur.
+// ============================================================
+
+.tree-table--lines {
+    .tree-table__tree-cell {
+        position: relative;
+
+        // Ligne verticale à gauche du contenu arbre
+        &::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            bottom: 0;
+            left: 0;
+            width: 1px;
+            background-color: $color-border;
+            opacity: 0.35;
+        }
+    }
+}
+
+
+// ============================================================
+// ÉTAT VIDE
+// ============================================================
+
+.tree-table__empty {
+    padding: $spacing-8 $spacing-4 !important;
+    text-align: center;
+    color: $color-text-muted;
+    font-style: italic;
+    font-size: $font-size-sm;
+}
+
+
+// ============================================================
+// RESPONSIVE
+// ============================================================
+
+@include responsive(mobile) {
+    .tree-table th,
+    .tree-table td {
+        padding: $spacing-2 $spacing-3;
+    }
+}
+
+
+// ============================================================
+// ACCESSIBILITÉ — RÉDUCTION DES ANIMATIONS
+// ============================================================
+
+@media (prefers-reduced-motion: reduce) {
+    .tree-table tbody tr,
+    .tree-table__toggle,
+    .tree-table__toggle svg,
+    .tree-table__actions,
+    .tree-table__th--sortable,
+    .tree-table__sort-icon {
+        transition: none;
+    }
+}

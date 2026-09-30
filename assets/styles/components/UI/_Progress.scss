@@ -1,0 +1,145 @@
+// ============================================================
+// COMPOSANT — PROGRESS
+// Fichier : components/UI/Progress/_Progress.scss
+// ------------------------------------------------------------
+// Rôle :
+//   Styles du composant <Progress /> (barre de progression).
+//   Gère : variantes (primary / secondary / success / warning /
+//   error), tailles (small / medium / large), label optionnel.
+//
+// Dépendances :
+//   - baseVariables/_variables.scss
+//   - baseVariables/_mixins.scss
+// ============================================================
+
+@use '../../baseVariables/variables' as *;
+@use '../../baseVariables/mixins' as *;
+
+
+// ============================================================
+// CONTENEUR (piste)
+// ============================================================
+
+.progress {
+    position: relative;
+    display: block;
+    width: 100%;
+    background-color: $color-bg-input;
+    border-radius: $radius-full;
+    overflow: hidden;
+
+    --progress-color: #{$color-primary};
+}
+
+
+// ============================================================
+// BARRE (remplissage)
+// ============================================================
+// L'élément enfant direct est la barre qui prend la largeur
+// passée par `style={{ width }}` en inline.
+// ============================================================
+
+.progress > *:not(.progress__label) {
+    display: block;
+    height: 100%;
+    background-color: var(--progress-color);
+    border-radius: $radius-full;
+    transition:
+        width $transition-normal,
+        background-color $transition-fast;
+}
+
+
+// ============================================================
+// TAILLES
+// ============================================================
+
+.progress--small {
+    height: 4px;
+}
+
+.progress--medium {
+    height: 6px;
+}
+
+.progress--large {
+    height: 10px;
+}
+
+
+// ============================================================
+// VARIANTES
+// ============================================================
+
+.progress--primary {
+    --progress-color: #{$color-primary};
+}
+
+.progress--secondary {
+    --progress-color: #{$color-purple};
+}
+
+.progress--success {
+    --progress-color: #{$color-success};
+}
+
+.progress--warning {
+    --progress-color: #{$color-warning};
+}
+
+.progress--error {
+    --progress-color: #{$color-danger};
+}
+
+
+// ============================================================
+// LABEL
+// ============================================================
+// Le label (si affiché) est rendu à l’extérieur de la barre.
+// Il peut être positionné sous ou à droite selon le parent.
+// ============================================================
+
+.progress__label {
+    display: block;
+    margin-top: $spacing-1;
+    font-size: $font-size-xs;
+    font-weight: $font-weight-medium;
+    color: $color-text-secondary;
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+}
+
+.progress--with-label {
+    // rien de spécial — le label est frère de la piste.
+}
+
+
+// ============================================================
+// VARIANTE — LABEL INLINE
+// ============================================================
+// Si le label doit être placé à l’intérieur de la barre (rare),
+// utilise `.progress__label--inline`.
+// ============================================================
+
+.progress__label--inline {
+    position: absolute;
+    top: 50%;
+    right: $spacing-2;
+    transform: translateY(-50%);
+    margin: 0;
+    font-size: 0.65rem;
+    color: $color-text-inverse;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+    line-height: 1;
+}
+
+
+// ============================================================
+// ACCESSIBILITÉ — RÉDUCTION DES ANIMATIONS
+// ============================================================
+
+@media (prefers-reduced-motion: reduce) {
+    .progress > *:not(.progress__label) {
+        transition: none;
+    }
+}

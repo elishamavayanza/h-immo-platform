@@ -1,0 +1,188 @@
+// ============================================================
+// COMPOSANT — BADGE
+// Fichier : components/UI/Badge/_Badge.scss
+// ------------------------------------------------------------
+// Rôle :
+//   Styles du composant <Badge />.
+//   Gère : variantes (default / primary / secondary / success /
+//   warning / error / info), tailles (small / medium / large),
+//   dot, pill, icône.
+//
+// Dépendances :
+//   - baseVariables/_variables.scss
+//   - baseVariables/_mixins.scss
+// ============================================================
+
+@use '../../baseVariables/variables' as *;
+@use '../../baseVariables/mixins' as *;
+
+
+// ============================================================
+// BASE
+// ============================================================
+
+.badge {
+    @include flex(row, center, center, $spacing-1);
+    display: inline-flex;
+    padding: 2px $spacing-2;
+    font-family: $font-family-base;
+    font-size: $font-size-xs;
+    font-weight: $font-weight-semibold;
+    line-height: 1;
+    white-space: nowrap;
+    border-radius: $radius-sm;
+    border: 1px solid transparent;
+
+    --badge-color: #{$color-text-secondary};
+    --badge-bg: #{$color-bg-elevated};
+    --badge-border: #{$color-border};
+
+    color: var(--badge-color);
+    background-color: var(--badge-bg);
+    border-color: var(--badge-border);
+}
+
+
+// ============================================================
+// DOT (pastille avant le texte)
+// ============================================================
+
+.badge__dot {
+    display: inline-block;
+    flex-shrink: 0;
+    width: 6px;
+    height: 6px;
+    border-radius: $radius-full;
+    background-color: currentColor;
+}
+
+// Badge avec dot seule (sans texte)
+.badge--dot:not(.badge--with-icon) {
+    padding: 3px;
+
+    .badge__text {
+        display: none;
+    }
+}
+
+
+// ============================================================
+// ICÔNE
+// ============================================================
+
+.badge__icon {
+    @include flex-center;
+    flex-shrink: 0;
+
+    svg {
+        display: block;
+        width: 12px;
+        height: 12px;
+    }
+}
+
+
+// ============================================================
+// TEXTE
+// ============================================================
+
+.badge__text {
+    line-height: 1;
+}
+
+
+// ============================================================
+// PILL (coins totalement arrondis)
+// ============================================================
+
+.badge--pill {
+    border-radius: $radius-full;
+    padding-left: $spacing-3;
+    padding-right: $spacing-3;
+}
+
+
+// ============================================================
+// VARIANTES
+// ============================================================
+
+.badge--default {
+    --badge-color: #{$color-text-secondary};
+    --badge-bg: #{$color-bg-elevated};
+    --badge-border: #{$color-border};
+}
+
+.badge--primary {
+    --badge-color: #{$color-primary};
+    --badge-bg: #{$color-primary-light};
+    --badge-border: #{rgba(37, 189, 232, 0.35)};
+}
+
+.badge--secondary {
+    --badge-color: #{$color-purple};
+    --badge-bg: #{$color-purple-light};
+    --badge-border: #{rgba(140, 120, 240, 0.35)};
+}
+
+.badge--success {
+    --badge-color: #{$color-success};
+    --badge-bg: #{$color-success-light};
+    --badge-border: #{rgba(101, 214, 165, 0.35)};
+}
+
+.badge--warning {
+    --badge-color: #{$color-warning};
+    --badge-bg: #{$color-warning-light};
+    --badge-border: #{rgba(243, 201, 105, 0.35)};
+}
+
+.badge--error {
+    --badge-color: #{$color-danger};
+    --badge-bg: #{$color-danger-light};
+    --badge-border: #{rgba(239, 91, 120, 0.35)};
+}
+
+.badge--info {
+    --badge-color: #{$color-info};
+    --badge-bg: #{$color-info-light};
+    --badge-border: #{rgba(37, 189, 232, 0.35)};
+}
+
+
+// ============================================================
+// TAILLES
+// ============================================================
+
+.badge--small {
+    padding: 1px $spacing-2;
+    font-size: 0.65rem;
+
+    .badge__dot {
+        width: 5px;
+        height: 5px;
+    }
+
+    .badge__icon svg {
+        width: 10px;
+        height: 10px;
+    }
+}
+
+.badge--medium {
+    // valeurs par défaut
+}
+
+.badge--large {
+    padding: $spacing-1 $spacing-3;
+    font-size: $font-size-sm;
+
+    .badge__dot {
+        width: 7px;
+        height: 7px;
+    }
+
+    .badge__icon svg {
+        width: 14px;
+        height: 14px;
+    }
+}

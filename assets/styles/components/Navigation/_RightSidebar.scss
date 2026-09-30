@@ -1,0 +1,339 @@
+// ============================================================
+// COMPOSANT — RIGHT SIDEBAR
+// Fichier : components/Navigation/RightSidebar/_RightSidebar.scss
+// ------------------------------------------------------------
+// Rôle :
+//   Styles du composant <RightSidebar /> (panneau latéral
+//   droit, resizable, collapsible, mobile-friendly).
+//   Gère : variantes, tailles, état collapsed, état dragging,
+//   resizer, backdrop, mobile trigger, header/footer.
+//
+// Dépendances :
+//   - baseVariables/_variables.scss
+//   - baseVariables/_mixins.scss
+// ============================================================
+
+@use '../../baseVariables/variables' as *;
+@use '../../baseVariables/mixins' as *;
+
+
+// ============================================================
+// CONTENEUR
+// ============================================================
+
+.right-sidebar {
+    @include flex(column, stretch, flex-start, 0);
+    position: relative;
+    flex-shrink: 0;
+    height: 100%;
+    background-color: $color-bg-sidebar;
+    border-left: 1px solid $color-border;
+    font-family: $font-family-base;
+    color: $color-text-primary;
+    overflow: hidden;
+    will-change: width, transform;
+}
+
+
+// ============================================================
+// VARIANTES
+// ============================================================
+
+.right-sidebar--default {
+    background-color: $color-bg-sidebar;
+}
+
+.right-sidebar--dark {
+    background-color: $color-bg-primary;
+}
+
+.right-sidebar--light {
+    background-color: $color-bg-card;
+    border-left-color: $color-border-light;
+}
+
+
+// ============================================================
+// RÉSIZER (poignée à gauche)
+// ============================================================
+
+.right-sidebar__resizer {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: -3px;
+    width: 6px;
+    cursor: col-resize;
+    background: transparent;
+    z-index: 10;
+    transition: background-color $transition-fast;
+
+    &:hover {
+        background-color: $color-primary-light;
+    }
+
+    &:active,
+    body.right-sidebar-resizing & {
+        background-color: $color-primary-soft;
+    }
+}
+
+
+// ============================================================
+// ÉTAT DRAGGING GLOBAL
+// ============================================================
+// La classe est posée sur <body> pendant le drag.
+// ============================================================
+
+:global(body.right-sidebar-resizing) {
+    user-select: none;
+    cursor: col-resize;
+
+    // Désactive les transitions de tous les éléments pendant le drag
+    * {
+        transition: none !important;
+    }
+}
+
+// Fallback Sass si :global() n’est pas supporté
+body.right-sidebar-resizing {
+    user-select: none;
+    cursor: col-resize;
+}
+
+
+// ============================================================
+// HEADER / TITLE / CONTENT / FOOTER
+// ============================================================
+
+.right-sidebar__header {
+    flex-shrink: 0;
+    padding: $spacing-4;
+    border-bottom: 1px solid $color-border;
+}
+
+.right-sidebar__title {
+    flex-shrink: 0;
+    padding: $spacing-3 $spacing-4;
+    font-family: $font-family-heading;
+    font-size: $font-size-md;
+    font-weight: $font-weight-semibold;
+    color: $color-text-primary;
+    @include truncate;
+}
+
+.right-sidebar__content {
+    @include scrollbar;
+    flex: 1;
+    min-height: 0;
+    padding: $spacing-3 $spacing-4;
+    overflow-y: auto;
+    overflow-x: hidden;
+}
+
+.right-sidebar__footer {
+    flex-shrink: 0;
+    padding: $spacing-3 $spacing-4;
+    border-top: 1px solid $color-border;
+    font-size: $font-size-xs;
+    color: $color-text-muted;
+}
+
+
+// ============================================================
+// BOUTON COLLAPSE (mode compact)
+// ============================================================
+
+.right-sidebar__collapse {
+    @include flex-center;
+    position: absolute;
+    top: $spacing-3;
+    right: $spacing-3;
+    width: 32px;
+    height: 32px;
+    padding: 0;
+    background-color: $color-bg-card;
+    border: 1px solid $color-border;
+    border-radius: $radius-md;
+    color: $color-text-secondary;
+    cursor: pointer;
+    z-index: 5;
+    transition:
+        background-color $transition-fast,
+        color $transition-fast,
+        border-color $transition-fast;
+
+    &:hover {
+        background-color: $color-bg-card-hover;
+        color: $color-text-primary;
+        border-color: $color-border-light;
+    }
+
+    &:focus-visible {
+        outline: none;
+        box-shadow: 0 0 0 2px $color-primary;
+    }
+
+    svg {
+        display: block;
+    }
+}
+
+
+// ============================================================
+// ÉTAT FULLY-COLLAPSED (bande verticale)
+// ============================================================
+
+.right-sidebar--fully-collapsed {
+    .right-sidebar__content,
+    .right-sidebar__header,
+    .right-sidebar__footer,
+    .right-sidebar__title {
+        display: none;
+    }
+}
+
+.right-sidebar__collapsed-strip {
+    @include flex(column, center, center, 0);
+    width: 100%;
+    height: 100%;
+    padding: $spacing-3 0;
+    background-color: $color-bg-card;
+    color: $color-text-muted;
+    cursor: col-resize;
+    user-select: none;
+    transition: background-color $transition-fast, color $transition-fast;
+
+    &:hover {
+        background-color: $color-bg-card-hover;
+        color: $color-text-primary;
+    }
+}
+
+.right-sidebar__collapsed-text {
+    writing-mode: vertical-rl;
+    transform: rotate(180deg);
+    font-size: $font-size-xs;
+    font-weight: $font-weight-medium;
+    letter-spacing: 0.04em;
+    color: currentColor;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-height: 80%;
+}
+
+
+// ============================================================
+// BACKDROP (mobile)
+// ============================================================
+// Affiché derrière le drawer en mode compact.
+// ============================================================
+
+.right-sidebar__backdrop {
+    position: fixed;
+    inset: 0;
+    background-color: rgba(0, 0, 0, 0.55);
+    backdrop-filter: blur(2px);
+    z-index: $z-modal-backdrop;
+    animation: right-sidebar-backdrop-fade $transition-fast both;
+}
+
+@keyframes right-sidebar-backdrop-fade {
+    from { opacity: 0; }
+    to   { opacity: 1; }
+}
+
+
+// ============================================================
+// BOUTON FLOTTANT (mobile, pour rouvrir)
+// ============================================================
+
+.right-sidebar__mobile-trigger {
+    @include flex(row, center, center, $spacing-2);
+    position: fixed;
+    top: 50%;
+    right: 0;
+    transform: translateY(-50%);
+    padding: $spacing-3 $spacing-2 $spacing-3 $spacing-3;
+    background-color: $color-primary;
+    color: $color-text-inverse;
+    border: none;
+    border-radius: $radius-md 0 0 $radius-md;
+    font-family: $font-family-base;
+    font-size: $font-size-xs;
+    font-weight: $font-weight-semibold;
+    box-shadow: $shadow-lg;
+    cursor: pointer;
+    z-index: $z-fixed;
+    transition:
+        background-color $transition-fast,
+        transform $transition-fast;
+
+    &:hover {
+        background-color: $color-primary-hover;
+        transform: translateY(-50%) translateX(-2px);
+    }
+
+    &:active {
+        transform: translateY(-50%) translateX(0);
+    }
+
+    &:focus-visible {
+        outline: none;
+        box-shadow: 0 0 0 3px $shadow-focus;
+    }
+
+    svg {
+        display: block;
+    }
+}
+
+.right-sidebar__mobile-trigger-label {
+    writing-mode: vertical-rl;
+    transform: rotate(180deg);
+    max-height: 160px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+
+// ============================================================
+// RESPONSIVE
+// ============================================================
+
+@media (max-width: #{$breakpoint-tablet - 1px}) {
+    .right-sidebar {
+        position: fixed;
+        top: 0;
+        right: 0;
+        height: 100vh;
+        max-width: 90vw;
+        box-shadow: $shadow-lg;
+        z-index: $z-modal;
+    }
+}
+
+
+// ============================================================
+// ACCESSIBILITÉ — RÉDUCTION DES ANIMATIONS
+// ============================================================
+
+@media (prefers-reduced-motion: reduce) {
+    .right-sidebar,
+    .right-sidebar__resizer,
+    .right-sidebar__collapse,
+    .right-sidebar__mobile-trigger,
+    .right-sidebar__collapsed-strip {
+        transition: none;
+    }
+
+    .right-sidebar__backdrop {
+        animation: none;
+    }
+
+    .right-sidebar__mobile-trigger:hover {
+        transform: translateY(-50%);
+    }
+}

@@ -1,0 +1,310 @@
+// ============================================================
+// COMPOSANT — SWITCH
+// Fichier : components/Form/Switch/_Switch.scss
+// ------------------------------------------------------------
+// Rôle :
+//   Styles du composant <Switch /> (toggle on/off).
+//   Gère : variantes (default / error / success),
+//   tailles (small / medium / large), désactivé, hover,
+//   focus clavier, coché (piste cyan + pouce qui glisse).
+//
+// Dépendances :
+//   - baseVariables/_variables.scss
+//   - baseVariables/_mixins.scss
+// ============================================================
+
+@use '../../baseVariables/variables' as *;
+@use '../../baseVariables/mixins' as *;
+
+
+// ============================================================
+// WRAPPER
+// ============================================================
+// Accepte deux patterns :
+//   - .switch-field__wrapper (nouveau, recommandé)
+//   - .switch-field--{variant|size|disabled} directement sur le label
+//     (pattern actuel de Switch.tsx)
+// ============================================================
+
+.switch-field__wrapper {
+    @include flex(row, center, flex-start, $spacing-2);
+    position: relative;
+    cursor: pointer;
+    user-select: none;
+    width: fit-content;
+
+    &:has(.switch-field:disabled) {
+        cursor: not-allowed;
+    }
+}
+
+
+// ============================================================
+// INPUT (caché)
+// ============================================================
+// Conservé pour l’accessibilité clavier et la soumission de form.
+// ============================================================
+
+.switch-field {
+    position: absolute;
+    opacity: 0;
+    width: 0;
+    height: 0;
+    margin: 0;
+    pointer-events: none;
+}
+
+
+// ============================================================
+// TRACK (piste)
+// ============================================================
+// Fond arrondi qui change de couleur quand le switch est coché.
+// ============================================================
+
+.switch-field__track {
+    position: relative;
+    flex-shrink: 0;
+    display: inline-block;
+    width: 36px;
+    height: 20px;
+    background-color: $color-bg-input;
+    border: 1.5px solid $color-border-light;
+    border-radius: $radius-full;
+    transition:
+        background-color $transition-fast,
+        border-color $transition-fast,
+        box-shadow $transition-fast;
+
+    // Hover
+    .switch-field__wrapper:hover & {
+        border-color: $color-border-strong;
+    }
+}
+
+
+// ============================================================
+// THUMB (pouce)
+// ============================================================
+// Cercle qui glisse de gauche à droite au checked.
+// ============================================================
+
+.switch-field__thumb {
+    position: absolute;
+    top: 50%;
+    left: 1px;
+    width: 14px;
+    height: 14px;
+    background-color: $color-text-secondary;
+    border-radius: $radius-full;
+    transform: translateY(-50%);
+    transition:
+        left $transition-fast,
+        background-color $transition-fast,
+        transform $transition-fast;
+}
+
+
+// ============================================================
+// ÉTAT COCHÉ
+// ============================================================
+
+.switch-field:checked + .switch-field__track {
+    background-color: $color-primary;
+    border-color: $color-primary;
+
+    .switch-field__thumb {
+        left: calc(100% - 15px);
+        background-color: $color-text-inverse;
+    }
+}
+
+// Hover d’un switch coché
+.switch-field__wrapper:hover .switch-field:checked + .switch-field__track {
+    background-color: $color-primary-hover;
+    border-color: $color-primary-hover;
+}
+
+
+// ============================================================
+// FOCUS CLAVIER
+// ============================================================
+
+.switch-field:focus-visible + .switch-field__track {
+    box-shadow: $shadow-focus;
+    border-color: $color-primary;
+}
+
+
+// ============================================================
+// DÉSACTIVÉ
+// ============================================================
+
+.switch-field:disabled + .switch-field__track {
+    background-color: $color-bg-app;
+    border-color: $color-border;
+    opacity: 0.6;
+
+    .switch-field__thumb {
+        background-color: $color-text-disabled;
+    }
+}
+
+.switch-field:disabled:checked + .switch-field__track {
+    background-color: $color-border;
+    border-color: $color-border;
+
+    .switch-field__thumb {
+        background-color: $color-text-muted;
+    }
+}
+
+
+// ============================================================
+// LABEL TEXTE
+// ============================================================
+
+.switch-field__label {
+    font-family: $font-family-base;
+    font-size: $font-size-sm;
+    font-weight: $font-weight-regular;
+    color: $color-text-primary;
+    line-height: $line-height-snug;
+    cursor: pointer;
+
+    .switch-field__wrapper:has(.switch-field:disabled) & {
+        color: $color-text-disabled;
+        cursor: not-allowed;
+    }
+}
+
+
+// ============================================================
+// TAILLES
+// ============================================================
+// Les tailles agissent sur le label ET sur le track (les deux
+// patterns sont gérés : classes sur le label ou sur le track).
+// ============================================================
+
+// ----- Small -----
+.switch-field__wrapper--small,
+.switch-field--small {
+    .switch-field__track,
+    &.switch-field__track {
+        width: 28px;
+        height: 16px;
+    }
+
+    .switch-field__thumb {
+        width: 10px;
+        height: 10px;
+    }
+
+    .switch-field:checked + .switch-field__track .switch-field__thumb {
+        left: calc(100% - 11px);
+    }
+
+    .switch-field__label {
+        font-size: $font-size-xs;
+    }
+}
+
+// ----- Medium (défaut) -----
+.switch-field__wrapper--medium,
+.switch-field--medium {
+    .switch-field__track {
+        width: 36px;
+        height: 20px;
+    }
+
+    .switch-field__thumb {
+        width: 14px;
+        height: 14px;
+    }
+
+    .switch-field__label {
+        font-size: $font-size-sm;
+    }
+}
+
+// ----- Large -----
+.switch-field__wrapper--large,
+.switch-field--large {
+    .switch-field__track {
+        width: 44px;
+        height: 24px;
+    }
+
+    .switch-field__thumb {
+        width: 18px;
+        height: 18px;
+    }
+
+    .switch-field:checked + .switch-field__track .switch-field__thumb {
+        left: calc(100% - 19px);
+    }
+
+    .switch-field__label {
+        font-size: $font-size-md;
+    }
+}
+
+
+// ============================================================
+// VARIANTES
+// ============================================================
+// Elles s’appliquent sur le wrapper (nouveau) ou directement
+// sur le label (pattern actuel de Switch.tsx).
+// ============================================================
+
+.switch-field__wrapper--error,
+.switch-field--error {
+    .switch-field__track,
+    &.switch-field__track {
+        border-color: $color-danger;
+    }
+
+    .switch-field:checked + .switch-field__track {
+        background-color: $color-danger;
+        border-color: $color-danger;
+    }
+
+    .switch-field:focus-visible + .switch-field__track {
+        box-shadow: 0 0 0 3px rgba(239, 91, 120, 0.30);
+    }
+
+    .switch-field__label {
+        color: $color-danger;
+    }
+}
+
+.switch-field__wrapper--success,
+.switch-field--success {
+    .switch-field__track {
+        border-color: $color-success;
+    }
+
+    .switch-field:checked + .switch-field__track {
+        background-color: $color-success;
+        border-color: $color-success;
+    }
+
+    .switch-field:focus-visible + .switch-field__track {
+        box-shadow: 0 0 0 3px rgba(101, 214, 165, 0.30);
+    }
+
+    .switch-field__label {
+        color: $color-success;
+    }
+}
+
+
+// ============================================================
+// ACCESSIBILITÉ — RÉDUCTION DES ANIMATIONS
+// ============================================================
+
+@media (prefers-reduced-motion: reduce) {
+    .switch-field__track,
+    .switch-field__thumb {
+        transition: none;
+    }
+}

@@ -1,0 +1,380 @@
+// ============================================================
+// COMPOSANT — CALENDAR
+// Fichier : components/Calender/_Calendar.scss
+// ------------------------------------------------------------
+// Rôle :
+//   Styles du composant <Calendar /> (React + hook useCalendar).
+//   Gère : navigation mois, grille 6x7, états de jour, plages
+//   de dates, marqueurs d’événements.
+//
+// Dépendances :
+//   - baseVariables/_variables.scss
+//   - baseVariables/_mixins.scss
+// ============================================================
+
+@use '../../baseVariables/variables' as *;
+@use '../../baseVariables/mixins' as *;
+
+
+// ============================================================
+// CONTENEUR PRINCIPAL
+// ============================================================
+// Reprend le style « card » du Design System. Largeur fluide,
+// scrollbar dark si débordement sur petits écrans.
+// ============================================================
+
+.calendar {
+    @include card($spacing-5);
+    @include scrollbar;
+    width: 100%;
+    max-width: 420px;
+    user-select: none;
+    color: $color-text-primary;
+
+    @include responsive(tablet) {
+        max-width: 460px;
+    }
+}
+
+
+// ============================================================
+// EN-TÊTE
+// ============================================================
+// Contient la navigation (prev/next), le titre du mois, et
+// le bouton « Aujourd’hui ».
+// ============================================================
+
+.calendar__header {
+    @include flex-between;
+    gap: $spacing-2;
+    margin-bottom: $spacing-4;
+    padding-bottom: $spacing-4;
+    border-bottom: 1px solid $color-border;
+}
+
+.calendar__nav {
+    @include flex-center;
+    @include focus-ring;
+    width: 32px;
+    height: 32px;
+    border: 1px solid $color-border;
+    border-radius: $radius-md;
+    background-color: transparent;
+    color: $color-text-secondary;
+    cursor: pointer;
+    transition: background-color $transition-fast,
+    color $transition-fast,
+    border-color $transition-fast;
+
+    &:hover {
+        background-color: $color-bg-elevated;
+        color: $color-text-primary;
+        border-color: $color-border-light;
+    }
+
+    &:active {
+        transform: scale(0.96);
+    }
+
+    svg {
+        display: block;
+    }
+}
+
+.calendar__title {
+    flex: 1;
+    text-align: center;
+    font-size: $font-size-md;
+    font-weight: $font-weight-semibold;
+    color: $color-text-primary;
+    letter-spacing: -0.01em;
+    @include truncate;
+}
+
+.calendar__month {
+    color: $color-text-primary;
+}
+
+.calendar__year {
+    color: $color-text-secondary;
+    font-weight: $font-weight-medium;
+}
+
+.calendar__today {
+    @include focus-ring;
+    padding: $spacing-1 $spacing-3;
+    font-size: $font-size-xs;
+    font-weight: $font-weight-medium;
+    color: $color-primary;
+    background-color: $color-primary-light;
+    border: 1px solid transparent;
+    border-radius: $radius-full;
+    cursor: pointer;
+    transition: background-color $transition-fast,
+    color $transition-fast,
+    border-color $transition-fast;
+    white-space: nowrap;
+
+    &:hover {
+        background-color: $color-primary-soft;
+        border-color: $color-primary;
+        color: $color-primary-hover;
+    }
+
+    &:active {
+        transform: scale(0.97);
+    }
+}
+
+
+// ============================================================
+// LIGNE DES JOURS DE LA SEMAINE
+// ============================================================
+// Lun → Dim. Texte discret, non cliquable.
+// ============================================================
+
+.calendar__weekdays {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: $spacing-1;
+    margin-bottom: $spacing-2;
+}
+
+.calendar__weekday {
+    @include flex-center;
+    height: 28px;
+    font-size: $font-size-xs;
+    font-weight: $font-weight-semibold;
+    color: $color-text-muted;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+
+
+// ============================================================
+// GRILLE DES JOURS
+// ============================================================
+// 6 semaines × 7 jours = 42 cellules. On utilise un grid pour
+// garder une géométrie parfaite, même quand les cellules ont
+// des bordures/rayons différents (range-start / range-end).
+// ============================================================
+
+.calendar__grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: $spacing-1;
+}
+
+
+// ============================================================
+// CELLULE DE JOUR — BASE
+// ============================================================
+
+.calendar__day {
+    @include flex-center;
+    @include focus-ring;
+    position: relative;
+    flex-direction: column;
+    gap: 2px;
+    aspect-ratio: 1 / 1;
+    padding: $spacing-1;
+    font-family: $font-family-base;
+    font-size: $font-size-sm;
+    font-weight: $font-weight-medium;
+    color: $color-text-primary;
+    background-color: transparent;
+    border: 1px solid transparent;
+    border-radius: $radius-md;
+    cursor: pointer;
+    transition: background-color $transition-fast,
+    color $transition-fast,
+    border-color $transition-fast,
+    transform $transition-fast;
+
+    &:hover:not(.calendar__day--disabled):not(.calendar__day--selected) {
+        background-color: $color-bg-elevated;
+        border-color: $color-border-light;
+    }
+
+    &:active:not(.calendar__day--disabled) {
+        transform: scale(0.94);
+    }
+}
+
+.calendar__day-number {
+    line-height: 1;
+    pointer-events: none;
+}
+
+
+// ============================================================
+// ÉTAT — HORS MOIS
+// ============================================================
+// Jours appartenant au mois précédent / suivant.
+// ============================================================
+
+.calendar__day--outside {
+    color: $color-text-disabled;
+    font-weight: $font-weight-regular;
+}
+
+
+// ============================================================
+// ÉTAT — AUJOURD'HUI
+// ============================================================
+// Anneau discret autour du jour courant.
+// ============================================================
+
+.calendar__day--today {
+    color: $color-primary;
+    font-weight: $font-weight-semibold;
+    border-color: $color-primary;
+    background-color: $color-primary-light;
+}
+
+
+// ============================================================
+// ÉTAT — SÉLECTIONNÉ
+// ============================================================
+// Priorité maximale : écrase today / in-range / hover.
+// ============================================================
+
+.calendar__day--selected {
+    color: $color-text-inverse;
+    background-color: $color-primary;
+    border-color: $color-primary;
+    font-weight: $font-weight-semibold;
+
+    &:hover {
+        background-color: $color-primary-hover;
+        border-color: $color-primary-hover;
+    }
+}
+
+
+// ============================================================
+// ÉTAT — PLAGE (IN RANGE)
+// ============================================================
+// Zone entre range-start et range-end. Rayons adoucis pour
+// former une barre visuelle continue.
+// ============================================================
+
+.calendar__day--in-range {
+    background-color: $color-primary-light;
+    color: $color-text-primary;
+    border-radius: 0;
+}
+
+.calendar__day--range-start {
+    background-color: $color-primary;
+    color: $color-text-inverse;
+    border-top-left-radius: $radius-md;
+    border-bottom-left-radius: $radius-md;
+    border-top-right-radius: 0;
+    border-bottom-right-radius: 0;
+}
+
+.calendar__day--range-end {
+    background-color: $color-primary;
+    color: $color-text-inverse;
+    border-top-right-radius: $radius-md;
+    border-bottom-right-radius: $radius-md;
+    border-top-left-radius: 0;
+    border-bottom-left-radius: 0;
+}
+
+// Cas particulier : un seul jour sélectionné (start = end)
+.calendar__day--range-start.calendar__day--range-end {
+    border-radius: $radius-md;
+}
+
+// Si today tombe dans une plage, on garde la lisibilité
+.calendar__day--today.calendar__day--in-range {
+    color: $color-primary-hover;
+    border-color: transparent;
+}
+
+
+// ============================================================
+// ÉTAT — DÉSACTIVÉ
+// ============================================================
+// Non cliquable, couleur atténuée, curseur explicite.
+// ============================================================
+
+.calendar__day--disabled {
+    color: $color-text-disabled;
+    background-color: transparent;
+    cursor: not-allowed;
+
+    &:hover {
+        background-color: transparent;
+        border-color: transparent;
+    }
+}
+
+
+// ============================================================
+// MARQUEURS D'ÉVÉNEMENTS
+// ============================================================
+// Petits points colorés sous le numéro du jour.
+// Couleurs fournies par le hook : info / success / warning / error.
+// ============================================================
+
+.calendar__day--has-events {
+    padding-bottom: $spacing-2;
+}
+
+.calendar__markers {
+    @include flex-center;
+    gap: 3px;
+    margin-top: 2px;
+    pointer-events: none;
+}
+
+.calendar__marker {
+    display: block;
+    width: 4px;
+    height: 4px;
+    border-radius: $radius-full;
+    background-color: $color-text-muted;
+}
+
+.calendar__marker--info {
+    background-color: $color-info;
+}
+
+.calendar__marker--success {
+    background-color: $color-success;
+}
+
+.calendar__marker--warning {
+    background-color: $color-warning;
+}
+
+.calendar__marker--error {
+    background-color: $color-danger;
+}
+
+// Les marqueurs restent visibles même sur un jour sélectionné
+.calendar__day--selected .calendar__marker {
+    box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.35);
+}
+
+
+// ============================================================
+// ACCESSIBILITÉ — RÉDUCTION DES ANIMATIONS
+// ============================================================
+// Respecte la préférence utilisateur « reduced motion ».
+// ============================================================
+
+@media (prefers-reduced-motion: reduce) {
+    .calendar__day,
+    .calendar__nav,
+    .calendar__today {
+        transition: none;
+    }
+
+    .calendar__day:active {
+        transform: none;
+    }
+}

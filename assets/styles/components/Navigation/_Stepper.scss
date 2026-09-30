@@ -1,0 +1,358 @@
+// ============================================================
+// COMPOSANT — STEPPER
+// Fichier : components/Navigation/Stepper/_Stepper.scss
+// ------------------------------------------------------------
+// Rôle :
+//   Styles du composant <Stepper /> (indicateur d’étapes).
+//   Gère : variantes (horizontal / vertical),
+//   tailles (small / medium / large), états (active / completed
+//   / disabled), indicateur numéroté ou icône, connecteur.
+//
+// Dépendances :
+//   - baseVariables/_variables.scss
+//   - baseVariables/_mixins.scss
+// ============================================================
+
+@use '../../baseVariables/variables' as *;
+@use '../../baseVariables/mixins' as *;
+
+
+// ============================================================
+// CONTENEUR
+// ============================================================
+
+.stepper {
+    font-family: $font-family-base;
+    color: $color-text-primary;
+    width: 100%;
+}
+
+.stepper__list {
+    @include flex(row, flex-start, flex-start, 0);
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    width: 100%;
+}
+
+
+// ============================================================
+// ÉTAPE
+// ============================================================
+
+.stepper__step {
+    @include flex(row, center, flex-start, $spacing-2);
+    position: relative;
+    flex: 1;
+    min-width: 0;
+}
+
+.stepper__step-button {
+    @include flex(row, center, flex-start, $spacing-3);
+    @include focus-ring;
+    flex: 1;
+    min-width: 0;
+    padding: $spacing-2;
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    text-align: left;
+    color: inherit;
+    border-radius: $radius-md;
+    transition: background-color $transition-fast;
+
+    &:hover:not(:disabled) {
+        background-color: $color-bg-card-hover;
+    }
+
+    &:disabled {
+        cursor: not-allowed;
+    }
+}
+
+
+// ============================================================
+// INDICATEUR (cercle numéroté)
+// ============================================================
+
+.stepper__indicator {
+    @include flex-center;
+    flex-shrink: 0;
+    width: 32px;
+    height: 32px;
+    background-color: $color-bg-card;
+    border: 1.5px solid $color-border-light;
+    border-radius: $radius-full;
+    color: $color-text-secondary;
+    font-size: $font-size-sm;
+    font-weight: $font-weight-semibold;
+    transition:
+        background-color $transition-fast,
+        border-color $transition-fast,
+        color $transition-fast;
+
+    svg {
+        display: block;
+        width: 16px;
+        height: 16px;
+    }
+}
+
+.stepper__number {
+    line-height: 1;
+}
+
+
+// ============================================================
+// CONTENU (label + description)
+// ============================================================
+
+.stepper__content {
+    @include flex(column, flex-start, flex-start, 2px);
+    min-width: 0;
+}
+
+.stepper__label {
+    font-size: $font-size-sm;
+    font-weight: $font-weight-medium;
+    color: $color-text-primary;
+    line-height: $line-height-snug;
+    @include truncate;
+}
+
+.stepper__description {
+    font-size: $font-size-xs;
+    color: $color-text-muted;
+    line-height: $line-height-snug;
+    @include line-clamp(2);
+}
+
+
+// ============================================================
+// CONNECTEUR (ligne entre étapes)
+// ============================================================
+
+.stepper__connector {
+    flex-shrink: 0;
+    height: 2px;
+    width: 100%;
+    min-width: $spacing-6;
+    background-color: $color-border;
+    border-radius: $radius-full;
+    margin: 0 $spacing-2;
+    align-self: center;
+    transition: background-color $transition-fast;
+}
+
+
+// ============================================================
+// ÉTAT ACTIF
+// ============================================================
+
+.stepper__step--active {
+    .stepper__indicator {
+        background-color: $color-primary;
+        border-color: $color-primary;
+        color: $color-text-inverse;
+        box-shadow: 0 0 0 4px $color-primary-light;
+    }
+
+    .stepper__label {
+        color: $color-primary-hover;
+        font-weight: $font-weight-semibold;
+    }
+}
+
+
+// ============================================================
+// ÉTAT COMPLÉTÉ
+// ============================================================
+
+.stepper__step--completed {
+    .stepper__indicator {
+        background-color: $color-success;
+        border-color: $color-success;
+        color: $color-text-inverse;
+    }
+
+    .stepper__label {
+        color: $color-text-primary;
+    }
+
+    // Connecteur qui suit une étape complétée → cyan
+    .stepper__connector {
+        background-color: $color-success;
+    }
+}
+
+
+// ============================================================
+// ÉTAT DÉSACTIVÉ
+// ============================================================
+
+.stepper__step--disabled {
+    opacity: 0.55;
+
+    .stepper__step-button {
+        cursor: not-allowed;
+    }
+
+    .stepper__indicator {
+        background-color: $color-bg-app;
+        border-color: $color-border;
+        color: $color-text-disabled;
+    }
+
+    .stepper__label {
+        color: $color-text-disabled;
+    }
+}
+
+
+// ============================================================
+// TAILLES
+// ============================================================
+
+.stepper--small {
+    .stepper__indicator {
+        width: 24px;
+        height: 24px;
+        font-size: $font-size-xs;
+
+        svg {
+            width: 12px;
+            height: 12px;
+        }
+    }
+
+    .stepper__label {
+        font-size: $font-size-xs;
+    }
+
+    .stepper__description {
+        font-size: 0.7rem;
+    }
+
+    .stepper__connector {
+        height: 1px;
+        min-width: $spacing-4;
+    }
+}
+
+.stepper--medium {
+    // valeurs par défaut
+}
+
+.stepper--large {
+    .stepper__indicator {
+        width: 40px;
+        height: 40px;
+        font-size: $font-size-md;
+
+        svg {
+            width: 20px;
+            height: 20px;
+        }
+    }
+
+    .stepper__label {
+        font-size: $font-size-md;
+    }
+
+    .stepper__description {
+        font-size: $font-size-sm;
+    }
+
+    .stepper__connector {
+        height: 3px;
+    }
+}
+
+
+// ============================================================
+// VARIANTE VERTICALE
+// ============================================================
+
+.stepper--vertical {
+    .stepper__list {
+        flex-direction: column;
+        align-items: stretch;
+        gap: $spacing-2;
+    }
+
+    .stepper__step {
+        flex-direction: row;
+        align-items: stretch;
+        width: 100%;
+    }
+
+    .stepper__connector {
+        position: absolute;
+        left: 15px;
+        top: 40px;
+        bottom: -#{$spacing-2};
+        width: 2px;
+        height: auto;
+        min-width: 0;
+        margin: 0;
+    }
+
+    .stepper__step--large .stepper__connector {
+        left: 19px;
+        top: 48px;
+    }
+
+    .stepper__step--small .stepper__connector {
+        left: 11px;
+        top: 32px;
+    }
+}
+
+
+// ============================================================
+// BODY (contenu sous le stepper)
+// ============================================================
+
+.stepper__body {
+    margin-top: $spacing-6;
+    padding: $spacing-4;
+    background-color: $color-bg-card;
+    border: 1px solid $color-border;
+    border-radius: $radius-lg;
+}
+
+
+// ============================================================
+// RESPONSIVE
+// ============================================================
+
+@include responsive(mobile) {
+    .stepper--horizontal {
+        .stepper__list {
+            flex-direction: column;
+            align-items: stretch;
+            gap: $spacing-2;
+        }
+
+        .stepper__step {
+            flex-direction: row;
+        }
+
+        .stepper__connector {
+            display: none;
+        }
+    }
+}
+
+
+// ============================================================
+// ACCESSIBILITÉ — RÉDUCTION DES ANIMATIONS
+// ============================================================
+
+@media (prefers-reduced-motion: reduce) {
+    .stepper__indicator,
+    .stepper__connector,
+    .stepper__step-button {
+        transition: none;
+    }
+}

@@ -1,0 +1,117 @@
+// ============================================================
+// COMPOSANT — COLLAPSIBLE
+// Fichier : components/UI/Collapsible/_Collapsible.scss
+// ------------------------------------------------------------
+// Rôle :
+//   Styles du composant <Collapsible />.
+//   Gère : trigger cliquable, contenu masquable, états
+//   ouvert / fermé, focus clavier, hover.
+//
+// Dépendances :
+//   - baseVariables/_variables.scss
+//   - baseVariables/_mixins.scss
+// ============================================================
+
+@use '../../baseVariables/variables' as *;
+@use '../../baseVariables/mixins' as *;
+
+
+// ============================================================
+// CONTENEUR
+// ============================================================
+
+.collapsible {
+    width: 100%;
+    font-family: $font-family-base;
+    color: $color-text-primary;
+    background-color: $color-bg-card;
+    border: 1px solid $color-border;
+    border-radius: $radius-lg;
+    overflow: hidden;
+}
+
+
+// ============================================================
+// TRIGGER
+// ============================================================
+// Zone cliquable en haut. La flèche implicite à droite peut
+// être ajoutée par le parent via `::after` si besoin.
+// ============================================================
+
+.collapsible__trigger {
+    @include flex-between;
+    @include focus-ring;
+    padding: $spacing-3 $spacing-4;
+    font-size: $font-size-sm;
+    font-weight: $font-weight-semibold;
+    color: $color-text-primary;
+    background-color: transparent;
+    border: none;
+    border-radius: 0;
+    cursor: pointer;
+    user-select: none;
+    transition:
+        background-color $transition-fast,
+        color $transition-fast;
+
+    &:hover {
+        background-color: $color-bg-card-hover;
+    }
+
+    &:focus-visible {
+        background-color: $color-bg-card-hover;
+    }
+}
+
+
+// ============================================================
+// CONTENU
+// ============================================================
+
+.collapsible__content {
+    padding: $spacing-3 $spacing-4;
+    font-size: $font-size-sm;
+    color: $color-text-secondary;
+    line-height: $line-height-normal;
+    border-top: 1px solid $color-border;
+    animation: collapsible-content-in $transition-fast both;
+}
+
+@keyframes collapsible-content-in {
+    from { opacity: 0; transform: translateY(-4px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+
+
+// ============================================================
+// ÉTATS
+// ============================================================
+
+// ----- Fermé -----
+.collapsible--closed {
+    .collapsible__trigger {
+        border-bottom: none;
+    }
+}
+
+// ----- Ouvert -----
+.collapsible--open {
+    .collapsible__trigger {
+        background-color: $color-bg-elevated;
+    }
+}
+
+
+// ============================================================
+// ACCESSIBILITÉ — RÉDUCTION DES ANIMATIONS
+// ============================================================
+
+@media (prefers-reduced-motion: reduce) {
+    .collapsible__trigger {
+        transition: none;
+    }
+
+    .collapsible__content {
+        animation: none;
+    }
+}

@@ -1,0 +1,213 @@
+// ============================================================
+// COMPOSANT — ICON BUTTON
+// Fichier : components/UI/IconButton/_IconButton.scss
+// ------------------------------------------------------------
+// Rôle :
+//   Styles du composant <IconButton /> (bouton carré avec
+//   uniquement une icône).
+//   Gère : variantes (primary / secondary / outline / ghost /
+//   danger), tailles (small / medium / large), disabled,
+//   loading (spinner), focus clavier.
+//
+// Dépendances :
+//   - baseVariables/_variables.scss
+//   - baseVariables/_mixins.scss
+// ============================================================
+
+@use '../../baseVariables/variables' as *;
+@use '../../baseVariables/mixins' as *;
+
+
+// ============================================================
+// BASE
+// ============================================================
+
+.icon-btn {
+    @include flex-center;
+    @include focus-ring;
+    display: inline-flex;
+    padding: 0;
+    aspect-ratio: 1 / 1;
+    font-family: $font-family-base;
+    border: 1px solid transparent;
+    border-radius: $radius-md;
+    cursor: pointer;
+    user-select: none;
+    outline: none;
+    transition:
+        background-color $transition-fast,
+        border-color $transition-fast,
+        color $transition-fast,
+        transform $transition-fast,
+        box-shadow $transition-fast;
+
+    &:active:not(:disabled):not(.icon-btn--disabled) {
+        transform: scale(0.94);
+    }
+
+    &:disabled,
+    &.icon-btn--disabled {
+        cursor: not-allowed;
+        opacity: 0.55;
+
+        &:active {
+            transform: none;
+        }
+    }
+
+    svg {
+        display: block;
+    }
+}
+
+
+// ============================================================
+// SPINNER (loading)
+// ============================================================
+
+.icon-btn__spinner {
+    display: inline-block;
+    width: 16px;
+    height: 16px;
+    border: 2px solid currentColor;
+    border-top-color: transparent;
+    border-radius: $radius-full;
+    animation: icon-btn-spin 0.65s linear infinite;
+}
+
+@keyframes icon-btn-spin {
+    to { transform: rotate(360deg); }
+}
+
+
+// ============================================================
+// TAILLES
+// ============================================================
+
+.icon-btn--small {
+    width: 28px;
+    height: 28px;
+    border-radius: $radius-sm;
+
+    svg {
+        width: 14px;
+        height: 14px;
+    }
+
+    .icon-btn__spinner {
+        width: 12px;
+        height: 12px;
+    }
+}
+
+.icon-btn--medium {
+    width: 36px;
+    height: 36px;
+
+    svg {
+        width: 18px;
+        height: 18px;
+    }
+}
+
+.icon-btn--large {
+    width: 44px;
+    height: 44px;
+    border-radius: $radius-lg;
+
+    svg {
+        width: 22px;
+        height: 22px;
+    }
+
+    .icon-btn__spinner {
+        width: 18px;
+        height: 18px;
+    }
+}
+
+
+// ============================================================
+// VARIANTES
+// ============================================================
+
+.icon-btn--primary {
+    background-color: $color-primary;
+    color: $color-text-inverse;
+    border-color: $color-primary;
+
+    &:hover:not(:disabled):not(.icon-btn--disabled) {
+        background-color: $color-primary-hover;
+        border-color: $color-primary-hover;
+    }
+
+    &:active:not(:disabled):not(.icon-btn--disabled) {
+        background-color: $color-primary-active;
+    }
+}
+
+.icon-btn--secondary {
+    background-color: $color-bg-card;
+    color: $color-text-primary;
+    border-color: $color-border-light;
+
+    &:hover:not(:disabled):not(.icon-btn--disabled) {
+        background-color: $color-bg-card-hover;
+        border-color: $color-border-strong;
+    }
+}
+
+.icon-btn--outline {
+    background-color: transparent;
+    color: $color-primary;
+    border-color: $color-primary;
+
+    &:hover:not(:disabled):not(.icon-btn--disabled) {
+        background-color: $color-primary-light;
+    }
+}
+
+.icon-btn--ghost {
+    background-color: transparent;
+    color: $color-text-secondary;
+    border-color: transparent;
+
+    &:hover:not(:disabled):not(.icon-btn--disabled) {
+        background-color: $color-bg-card-hover;
+        color: $color-text-primary;
+    }
+}
+
+.icon-btn--danger {
+    background-color: $color-danger;
+    color: $color-text-inverse;
+    border-color: $color-danger;
+
+    &:hover:not(:disabled):not(.icon-btn--disabled) {
+        background-color: #D64B68;
+        border-color: #D64B68;
+    }
+
+    &:active:not(:disabled):not(.icon-btn--disabled) {
+        background-color: #C33E5A;
+    }
+}
+
+
+// ============================================================
+// ACCESSIBILITÉ — RÉDUCTION DES ANIMATIONS
+// ============================================================
+
+@media (prefers-reduced-motion: reduce) {
+    .icon-btn {
+        transition: none;
+    }
+
+    .icon-btn:active {
+        transform: none;
+    }
+
+    .icon-btn__spinner {
+        animation-duration: 1.5s;
+    }
+}

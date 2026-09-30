@@ -277,9 +277,9 @@ docker-compose.local.yml
 # Frontend generated assets
 # ============================================================
 
-/assets/app/node_modules/
-/assets/app/dist/
-/assets/app/build/
+/assets/react/app/node_modules/
+/assets/react/app/dist/
+/assets/react/app/build/
 
 
 # ============================================================

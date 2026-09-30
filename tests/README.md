@@ -31,7 +31,7 @@ node tests/verify-reset-password-form.ts
 
 Les onze premiers scripts s'exécutent avec PHP. Le dernier est un script
 Node : il vérifie la logique pure du formulaire React
-(`assets/app/password-form.ts`), que Node 24 exécute nativement sans
+(`../assets/react/app`), que Node 24 exécute nativement sans
 transpiler. Il exige l'API démarrée sur le port 8000 uniquement pour
 confronter ses contraintes de longueur au schéma OpenAPI ; sans elle, ce
 contrôle est ignoré et les autres restent exécutés.

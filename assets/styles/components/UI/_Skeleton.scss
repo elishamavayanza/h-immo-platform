@@ -1,0 +1,101 @@
+// ============================================================
+// COMPOSANT — SKELETON
+// Fichier : components/UI/Skeleton/_Skeleton.scss
+// ------------------------------------------------------------
+// Rôle :
+//   Styles du composant <Skeleton /> (placeholder animé).
+//   Gère : variantes (text / rect / circle),
+//   tailles (small / medium / large), largeur/hauteur inline.
+//
+// Dépendances :
+//   - baseVariables/_variables.scss
+//   - baseVariables/_mixins.scss
+// ============================================================
+
+@use '../../baseVariables/variables' as *;
+@use '../../baseVariables/mixins' as *;
+
+
+// ============================================================
+// BASE
+// ============================================================
+
+.skeleton {
+    position: relative;
+    display: block;
+    background-color: $color-bg-elevated;
+    border-radius: $radius-md;
+    overflow: hidden;
+
+    // Effet shimmer : un dégradé qui traverse horizontalement
+    &::after {
+        content: '';
+        position: absolute;
+        inset: 0;
+        background: linear-gradient(
+            90deg,
+            transparent 0%,
+            rgba(255, 255, 255, 0.04) 50%,
+            transparent 100%
+        );
+        transform: translateX(-100%);
+        animation: skeleton-shimmer 1.6s ease-in-out infinite;
+    }
+}
+
+@keyframes skeleton-shimmer {
+    to { transform: translateX(100%); }
+}
+
+
+// ============================================================
+// VARIANTES DE FORME
+// ============================================================
+
+.skeleton--text {
+    height: 1em;
+    border-radius: $radius-sm;
+}
+
+.skeleton--rect {
+    border-radius: $radius-md;
+}
+
+.skeleton--circle {
+    border-radius: $radius-full;
+}
+
+
+// ============================================================
+// TAILLES
+// ============================================================
+
+.skeleton--small {
+    &.skeleton--text   { height: 10px; }
+    &.skeleton--rect   { height: 40px; }
+    &.skeleton--circle { width: 28px; height: 28px; }
+}
+
+.skeleton--medium {
+    &.skeleton--text   { height: 14px; }
+    &.skeleton--rect   { height: 80px; }
+    &.skeleton--circle { width: 40px; height: 40px; }
+}
+
+.skeleton--large {
+    &.skeleton--text   { height: 20px; }
+    &.skeleton--rect   { height: 140px; }
+    &.skeleton--circle { width: 64px; height: 64px; }
+}
+
+
+// ============================================================
+// ACCESSIBILITÉ — RÉDUCTION DES ANIMATIONS
+// ============================================================
+
+@media (prefers-reduced-motion: reduce) {
+    .skeleton::after {
+        animation: none;
+        background: none;
+    }
+}

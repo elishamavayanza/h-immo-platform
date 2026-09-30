@@ -1,0 +1,320 @@
+// ============================================================
+// COMPOSANT — TREE
+// Fichier : components/Data/_Tree.scss
+// ------------------------------------------------------------
+// Rôle :
+//   Styles du composant <Tree /> (arborescence).
+//   Gère : variantes, taille (small / medium / large),
+//   nœuds (icône, toggle, label, actions), sélection,
+//   état désactivé, lignes verticales (showLines),
+//   état vide.
+//
+// Dépendances :
+//   - baseVariables/_variables.scss
+//   - baseVariables/_mixins.scss
+// ============================================================
+
+@use '../../baseVariables/variables' as *;
+@use '../../baseVariables/mixins' as *;
+
+
+// ============================================================
+// CONTENEUR
+// ============================================================
+
+.tree {
+    @include card($spacing-3);
+    width: 100%;
+    font-family: $font-family-base;
+    font-size: $font-size-sm;
+    color: $color-text-primary;
+    overflow: hidden;
+}
+
+
+// ============================================================
+// CONTENEUR DE NŒUD (par nœud)
+// ============================================================
+
+.tree-node-container {
+    position: relative;
+}
+
+
+// ============================================================
+// NŒUD — BASE
+// ============================================================
+// Flex row, padding piloté par le niveau via style inline.
+// ============================================================
+
+.tree-node {
+    @include flex(row, center, flex-start, $spacing-2);
+    position: relative;
+    padding: $spacing-2 $spacing-2;
+    border-radius: $radius-md;
+    cursor: pointer;
+    user-select: none;
+    transition: background-color $transition-fast,
+    color $transition-fast;
+
+    &:hover {
+        background-color: $color-bg-card-hover;
+    }
+
+    &:focus-visible {
+        outline: none;
+        box-shadow: inset 0 0 0 2px $color-primary;
+    }
+}
+
+
+// ============================================================
+// TOGGLE (chevron)
+// ============================================================
+// Bouton carré, discret, qui pivote quand le nœud est étendu.
+// ============================================================
+
+.tree-node__toggle {
+    @include flex-center;
+    flex-shrink: 0;
+    width: 20px;
+    height: 20px;
+    padding: 0;
+    background: transparent;
+    border: none;
+    color: $color-text-muted;
+    cursor: pointer;
+    transition: transform $transition-fast, color $transition-fast;
+
+    svg {
+        display: block;
+        transition: transform $transition-fast;
+    }
+
+    &:hover {
+        color: $color-text-primary;
+    }
+
+    &:focus-visible {
+        outline: none;
+        color: $color-primary;
+    }
+
+    // Chevron pivoté quand étendu
+    &--expanded svg {
+        transform: rotate(90deg);
+    }
+}
+
+// Espace réservé quand le nœud est une feuille (pas de chevron)
+.tree-node__toggle-placeholder {
+    display: inline-block;
+    flex-shrink: 0;
+    width: 20px;
+    height: 20px;
+}
+
+
+// ============================================================
+// ICÔNE DU NŒUD
+// ============================================================
+
+.tree-node__icon {
+    @include flex-center;
+    flex-shrink: 0;
+    width: 20px;
+    height: 20px;
+    color: $color-text-muted;
+
+    svg {
+        display: block;
+    }
+}
+
+
+// ============================================================
+// LABEL
+// ============================================================
+// Prend tout l'espace restant, tronqué si trop long.
+// ============================================================
+
+.tree-node__label {
+    flex: 1;
+    min-width: 0;
+    color: $color-text-primary;
+    line-height: $line-height-snug;
+    @include truncate;
+}
+
+
+// ============================================================
+// ACTIONS DU NŒUD
+// ============================================================
+// Zone d'actions (boutons) à droite du label.
+// ============================================================
+
+.tree-node__actions {
+    @include flex(row, center, flex-end, $spacing-1);
+    flex-shrink: 0;
+    margin-left: auto;
+    opacity: 0;
+    transition: opacity $transition-fast;
+
+    .tree-node:hover & {
+        opacity: 1;
+    }
+}
+
+
+// ============================================================
+// ÉTAT SÉLECTIONNÉ
+// ============================================================
+
+.tree-node--selected {
+    background-color: $color-primary-light;
+    color: $color-text-primary;
+
+    &:hover {
+        background-color: $color-primary-soft;
+    }
+
+    .tree-node__label {
+        color: $color-primary-hover;
+        font-weight: $font-weight-semibold;
+    }
+
+    .tree-node__icon {
+        color: $color-primary;
+    }
+}
+
+
+// ============================================================
+// ÉTAT DÉSACTIVÉ
+// ============================================================
+
+.tree-node--disabled {
+    color: $color-text-disabled;
+    cursor: not-allowed;
+    opacity: 0.55;
+
+    &:hover {
+        background-color: transparent;
+    }
+
+    .tree-node__label,
+    .tree-node__icon,
+    .tree-node__toggle {
+        color: $color-text-disabled;
+    }
+
+    .tree-node__toggle {
+        cursor: not-allowed;
+    }
+}
+
+
+// ============================================================
+// TAILLES
+// ============================================================
+
+.tree-node--small {
+    padding: $spacing-1 $spacing-2;
+    font-size: $font-size-xs;
+    gap: $spacing-1;
+
+    .tree-node__toggle,
+    .tree-node__toggle-placeholder,
+    .tree-node__icon {
+        width: 16px;
+        height: 16px;
+
+        svg {
+            width: 14px;
+            height: 14px;
+        }
+    }
+}
+
+.tree-node--medium {
+    // valeurs par défaut
+}
+
+.tree-node--large {
+    padding: $spacing-3 $spacing-3;
+    font-size: $font-size-md;
+    gap: $spacing-3;
+
+    .tree-node__toggle,
+    .tree-node__toggle-placeholder,
+    .tree-node__icon {
+        width: 24px;
+        height: 24px;
+
+        svg {
+            width: 20px;
+            height: 20px;
+        }
+    }
+}
+
+
+// ============================================================
+// VARIANTES
+// ============================================================
+
+// ----- Default -----
+.tree--default {
+    // rien
+}
+
+// ----- Lignes verticales (hiérarchie visuelle) -----
+.tree--lines {
+    .tree-node__children {
+        position: relative;
+        padding-left: $spacing-4;
+
+        // Ligne verticale discrète à gauche des enfants
+        &::before {
+            content: '';
+            position: absolute;
+            left: 18px;
+            top: 0;
+            bottom: 0;
+            width: 1px;
+            background-color: $color-border;
+        }
+    }
+
+    .tree-node-container {
+        position: relative;
+    }
+}
+
+
+// ============================================================
+// ÉTAT VIDE
+// ============================================================
+
+.tree__empty {
+    @include flex-center;
+    padding: $spacing-6 $spacing-4;
+    color: $color-text-muted;
+    font-size: $font-size-sm;
+    font-style: italic;
+    text-align: center;
+}
+
+
+// ============================================================
+// ACCESSIBILITÉ — RÉDUCTION DES ANIMATIONS
+// ============================================================
+
+@media (prefers-reduced-motion: reduce) {
+    .tree-node,
+    .tree-node__toggle,
+    .tree-node__toggle svg,
+    .tree-node__actions {
+        transition: none;
+    }
+}

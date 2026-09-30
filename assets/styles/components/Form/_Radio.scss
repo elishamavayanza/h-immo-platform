@@ -1,0 +1,242 @@
+// ============================================================
+// COMPOSANT — RADIO
+// Fichier : components/Form/Radio/_Radio.scss
+// ------------------------------------------------------------
+// Rôle :
+//   Styles du composant <Radio /> (bouton radio custom).
+//   Gère : variantes (default / error / success),
+//   tailles (small / medium / large), désactivé, hover,
+//   focus clavier, checked.
+//
+// Dépendances :
+//   - baseVariables/_variables.scss
+//   - baseVariables/_mixins.scss
+// ============================================================
+
+@use '../../baseVariables/variables' as *;
+@use '../../baseVariables/mixins' as *;
+
+
+// ============================================================
+// WRAPPER
+// ============================================================
+
+.radio-field__wrapper {
+    @include flex(row, center, flex-start, $spacing-2);
+    position: relative;
+    cursor: pointer;
+    user-select: none;
+    width: fit-content;
+
+    &:has(.radio-field:disabled) {
+        cursor: not-allowed;
+    }
+}
+
+
+// ============================================================
+// INPUT (caché)
+// ============================================================
+
+.radio-field {
+    position: absolute;
+    opacity: 0;
+    width: 0;
+    height: 0;
+    margin: 0;
+    pointer-events: none;
+}
+
+
+// ============================================================
+// VISUEL CUSTOM
+// ============================================================
+// Cercle qui remplace l’input natif. Le point central est
+// dessiné avec un `::after` qui scale de 0 à 1 au checked.
+// ============================================================
+
+.radio-field__visual {
+    @include flex-center;
+    position: relative;
+    flex-shrink: 0;
+    width: 18px;
+    height: 18px;
+    background-color: $color-bg-input;
+    border: 1.5px solid $color-border-light;
+    border-radius: $radius-full;
+    transition:
+        background-color $transition-fast,
+        border-color $transition-fast,
+        box-shadow $transition-fast;
+
+    // Point central
+    &::after {
+        content: '';
+        position: absolute;
+        width: 8px;
+        height: 8px;
+        background-color: $color-text-inverse;
+        border-radius: $radius-full;
+        transform: scale(0);
+        transition: transform $transition-fast;
+    }
+
+    // Hover du wrapper
+    .radio-field__wrapper:hover & {
+        border-color: $color-border-strong;
+    }
+}
+
+// Cocher : fond cyan, point visible
+.radio-field:checked + .radio-field__visual {
+    background-color: $color-primary;
+    border-color: $color-primary;
+
+    &::after {
+        transform: scale(1);
+    }
+}
+
+// Survol d’un radio coché
+.radio-field__wrapper:hover .radio-field:checked + .radio-field__visual {
+    background-color: $color-primary-hover;
+    border-color: $color-primary-hover;
+}
+
+// Focus clavier
+.radio-field:focus-visible + .radio-field__visual {
+    box-shadow: $shadow-focus;
+    border-color: $color-primary;
+}
+
+// Désactivé
+.radio-field:disabled + .radio-field__visual {
+    background-color: $color-bg-app;
+    border-color: $color-border;
+    opacity: 0.6;
+
+    &::after {
+        background-color: $color-text-disabled;
+    }
+}
+
+.radio-field:disabled:checked + .radio-field__visual {
+    background-color: $color-border;
+    border-color: $color-border;
+}
+
+
+// ============================================================
+// LABEL TEXTE
+// ============================================================
+
+.radio-field__label {
+    font-family: $font-family-base;
+    font-size: $font-size-sm;
+    font-weight: $font-weight-regular;
+    color: $color-text-primary;
+    line-height: $line-height-snug;
+    cursor: pointer;
+
+    .radio-field__wrapper:has(.radio-field:disabled) & {
+        color: $color-text-disabled;
+        cursor: not-allowed;
+    }
+}
+
+
+// ============================================================
+// TAILLES
+// ============================================================
+
+.radio-field--small + .radio-field__visual {
+    width: 14px;
+    height: 14px;
+
+    &::after {
+        width: 6px;
+        height: 6px;
+    }
+}
+
+.radio-field--small ~ .radio-field__label {
+    font-size: $font-size-xs;
+}
+
+.radio-field--medium + .radio-field__visual {
+    width: 18px;
+    height: 18px;
+}
+
+.radio-field--medium ~ .radio-field__label {
+    font-size: $font-size-sm;
+}
+
+.radio-field--large + .radio-field__visual {
+    width: 22px;
+    height: 22px;
+
+    &::after {
+        width: 10px;
+        height: 10px;
+    }
+}
+
+.radio-field--large ~ .radio-field__label {
+    font-size: $font-size-md;
+}
+
+
+// ============================================================
+// VARIANTES
+// ============================================================
+
+// ----- Error -----
+.radio-field--error + .radio-field__visual {
+    border-color: $color-danger;
+}
+
+.radio-field--error:checked + .radio-field__visual {
+    background-color: $color-danger;
+    border-color: $color-danger;
+}
+
+.radio-field--error:focus-visible + .radio-field__visual {
+    box-shadow: 0 0 0 3px rgba(239, 91, 120, 0.30);
+    border-color: $color-danger;
+}
+
+.radio-field--error ~ .radio-field__label {
+    color: $color-danger;
+}
+
+// ----- Success -----
+.radio-field--success + .radio-field__visual {
+    border-color: $color-success;
+}
+
+.radio-field--success:checked + .radio-field__visual {
+    background-color: $color-success;
+    border-color: $color-success;
+}
+
+.radio-field--success:focus-visible + .radio-field__visual {
+    box-shadow: 0 0 0 3px rgba(101, 214, 165, 0.30);
+    border-color: $color-success;
+}
+
+.radio-field--success ~ .radio-field__label {
+    color: $color-success;
+}
+
+
+// ============================================================
+// ACCESSIBILITÉ — RÉDUCTION DES ANIMATIONS
+// ============================================================
+
+@media (prefers-reduced-motion: reduce) {
+    .radio-field__visual,
+    .radio-field__visual::after {
+        transition: none;
+    }
+}

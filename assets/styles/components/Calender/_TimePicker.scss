@@ -1,0 +1,344 @@
+// ============================================================
+// COMPOSANT — TIME PICKER
+// Fichier : components/Form/TimePicker/_TimePicker.scss
+// ------------------------------------------------------------
+// Rôle :
+//   Styles du composant <TimePicker /> (input type="time").
+//   Gère : variantes (default / error / success), tailles
+//   (small / medium / large), plein largeur, désactivé,
+//   icône optionnelle, et le style natif du time picker
+//   WebKit / Firefox sur Dark Theme.
+//
+// Dépendances :
+//   - baseVariables/_variables.scss
+//   - baseVariables/_mixins.scss
+// ============================================================
+
+@use '../../../baseVariables/variables' as *;
+@use '../../../baseVariables/mixins' as *;
+
+
+// ============================================================
+// WRAPPER
+// ============================================================
+// Conteneur positionné pour accueillir l’icône absolue à
+// gauche de l’input. Le focus et l’état visuel sont gérés au
+// niveau du wrapper pour englober à la fois l’icône et le champ.
+// ============================================================
+
+.time-picker-wrapper {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    width: fit-content;
+
+    // Plein largeur : le wrapper suit l’input
+    &:has(.time-picker--full-width) {
+        display: flex;
+        width: 100%;
+    }
+
+    // Focus visible : anneau primaire sur le champ
+    &:focus-within .time-picker {
+        border-color: $color-primary;
+        box-shadow: $shadow-focus;
+    }
+
+    // Focus sur la variante error / success : anneau coloré
+    &:focus-within .time-picker--error {
+        border-color: $color-danger;
+        box-shadow: 0 0 0 3px rgba(239, 91, 120, 0.30);
+    }
+
+    &:focus-within .time-picker--success {
+        border-color: $color-success;
+        box-shadow: 0 0 0 3px rgba(101, 214, 165, 0.30);
+    }
+}
+
+
+// ============================================================
+// ICÔNE
+// ============================================================
+// Icône positionnée à gauche du champ, désactivée aux clics
+// pour ne jamais bloquer la saisie.
+// ============================================================
+
+.time-picker__icon {
+    @include flex-center;
+    position: absolute;
+    left: $spacing-3;
+    top: 50%;
+    transform: translateY(-50%);
+    color: $color-text-muted;
+    pointer-events: none;
+    z-index: 1;
+    transition: color $transition-fast;
+
+    svg {
+        display: block;
+    }
+}
+
+// L’icône suit la couleur du champ au focus
+.time-picker-wrapper:focus-within .time-picker__icon {
+    color: $color-primary;
+}
+
+
+// ============================================================
+// INPUT — BASE
+// ============================================================
+// Champ natif `input[type="time"]`. On neutralise partiellement
+// l’apparence native pour rester aligné avec le Design System.
+// ============================================================
+
+.time-picker {
+    width: 100%;
+    font-family: $font-family-base;
+    font-weight: $font-weight-medium;
+    color: $color-text-primary;
+    background-color: $color-bg-input;
+    border: 1px solid $color-border;
+    border-radius: $radius-md;
+    outline: none;
+    appearance: none;
+    -webkit-appearance: none;
+    color-scheme: dark; // <- rend l’indicateur natif compatible Dark Theme
+
+    transition:
+        background-color $transition-fast,
+        border-color $transition-fast,
+        box-shadow $transition-fast,
+        color $transition-fast;
+
+    // Texte saisi par l’utilisateur
+    &::-webkit-datetime-edit {
+        padding: 0;
+        color: inherit;
+    }
+
+    &::-webkit-datetime-edit-fields-wrapper {
+        padding: 0;
+    }
+
+    // Indicateur natif « horloge » à droite (WebKit / Blink)
+    &::-webkit-calendar-picker-indicator {
+        cursor: pointer;
+        opacity: 0.55;
+        transition: opacity $transition-fast, filter $transition-fast;
+        padding: 0;
+        margin-left: $spacing-2;
+
+        &:hover {
+            opacity: 1;
+        }
+    }
+
+    // Firefox : on garde le rendu natif mais on aligne les couleurs
+    &::-moz-focus-inner {
+        border: 0;
+        padding: 0;
+    }
+
+    // --------------------------------------------------------
+    // États interactifs
+    // --------------------------------------------------------
+
+    &:hover:not(:disabled):not(.time-picker--disabled) {
+        background-color: $color-bg-card-hover;
+        border-color: $color-border-light;
+    }
+
+    &:active:not(:disabled):not(.time-picker--disabled) {
+        background-color: $color-bg-card;
+    }
+
+    // --------------------------------------------------------
+    // Placeholder (au cas où il serait utilisé via inputProps)
+    // --------------------------------------------------------
+
+    &::placeholder {
+        color: $color-text-muted;
+    }
+
+    // --------------------------------------------------------
+    // Accessibilité : focus clavier uniquement
+    // --------------------------------------------------------
+
+    &:focus-visible {
+        border-color: $color-primary;
+    }
+
+    // --------------------------------------------------------
+    // Désactivé
+    // --------------------------------------------------------
+
+    &:disabled,
+    &.time-picker--disabled {
+        color: $color-text-disabled;
+        background-color: $color-bg-app;
+        border-color: $color-border;
+        cursor: not-allowed;
+        opacity: 0.7;
+
+        &::-webkit-calendar-picker-indicator {
+            cursor: not-allowed;
+            opacity: 0.3;
+        }
+    }
+}
+
+
+// ============================================================
+// TAILLES
+// ============================================================
+// Trois tailles cohérentes avec l’échelle d’espacement.
+// L’icône est prise en compte via `:has()` pour ne pas laisser
+// d’espace vide quand aucune icône n’est affichée.
+// ============================================================
+
+// ----- Small -----
+.time-picker--small {
+    padding: $spacing-2 $spacing-3;
+    font-size: $font-size-sm;
+    min-height: 32px;
+    border-radius: $radius-sm;
+
+    &::-webkit-calendar-picker-indicator {
+        width: 14px;
+        height: 14px;
+    }
+}
+
+// ----- Medium (défaut) -----
+.time-picker--medium {
+    padding: $spacing-3 $spacing-4;
+    font-size: $font-size-md;
+    min-height: 40px;
+    border-radius: $radius-md;
+
+    &::-webkit-calendar-picker-indicator {
+        width: 16px;
+        height: 16px;
+    }
+}
+
+// ----- Large -----
+.time-picker--large {
+    padding: $spacing-4 $spacing-5;
+    font-size: $font-size-lg;
+    min-height: 48px;
+    border-radius: $radius-lg;
+
+    &::-webkit-calendar-picker-indicator {
+        width: 18px;
+        height: 18px;
+    }
+}
+
+
+// ============================================================
+// DÉCALAGE POUR L’ICÔNE
+// ============================================================
+// Quand une icône est présente, on ajoute un padding-left
+// proportionnel à la taille du champ, sans laisser de vide
+// si l’icône n’est pas rendue.
+// ============================================================
+
+.time-picker-wrapper:has(.time-picker__icon) {
+
+    .time-picker--small   { padding-left: $spacing-8; }
+    .time-picker--medium  { padding-left: $spacing-10; }
+    .time-picker--large   { padding-left: $spacing-12; }
+}
+
+
+// ============================================================
+// VARIANTES
+// ============================================================
+// default : neutre (aucune surcharge)
+// error   : bordure et focus rouges
+// success : bordure et focus verts
+// ============================================================
+
+// ----- Error -----
+.time-picker--error {
+    border-color: $color-danger;
+
+    &:hover:not(:disabled):not(.time-picker--disabled) {
+        border-color: $color-danger;
+        background-color: $color-danger-light;
+    }
+
+    &:focus,
+    &:focus-visible {
+        border-color: $color-danger;
+        box-shadow: 0 0 0 3px rgba(239, 91, 120, 0.30);
+    }
+
+    &::-webkit-calendar-picker-indicator {
+        opacity: 0.85;
+        filter: invert(48%) sepia(78%) saturate(4485%) hue-rotate(325deg) brightness(97%) contrast(97%);
+    }
+}
+
+// ----- Success -----
+.time-picker--success {
+    border-color: $color-success;
+
+    &:hover:not(:disabled):not(.time-picker--disabled) {
+        border-color: $color-success;
+        background-color: $color-success-light;
+    }
+
+    &:focus,
+    &:focus-visible {
+        border-color: $color-success;
+        box-shadow: 0 0 0 3px rgba(101, 214, 165, 0.30);
+    }
+
+    &::-webkit-calendar-picker-indicator {
+        opacity: 0.85;
+        filter: invert(82%) sepia(31%) saturate(504%) hue-rotate(97deg) brightness(93%) contrast(92%);
+    }
+}
+
+
+// ============================================================
+// PLEIN LARGEUR
+// ============================================================
+// À combiner avec le wrapper qui devient `display: flex`.
+// ============================================================
+
+.time-picker--full-width {
+    width: 100%;
+    display: block;
+}
+
+
+// ============================================================
+// RESPONSIVE
+// ============================================================
+// Sur mobile, la taille medium devient plus confortable au
+// toucher (min 44px de hauteur recommandée).
+// ============================================================
+
+@include responsive(mobile) {
+    .time-picker--medium {
+        min-height: 44px;
+    }
+}
+
+
+// ============================================================
+// ACCESSIBILITÉ — RÉDUCTION DES ANIMATIONS
+// ============================================================
+
+@media (prefers-reduced-motion: reduce) {
+    .time-picker,
+    .time-picker__icon,
+    .time-picker-wrapper {
+        transition: none;
+    }
+}

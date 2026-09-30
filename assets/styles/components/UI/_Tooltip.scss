@@ -1,0 +1,189 @@
+// ============================================================
+// COMPOSANT — TOOLTIP
+// Fichier : components/UI/Tooltip/_Tooltip.scss
+// ------------------------------------------------------------
+// Rôle :
+//   Styles du composant <Tooltip />.
+//   Gère : positions (top / bottom / left / right),
+//   états (visible / caché), flèche directionnelle,
+//   apparition avec transition douce.
+//
+// Dépendances :
+//   - baseVariables/_variables.scss
+//   - baseVariables/_mixins.scss
+// ============================================================
+
+@use '../../baseVariables/variables' as *;
+@use '../../baseVariables/mixins' as *;
+
+
+// ============================================================
+// WRAPPER
+// ============================================================
+// Enveloppe l’élément déclencheur, position relative.
+// ============================================================
+
+.tooltip__wrapper {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+}
+
+
+// ============================================================
+// TOOLTIP (base, cachée par défaut)
+// ============================================================
+
+.tooltip {
+    @include elevation(md);
+    position: absolute;
+    z-index: $z-tooltip;
+    max-width: 260px;
+    padding: $spacing-2 $spacing-3;
+    background-color: $color-bg-elevated;
+    border: 1px solid $color-border-light;
+    border-radius: $radius-md;
+    font-family: $font-family-base;
+    font-size: $font-size-xs;
+    font-weight: $font-weight-medium;
+    color: $color-text-primary;
+    line-height: $line-height-snug;
+    text-align: center;
+    white-space: normal;
+    word-break: break-word;
+    pointer-events: none;
+    opacity: 0;
+    visibility: hidden;
+    transition:
+        opacity $transition-fast,
+        visibility $transition-fast,
+        transform $transition-fast;
+
+    // Flèche (par défaut : vers le bas)
+    &::after {
+        content: '';
+        position: absolute;
+        width: 8px;
+        height: 8px;
+        background-color: $color-bg-elevated;
+        border: 1px solid $color-border-light;
+        transform: rotate(45deg);
+    }
+}
+
+
+// ============================================================
+// ÉTAT VISIBLE
+// ============================================================
+
+.tooltip--visible {
+    opacity: 1;
+    visibility: visible;
+}
+
+
+// ============================================================
+// POSITION — TOP
+// ============================================================
+
+.tooltip--top {
+    bottom: calc(100% + #{$spacing-2});
+    left: 50%;
+    transform: translate(-50%, 4px);
+
+    &::after {
+        top: 100%;
+        left: 50%;
+        margin-top: -5px;
+        margin-left: -4px;
+        border-top: none;
+        border-left: none;
+    }
+
+    &.tooltip--visible {
+        transform: translate(-50%, 0);
+    }
+}
+
+
+// ============================================================
+// POSITION — BOTTOM
+// ============================================================
+
+.tooltip--bottom {
+    top: calc(100% + #{$spacing-2});
+    left: 50%;
+    transform: translate(-50%, -4px);
+
+    &::after {
+        bottom: 100%;
+        left: 50%;
+        margin-bottom: -5px;
+        margin-left: -4px;
+        border-bottom: none;
+        border-right: none;
+    }
+
+    &.tooltip--visible {
+        transform: translate(-50%, 0);
+    }
+}
+
+
+// ============================================================
+// POSITION — LEFT
+// ============================================================
+
+.tooltip--left {
+    right: calc(100% + #{$spacing-2});
+    top: 50%;
+    transform: translate(4px, -50%);
+
+    &::after {
+        left: 100%;
+        top: 50%;
+        margin-left: -5px;
+        margin-top: -4px;
+        border-bottom: none;
+        border-left: none;
+    }
+
+    &.tooltip--visible {
+        transform: translate(0, -50%);
+    }
+}
+
+
+// ============================================================
+// POSITION — RIGHT
+// ============================================================
+
+.tooltip--right {
+    left: calc(100% + #{$spacing-2});
+    top: 50%;
+    transform: translate(-4px, -50%);
+
+    &::after {
+        right: 100%;
+        top: 50%;
+        margin-right: -5px;
+        margin-top: -4px;
+        border-top: none;
+        border-right: none;
+    }
+
+    &.tooltip--visible {
+        transform: translate(0, -50%);
+    }
+}
+
+
+// ============================================================
+// ACCESSIBILITÉ — RÉDUCTION DES ANIMATIONS
+// ============================================================
+
+@media (prefers-reduced-motion: reduce) {
+    .tooltip {
+        transition: opacity $transition-fast, visibility $transition-fast;
+    }
+}

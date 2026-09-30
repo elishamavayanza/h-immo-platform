@@ -1,0 +1,85 @@
+// ============================================================
+// SOFT-IMMO — POINT D'ENTRÉE DES STYLES
+// Fichier : main.scss
+// ------------------------------------------------------------
+// Rôle :
+//   Point d'entrée unique pour tous les styles de l'application.
+//   Charge les fondations, les styles globaux, puis les
+//   styles des composants et des pages.
+// ============================================================
+
+// ============================================================
+// 1. FONDATIONS (Variables & Mixins)
+// ============================================================
+@use './baseVariables/variables' as *;
+@use './baseVariables/mixins' as *;
+
+// ============================================================
+// 2. STYLES GLOBAUX (Reset, Base, Typographie)
+// ============================================================
+// (Si tu n'as pas encore ces fichiers, crée-les dans un dossier
+//  "base" ou mets ces styles directement ici).
+
+// Reset CSS de base
+*,
+*::before,
+*::after {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+html {
+    font-size: 16px;
+    scroll-behavior: smooth;
+}
+
+body {
+    font-family: $font-family-base;
+    font-size: $font-size-md;
+    font-weight: $font-weight-regular;
+    line-height: $line-height-normal;
+    color: $color-text-primary;
+    background-color: $color-bg-app;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+
+    @include scrollbar; // Scrollbar dark globale
+}
+
+// Liens
+a {
+    color: $color-primary;
+    text-decoration: none;
+    transition: color $transition-fast;
+
+    &:hover {
+        color: $color-primary-hover;
+    }
+}
+
+// Titres
+h1, h2, h3, h4, h5, h6 {
+    font-family: $font-family-heading;
+    font-weight: $font-weight-semibold;
+    color: $color-text-primary;
+    line-height: $line-height-tight;
+}
+
+// ============================================================
+// 3. COMPOSANTS
+// ============================================================
+// Utilise des index.scss dans chaque dossier pour importer
+// proprement les styles.
+@use './components' as *;
+
+// ============================================================
+// 4. PAGES
+// ============================================================
+@use './pages' as *;
+
+
+// ============================================================
+// 5. EMAILS
+// ============================================================
+@use './emails' as *;

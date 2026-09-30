@@ -1,0 +1,151 @@
+// ============================================================
+// COMPOSANT — SEPARATOR
+// Fichier : components/UI/Separator/_Separator.scss
+// ------------------------------------------------------------
+// Rôle :
+//   Styles du composant <Separator />.
+//   Gère : orientations (horizontal / vertical),
+//   variantes (default / primary / secondary / light),
+//   épaisseurs (thin / medium / thick), label optionnel.
+//
+// Dépendances :
+//   - baseVariables/_variables.scss
+//   - baseVariables/_mixins.scss
+// ============================================================
+
+@use '../../baseVariables/variables' as *;
+@use '../../baseVariables/mixins' as *;
+
+
+// ============================================================
+// BASE (horizontal)
+// ============================================================
+
+.separator {
+    border: none;
+    background: none;
+    margin: 0;
+    flex-shrink: 0;
+
+    // Variable locale pour piloter la couleur de la ligne
+    --separator-color: #{$color-border};
+}
+
+
+// ============================================================
+// ORIENTATION — HORIZONTAL
+// ============================================================
+
+.separator--horizontal {
+    display: flex;
+    align-items: center;
+    width: 100%;
+    height: auto;
+
+    // hr direct
+    &:not(.separator--with-label) {
+        border-top: 1px solid var(--separator-color);
+        background: none;
+        height: 0;
+    }
+
+    // avec label
+    &.separator--with-label {
+        gap: $spacing-3;
+    }
+}
+
+
+// ============================================================
+// ORIENTATION — VERTICAL
+// ============================================================
+
+.separator--vertical {
+    display: inline-block;
+    width: 0;
+    height: 100%;
+    min-height: 20px;
+    border-left: 1px solid var(--separator-color);
+    border-top: none;
+    vertical-align: middle;
+}
+
+
+// ============================================================
+// ÉPAISSEURS
+// ============================================================
+
+.separator--thin {
+    &.separator--horizontal:not(.separator--with-label) {
+        border-top-width: 1px;
+    }
+
+    &.separator--vertical {
+        border-left-width: 1px;
+    }
+}
+
+.separator--medium {
+    &.separator--horizontal:not(.separator--with-label) {
+        border-top-width: 1.5px;
+    }
+
+    &.separator--vertical {
+        border-left-width: 1.5px;
+    }
+}
+
+.separator--thick {
+    &.separator--horizontal:not(.separator--with-label) {
+        border-top-width: 3px;
+    }
+
+    &.separator--vertical {
+        border-left-width: 3px;
+    }
+}
+
+
+// ============================================================
+// VARIANTES (couleurs)
+// ============================================================
+
+.separator--default {
+    --separator-color: #{$color-border};
+}
+
+.separator--primary {
+    --separator-color: #{$color-primary};
+}
+
+.separator--secondary {
+    --separator-color: #{$color-purple};
+}
+
+.separator--light {
+    --separator-color: #{$color-border-light};
+}
+
+
+// ============================================================
+// LABEL (variante horizontale avec label)
+// ============================================================
+
+.separator__line {
+    flex: 1;
+    height: 0;
+    border-top: 1px solid var(--separator-color);
+}
+
+.separator__label {
+    flex-shrink: 0;
+    padding: 0 $spacing-2;
+    font-family: $font-family-base;
+    font-size: $font-size-xs;
+    font-weight: $font-weight-semibold;
+    color: $color-text-muted;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    user-select: none;
+    line-height: 1;
+}

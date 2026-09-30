@@ -1,0 +1,39 @@
+// ============================================================
+// COMPOSANT — LOADING
+// Fichier : components/UI/Loading/_Loading.scss
+// ------------------------------------------------------------
+// Rôle :
+//   Styles du composant <Loading /> (spinner + texte).
+//
+// Dépendances :
+//   - baseVariables/_variables.scss
+//   - baseVariables/_mixins.scss
+// ============================================================
+
+@use '../../baseVariables/variables' as *;
+@use '../../baseVariables/mixins' as *;
+
+
+// ============================================================
+// CONTENEUR
+// ============================================================
+
+.loading {
+    @include flex(column, center, center, $spacing-3);
+    padding: $spacing-6;
+    font-family: $font-family-base;
+    color: $color-text-secondary;
+    text-align: center;
+}
+
+
+// ============================================================
+// TEXTE
+// ============================================================
+
+.loading__text {
+    font-size: $font-size-sm;
+    color: $color-text-secondary;
+    font-weight: $font-weight-medium;
+    line-height: $line-height-snug;
+}

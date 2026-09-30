@@ -1,0 +1,250 @@
+// ============================================================
+// COMPOSANT — SELECT
+// Fichier : components/Form/Select/_Select.scss
+// ------------------------------------------------------------
+// Rôle :
+//   Styles du composant <Select /> (select natif stylé).
+//   Gère : variantes (default / error / success),
+//   tailles (small / medium / large), plein largeur, désactivé,
+//   focus, chevron personnalisé, options natives.
+//
+// Dépendances :
+//   - baseVariables/_variables.scss
+//   - baseVariables/_mixins.scss
+// ============================================================
+
+@use '../../baseVariables/variables' as *;
+@use '../../baseVariables/mixins' as *;
+
+
+// ============================================================
+// WRAPPER
+// ============================================================
+// Position relative pour accueillir le chevron absolu.
+// ============================================================
+
+.select-field__wrapper {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    width: fit-content;
+
+    &:has(.select-field--full-width) {
+        display: flex;
+        width: 100%;
+    }
+
+    // Focus visible : anneau primaire
+    &:focus-within .select-field {
+        border-color: $color-primary;
+        box-shadow: $shadow-focus;
+    }
+
+    &:focus-within .select-field--error {
+        border-color: $color-danger;
+        box-shadow: 0 0 0 3px rgba(239, 91, 120, 0.30);
+    }
+
+    &:focus-within .select-field--success {
+        border-color: $color-success;
+        box-shadow: 0 0 0 3px rgba(101, 214, 165, 0.30);
+    }
+
+    // Chevron suit la couleur du focus
+    &:focus-within .select-field__arrow {
+        border-color: $color-primary;
+    }
+}
+
+
+// ============================================================
+// SELECT
+// ============================================================
+
+.select-field {
+    width: 100%;
+    font-family: $font-family-base;
+    font-weight: $font-weight-medium;
+    color: $color-text-primary;
+    background-color: $color-bg-input;
+    border: 1px solid $color-border;
+    border-radius: $radius-md;
+    outline: none;
+    appearance: none;
+    -webkit-appearance: none;
+    cursor: pointer;
+    padding-right: $spacing-10;
+    transition:
+        background-color $transition-fast,
+        border-color $transition-fast,
+        box-shadow $transition-fast,
+        color $transition-fast;
+
+    // Retire l’apparence natif Firefox / IE
+    &::-ms-expand {
+        display: none;
+    }
+
+    // Options natives (peu stylables mais on aligne la couleur)
+    option {
+        background-color: $color-bg-elevated;
+        color: $color-text-primary;
+
+        &:disabled {
+            color: $color-text-disabled;
+        }
+    }
+
+    &:hover:not(:disabled):not(.select-field--disabled) {
+        background-color: $color-bg-card-hover;
+        border-color: $color-border-light;
+    }
+
+    &:focus-visible {
+        border-color: $color-primary;
+    }
+
+    &:disabled,
+    &.select-field--disabled {
+        color: $color-text-disabled;
+        background-color: $color-bg-app;
+        border-color: $color-border;
+        cursor: not-allowed;
+        opacity: 0.7;
+    }
+}
+
+
+// ============================================================
+// CHEVRON PERSONNALISÉ
+// ============================================================
+// Dessiné en CSS pur, absolument positionné à droite.
+// ============================================================
+
+.select-field__arrow {
+    position: absolute;
+    top: 50%;
+    right: $spacing-3;
+    width: 8px;
+    height: 8px;
+    border-right: 2px solid $color-text-muted;
+    border-bottom: 2px solid $color-text-muted;
+    transform: translateY(-70%) rotate(45deg);
+    pointer-events: none;
+    transition: border-color $transition-fast;
+}
+
+
+// ============================================================
+// TAILLES
+// ============================================================
+
+.select-field--small {
+    padding: $spacing-2 $spacing-3;
+    padding-right: $spacing-8;
+    font-size: $font-size-sm;
+    min-height: 32px;
+    border-radius: $radius-sm;
+
+    & + .select-field__arrow {
+        right: $spacing-2;
+        width: 6px;
+        height: 6px;
+    }
+}
+
+.select-field--medium {
+    padding: $spacing-3 $spacing-4;
+    font-size: $font-size-md;
+    min-height: 40px;
+}
+
+.select-field--large {
+    padding: $spacing-4 $spacing-5;
+    padding-right: $spacing-12;
+    font-size: $font-size-lg;
+    min-height: 48px;
+    border-radius: $radius-lg;
+
+    & + .select-field__arrow {
+        right: $spacing-4;
+        width: 10px;
+        height: 10px;
+    }
+}
+
+
+// ============================================================
+// VARIANTES
+// ============================================================
+
+.select-field--error {
+    border-color: $color-danger;
+
+    &:hover:not(:disabled):not(.select-field--disabled) {
+        border-color: $color-danger;
+        background-color: $color-danger-light;
+    }
+
+    &:focus,
+    &:focus-visible {
+        border-color: $color-danger;
+        box-shadow: 0 0 0 3px rgba(239, 91, 120, 0.30);
+    }
+
+    & + .select-field__arrow {
+        border-color: $color-danger;
+    }
+}
+
+.select-field--success {
+    border-color: $color-success;
+
+    &:hover:not(:disabled):not(.select-field--disabled) {
+        border-color: $color-success;
+        background-color: $color-success-light;
+    }
+
+    &:focus,
+    &:focus-visible {
+        border-color: $color-success;
+        box-shadow: 0 0 0 3px rgba(101, 214, 165, 0.30);
+    }
+
+    & + .select-field__arrow {
+        border-color: $color-success;
+    }
+}
+
+
+// ============================================================
+// PLEIN LARGEUR
+// ============================================================
+
+.select-field--full-width {
+    width: 100%;
+    display: block;
+}
+
+
+// ============================================================
+// RESPONSIVE
+// ============================================================
+
+@include responsive(mobile) {
+    .select-field--medium {
+        min-height: 44px;
+    }
+}
+
+
+// ============================================================
+// ACCESSIBILITÉ — RÉDUCTION DES ANIMATIONS
+// ============================================================
+
+@media (prefers-reduced-motion: reduce) {
+    .select-field,
+    .select-field__arrow {
+        transition: none;
+    }
+}

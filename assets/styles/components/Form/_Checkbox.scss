@@ -1,0 +1,255 @@
+// ============================================================
+// COMPOSANT — CHECKBOX
+// Fichier : components/Form/Checkbox/_Checkbox.scss
+// ------------------------------------------------------------
+// Rôle :
+//   Styles du composant <Checkbox /> (case à cocher custom).
+//   Gère : variantes (default / error / success),
+//   tailles (small / medium / large), désactivé, hover,
+//   focus clavier, checked, label.
+//
+// Dépendances :
+//   - baseVariables/_variables.scss
+//   - baseVariables/_mixins.scss
+// ============================================================
+
+@use '../../baseVariables/variables' as *;
+@use '../../baseVariables/mixins' as *;
+
+
+// ============================================================
+// WRAPPER
+// ============================================================
+// Label qui contient : input (caché), visuel custom, label texte.
+// Aligné en ligne, curseur main sur toute la zone.
+// ============================================================
+
+.checkbox-field__wrapper {
+    @include flex(row, center, flex-start, $spacing-2);
+    position: relative;
+    cursor: pointer;
+    user-select: none;
+    width: fit-content;
+
+    &:has(.checkbox-field:disabled) {
+        cursor: not-allowed;
+    }
+}
+
+
+// ============================================================
+// INPUT (caché)
+// ============================================================
+// On garde l’input natif pour l’accessibilité clavier, mais on
+// le rend visuellement transparent. Le `.checkbox-field__visual`
+// fait office de case à cocher.
+// ============================================================
+
+.checkbox-field {
+    position: absolute;
+    opacity: 0;
+    width: 0;
+    height: 0;
+    margin: 0;
+    pointer-events: none;
+}
+
+
+// ============================================================
+// VISUEL CUSTOM
+// ============================================================
+// Carré arrondi qui remplace l’input natif. États : base, hover,
+// checked (coche ✓), focus, disabled.
+// ============================================================
+
+.checkbox-field__visual {
+    @include flex-center;
+    position: relative;
+    flex-shrink: 0;
+    width: 18px;
+    height: 18px;
+    background-color: $color-bg-input;
+    border: 1.5px solid $color-border-light;
+    border-radius: $radius-xs;
+    transition:
+        background-color $transition-fast,
+        border-color $transition-fast,
+        box-shadow $transition-fast;
+
+    // Coche « ✓ » dessinée en CSS pour éviter une dépendance SVG
+    &::after {
+        content: '';
+        position: absolute;
+        width: 5px;
+        height: 9px;
+        border: solid $color-text-inverse;
+        border-width: 0 2px 2px 0;
+        transform: rotate(45deg) scale(0);
+        transform-origin: center;
+        transition: transform $transition-fast;
+        top: 1px;
+    }
+
+    // Hover du wrapper
+    .checkbox-field__wrapper:hover & {
+        border-color: $color-border-strong;
+    }
+}
+
+// Cocher : fond cyan, coche visible
+.checkbox-field:checked + .checkbox-field__visual {
+    background-color: $color-primary;
+    border-color: $color-primary;
+
+    &::after {
+        transform: rotate(45deg) scale(1);
+    }
+}
+
+// Survol d’une checkbox cochée
+.checkbox-field__wrapper:hover .checkbox-field:checked + .checkbox-field__visual {
+    background-color: $color-primary-hover;
+    border-color: $color-primary-hover;
+}
+
+// Focus clavier
+.checkbox-field:focus-visible + .checkbox-field__visual {
+    box-shadow: $shadow-focus;
+    border-color: $color-primary;
+}
+
+// Désactivé
+.checkbox-field:disabled + .checkbox-field__visual,
+.checkbox-field__wrapper:has(.checkbox-field:disabled) .checkbox-field__visual {
+    background-color: $color-bg-app;
+    border-color: $color-border;
+    opacity: 0.6;
+    cursor: not-allowed;
+
+    &::after {
+        border-color: $color-text-disabled;
+    }
+}
+
+.checkbox-field:disabled:checked + .checkbox-field__visual {
+    background-color: $color-border;
+    border-color: $color-border;
+}
+
+
+// ============================================================
+// LABEL TEXTE
+// ============================================================
+
+.checkbox-field__label {
+    font-family: $font-family-base;
+    font-size: $font-size-sm;
+    font-weight: $font-weight-regular;
+    color: $color-text-primary;
+    line-height: $line-height-snug;
+    cursor: pointer;
+
+    .checkbox-field__wrapper:has(.checkbox-field:disabled) & {
+        color: $color-text-disabled;
+        cursor: not-allowed;
+    }
+}
+
+
+// ============================================================
+// TAILLES
+// ============================================================
+
+.checkbox-field--small + .checkbox-field__visual {
+    width: 14px;
+    height: 14px;
+
+    &::after {
+        width: 4px;
+        height: 7px;
+        top: 0;
+    }
+}
+
+.checkbox-field--small ~ .checkbox-field__label {
+    font-size: $font-size-xs;
+}
+
+.checkbox-field--medium + .checkbox-field__visual {
+    width: 18px;
+    height: 18px;
+}
+
+.checkbox-field--medium ~ .checkbox-field__label {
+    font-size: $font-size-sm;
+}
+
+.checkbox-field--large + .checkbox-field__visual {
+    width: 22px;
+    height: 22px;
+
+    &::after {
+        width: 6px;
+        height: 11px;
+        top: 1px;
+    }
+}
+
+.checkbox-field--large ~ .checkbox-field__label {
+    font-size: $font-size-md;
+}
+
+
+// ============================================================
+// VARIANTES
+// ============================================================
+
+// ----- Error -----
+.checkbox-field--error + .checkbox-field__visual {
+    border-color: $color-danger;
+}
+
+.checkbox-field--error:checked + .checkbox-field__visual {
+    background-color: $color-danger;
+    border-color: $color-danger;
+}
+
+.checkbox-field--error:focus-visible + .checkbox-field__visual {
+    box-shadow: 0 0 0 3px rgba(239, 91, 120, 0.30);
+    border-color: $color-danger;
+}
+
+.checkbox-field--error ~ .checkbox-field__label {
+    color: $color-danger;
+}
+
+// ----- Success -----
+.checkbox-field--success + .checkbox-field__visual {
+    border-color: $color-success;
+}
+
+.checkbox-field--success:checked + .checkbox-field__visual {
+    background-color: $color-success;
+    border-color: $color-success;
+}
+
+.checkbox-field--success:focus-visible + .checkbox-field__visual {
+    box-shadow: 0 0 0 3px rgba(101, 214, 165, 0.30);
+    border-color: $color-success;
+}
+
+.checkbox-field--success ~ .checkbox-field__label {
+    color: $color-success;
+}
+
+
+// ============================================================
+// ACCESSIBILITÉ — RÉDUCTION DES ANIMATIONS
+// ============================================================
+
+@media (prefers-reduced-motion: reduce) {
+    .checkbox-field__visual,
+    .checkbox-field__visual::after {
+        transition: none;
+    }
+}

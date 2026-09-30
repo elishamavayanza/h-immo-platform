@@ -1,0 +1,243 @@
+// ============================================================
+// COMPOSANT — COMMAND PALETTE
+// Fichier : components/Navigation/CommandPalette/_CommandPalette.scss
+// ------------------------------------------------------------
+// Rôle :
+//   Styles du composant <CommandPalette /> (palette de
+//   commandes type Spotlight / Cmd+K).
+//   Gère : overlay, panneau, input, liste de commandes,
+//   item sélectionné, item désactivé, groupe, état vide,
+//   animation d’ouverture.
+//
+// Dépendances :
+//   - baseVariables/_variables.scss
+//   - baseVariables/_mixins.scss
+// ============================================================
+
+@use '../../baseVariables/variables' as *;
+@use '../../baseVariables/mixins' as *;
+
+
+// ============================================================
+// OVERLAY (racine, caché par défaut)
+// ============================================================
+// Le hook applique `.command-palette--open` quand isOpen = true.
+// ============================================================
+
+.command-palette {
+    @include flex(row, flex-start, center, 0);
+    position: fixed;
+    inset: 0;
+    z-index: $z-modal;
+    padding-top: 12vh;
+    background-color: rgba(0, 0, 0, 0.65);
+    backdrop-filter: blur(4px);
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    transition: opacity $transition-fast, visibility $transition-fast;
+
+    &--open {
+        opacity: 1;
+        visibility: visible;
+        pointer-events: auto;
+    }
+}
+
+
+// ============================================================
+// PANNEAU
+// ============================================================
+// Bloc central qui accueille l’input et la liste.
+// Le composant parent doit rendre <div className="command-palette__panel">
+// ============================================================
+
+.command-palette__panel {
+    @include elevation(lg);
+    width: 100%;
+    max-width: 560px;
+    max-height: 60vh;
+    margin: 0 $spacing-4;
+    background-color: $color-bg-elevated;
+    border: 1px solid $color-border-light;
+    border-radius: $radius-lg;
+    overflow: hidden;
+    transform: translateY(-8px) scale(0.98);
+    transition: transform $transition-fast;
+
+    .command-palette--open & {
+        transform: translateY(0) scale(1);
+    }
+}
+
+
+// ============================================================
+// INPUT
+// ============================================================
+
+.command-palette__input {
+    width: 100%;
+    padding: $spacing-4 $spacing-5;
+    font-family: $font-family-base;
+    font-size: $font-size-md;
+    font-weight: $font-weight-medium;
+    color: $color-text-primary;
+    background-color: transparent;
+    border: none;
+    border-bottom: 1px solid $color-border;
+    outline: none;
+
+    &::placeholder {
+        color: $color-text-muted;
+        font-weight: $font-weight-regular;
+    }
+
+    &:focus {
+        border-bottom-color: $color-primary;
+    }
+}
+
+
+// ============================================================
+// LISTE DE COMMANDES
+// ============================================================
+
+.command-palette__list {
+    @include scrollbar;
+    margin: 0;
+    padding: $spacing-2;
+    list-style: none;
+    max-height: calc(60vh - 70px);
+    overflow-y: auto;
+}
+
+
+// ============================================================
+// GROUPE
+// ============================================================
+
+.command-palette__group-title {
+    padding: $spacing-2 $spacing-3;
+    font-size: $font-size-xs;
+    font-weight: $font-weight-semibold;
+    color: $color-text-muted;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+}
+
+
+// ============================================================
+// ITEM
+// ============================================================
+
+.command-palette__item {
+    @include flex(row, center, flex-start, $spacing-3);
+    padding: $spacing-2 $spacing-3;
+    border-radius: $radius-md;
+    color: $color-text-primary;
+    font-size: $font-size-sm;
+    cursor: pointer;
+    transition: background-color $transition-fast, color $transition-fast;
+
+    // Icône de la commande
+    > svg,
+    .command-palette__item-icon {
+        flex-shrink: 0;
+        color: $color-text-muted;
+        transition: color $transition-fast;
+    }
+
+    &:hover:not(.command-palette__item--disabled) {
+        background-color: $color-bg-card-hover;
+    }
+}
+
+// Item sélectionné (navigation clavier)
+.command-palette__item--selected {
+    background-color: $color-primary-light;
+    color: $color-primary-hover;
+
+    > svg,
+    .command-palette__item-icon {
+        color: $color-primary;
+    }
+
+    &:hover {
+        background-color: $color-primary-soft;
+    }
+}
+
+// Item désactivé
+.command-palette__item--disabled {
+    color: $color-text-disabled;
+    cursor: not-allowed;
+    opacity: 0.55;
+
+    > svg,
+    .command-palette__item-icon {
+        color: $color-text-disabled;
+    }
+
+    &:hover {
+        background-color: transparent;
+    }
+}
+
+// Label de la commande
+.command-palette__item-label {
+    flex: 1;
+    min-width: 0;
+    @include truncate;
+}
+
+
+// ============================================================
+// ÉTAT VIDE
+// ============================================================
+
+.command-palette__empty {
+    @include flex-center;
+    padding: $spacing-8 $spacing-4;
+    color: $color-text-muted;
+    font-size: $font-size-sm;
+    font-style: italic;
+    text-align: center;
+}
+
+
+// ============================================================
+// RESPONSIVE
+// ============================================================
+
+@include responsive(mobile) {
+    .command-palette {
+        padding-top: 6vh;
+    }
+
+    .command-palette__panel {
+        max-height: 75vh;
+        margin: 0 $spacing-2;
+    }
+
+    .command-palette__input {
+        padding: $spacing-3 $spacing-4;
+        font-size: $font-size-sm;
+    }
+}
+
+
+// ============================================================
+// ACCESSIBILITÉ — RÉDUCTION DES ANIMATIONS
+// ============================================================
+
+@media (prefers-reduced-motion: reduce) {
+    .command-palette,
+    .command-palette__panel,
+    .command-palette__item {
+        transition: none;
+    }
+
+    .command-palette__panel {
+        transform: none;
+    }
+}
