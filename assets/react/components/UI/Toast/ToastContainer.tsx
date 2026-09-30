@@ -1,6 +1,5 @@
 import React from 'react';
 import { ToastItem, ToastPosition } from '../../../hook-components/UI/Toast';
-import { useI18n } from '@/react/i18n/I18nContext';
 
 // Icônes SVG inline (pas d'emoji)
 const IconInfo = () => (
@@ -55,7 +54,6 @@ const variantIcon = {
 };
 
 export function ToastContainer({ toasts, position = 'top-right', onClose }: ToastContainerProps) {
-    const { t } = useI18n();
     return (
         <div className={`toast-container toast-container--${position}`}>
             {toasts.map((toast) => (
@@ -64,7 +62,7 @@ export function ToastContainer({ toasts, position = 'top-right', onClose }: Toas
                         {variantIcon[toast.variant]}
                     </div>
                     <div className="toast__message">{toast.message}</div>
-                    <button className="toast__close" onClick={() => onClose(toast.id)} aria-label={t('Fermer la notification')}>
+                    <button className="toast__close" onClick={() => onClose(toast.id)} aria-label={('Fermer la notification')}>
                         <IconClose />
                     </button>
                 </div>

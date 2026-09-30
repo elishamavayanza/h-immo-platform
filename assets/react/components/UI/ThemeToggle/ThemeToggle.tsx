@@ -1,6 +1,39 @@
-import React from 'react';
-import { useTheme } from '@/react/hooks/ThemeProvider';
-import { useI18n } from '@/react/i18n/I18nContext';
+import React, { useState, useEffect, useCallback } from 'react';
+
+// ============================================================
+// Hook local — gestion du thème clair/sombre
+// ------------------------------------------------------------
+// - Persiste le choix dans localStorage
+// - Applique `data-theme="dark"|"light"` sur <html>
+// - Se synchronise avec la préférence système au premier lancement
+// ============================================================
+
+type Theme = 'light' | 'dark';
+
+function useTheme() {
+    const [theme, setTheme] = useState<Theme>(() => {
+        if (typeof window === 'undefined') return 'dark';
+        const stored = window.localStorage.getItem('theme') as Theme | null;
+        if (stored === 'light' || stored === 'dark') return stored;
+        return window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
+    });
+
+    useEffect(() => {
+        if (typeof document === 'undefined') return;
+        document.documentElement.setAttribute('data-theme', theme);
+        window.localStorage.setItem('theme', theme);
+    }, [theme]);
+
+    const toggleTheme = useCallback(() => {
+        setTheme((prev) => (prev === 'dark' ? 'light' : 'dark'));
+    }, []);
+
+    return { theme, setTheme, toggleTheme };
+}
+
+// ============================================================
+// Icônes
+// ============================================================
 
 const SunIcon = () => (
     <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -15,13 +48,16 @@ const MoonIcon = () => (
     </svg>
 );
 
+// ============================================================
+// Composant
+// ============================================================
+
 export interface ThemeToggleProps {
     className?: string;
     compact?: boolean;
 }
 
 export function ThemeToggle({ className = '', compact = false }: ThemeToggleProps) {
-    const { t } = useI18n();
     const { theme, toggleTheme } = useTheme();
     const isDark = theme === 'dark';
 
@@ -30,11 +66,15 @@ export function ThemeToggle({ className = '', compact = false }: ThemeToggleProp
             type="button"
             className={`theme-toggle ${className}`.trim()}
             onClick={toggleTheme}
-            aria-label={isDark ? t('Activer le thème clair') : t('Activer le thème sombre')}
-            title={isDark ? t('Thème clair') : t('Thème sombre')}
+            aria-label={isDark ? 'Activer le thème clair' : 'Activer le thème sombre'}
+            title={isDark ? 'Thème clair' : 'Thème sombre'}
         >
             {isDark ? <SunIcon /> : <MoonIcon />}
-            {!compact && <span className="theme-toggle__label">{isDark ? t('Clair') : t('Sombre')}</span>}
+            {!compact && (
+                <span className="theme-toggle__label">
+                    {isDark ? 'Clair' : 'Sombre'}
+                </span>
+            )}
         </button>
     );
 }

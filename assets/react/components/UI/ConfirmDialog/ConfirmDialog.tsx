@@ -1,7 +1,6 @@
 import React from 'react';
 import { createPortal } from 'react-dom';
-import { useConfirmDialog, UseConfirmDialogProps } from '@/react/hook-components/UI/ConfirmDialog';
-import { useI18n } from '@/react/i18n/I18nContext';
+import {useConfirmDialog, UseConfirmDialogProps} from "../../../hook-components/UI/ConfirmDialog";
 
 export interface ConfirmDialogProps extends UseConfirmDialogProps {}
 
@@ -36,7 +35,6 @@ export function ConfirmDialog({
         className,
     });
 
-    const { t } = useI18n();
 
     if (!isOpen) return null;
 
@@ -48,8 +46,8 @@ export function ConfirmDialog({
                 aria-modal="true"
                 onClick={(e) => e.stopPropagation()}
             >
-                {title && <div className="confirm-dialog__title">{typeof title === 'string' ? t(title) : title}</div>}
-                <div className="confirm-dialog__message">{typeof message === 'string' ? t(message) : message}</div>
+                {title && <div className="confirm-dialog__title">{typeof title === 'string' ? (title) : title}</div>}
+                <div className="confirm-dialog__message">{typeof message === 'string' ? (message) : message}</div>
                 <div className="confirm-dialog__actions">
                     <button className="confirm-dialog__button confirm-dialog__button--cancel" onClick={handleCancel}>
                         {cancelText}

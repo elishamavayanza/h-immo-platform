@@ -1,7 +1,5 @@
 import React from 'react';
 import { useStepper, UseStepperProps, StepperStep } from '../../../hook-components/Navigation/Stepper';
-import { useI18n } from '@/react/i18n/I18nContext';
-
 export interface StepperProps extends UseStepperProps {
     children?: (activeStepId: string) => React.ReactNode; // contenu affiché sous le stepper
 }
@@ -17,7 +15,6 @@ export function Stepper({
                             className,
                             children,
                         }: StepperProps) {
-    const { t } = useI18n();
     const { classes, activeStepId: currentStepId, activeIndex, goToStep } = useStepper({
         steps,
         activeStepId,
@@ -57,9 +54,9 @@ export function Stepper({
                   {step.icon || <span className="stepper__number">{index + 1}</span>}
                 </span>
                                 <span className="stepper__content">
-                  <span className="stepper__label">{typeof step.label === 'string' ? t(step.label) : step.label}</span>
+                  <span className="stepper__label">{typeof step.label === 'string' ? (step.label) : step.label}</span>
                                     {showDescription && step.description && (
-                                        <span className="stepper__description">{typeof step.description === 'string' ? t(step.description) : step.description}</span>
+                                        <span className="stepper__description">{typeof step.description === 'string' ? (step.description) : step.description}</span>
                                     )}
                 </span>
                             </button>

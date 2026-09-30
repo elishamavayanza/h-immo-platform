@@ -1,5 +1,5 @@
 import React, { forwardRef } from 'react';
-import { useForm, UseFormProps } from '@/react/hook-components/Forms/Form';
+import {useForm, UseFormProps} from "../../../hook-components/Forms/Form";
 
 export interface FormProps extends React.FormHTMLAttributes<HTMLFormElement>, UseFormProps {}
 

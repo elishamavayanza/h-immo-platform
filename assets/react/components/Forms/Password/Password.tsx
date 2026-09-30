@@ -1,6 +1,5 @@
 import React, { forwardRef } from 'react';
 import { usePassword, UsePasswordProps } from '../../../hook-components/Forms/Password';
-import { useI18n } from '@/react/i18n/I18nContext';
 
 export interface PasswordProps extends React.InputHTMLAttributes<HTMLInputElement>, UsePasswordProps {
     showIcon?: React.ReactNode;
@@ -37,7 +36,6 @@ export const Password = forwardRef<HTMLInputElement, PasswordProps>(
         },
         ref
     ) => {
-        const { t } = useI18n();
         const { classes, ariaProps, showPassword, togglePassword } = usePassword({
             variant,
             fieldSize,                     // passage correct
@@ -64,7 +62,7 @@ export const Password = forwardRef<HTMLInputElement, PasswordProps>(
                     onClick={togglePassword}
                     disabled={disabled || readOnly}
                     tabIndex={-1}
-                    aria-label={showPassword ? t('Masquer le mot de passe') : t('Afficher le mot de passe')}
+                    aria-label={showPassword ? ('Masquer le mot de passe') : ('Afficher le mot de passe')}
                 >
                     {showPassword ? hideIcon : showIcon}
                 </button>

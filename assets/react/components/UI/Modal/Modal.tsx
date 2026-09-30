@@ -1,7 +1,6 @@
 import React from 'react';
 import { createPortal } from 'react-dom';
-import { useModal, UseModalProps } from '@/react/hook-components/UI/Modal';
-import { useI18n } from '@/react/i18n/I18nContext';
+import {useModal, UseModalProps} from "../../../hook-components/UI/Modal";
 
 export interface ModalProps extends UseModalProps {
     title?: React.ReactNode;
@@ -20,7 +19,6 @@ export function Modal({
                           children,
                           footer,
                       }: ModalProps) {
-    const { t } = useI18n();
     const { classes, overlayClick } = useModal({
         isOpen,
         onClose,
@@ -35,7 +33,7 @@ export function Modal({
     return createPortal(
         <div className="modal__overlay" onClick={overlayClick}>
             <div className={classes} role="dialog" aria-modal="true">
-                <button className="modal__close" onClick={onClose} aria-label={t('Fermer')}>
+                <button className="modal__close" onClick={onClose} aria-label={('Fermer')}>
                     &times;
                 </button>
                 {title && <div className="modal__header">{title}</div>}

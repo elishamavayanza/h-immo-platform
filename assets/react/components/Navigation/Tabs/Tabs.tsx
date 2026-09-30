@@ -1,7 +1,5 @@
 import React from 'react';
 import {TabItem, useTabs, UseTabsProps} from '../../../hook-components/Navigation/Tabs';
-import { useI18n } from '@/react/i18n/I18nContext';
-
 export interface TabsProps extends UseTabsProps {
     children?: (activeTab: TabItem) => React.ReactNode; // contenu personnalisé par onglet
     renderContent?: (activeTabId: string) => React.ReactNode;
@@ -16,7 +14,6 @@ export function Tabs({
                          children,
                          renderContent,
                      }: TabsProps) {
-    const { t } = useI18n();
     const { classes, activeTabId, activeTab, selectTab } = useTabs({
         tabs,
         defaultActiveTabId,
@@ -41,7 +38,7 @@ export function Tabs({
                         disabled={tab.disabled}
                     >
                         {tab.icon && <span className="tabs__icon">{tab.icon}</span>}
-                        {typeof tab.label === 'string' ? t(tab.label) : tab.label}
+                        {typeof tab.label === 'string' ? (tab.label) : tab.label}
                     </button>
                 ))}
             </div>

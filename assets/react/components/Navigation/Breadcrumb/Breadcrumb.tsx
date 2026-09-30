@@ -1,15 +1,13 @@
 import React from 'react';
 import { useBreadcrumb, UseBreadcrumbProps } from '../../../hook-components/Navigation/Breadcrumb';
-import { useI18n } from '@/react/i18n/I18nContext';
 
 export interface BreadcrumbProps extends UseBreadcrumbProps {}
 
 export function Breadcrumb({ items, separator, size, className }: BreadcrumbProps) {
-    const { t } = useI18n();
     const { classes, separator: sep } = useBreadcrumb({ items, separator, size, className });
 
     return (
-        <nav className={classes} aria-label={t("Fil d'Ariane")}>
+        <nav className={classes} aria-label={("Fil d'Ariane")}>
             <ol className="breadcrumb__list">
                 {items.map((item, index) => {
                     const isLast = index === items.length - 1;

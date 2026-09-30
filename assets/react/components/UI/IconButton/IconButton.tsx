@@ -1,6 +1,6 @@
 import React, { forwardRef } from 'react';
-import { useIconButton, UseIconButtonProps } from '@/react/hook-components/UI/IconButton';
-import { useI18n } from '@/react/i18n/I18nContext';
+import {useIconButton, UseIconButtonProps} from "../../../hook-components/UI/IconButton";
+
 
 export interface IconButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement>, UseIconButtonProps {
     icon: React.ReactNode;
@@ -21,7 +21,6 @@ export const IconButton = forwardRef<HTMLButtonElement, IconButtonProps>(
         },
         ref
     ) => {
-        const { t } = useI18n();
         const { classes, ariaProps } = useIconButton({
             variant,
             fieldSize,
@@ -36,7 +35,7 @@ export const IconButton = forwardRef<HTMLButtonElement, IconButtonProps>(
                 type="button"
                 className={classes}
                 disabled={disabled || isLoading}
-                aria-label={typeof ariaLabel === 'string' ? t(ariaLabel) : ariaLabel}
+                aria-label={typeof ariaLabel === 'string' ? (ariaLabel) : ariaLabel}
                 {...ariaProps}
                 {...rest}
             >

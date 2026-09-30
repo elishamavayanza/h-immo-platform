@@ -42,7 +42,8 @@ export function FileUpload({
                                label,
                                hint,
                            }: FileUploadProps) {
-    const effectiveLabel = label ?? t('Cliquez ou déposez des fichiers ici');
+    const effectiveLabel = label ?? 'Cliquez ou déposez des fichiers ici';
+
     const {
         classes,
         files,
@@ -103,12 +104,14 @@ export function FileUpload({
                         <li key={file.id} className="fileupload__item">
                             <FileIcon />
                             <span className="fileupload__filename">{file.file.name}</span>
-                            <span className="fileupload__filesize">({(file.file.size / 1024).toFixed(1)} Ko)</span>
+                            <span className="fileupload__filesize">
+                                ({(file.file.size / 1024).toFixed(1)} Ko)
+                            </span>
                             <button
                                 type="button"
                                 className="fileupload__remove"
                                 onClick={() => removeFile(file.id)}
-                                aria-label={('Supprimer {{ nom }}', { nom: file.file.name })}
+                                aria-label={`Supprimer ${file.file.name}`}
                             >
                                 <RemoveIcon />
                             </button>

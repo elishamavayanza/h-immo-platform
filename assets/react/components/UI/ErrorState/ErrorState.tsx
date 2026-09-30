@@ -1,8 +1,25 @@
 import React from 'react';
 import { useErrorState, UseErrorStateProps } from '../../../hook-components/UI/ErrorState';
-import { Button } from '@/react/components/UI/Button';
-import { ApiErrorKind } from '@/services/api/errorDisplay';
-import { useI18n, TranslateFn } from '@/react/i18n/I18nContext';
+import { Button } from '../Button';
+
+
+// ─────────────────────────────────────────
+// Type local — catégories d’erreur API
+// ─────────────────────────────────────────
+// Défini localement pour éviter la dépendance à un service
+// externe. Étends cette union si ton backend expose d’autres
+// catégories (ex. 'timeout', 'rate-limit', etc.).
+// ─────────────────────────────────────────
+
+export type ApiErrorKind =
+    | 'unauthorized'
+    | 'forbidden'
+    | 'not-found'
+    | 'network'
+    | 'server'
+    | 'bad-request'
+    | 'unknown';
+
 
 // ─────────────────────────────────────────
 // Icônes d'illustration
@@ -86,6 +103,7 @@ function pickTone(status?: number, kind?: ApiErrorKind): 'default' | 'warning' |
     return 'info';
 }
 
+
 // ─────────────────────────────────────────
 // Composant
 // ─────────────────────────────────────────
@@ -111,8 +129,8 @@ export interface ErrorStateProps extends UseErrorStateProps {
     onHome?: () => void;
 }
 
-function renderActions(props: ErrorStateProps & { t: TranslateFn }) {
-    const { onRetry, onLogin, onBack, onHome, t } = props;
+function renderActions(props: ErrorStateProps) {
+    const { onRetry, onLogin, onBack, onHome } = props;
     const hasActions = !!(onRetry || onLogin || onBack || onHome);
     if (!hasActions) return null;
 
@@ -120,22 +138,22 @@ function renderActions(props: ErrorStateProps & { t: TranslateFn }) {
         <div className="error-state__actions">
             {onRetry && (
                 <Button variant="primary" onClick={onRetry}>
-                    {t('Réessayer')}
+                    Réessayer
                 </Button>
             )}
             {onLogin && (
                 <Button variant="primary" onClick={onLogin}>
-                    {t('Se connecter')}
+                    Se connecter
                 </Button>
             )}
             {onBack && (
                 <Button variant="secondary" onClick={onBack}>
-                    {t('Retour')}
+                    Retour
                 </Button>
             )}
             {onHome && (
                 <Button variant="secondary" onClick={onHome}>
-                    {t('Accueil')}
+                    Accueil
                 </Button>
             )}
         </div>
@@ -157,7 +175,6 @@ export function ErrorState({
                                compact,
                                className,
                            }: ErrorStateProps) {
-    const { t } = useI18n();
     const { classes } = useErrorState({
         size,
         tone: tone ?? pickTone(status, kind),
@@ -165,12 +182,12 @@ export function ErrorState({
         className,
     });
 
-    const displayedTitle = title ? (typeof title === 'string' ? t(title) : title) : t('Une erreur est survenue');
-    const displayedMessage = message ? (typeof message === 'string' ? t(message) : message) : undefined;
+    const displayedTitle = title ?? 'Une erreur est survenue';
+    const displayedMessage = message;
     const displayedCode = status !== undefined
         ? (codeLabel
-            ? t('ERREUR {{ status }} · {{ codeLabel }}', { status: String(status), codeLabel })
-            : t('ERREUR {{ status }}', { status: String(status) }))
+            ? `ERREUR ${status} · ${codeLabel}`
+            : `ERREUR ${status}`)
         : codeLabel;
 
     return (
@@ -187,7 +204,7 @@ export function ErrorState({
                 <span className="error-state__code">{displayedCode}</span>
             )}
 
-            {renderActions({ status, codeLabel, kind, title, message: displayedMessage, onRetry, onLogin, onBack, onHome, t })}
+            {renderActions({ status, codeLabel, kind, title, message: displayedMessage, onRetry, onLogin, onBack, onHome })}
         </div>
     );
 }

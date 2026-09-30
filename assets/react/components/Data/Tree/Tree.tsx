@@ -1,8 +1,7 @@
 import React, { useRef, useEffect } from 'react';
-import { useTree } from '@/react/hook-components/Data/Tree/useTree';
-import { TreeNode, TreeProps } from '@/react/hook-components/Data/Tree/types';
-import { useI18n } from '@/react/i18n/I18nContext';
 import '../../../../styles/components/Data/Tree.scss';
+import {TreeNode, TreeProps} from "../../../hook-components/Data/Tree/types.ts";
+import {useTree} from "../../../hook-components/Data/Tree/useTree.ts";
 
 const ChevronIcon = () => (
     <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2">
@@ -35,7 +34,6 @@ export function Tree({
                          variant = 'default',
                          showLines = false,
                       }: TreeProps) {
-    const { t } = useI18n();
     const {
         expandedMap,
         toggleNode,
@@ -92,7 +90,7 @@ export function Tree({
                                 e.stopPropagation();
                                 toggleNode(node);
                             }}
-                            aria-label={isExpanded ? t('Replier') : t('Déplier')}
+                            aria-label={isExpanded ? ('Replier') : ('Déplier')}
                         >
                             <ChevronIcon />
                         </button>
@@ -122,7 +120,7 @@ export function Tree({
     return (
         <div className={`tree tree--${variant} ${showLines ? 'tree--lines' : ''}`}>
             {filteredNodes.length === 0 ? (
-                <div className="tree__empty">{t('Aucun résultat')}</div>
+                <div className="tree__empty">{('Aucun résultat')}</div>
             ) : (
                 filteredNodes.map((node) => renderNode(node, 0))
             )}

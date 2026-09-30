@@ -1,6 +1,5 @@
 import React from 'react';
 import { useDropdown, UseDropdownProps } from '../../../hook-components/UI/Dropdown';
-import { useI18n } from '@/react/i18n/I18nContext';
 
 const ChevronIcon = () => (
     <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2">
@@ -11,7 +10,6 @@ const ChevronIcon = () => (
 export interface DropdownProps extends UseDropdownProps {}
 
 export function Dropdown({ options, value, onSelect, placeholder, disabled, className }: DropdownProps) {
-    const { t } = useI18n();
     const {
         classes,
         isOpen,
@@ -32,7 +30,7 @@ export function Dropdown({ options, value, onSelect, placeholder, disabled, clas
                 aria-haspopup="listbox"
                 aria-expanded={isOpen}
             >
-                <span className="dropdown__value">{selectedOption ? selectedOption.label : t(placeholderText)}</span>
+                <span className="dropdown__value">{selectedOption ? selectedOption.label : (placeholderText)}</span>
                 <ChevronIcon />
             </button>
 
