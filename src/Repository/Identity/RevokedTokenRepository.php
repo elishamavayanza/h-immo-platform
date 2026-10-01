@@ -56,10 +56,32 @@ class RevokedTokenRepository extends ServiceEntityRepository
     }
 
     /**
+     * Nombre de révocations déjà sans effet, donc candidates à la purge.
+     *
+     * Même prédicat que `purgeExpired()` : les deux méthodes doivent rester
+     * alignées, faute de quoi un `--dry-run` annoncerait un nombre différent
+     * de ce que la purge réelle supprimerait.
+     */
+    public function countExpired(): int
+    {
+        return (int) $this->createQueryBuilder('r')
+            ->select('COUNT(r.id)')
+            ->andWhere('r.expiresAt < :now')
+            ->setParameter('now', $this->dateTime->now())
+            ->getQuery()
+            ->getSingleScalarResult();
+    }
+
+    /**
      * Supprime les lignes dont le jeton correspondant est de toute façon
      * refusé : passé l'échéance, la révocation n'a plus d'effet puisque
      * `JWT::decode` rejette déjà le jeton. Sans cette purge, la table
      * grossirait indéfiniment au rythme des déconnexions.
+     *
+     * La borne est `expiresAt < now`, jamais `<=`, et jamais un calcul sur
+     * `createdAt` : une révocation dont le jeton est encore valide doit rester
+     * en table, faute de quoi le jeton révoqué redeviendrait utilisable
+     * jusqu'à son échéance naturelle.
      */
     public function purgeExpired(): int
     {
