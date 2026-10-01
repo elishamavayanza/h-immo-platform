@@ -791,7 +791,87 @@ que l'agent ne construise pas sur une prémisse fausse.
 
 ---
 
-## 20. Checklist avant de livrer
+## 20. Sécurité de la base de données (Database Safety)
+
+**Règle fondamentale : aucune modification de code ne doit entraîner automatiquement la suppression des données existantes.**
+
+### Workflow des migrations
+
+```text
+Modifier Entity
+      ↓
+Générer migration (doctrine:migrations:diff)
+      ↓
+Lire et analyser la migration générée
+      ↓
+Vérifier l'absence d'opérations destructives :
+  - DROP TABLE / DROP COLUMN / TRUNCATE / DELETE sans WHERE
+  - Renommage de colonne sans copie des données
+  - Changement de type risquant la perte de données
+      ↓
+Corriger la migration si nécessaire (copie progressive, ALTER non destructif)
+      ↓
+Appliquer la migration (doctrine:migrations:migrate)
+      ↓
+Vérifier la conservation des données
+```
+
+### Interdictions strictes
+
+Ne jamais exécuter automatiquement sur la base de développement :
+
+```bash
+php bin/console doctrine:database:drop --force
+php bin/console doctrine:database:create
+php bin/console doctrine:fixtures:load
+php bin/console doctrine:schema:update --force
+```
+
+Ces commandes ne sont autorisées que sur **demande explicite de l'utilisateur** et uniquement sur la base de **test**.
+
+### Tests : base de données séparée obligatoire
+
+- Les tests doivent utiliser l'environnement `test` (`APP_ENV=test` ou `new Kernel('test', ...)`)
+- La configuration `when@test` dans `config/packages/doctrine.yaml` ajoute un suffixe `_test` au nom de la base
+- La base de test (`gestion_himmo_test`) doit exister et être à jour (migrations appliquées)
+- Les scripts de test dans `tests/` utilisent des transactions qui sont **toutes** annulées à la fin (y compris le nettoyage initial `DELETE FROM`)
+
+### Fixtures
+
+- `doctrine:fixtures:load` ne doit **jamais** s'exécuter sur la base de développement
+- Les fixtures sont réservées à la base de test ou à un environnement de démonstration dédié
+
+### Protection dans les scripts de test
+
+Tous les scripts `tests/verify-*.php` suivent ce pattern :
+
+```php
+// 1. Démarrer la transaction AVANT toute suppression
+$connection->beginTransaction();
+
+// 2. Nettoyage (aussi dans la transaction, donc rollback à la fin)
+$connection->executeStatement('SET FOREIGN_KEY_CHECKS = 0');
+foreach ($tables as $table) {
+    $connection->executeStatement('DELETE FROM `' . $table . '`');
+}
+$connection->executeStatement('SET FOREIGN_KEY_CHECKS = 1');
+
+// 3. Créer les données de test, exécuter les vérifications
+// 4. Rollback automatique à la fin (shutdown function)
+```
+
+Cela garantit que **la base de développement est inchangée** après chaque exécution de test.
+
+### En cas de risque de perte de données
+
+Si une migration ou une opération comporte un risque de perte de données :
+1. Arrêter l'opération
+2. Signaler le risque explicitement
+3. Proposer une stratégie de migration progressive (copie, transformation, vérification, puis suppression de l'ancienne colonne)
+
+---
+
+## 21. Checklist avant de livrer
 
 ```text
 [ ] Le changement respecte-t-il l'isolation multi-organisation ?
@@ -809,4 +889,7 @@ que l'agent ne construise pas sur une prémisse fausse.
 [ ] Aucun secret ni fichier généré n'a été ajouté au dépôt ?
 [ ] Aucune modification préexistante de l'utilisateur n'a été écrasée ?
 [ ] AGENTS.md / docs restent-elles cohérentes avec le code ?
+[ ] Les tests utilisent-ils l'environnement `test` (base séparée) ?
+[ ] La migration a-t-elle été inspectée pour opérations destructives (DROP, TRUNCATE, DELETE sans WHERE) ?
+[ ] Les données de développement sont-elles conservées après migration ?
 ```

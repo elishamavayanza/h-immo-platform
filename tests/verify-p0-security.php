@@ -162,6 +162,7 @@ $database = (string) $connection->fetchOne('SELECT DATABASE()');
 $tables = $connection->fetchFirstColumn(
     'SELECT table_name FROM information_schema.tables WHERE table_schema = DATABASE()'
 );
+$connection->beginTransaction();
 $connection->executeStatement('SET FOREIGN_KEY_CHECKS = 0');
 
 foreach (array_reverse($tables) as $table) {
@@ -172,7 +173,6 @@ foreach (array_reverse($tables) as $table) {
 }
 
 $connection->executeStatement('SET FOREIGN_KEY_CHECKS = 1');
-$connection->beginTransaction();
 
 $rollback = static function () use ($connection): void {
     if ($connection->isTransactionActive()) {
