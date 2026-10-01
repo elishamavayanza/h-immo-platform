@@ -604,6 +604,21 @@ final class SecurityService implements SecurityServiceInterface
         $this->checkCityAccess($unit->getBuilding()->getParcel()->getCity(), $action);
     }
 
+    /**
+     * Gérer la vitrine publique d'une unité se décide sur la ville où elle se
+     * trouve, pas sur l'unité seule.
+     *
+     * Aucune logique territoriale n'est ajoutée ici : la délégation à
+     * `checkUnitAccess()` fait déjà remonter jusqu'à `checkCityAccess()`, qui
+     * résout le rôle dans l'Organization de la ville et vérifie les `UserCity`
+     * d'un ADMIN_VILLE. Réimplémenter ce contrôle exposerait deux endroits où
+     * modifier la règle territoriale, dont un oublié.
+     */
+    public function checkUnitPublishAccess(Unit $unit, SecurityAction $action): void
+    {
+        $this->checkUnitAccess($unit, $action);
+    }
+
     public function canAccessUnit(Unit $unit, SecurityAction $action = SecurityAction::VIEW): bool
     {
         try {
@@ -1031,6 +1046,7 @@ final class SecurityService implements SecurityServiceInterface
             SecurityAction::VIEW_BUILDING, SecurityAction::CREATE_BUILDING, SecurityAction::UPDATE_BUILDING, SecurityAction::DELETE_BUILDING,
 
             SecurityAction::VIEW_UNIT, SecurityAction::CREATE_UNIT, SecurityAction::UPDATE_UNIT, SecurityAction::DELETE_UNIT,
+            SecurityAction::PUBLISH_LISTING,
 
             SecurityAction::VIEW_TENANT, SecurityAction::CREATE_TENANT, SecurityAction::UPDATE_TENANT, SecurityAction::DELETE_TENANT, SecurityAction::ARCHIVE_TENANT,
 
@@ -1081,6 +1097,7 @@ final class SecurityService implements SecurityServiceInterface
             SecurityAction::VIEW_BUILDING, SecurityAction::CREATE_BUILDING, SecurityAction::UPDATE_BUILDING, SecurityAction::DELETE_BUILDING,
 
             SecurityAction::VIEW_UNIT, SecurityAction::CREATE_UNIT, SecurityAction::UPDATE_UNIT, SecurityAction::DELETE_UNIT,
+            SecurityAction::PUBLISH_LISTING,
 
             SecurityAction::VIEW_TENANT, SecurityAction::CREATE_TENANT, SecurityAction::UPDATE_TENANT, SecurityAction::ARCHIVE_TENANT,
 

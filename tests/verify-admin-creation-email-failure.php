@@ -35,15 +35,11 @@ use App\Enum\OrganizationRole;
 use App\Enum\OrganizationStatus;
 use App\Enum\PlatformRole;
 use Doctrine\ORM\EntityManagerInterface;
-use Symfony\Component\DependencyInjection\Compiler\CompilerPassInterface;
-use Symfony\Component\DependencyInjection\ContainerBuilder;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\Mailer\Exception\TransportException;
 use Symfony\Component\Mailer\Envelope;
 use Symfony\Component\Mailer\MailerInterface;
 use Symfony\Component\Mime\RawMessage;
-
-ob_start();
 
 require dirname(__DIR__) . '/vendor/autoload.php';
 (new Symfony\Component\Dotenv\Dotenv())->bootEnv(dirname(__DIR__) . '/.env');
@@ -63,28 +59,6 @@ final class FailingMailer implements MailerInterface
     }
 }
 
-final class AdminCreationKernel extends App\Kernel
-{
-    protected function build(ContainerBuilder $container): void
-    {
-        $container->addCompilerPass(new class implements CompilerPassInterface {
-            public function process(ContainerBuilder $container): void
-            {
-                foreach (['security.token_storage', 'cache.rate_limiter'] as $id) {
-                    if ($container->hasDefinition($id)) {
-                        $container->getDefinition($id)->setPublic(true);
-                    }
-                }
-
-                // Substitution du transport : c'est ce qui rend le scénario
-                // d'échec d'envoi reproductible.
-                if ($container->hasDefinition('mailer.mailer')) {
-                    $container->getDefinition('mailer.mailer')->setClass(FailingMailer::class);
-                }
-            }
-        });
-    }
-}
 
 $checks = 0;
 $failures = [];
@@ -108,6 +82,44 @@ function check(string $label, bool $ok, string $detail = ''): void
 function section(string $title): void
 {
     echo "\n=== {$title} ===\n";
+}
+
+// Clear cache to ensure MAILER_DSN change is picked up
+exec('rm -rf ' . dirname(__DIR__) . '/var/cache/dev');
+
+use Symfony\Bundle\FrameworkBundle\Kernel\MicroKernelTrait;
+use Symfony\Component\DependencyInjection\Compiler\CompilerPassInterface;
+use Symfony\Component\DependencyInjection\ContainerBuilder;
+use Symfony\Component\HttpKernel\Kernel as BaseKernel;
+
+final class AdminCreationKernel extends BaseKernel
+{
+    use MicroKernelTrait;
+
+    public function getProjectDir(): string
+    {
+        return dirname(__DIR__);
+    }
+
+    protected function build(ContainerBuilder $container): void
+    {
+        parent::build($container);
+
+        $container->addCompilerPass(new class implements CompilerPassInterface {
+            public function process(ContainerBuilder $container): void
+            {
+                foreach (['security.token_storage', 'cache.rate_limiter', 'mailer.mailer'] as $id) {
+                    if ($container->hasDefinition($id)) {
+                        $container->getDefinition($id)->setPublic(true);
+                    }
+                }
+
+                if ($container->hasDefinition('mailer.mailer')) {
+                    $container->getDefinition('mailer.mailer')->setClass(FailingMailer::class);
+                }
+            }
+        });
+    }
 }
 
 $kernel = new AdminCreationKernel('dev', false);

@@ -96,6 +96,23 @@ class Unit extends SoftDeletableEntity
     #[ORM\Column(type: Types::TEXT, nullable: true)]
     private ?string $description = null;
 
+    /**
+     * Décision éditoriale : cette unité est-elle proposée sur la vitrine
+     * publique ?
+     *
+     * ⚠ Ce champ n'est PAS l'état de disponibilité. Une unité peut rester
+     * `true` et être invisible si elle porte un bail `ACTIVE` : la visibilité
+     * publique est recalculée à chaque lecture (`findPublishedAndVacant()`),
+     * jamais déduite de ce seul drapeau.
+     *
+     * Conséquence voulue : à la fin d'un bail, l'unité redevient visible sans
+     * que personne ait à la republier. C'est aussi pourquoi ce champ n'est pas
+     * remis à `false` à l'activation d'un bail — cela obligerait un
+     * ADMIN_VILLE à intervenir manuellement à chaque vacance.
+     */
+    #[ORM\Column(type: Types::BOOLEAN, options: ['default' => false])]
+    private bool $isPublished = false;
+
     public function getBuilding(): Building
     {
         return $this->building;
@@ -224,6 +241,18 @@ class Unit extends SoftDeletableEntity
     public function setDescription(?string $description): static
     {
         $this->description = $description;
+
+        return $this;
+    }
+
+    public function isPublished(): bool
+    {
+        return $this->isPublished;
+    }
+
+    public function setIsPublished(bool $isPublished): static
+    {
+        $this->isPublished = $isPublished;
 
         return $this;
     }

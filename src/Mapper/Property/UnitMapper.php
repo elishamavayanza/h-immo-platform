@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Mapper\Property;
 
 use App\Dto\Request\Property\UnitRequest;
+use App\Dto\Response\Property\PublicListingResponse;
 use App\Dto\Response\Property\UnitResponse;
 use App\Entity\Property\Unit;
 
@@ -66,4 +67,37 @@ final class UnitMapper
         return UnitResponse::fromEntity($unit);
     }
 
+    /**
+     * Annonce publique d'une unité disponible.
+     *
+     * La ville et le nom du bâtiment sont résolus ici plutôt que dans le
+     * service : la chaîne `Unit → Building → Parcel → City` est une
+     * navigation d'entité, donc une affaire de mapping.
+     *
+     * @param list<array{url: string, position: int}> $photos galerie déjà ordonnée
+     */
+    public function toPublicListing(
+        Unit $unit,
+        array $photos
+    ): PublicListingResponse {
+        $city = $unit->getBuilding()->getParcel()->getCity();
+        $building = $unit->getBuilding();
+
+        return new PublicListingResponse(
+            unitId: (string) $unit->getUuid(),
+            reference: $unit->getReference(),
+            type: $unit->getType()->value,
+            floor: $unit->getFloor(),
+            description: $unit->getDescription(),
+            monthlyRent: $unit->getMonthlyRent(),
+            currency: $unit->getCurrency()->value,
+            surface: $unit->getSurface(),
+            bedrooms: $unit->getBedrooms(),
+            rooms: $unit->getRooms(),
+            bathrooms: $unit->getBathrooms(),
+            city: $city->getName(),
+            buildingName: $building->getName(),
+            photos: $photos,
+        );
+    }
 }

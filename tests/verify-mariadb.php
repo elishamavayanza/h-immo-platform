@@ -10,6 +10,11 @@ use Symfony\Component\Dotenv\Dotenv;
 
 require dirname(__DIR__).'/vendor/autoload.php';
 
+// La table de métadonnées de Doctrine n'appartient pas au modèle métier : elle
+// est exclue de la comparaison des tables attendues, et son nom est centralisé
+// ici car le reste du script la désigne à plusieurs endroits.
+const MIGRATION_TABLE = 'doctrine_migration_versions';
+
 (new Dotenv())->bootEnv(dirname(__DIR__).'/.env');
 
 /**
@@ -117,19 +122,64 @@ $sm = $connection->createSchemaManager();
 $tables = $sm->listTableNames();
 
 $expected = [
-    'audit_log', 'building', 'city', 'expense', 'lease', 'organization',
-    'organization_user', 'parcel', 'password_reset_token', 'payment', 'rent',
-    'revoked_token', 'tenant', 'unit', 'user', 'user_city', 'worker',
-    'worker_assignment',
+    'audit_log', 'building', 'city', 'exchange_rate', 'expense', 'lease',
+    'organization', 'organization_user', 'parcel', 'password_reset_token',
+    'payment', 'rent', 'revoked_token', 'tenant', 'unit', 'unit_photo',
+    'user', 'user_city', 'worker', 'worker_assignment',
 ];
 
 $missing = array_values(array_diff($expected, $tables));
 check('toutes les tables attendues existent', $missing === [], implode(', ', $missing));
 
+// La vitrine publique ne doit pas dépendre du nombre de tables : une table
+// ajoutée par erreur resterait invisible si la liste ci-dessus n'était
+// qu'un minimum. La comparaison est donc stricte dans les deux sens.
+// La table de métadonnées de Doctrine est la seule exception : elle appartient
+// à l'outil de migration, pas au modèle métier, et son nom varie selon la
+// configuration (`migration_versions` sous d'autres réglages).
+$unexpected = array_values(array_diff($tables, $expected, [MIGRATION_TABLE]));
+check('aucune table inattendue', $unexpected === [], implode(', ', $unexpected));
+
 check('la table revoked_token existe', in_array('revoked_token', $tables, true));
+check('la table unit_photo existe', in_array('unit_photo', $tables, true));
+
+// Colonnes de la vitrine : `is_published` porte la décision de publier,
+// jamais l'état de disponibilité, recalculé à chaque lecture publique.
+$unitColumns = array_map(
+    static fn ($column): string => strtolower($column->getName()),
+    $sm->listTableColumns('unit'),
+);
+$organizationColumns = array_map(
+    static fn ($column): string => strtolower($column->getName()),
+    $sm->listTableColumns('organization'),
+);
+
+check('unit.is_published existe', in_array('is_published', $unitColumns, true));
+check(
+    'organization expose slug, public_description et is_publicly_listed',
+    in_array('slug', $organizationColumns, true)
+        && in_array('public_description', $organizationColumns, true)
+        && in_array('is_publicly_listed', $organizationColumns, true),
+);
+
+// `position` est indexé avec `unit_id` : la galerie est lue par unité et
+// ordonnée, c'est le couple qui doit être indexé.
+$unitPhotoIndexes = $sm->listTableIndexes('unit_photo');
+$indexedColumns = [];
+
+foreach ($unitPhotoIndexes as $index) {
+    foreach ($index->getColumns() as $column) {
+        $indexedColumns[] = strtolower($column);
+    }
+}
+
+check(
+    'unit_photo est indexé sur (unit_id, position)',
+    in_array('unit_id', $indexedColumns, true) && in_array('position', $indexedColumns, true),
+);
 
 $migrations = $sm->listTableNames();
-$metaTable = in_array('doctrine_migration_versions', $migrations, true);
+$metaTable = in_array(MIGRATION_TABLE, $migrations, true);
 check('la table des versions de migration existe', $metaTable);
 
 if ($metaTable) {

@@ -79,6 +79,10 @@ security:
         - { path: ^/api/doc, roles: PUBLIC_ACCESS }
         - { path: ^/api/docs, roles: PUBLIC_ACCESS }
 
+        # Vitrine publique : lecture sans authentification.
+        # Doit précéder la règle `^/api` pour ne pas être interceptée.
+        - { path: ^/api/public/, roles: PUBLIC_ACCESS }
+
         # Public : l'onboarding d'un compte (Organization + PATRON) se fait
         # par email. Sans ces deux exceptions, les endpoints tomberaient
         # sur la règle `^/api` ci-dessous et exigeraient une session déjà

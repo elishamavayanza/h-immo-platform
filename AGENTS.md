@@ -135,16 +135,16 @@ Règles :
   en sont dépourvus : un `r.deletedAt IS NULL` sur ces tables est une erreur DQL
   « no field or association named deletedAt », donc un 500 à l'exécution.
 
-### Entités réellement présentes (18 tables)
+### Entités réellement présentes (20 tables)
 
 | Package | Entités (classe de base) |
 | --- | --- |
 | Identity | `User` (SoftDeletable), `Organization` (SoftDeletable), `OrganizationUser` (Timestamped), `UserCity` (CreatedOnly), `PasswordResetToken` (CreatedOnly), `RevokedToken` (CreatedOnly) |
-| Property | `City`, `Parcel`, `Building`, `Unit` (tous SoftDeletable) |
+| Property | `City`, `Parcel`, `Building`, `Unit`, `UnitPhoto` (tous SoftDeletable) |
 | Rental | `Tenant`, `Lease` (SoftDeletable), `Rent`, `Payment` (Timestamped) |
 | Expense | `Expense` (Timestamped) |
 | Staff | `Worker`, `WorkerAssignment` (SoftDeletable) |
-| System | `AuditLog` (CreatedOnly) |
+| System | `AuditLog`, `ExchangeRate` (CreatedOnly) |
 
 Il n'existe **pas** d'entité `Owner`, `Property`, `Contract`, `Maintenance`,
 `Document` ni `Notification` dans le code, malgré leur mention dans
@@ -438,7 +438,7 @@ Migrations (`migrations/`, namespace `DoctrineMigrations`, répertoire déclaré
 ## 11. Sessions
 
 Le projet **n'a pas et ne doit pas avoir de table `sessions` en base** (la
-baseline crée 18 tables, aucune n'est `sessions`).
+baseline crée 20 tables, aucune n'est `sessions`).
 
 - Le pare-feu `main` est `stateless: true` : authentification par jeton Bearer
   uniquement, aucun cookie de session émis.

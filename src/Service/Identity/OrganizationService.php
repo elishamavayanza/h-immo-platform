@@ -6,6 +6,7 @@ namespace App\Service\Identity;
 
 use App\Dto\Feedback;
 use App\Dto\Request\Identity\OrganizationRequest;
+use App\Dto\Request\Identity\OrganizationShowcaseRequest;
 use App\Dto\Request\PaginationQuery;
 use App\Entity\Identity\Organization;
 use App\Entity\Identity\OrganizationUser;
@@ -18,7 +19,9 @@ use App\Repository\Identity\UserRepository;
 use App\Security\SecurityAction;
 use App\Security\SecurityServiceInterface;
 use App\Service\System\AuditLogService;
+use App\Service\System\DateTimeService;
 use Doctrine\ORM\EntityManagerInterface;
+use Symfony\Component\Uid\Uuid;
 use Symfony\Component\Validator\Validator\ValidatorInterface;
 
 /**
@@ -44,7 +47,8 @@ final readonly class OrganizationService
         private ValidatorInterface $validator,
         private SecurityServiceInterface $security,
         private PasswordResetService $passwordResetService,
-        private AuditLogService $auditLogService
+        private AuditLogService $auditLogService,
+        private DateTimeService $dateTimeService
     ) {
     }
 
@@ -266,6 +270,97 @@ final readonly class OrganizationService
         return $feedback
             ->setData($this->mapper->toResponse($organization))
             ->setFlushDescription('L\'organisation a été mise à jour avec succès.')
+            ->setStatus(200)
+            ->autoInitFlush();
+    }
+
+    /**
+     * Met à jour la vitrine publique de l'Organization.
+     *
+     * Réservé au PATRON, via `MANAGE_ORGANIZATION` : la vitrine engage
+     * l'image de l'entreprise et son URL publique, alors qu'un
+     * `ADMIN_IMMOBILIER` ou un `ADMIN_VILLE` n'a mandat que sur son périmètre
+     * immobilier ou son périmètre ville.
+     *
+     * Les trois champs sont facultatifs et appliqués seulement s'ils sont
+     * présents : une omission ne doit pas effacer la présentation existante.
+     * Pour vider volontairement la description, le client envoie `""`, qui
+     * arrive ici comme une chaîne vide et non comme `null`.
+     */
+    public function updateShowcase(string $uuid, OrganizationShowcaseRequest $request): Feedback
+    {
+        $feedback = new Feedback();
+
+        $organization = $this->repository->findOneByUuid(Uuid::fromString($uuid));
+
+        if (!$organization) {
+            return $feedback
+                ->addError('uuid', 'Organisation introuvable.')
+                ->setErrorFlushDescription('Impossible de mettre à jour la vitrine.')
+                ->setStatus(404)
+                ->autoInitFlush();
+        }
+
+        $this->security->checkOrganizationAccess($organization, SecurityAction::MANAGE_ORGANIZATION);
+
+        $violations = $this->validator->validate($request);
+
+        if (count($violations) > 0) {
+            return $feedback
+                ->bind($violations)
+                ->setErrorFlushDescription('Échec de la validation des données.')
+                ->setStatus(422)
+                ->autoInitFlush();
+        }
+
+        $previous = [
+            'slug' => $organization->getSlug(),
+            'isPubliclyListed' => $organization->isPubliclyListed(),
+        ];
+
+        if ($request->slug !== null) {
+            // La page est identifiée par son slug : un slug déjà pris par une
+            // autre entreprise rendrait deux vitrines ambiguës sur la même
+            // URL, d'où le contrôle explicite plutôt qu'un `catch` sur la
+            // violation UNIQUE, dont le message n'est pas traduisible.
+            if ($this->repository->isSlugTakenByAnother($request->slug, $organization)) {
+                return $feedback
+                    ->addError('slug', 'Ce slug est déjà utilisé par une autre entreprise.')
+                    ->setErrorFlushDescription('Conflit sur le slug.')
+                    ->setStatus(409)
+                    ->autoInitFlush();
+            }
+
+            $organization->setSlug($request->slug);
+        }
+
+        if ($request->publicDescription !== null) {
+            $organization->setPublicDescription($request->publicDescription);
+        }
+
+        if ($request->isPubliclyListed !== null) {
+            $organization->setIsPubliclyListed($request->isPubliclyListed);
+        }
+
+        $organization->setUpdatedAt($this->dateTimeService->now());
+        $this->em->flush();
+
+        $this->auditLogService->log(
+            'SHOWCASE_UPDATED',
+            Organization::class,
+            $organization->getId(),
+            $organization,
+            $this->security->getCurrentUser(),
+            $previous,
+            [
+                'slug' => $organization->getSlug(),
+                'isPubliclyListed' => $organization->isPubliclyListed(),
+            ]
+        );
+
+        return $feedback
+            ->setData($this->mapper->toResponse($organization))
+            ->setFlushDescription('La vitrine publique a été mise à jour.')
             ->setStatus(200)
             ->autoInitFlush();
     }

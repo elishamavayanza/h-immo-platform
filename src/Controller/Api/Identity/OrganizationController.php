@@ -4,10 +4,13 @@ declare(strict_types=1);
 
 namespace App\Controller\Api\Identity;
 
+use App\Dto\Feedback;
 use App\Dto\Request\Identity\OrganizationRequest;
+use App\Dto\Request\Identity\OrganizationShowcaseRequest;
 use App\Dto\Request\PaginationQuery;
 use App\Service\Identity\OrganizationService;
 use App\Trait\FeedbackTrait;
+use Nelmio\ApiDocBundle\Attribute\Model;
 use OpenApi\Attributes as OA;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
@@ -98,6 +101,42 @@ final class OrganizationController extends AbstractController
     public function delete(string $uuid): JsonResponse
     {
         $feedback = $this->organizationService->delete($uuid);
+
+        return $this->json($feedback, $feedback->getStatus());
+    }
+
+    #[Route('/{uuid}/showcase', name: 'update_showcase', methods: ['PATCH'])]
+    #[OA\Patch(
+        summary: 'Mettre à jour la vitrine publique de l\'entreprise',
+        description: 'Modifie le slug, la description publique et la visibilité de la vitrine. Réservé au PATRON.'
+    )]
+    #[OA\RequestBody(content: new OA\JsonContent(ref: new Model(type: OrganizationShowcaseRequest::class)))]
+    #[OA\Response(
+        response: 200,
+        description: 'Vitrine mise à jour',
+        content: new OA\JsonContent(ref: new Model(type: Feedback::class))
+    )]
+    #[OA\Response(
+        response: 409,
+        description: 'Slug déjà utilisé par une autre entreprise'
+    )]
+    #[OA\Response(
+        response: 422,
+        description: 'Données invalides (slug mal formaté)'
+    )]
+    #[OA\Response(
+        response: 403,
+        description: 'Accès réservé au PATRON'
+    )]
+    #[OA\Response(
+        response: 404,
+        description: 'Organisation introuvable'
+    )]
+    public function updateShowcase(
+        string $uuid,
+        #[MapRequestPayload] OrganizationShowcaseRequest $request
+    ): JsonResponse {
+        $feedback = $this->organizationService->updateShowcase($uuid, $request);
 
         return $this->json($feedback, $feedback->getStatus());
     }

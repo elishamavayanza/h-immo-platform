@@ -234,6 +234,18 @@ interface SecurityServiceInterface
      */
     public function checkUnitAccess(Unit $unit, SecurityAction $action): void;
 
+    /**
+     * Vérifie que l'appelant peut gérer la vitrine publique de cette unité.
+     *
+     * Alias de `checkUnitAccess($unit, PUBLISH_LISTING)`, nommé pour que le
+     * service appelant n'ait pas à répéter l'action. La délégation est
+     * héritée : la chaîne `Unit → Building → Parcel → City` retombe sur
+     * `checkCityAccess()`, qui borne un ADMIN_VILLE à ses `UserCity`.
+     *
+     * @throws AccessDeniedException
+     */
+    public function checkUnitPublishAccess(Unit $unit, SecurityAction $action): void;
+
     public function canAccessUnit(
         Unit $unit,
         SecurityAction $action = SecurityAction::VIEW
