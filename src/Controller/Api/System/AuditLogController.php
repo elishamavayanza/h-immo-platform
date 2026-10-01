@@ -24,15 +24,23 @@ use Symfony\Component\Security\Http\Attribute\IsGranted;
  *
  * Journal d'audit centralisé (traçabilité des actions sur la plateforme).
  * Enregistre : action, type d'entité, ID, valeurs avant/après, organisation, utilisateur.
- * Accessible uniquement aux rôles d'administration (ROLE_ADMIN).
- * L'isolation Organization est appliquée : un PATRON/ADMIN_IMMOBILIER ne voit que son organisation.
+ * L'isolation Organization est appliquée : un PATRON/ADMIN_IMMOBILIER ne voit que son
+ * organisation, un ADMIN_VILLE en est exclu, et seul le SUPER_ADMIN a une vue plateforme.
+ *
+ * Le garde-fou du contrôleur est volontairement minimal (`ROLE_USER`, comme
+ * les neuf autres contrôleurs) : la restriction réelle est portée par
+ * `SecurityService::checkOrganizationAuditLogAccess()`, qui lit le rôle
+ * d'Organization du lecteur. Il ne faut pas la remplacer par un rôle de
+ * pare-feu — aucun utilisateur ne dérive de rôle depuis son rôle
+ * d'Organization, `User::getRoles()` ne produisant que `ROLE_USER` et
+ * `ROLE_SUPER_ADMIN`.
  *
  * Endpoints :
  * - GET /api/v1/system/audit-logs          : liste paginée avec filtres
  * - GET /api/v1/system/audit-logs/{uuid}   : détails d'une entrée
  */
 #[Route('/api/v1/system/audit-logs')]
-#[IsGranted('ROLE_ADMIN')]
+#[IsGranted('ROLE_USER')]
 #[OA\Tag(name: 'System & Audit', description: 'Journal d\'audit centralisé (traçabilité, sécurité, conformité).')]
 final class AuditLogController extends AbstractController
 {
@@ -106,6 +114,8 @@ final class AuditLogController extends AbstractController
                 description: 'Détail du log d\'audit',
                 content: new OA\JsonContent(ref: new Model(type: AuditLogResponse::class))
             ),
+            new OA\Response(response: 401, description: 'Non authentifié'),
+            new OA\Response(response: 403, description: 'Accès refusé : entrée hors du périmètre du lecteur'),
             new OA\Response(response: 404, description: 'Entrée introuvable'),
         ]
     )]
