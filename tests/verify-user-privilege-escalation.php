@@ -119,6 +119,7 @@ $connection = $em->getConnection();
 $tables = $connection->fetchFirstColumn(
     'SELECT table_name FROM information_schema.tables WHERE table_schema = DATABASE()'
 );
+$connection->beginTransaction();
 $connection->executeStatement('SET FOREIGN_KEY_CHECKS = 0');
 
 foreach (array_reverse($tables) as $table) {
@@ -128,7 +129,6 @@ foreach (array_reverse($tables) as $table) {
 }
 
 $connection->executeStatement('SET FOREIGN_KEY_CHECKS = 1');
-$connection->beginTransaction();
 
 $suffix = 'escalation';
 $plainPassword = 'MotDePasse!123';

@@ -162,6 +162,7 @@ $migrationTables = ['doctrine_migration_versions', 'migration_versions'];
 $wiped = 0;
 $skipped = [];
 
+$connection->beginTransaction();
 $connection->executeStatement('SET FOREIGN_KEY_CHECKS = 0');
 
 foreach (array_reverse($tables) as $table) {
