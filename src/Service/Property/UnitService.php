@@ -14,6 +14,7 @@ use App\Repository\Property\UnitRepository;
 use App\Security\SecurityAction;
 use App\Security\SecurityServiceInterface;
 use Doctrine\ORM\EntityManagerInterface;
+use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 use Symfony\Component\Uid\Uuid;
 use Symfony\Component\Validator\Validator\ValidatorInterface;
 
@@ -200,6 +201,31 @@ final readonly class UnitService
             ->setFlushDescription('Le unité a été supprimé avec succès.')
             ->setStatus(200)
             ->autoInitFlush();
+    }
+
+    /**
+     * Trouve une unité par son UUID, ou lève NotFoundHttpException.
+     *
+     * Ne fait PAS de contrôle d'accès : l'appelant (PublicShowcaseManagementService)
+     * applique son propre contrôle (`PUBLISH_LISTING`) après la résolution.
+     * C'est délibéré pour que l'exception 404 ne distingue pas "unité d'un autre
+     * tenant" d'"unité inexistante" — seul un 404 unifié évite l'énumération.
+     */
+    public function findByUuidOrFail(string $uuid): Unit
+    {
+        try {
+            $parsed = Uuid::fromString($uuid);
+        } catch (\InvalidArgumentException) {
+            throw new NotFoundHttpException('Identifiant de unité invalide.');
+        }
+
+        $unit = $this->unitRepository->findOneByUuid($parsed);
+
+        if ($unit === null) {
+            throw new NotFoundHttpException('Unité introuvable.');
+        }
+
+        return $unit;
     }
 
     /**

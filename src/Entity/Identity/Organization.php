@@ -24,6 +24,7 @@ use Doctrine\ORM\Mapping as ORM;
 #[ORM\Entity]
 #[ORM\Table(name: 'organization')]
 #[ORM\UniqueConstraint(name: 'uniq_organization_code', columns: ['code'])]
+#[ORM\UniqueConstraint(name: 'uniq_organization_slug', columns: ['slug'])]
 class Organization extends SoftDeletableEntity
 {
 
@@ -74,6 +75,39 @@ class Organization extends SoftDeletableEntity
      */
     #[ORM\Column(type: Types::STRING, length: 100, nullable: true)]
     private ?string $country = null;
+
+    /**
+     * Identifiant lisible utilisé dans l'URL de la vitrine publique
+     * (`/api/public/organizations/{slug}`).
+     *
+     * Volontairement distinct de `code` : `code` est un identifiant interne
+     * propre à l'organization et n'a aucune vocation à être présenté à un
+     * visiteur. Nullable pour que les Organizations existantes — créées sans
+     * vitrine — restent exploitables ; une Organization sans slug n'a pas de
+     * page publique, ce qui n'est pas la même chose qu'une page dépubliée.
+     */
+    #[ORM\Column(type: Types::STRING, length: 60, nullable: true, unique: true)]
+    private ?string $slug = null;
+
+    /**
+     * Texte de présentation affiché sur la page publique.
+     *
+     * Distinct de `name` (identité administrative) et de `address` (coordonnée
+     * postale) : c'est le seul champ fait pour être lu par un visiteur.
+     */
+    #[ORM\Column(type: Types::TEXT, nullable: true)]
+    private ?string $publicDescription = null;
+
+    /**
+     * Interrupteur de mise en ligne de la vitrine.
+     *
+     * `false` renvoie un 404 sur les routes publiques sans rien supprimer :
+     * un PATRON doit pouvoir retirer sa page de la circulation tout en gardant
+     * son texte et ses annonces. La disponibilité des unités, elle, ne dépend
+     * pas de ce champ mais du bail actif, recalculé à chaque lecture.
+     */
+    #[ORM\Column(type: Types::BOOLEAN, options: ['default' => true])]
+    private bool $isPubliclyListed = true;
 
     /**
      * État actuel de l'organisation dans la plateforme.
@@ -175,6 +209,54 @@ class Organization extends SoftDeletableEntity
         $this->country = $country;
 
         return $this;
+    }
+
+    public function getSlug(): ?string
+    {
+        return $this->slug;
+    }
+
+    public function setSlug(?string $slug): static
+    {
+        $this->slug = $slug === null ? null : mb_strtolower(trim($slug));
+
+        return $this;
+    }
+
+    public function getPublicDescription(): ?string
+    {
+        return $this->publicDescription;
+    }
+
+    public function setPublicDescription(?string $publicDescription): static
+    {
+        $this->publicDescription = $publicDescription;
+
+        return $this;
+    }
+
+    public function isPubliclyListed(): bool
+    {
+        return $this->isPubliclyListed;
+    }
+
+    public function setIsPubliclyListed(bool $isPubliclyListed): static
+    {
+        $this->isPubliclyListed = $isPubliclyListed;
+
+        return $this;
+    }
+
+    /**
+     * La vitrine n'est-elle pas accessible au public ?
+     *
+     * Nomé par rapport à ce qui est demandé partout ailleurs dans l'entité
+     * (`isActive()`, `isSuspended()`) pour qu'un appelant puisse lire la
+     * condition sans connaître le sens du drapeau.
+     */
+    public function isPubliclyHidden(): bool
+    {
+        return !$this->isPubliclyListed;
     }
 
     public function getStatus(): OrganizationStatus

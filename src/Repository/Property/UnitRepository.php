@@ -4,10 +4,13 @@ declare(strict_types=1);
 
 namespace App\Repository\Property;
 
+use App\Entity\Identity\Organization;
 use App\Entity\Property\Building;
 use App\Entity\Property\City;
 use App\Entity\Property\Unit;
+use App\Enum\Currency;
 use App\Enum\LeaseStatus;
+use App\Enum\UnitType;
 use App\Repository\PaginatedResultTrait;
 use App\Repository\UuidParameterTrait;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
@@ -184,5 +187,128 @@ class UnitRepository extends ServiceEntityRepository
         }
 
         return $this->fetchPaginated($qb, $page, $limit);
+    }
+
+    /**
+     * Unités publiées ET libres, pour la vitrine publique.
+     *
+     * Les deux conditions sont indissociables, et c'est le cœur de la règle
+     * métier de cette fonctionnalité :
+     *
+     *  - `is_published` est la *décision* de l'ADMIN_VILLE, pas l'état de
+     *    disponibilité ;
+     *  - l'absence de bail `ACTIVE` est l'*état réel*, recalculé à chaque
+     *    lecture.
+     *
+     * Ne filtrer que sur `is_published` laisserait afficher une unité louée ;
+     * ne filtrer que sur l'absence de bail publierait des unités qu'aucun
+     * gestionnaire n'a choisi d'exposer. Les lignes supprimées sont exclues à
+     * chaque niveau de la chaîne, `SoftDeletableEntity` n'ayant pas de filtre
+     * Doctrine automatique.
+     *
+     * Le `NOT EXISTS` porte sur `lease.unit_id` et `lease.status`, tous deux
+     * indexés : la sous-requête corrélée ne se réexécute pas ligne à ligne.
+     *
+     * @param list<City> $cities villes retenues par le filtre, ou [] pour toutes
+     *                          celles de l'Organization
+     * @return array{items: list<Unit>, total: int}
+     */
+    public function findPublishedAndVacant(
+        Organization $organization,
+        array $cities = [],
+        int $page = 1,
+        int $limit = 20,
+        ?UnitType $type = null,
+        ?int $minBedrooms = null,
+        ?string $minRent = null,
+        ?string $maxRent = null,
+        ?Currency $currency = null
+    ): array {
+        $qb = $this->createQueryBuilder('u')
+            ->innerJoin('u.building', 'b')
+            ->innerJoin('b.parcel', 'p')
+            ->innerJoin('p.city', 'c')
+            ->andWhere('u.deletedAt IS NULL')
+            ->andWhere('b.deletedAt IS NULL')
+            ->andWhere('p.deletedAt IS NULL')
+            ->andWhere('c.deletedAt IS NULL')
+            ->andWhere('c.organization = :organization')
+            ->setParameter('organization', $organization)
+            ->andWhere('u.isPublished = :published')
+            ->setParameter('published', true)
+            ->andWhere(
+                'NOT EXISTS (
+                    SELECT 1 FROM App\Entity\Rental\Lease l
+                    WHERE l.unit = u AND l.status = :activeStatus
+                )'
+            )
+            ->setParameter('activeStatus', LeaseStatus::ACTIVE);
+
+        if ($cities !== []) {
+            $qb->andWhere('c IN (:cities)')->setParameter('cities', $cities);
+        }
+
+        if ($type !== null) {
+            $qb->andWhere('u.type = :type')->setParameter('type', $type);
+        }
+
+        if ($minBedrooms !== null) {
+            $qb->andWhere('u.bedrooms >= :minBedrooms')->setParameter('minBedrooms', $minBedrooms);
+        }
+
+        // `monthlyRent` est un DECIMAL : les bornes sont comparées comme des
+        // chaînes normalisées, jamais converties en float (§ Argent).
+        if ($minRent !== null && $minRent !== '') {
+            $qb->andWhere('u.monthlyRent >= :minRent')->setParameter('minRent', $minRent);
+        }
+
+        if ($maxRent !== null && $maxRent !== '') {
+            $qb->andWhere('u.monthlyRent <= :maxRent')->setParameter('maxRent', $maxRent);
+        }
+
+        // Un filtre de loyer sans devise reviendrait à comparer des montants de
+        // devises différentes : le critère de disponibilité est donc la
+        // cohérence du regroupement, pas une commodité d'affichage.
+        if ($currency !== null) {
+            $qb->andWhere('u.currency = :currency')->setParameter('currency', $currency);
+        }
+
+        $qb->orderBy('u.monthlyRent', 'ASC')->addOrderBy('u.id', 'ASC');
+
+        return $this->fetchPaginated($qb, $page, $limit);
+    }
+
+    /**
+     * Une unité publiée, et toujours libre, vue par son UUID public.
+     *
+     * Même couple de conditions que `findPublishedAndVacant()`, et pour la
+     * même raison : le détail d'une annonce ne doit pas devenir accessible par
+     * la seule connaissance d'un UUID, y compris après la signature d'un bail.
+     */
+    public function findPublishedAndVacantByUuid(Uuid $uuid, Organization $organization): ?Unit
+    {
+        return $this->createQueryBuilder('u')
+            ->innerJoin('u.building', 'b')
+            ->innerJoin('b.parcel', 'p')
+            ->innerJoin('p.city', 'c')
+            ->andWhere('u.uuid = :uuid')
+            ->setParameter('uuid', $this->bindableUuid($uuid))
+            ->andWhere('u.deletedAt IS NULL')
+            ->andWhere('b.deletedAt IS NULL')
+            ->andWhere('p.deletedAt IS NULL')
+            ->andWhere('c.deletedAt IS NULL')
+            ->andWhere('c.organization = :organization')
+            ->setParameter('organization', $organization)
+            ->andWhere('u.isPublished = :published')
+            ->setParameter('published', true)
+            ->andWhere(
+                'NOT EXISTS (
+                    SELECT 1 FROM App\Entity\Rental\Lease l
+                    WHERE l.unit = u AND l.status = :activeStatus
+                )'
+            )
+            ->setParameter('activeStatus', LeaseStatus::ACTIVE)
+            ->getQuery()
+            ->getOneOrNullResult();
     }
 }

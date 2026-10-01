@@ -6,15 +6,19 @@ namespace App\Controller\Api\Property;
 
 use App\Dto\Feedback;
 use App\Dto\Request\PaginationQuery;
+use App\Dto\Request\Property\PublishListingRequest;
 use App\Dto\Request\Property\UnitRequest;
 use App\Dto\Response\HttpErrorResponsePayload;
 use App\Dto\Response\Property\UnitResponse;
+use App\Service\Property\PublicShowcaseManagementService;
 use App\Service\Property\UnitService;
 use App\Trait\FeedbackTrait;
 use Nelmio\ApiDocBundle\Attribute\Model;
 use OpenApi\Attributes as OA;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
+use Symfony\Component\HttpFoundation\File\UploadedFile;
 use Symfony\Component\HttpFoundation\JsonResponse;
+use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpKernel\Attribute\MapQueryString;
 use Symfony\Component\HttpKernel\Attribute\MapRequestPayload;
 use Symfony\Component\Routing\Attribute\Route;
@@ -43,6 +47,7 @@ final class UnitController extends AbstractController
 
     public function __construct(
         private readonly UnitService $unitService,
+        private readonly PublicShowcaseManagementService $publicShowcaseManagementService,
     ) {
     }
 
@@ -153,6 +158,127 @@ final class UnitController extends AbstractController
     public function delete(string $uuid): JsonResponse
     {
         $feedback = $this->unitService->delete($uuid);
+
+        return $this->json($feedback, $feedback->getStatus());
+    }
+
+    #[Route('/{uuid}/publish', name: 'publish', methods: ['PATCH'])]
+    #[OA\Patch(
+        summary: 'Publier ou retirer l\'annonce d\'une unité sur la vitrine publique',
+        description: 'Bascule l\'état de publication. Publier une unité occupée est refusé (422).'
+    )]
+    #[OA\RequestBody(content: new OA\JsonContent(ref: new Model(type: PublishListingRequest::class)))]
+    #[OA\Response(
+        response: 200,
+        description: 'État de publication mis à jour',
+        content: new OA\JsonContent(ref: new Model(type: Feedback::class))
+    )]
+    #[OA\Response(
+        response: 422,
+        description: 'Unité occupée (publication refusée) ou identifiant invalide',
+        content: new OA\JsonContent(ref: new Model(type: Feedback::class))
+    )]
+    #[OA\Response(
+        response: 403,
+        description: 'Accès refusé : droit PUBLISH_LISTING manquant sur la ville de l\'unité'
+    )]
+    #[OA\Response(
+        response: 404,
+        description: 'Unité introuvable'
+    )]
+    public function publish(
+        string $uuid,
+        #[MapRequestPayload] PublishListingRequest $request
+    ): JsonResponse {
+        $feedback = $this->publicShowcaseManagementService->publish(
+            $this->unitService->findByUuidOrFail($uuid),
+            $request
+        );
+
+        return $this->json($feedback, $feedback->getStatus());
+    }
+
+    #[Route('/{uuid}/photos', name: 'add_photo', methods: ['POST'])]
+    #[OA\Post(
+        summary: 'Ajouter une photo à la galerie de l\'unité',
+        description: 'Upload d\'une image (JPEG, PNG, WebP, GIF, max 10 Mo). La photo est ajoutée en fin de galerie. Publication non requise.'
+    )]
+    #[OA\RequestBody(
+        content: new OA\MediaType(
+            mediaType: 'multipart/form-data',
+            schema: new OA\Schema(
+                properties: [
+                    new OA\Property(property: 'file', type: 'string', format: 'binary', description: 'Fichier image')
+                ],
+                required: ['file']
+            )
+        )
+    )]
+    #[OA\Response(
+        response: 201,
+        description: 'Photo ajoutée, galerie complète retournée',
+        content: new OA\JsonContent(ref: new Model(type: Feedback::class))
+    )]
+    #[OA\Response(
+        response: 413,
+        description: 'Fichier trop volumineux (> 10 Mo)'
+    )]
+    #[OA\Response(
+        response: 415,
+        description: 'Type de fichier non supporté'
+    )]
+    #[OA\Response(
+        response: 403,
+        description: 'Accès refusé : droit PUBLISH_LISTING manquant'
+    )]
+    #[OA\Response(
+        response: 404,
+        description: 'Unité introuvable'
+    )]
+    public function addPhoto(string $uuid, Request $request): JsonResponse
+    {
+        $file = $request->files->get('file');
+
+        if (!$file instanceof UploadedFile) {
+            return $this->json(
+                (new Feedback())
+                    ->addError('file', 'Aucun fichier fourni.')
+                    ->setErrorFlushDescription('Upload requis.')
+                    ->setStatus(400)
+                    ->autoInitFlush(),
+                400
+            );
+        }
+
+        $feedback = $this->publicShowcaseManagementService->addPhoto(
+            $this->unitService->findByUuidOrFail($uuid),
+            $file
+        );
+
+        return $this->json($feedback, $feedback->getStatus());
+    }
+
+    #[Route('/{uuid}/photos/{photoUuid}', name: 'remove_photo', methods: ['DELETE'])]
+    #[OA\Delete(
+        summary: 'Retirer une photo de la galerie d\'une unité',
+        description: 'Supprime la photo identifiée par son UUID de la galerie.'
+    )]
+    #[OA\Response(
+        response: 200,
+        description: 'Photo retirée, galerie mise à jour retournée',
+        content: new OA\JsonContent(ref: new Model(type: Feedback::class))
+    )]
+    #[OA\Response(
+        response: 404,
+        description: 'Unité ou photo introuvable'
+    )]
+    #[OA\Response(
+        response: 403,
+        description: 'Accès refusé'
+    )]
+    public function removePhoto(string $uuid, string $photoUuid): JsonResponse
+    {
+        $feedback = $this->publicShowcaseManagementService->removePhoto($uuid, $photoUuid);
 
         return $this->json($feedback, $feedback->getStatus());
     }

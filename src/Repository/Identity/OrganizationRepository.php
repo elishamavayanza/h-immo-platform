@@ -53,7 +53,59 @@ class OrganizationRepository extends ServiceEntityRepository
     }
 
     /**
-     * Recherche une organisation par son code unique.
+     * Recherche une Organization par son slug de vitrine publique.
+     *
+     * Le slug est normalisé en minuscules à l'écriture (voir
+     * `Organization::setSlug()`) comme ici : sans cette normalisation
+ * symétrique, `Immo-Plus` et `immo-plus` désigneraient deux pages pour la
+     * même entreprise alors que la contrainte UNIQUE n'en interdisait qu'une.
+     */
+    public function findOneBySlug(string $slug): ?Organization
+    {
+        $normalized = mb_strtolower(trim($slug));
+
+        if ($normalized === '') {
+            return null;
+        }
+
+        return $this->createQueryBuilder('o')
+            ->andWhere('o.slug = :slug')
+            ->andWhere('o.deletedAt IS NULL')
+            ->setParameter('slug', $normalized)
+            ->getQuery()
+            ->getOneOrNullResult();
+    }
+
+    /**
+     * Un autre Organization possède-t-il déjà ce slug ?
+     *
+     * Contrôle d'exclusion : la publication d'une vitrine doit pouvoir changer
+     * le slug d'une Organization existante, donc rejeter un slug déjà pris par
+     * elle-même serait un faux positif.
+     */
+    public function isSlugTakenByAnother(string $slug, Organization $except): bool
+    {
+        $normalized = mb_strtolower(trim($slug));
+
+        if ($normalized === '') {
+            return false;
+        }
+
+        $count = $this->createQueryBuilder('o')
+            ->select('COUNT(o.id)')
+            ->andWhere('o.slug = :slug')
+            ->andWhere('o.id <> :id')
+            ->andWhere('o.deletedAt IS NULL')
+            ->setParameter('slug', $normalized)
+            ->setParameter('id', $except->getId())
+            ->getQuery()
+            ->getSingleScalarResult();
+
+        return (int) $count > 0;
+    }
+
+    /**
+     * Recherche une Organization par son code unique.
      */
     public function findOneByCode(string $code): ?Organization
     {
