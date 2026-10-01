@@ -79,6 +79,14 @@ final class UserController extends AbstractController
     /**
      * Endpoint API permettant la modification des données d'un utilisateur.
      * Reçoit le payload de mise à jour et applique les modifications.
+     *
+     * Deux champs sont soumis à une autorisation propre, plus stricte que le
+     * reste de la fiche : `platformRole` exige un SUPER_ADMIN (403 sinon), et
+     * `isActive` un SUPER_ADMIN ou un PATRON de l'Organization concernée. Les
+     * champs omis ne sont pas réécrits, en particulier `isActive` : un PUT
+     * sans ce champ ne réactive donc pas un compte suspendu. Un utilisateur
+     * ne peut modifier que sa propre fiche, sauf s'il est PATRON d'une
+     * Organization à laquelle appartient la cible.
      */
     #[Route('/{uuid}', name: 'update', methods: ['PUT', 'PATCH'])]
     public function update(

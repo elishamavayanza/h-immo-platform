@@ -139,6 +139,18 @@ interface SecurityServiceInterface
      */
 
     /**
+     * Vérifie que l'appelant peut agir sur le compte visé selon `$action`.
+     *
+     * `VIEW_USER` s'arrête à l'appartenance à une Organization partagée
+     * (périmètre de tenant). Les actions d'administration
+     * (`UPDATE_USER`, `DELETE_USER`, `ACTIVATE_USER`, `SUSPEND_USER`,
+     * `MANAGE_USERS`, …) passent par la matrice rôle × action, et n'autorisent
+     * un tiers que s'il est PATRON d'une Organization partagée avec la cible.
+     * Seule `UPDATE_USER` admet un cas « soi-même » (auto-service de profil) :
+     * les champs de privilège d'une requête doivent donc être filtrés
+     * séparément, une autorisation de ressource ne valant pas autorisation de
+     * champ.
+     *
      * @throws AccessDeniedException
      * @throws UnauthenticatedException
      */
