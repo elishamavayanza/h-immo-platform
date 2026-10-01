@@ -90,12 +90,12 @@ final readonly class UserRequest
         public ?PlatformRole $platformRole = null,
 
         #[OA\Property(
-            description: 'Indique si le compte est actif ou suspendu',
+            description: 'Indique si le compte est actif ou suspendu. Absent d\'une mise à jour, l\'état courant est conservé : le champ est nullable pour distinguer un PUT qui ne parle pas d\'activation d\'un PUT qui la demande explicitement.',
             example: true,
-            default: true
+            nullable: true
         )]
         #[Assert\Type('bool', groups: ['create', 'update'])]
-        public bool $isActive = true,
+        public ?bool $isActive = null,
     ) {
     }
 }

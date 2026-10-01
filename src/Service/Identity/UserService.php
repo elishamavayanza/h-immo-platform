@@ -128,6 +128,10 @@ final readonly class UserService
         }
 
         $user = $this->mapper->copyToEntity($request, new User());
+        // `isActive` est nullable dans le DTO (un PUT ne doit pas réactiver un
+        // compte suspendu) ; une création, elle, part toujours d'un compte actif
+        // sauf demande explicite de la part d'un SUPER_ADMIN.
+        $user->setIsActive($request->isActive ?? true);
         $this->em->persist($user);
         $this->em->flush();
 
@@ -156,6 +160,28 @@ final readonly class UserService
         }
 
         $this->security->checkUserAccess($user, SecurityAction::UPDATE_USER);
+
+        // Un droit de rôle ne se délègue pas par un PUT sur une fiche.
+        // `checkUserAccess()` autorise explicitement l'auto-service, il ne peut
+        // donc pas servir de garde-fou sur un champ qui *accorde* des droits :
+        // sans ce filtre, `{"platformRole": "super_admin"}` sur sa propre fiche
+        // suffirait à devenir administrateur de la plateforme.
+        if ($request->platformRole !== null) {
+            $this->security->requirePlatformRole();
+        }
+
+        // Même raison pour l'activation : un PATRON peut suspendre un compte de
+        // sa société, mais un membre ne doit ni réactiver le sien (contournement
+        // d'une suspension) ni en suspendre un autre. La matrice de rôle refuse
+        // déjà ces deux actions aux ADMIN_IMMOBILIER et ADMIN_VILLE.
+        if ($request->isActive !== null) {
+            $this->security->checkUserAccess(
+                $user,
+                $request->isActive
+                    ? SecurityAction::ACTIVATE_USER
+                    : SecurityAction::SUSPEND_USER
+            );
+        }
 
         $violations = $this->validator->validate($request, groups: ['update']);
         if (count($violations) > 0) {

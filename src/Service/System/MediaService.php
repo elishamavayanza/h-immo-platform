@@ -61,11 +61,11 @@ final readonly class MediaService
      * Remplace la photo de profil d'un utilisateur et renvoie le chemin
      * relatif stocké.
      *
-     * Le contrôle est `UPDATE_USER` : `checkUserAccess()` autorise
-     * l'appelant sur son propre profil, le SUPER_ADMIN, et un compte
-     * partageant au moins une Organization avec lui. Un compte d'une autre
-     * société ne peut donc pas remplacer la photo d'un utilisateur qui
-     * n'a rien à voir avec lui.
+     * Le contrôle est `UPDATE_USER`, la seule action qui conserve un cas
+     * « soi-même » dans `checkUserAccess()` : chacun peut changer sa propre photo.
+     * Sur le compte d'un tiers, la même action est arbitrée par la matrice
+     * rôle × action et revient donc au PATRON de l'Organization partagée —
+     * l'appartenance à une société ne suffit plus.
      */
     public function replaceUserPhoto(User $target, UploadedFile $file): string
     {

@@ -300,6 +300,23 @@ final class SecurityService implements SecurityServiceInterface
      * À l'inverse, l'absence d'appartenance commune rend le compte
      * invisible : le renvoyer en 403 et non 404 évite de laisser deviner
      * l'existence de comptes d'autres tenants.
+     *
+     * L'action, en revanche, n'est pas décorative. Historiquement ce
+     * paramètre était ignoré : l'appartenance à une Organization commune
+     * suffisait à accorder `UPDATE_USER` et `DELETE_USER`, si bien qu'un
+     * simple membre pouvait s'attribuer `platformRole`, réécrire le mot de
+     * passe du PATRON de sa société, puis le supprimer, sans jamais croiser une
+     * seule ligne de la matrice de rôle. Une modification ou une suppression
+     * portant sur un AUTRE compte passe donc désormais par
+     * `applyRoleRuleOnOrganization()`, qui réserve ces actions au PATRON de
+     * l'Organization concernée (le SUPER_ADMIN étant traité en amont).
+     *
+     * Seule `UPDATE_USER` conserve un cas « soi-même » : c'est le fondement de
+     * l'auto-service de profil (fiche, téléphone, photo via `MediaService`).
+     * Les champs de privilège que porte la requête — `platformRole`,
+     * `isActive` — sont filtrés en amont par `UserService::update()` : une
+     * autorisation de ressource ne peut pas se substituer à une autorisation
+     * de champ, sinon le cas « soi-même » rouvrirait l'auto-promotion.
      */
     public function checkUserAccess(User $user, SecurityAction $action = SecurityAction::VIEW_USER): void
     {
@@ -313,18 +330,45 @@ final class SecurityService implements SecurityServiceInterface
 
         $currentUser = $this->getCurrentUser();
 
-        if ($currentUser->getId() === $user->getId()) {
+        // Auto-service de profil : modifier sa propre fiche. Réservé à
+        // UPDATE_USER, et jamais à la suppression ni à l'attribution de droits.
+        if ($action === SecurityAction::UPDATE_USER && $currentUser->getId() === $user->getId()) {
             return;
         }
 
-        foreach ($this->getCurrentUserOrganizations() as $organization) {
-            if ($this->belongsToOrganization($user, $organization)) {
-                return;
+        $sharedOrganizations = $this->getCurrentUserOrganizations();
+
+        // Une lecture s'arrête à l'appartenance commune : c'est un périmètre de
+        // tenant, pas un privilège d'administration.
+        if ($action === SecurityAction::VIEW_USER) {
+            foreach ($sharedOrganizations as $organization) {
+                if ($this->belongsToOrganization($user, $organization)) {
+                    return;
+                }
+            }
+        } else {
+            // Les actions d'administration sont arbitrées par la matrice
+            // rôle × action : on retient la première Organization partagée qui
+            // autorise l'appelant. Un refus sur une Organization ne doit pas
+            // masquer une autorisation sur une autre, d'où le `continue`.
+            foreach ($sharedOrganizations as $organization) {
+                if (!$this->belongsToOrganization($user, $organization)) {
+                    continue;
+                }
+
+                try {
+                    $this->applyRoleRuleOnOrganization($organization, $action);
+
+                    return;
+                } catch (AccessDeniedException) {
+                    continue;
+                }
             }
         }
 
         throw new AccessDeniedException(
-            'Accès refusé : cet utilisateur n\'appartient à aucune de vos organizations.'
+            'Accès refusé : cet utilisateur n\'appartient à aucune de vos organizations, '
+            . 'ou votre rôle ne vous autorise pas cette action.'
         );
     }
 

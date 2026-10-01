@@ -42,6 +42,12 @@ final readonly class UserMapper
     /**
      * Mappe les données d'un DTO UserRequest vers l'entité User.
      * Assemble le nom complet et hache le mot de passe si fourni.
+     *
+     * Chaque champ n'est appliqué que s'il est présent dans la requête : un
+     * PUT est ici traité comme un patch, faute de quoi un champ absent
+     * écraserait la valeur stockée. `isActive` était précisément le contre-exemple
+     * — non nullable avec un défaut `true`, il réactivait d'office un compte
+     * suspendu à la moindre mise à jour de numéro de téléphone.
      */
     public function copyToEntity(UserRequest $dto, User $user): User
     {
@@ -73,7 +79,9 @@ final readonly class UserMapper
             $user->setPlatformRole($dto->platformRole);
         }
 
-        $user->setIsActive($dto->isActive);
+        if ($dto->isActive !== null) {
+            $user->setIsActive($dto->isActive);
+        }
 
         return $user;
     }
