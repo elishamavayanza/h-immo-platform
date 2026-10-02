@@ -41,10 +41,10 @@ final class ParcelMapper
             $parcel->setArea($request->area);
         }
         if ($request->latitude !== null) {
-            $parcel->setLatitude($request->latitude);
+            $parcel->setLatitude((string) $request->latitude);
         }
         if ($request->longitude !== null) {
-            $parcel->setLongitude($request->longitude);
+            $parcel->setLongitude((string) $request->longitude);
         }
         if ($request->description !== null) {
             $parcel->setDescription($request->description);

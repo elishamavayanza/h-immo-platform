@@ -8,6 +8,7 @@ use App\Dto\Feedback;
 use App\Dto\Request\PaginationQuery;
 use App\Dto\Request\Property\BuildingRequest;
 use App\Entity\Property\Building;
+use App\Entity\Property\Parcel;
 use App\Mapper\Property\BuildingMapper;
 use App\Repository\Property\ParcelRepository;
 use App\Repository\Property\BuildingRepository;
