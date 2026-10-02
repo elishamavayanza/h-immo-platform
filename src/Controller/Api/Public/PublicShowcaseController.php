@@ -132,14 +132,20 @@ final class PublicShowcaseController extends AbstractController
         $page = $query->page ?? 1;
         $limit = min($query->limit ?? 20, 100);
 
+        $unitType = $type !== null ? \App\Enum\UnitType::tryFrom($type) : null;
+        $currencyEnum = $currency !== null ? \App\Enum\Currency::tryFrom($currency) : null;
+
+        // Valeur invalide = pas de filtre (même comportement que city inconnu)
+        // Un 400/422 serait plus strict, mais l'API publique privilégie la robustesse :
+        // un bot qui essaie des paramètres au hasard ne doit pas provoquer de 500.
         $result = $this->publicShowcaseService->listListings(
             $organization,
             $city !== null ? [$city] : null,
-            $type !== null ? \App\Enum\UnitType::from($type) : null,
+            $unitType,
             $bedrooms,
             $minRent,
             $maxRent,
-            $currency !== null ? \App\Enum\Currency::from($currency) : null,
+            $currencyEnum,
             $page,
             $limit
         );
