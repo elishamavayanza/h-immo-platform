@@ -7,6 +7,7 @@ namespace App\Service\Property;
 use App\Dto\Feedback;
 use App\Dto\Request\PaginationQuery;
 use App\Dto\Request\Property\ParcelRequest;
+use App\Entity\Property\City;
 use App\Entity\Property\Parcel;
 use App\Mapper\Property\ParcelMapper;
 use App\Repository\Property\CityRepository;
@@ -119,8 +120,8 @@ final readonly class ParcelService
         return $feedback
             ->setData($this->parcelMapper->toResponse($parcelRepository))
             ->setFlushDescription('Le parcelle a été créé avec succès.')
-            ->setStatus(201)
-            ->autoInitFlush();
+            ->autoInitFlush()
+            ->setStatus(201);
     }
 
     public function update(string $uuid, ParcelRequest $request): Feedback

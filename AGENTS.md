@@ -554,6 +554,7 @@ php tests/verify-password-reset.php     # flux mot de passe oublié
 php tests/verify-admin-creation-email-failure.php # création compte + mailer en échec (201 + warning)
 php tests/verify-p0-security.php        # rapports, dépenses, médias, statuts
 php tests/verify-p0-7-list-endpoints.php # endpoints de liste rentals (200, pas de fuite)
+php tests/verify-parcel-coordinates.php # coordonnées GPS Parcel (201/422, round-trip)
 php tests/check-injected-dependencies.php # dépendances $this-> injectées (statique)
 node tests/verify-reset-password-form.ts # logique pure du formulaire React
 ```
@@ -770,8 +771,8 @@ que l'agent ne construise pas sur une prémisse fausse.
   `->setStatus(201)->autoInitFlush()` renvoie donc **200**, et non 201, quel que
   soit le nombre d'endpoints concernés (au moins une douzaine, d'`ExpenseService`
   à `UserCityService`), alors que leurs schémas OpenAPI annoncent 201. Ce n'est
-  pas corrigé à ce jour : le correctif livré le fait pour `createAdmin()` et
-  `OrganizationService::create()` en inversant l'ordre
+  pas corrigé globalement à ce jour : le correctif appliqué à `createAdmin()`,
+  `OrganizationService::create()` et `ParcelService::create()` inverse l'ordre
   (`->autoInitFlush()->setStatus(201)`). **Corriger `Feedback` globalement
   changerait le statut de toutes les créations de l'API** et demande sa propre
   validation.
@@ -787,7 +788,14 @@ que l'agent ne construise pas sur une prémisse fausse.
   qu'il n'y a plus de flush intermédiaire) et couvert par
   `tests/verify-admin-creation-email-failure.php`. Le point à retenir : le
   `500` observé était attribué au mailer dans le rapport initial, alors que la
-  cause réelle était antérieure et bloquait tout le chemin.
+  cause réelle était antérieure et bloquait tout le chemin. La même classe de
+  faute (type d'entité non importé, résolu dans le namespace du service →
+  500 à l'appel) a été retrouvée et corrigée le 2026-10-02 dans
+  `ParcelService::resolveParent()` (`?City` sans `use App\Entity\Property\City`,
+  donc `POST`/`PUT /api/v1/parcels` en 500 pour toute requête valide) et dans
+  l'homologue `BuildingService::resolveParent()` (`?Parcel` non importé). Elle
+  est désormais couverte par `tests/verify-parcel-coordinates.php` (et ses
+  vérifications de création/lecture).
 
 ---
 

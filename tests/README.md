@@ -25,6 +25,7 @@ php tests/verify-api-token.php
 php tests/verify-mariadb.php
 php tests/verify-p0-security.php
 php tests/verify-p0-7-list-endpoints.php
+php tests/verify-parcel-coordinates.php
 php tests/check-injected-dependencies.php
 node tests/verify-reset-password-form.ts
 ```
@@ -51,6 +52,7 @@ contrôle est ignoré et les autres restent exécutés.
 | `verify-mariadb.php` | Cible SGBD : plateforme DBAL et serveur réellement MariaDB, base en `utf8mb4`, absence de PostgreSQL dans `compose.yaml`, `compose.override.yaml`, `.env` et `config/packages/doctrine.yaml`, présence de toutes les tables attendues, absence de version de migration orpheline, et exécution des deux agrégats mensuels qui s'appuient sur `DATE_FORMAT()`. |
 | `verify-p0-security.php` | Les quatre correctifs P0, rejoués de bout en bout à travers le noyau et sur deux organisations concurrentes : (P0-1) rapports exigeant l'organisation visée et le rôle réellement détenu, y compris le compte à double appartenance ; (P0-2) cumul des dépenses borné aux villes du lecteur, sans fuite du chiffre d'une organisation concurrente ; (P0-3) médias refusés hors de leur organisation et chemins de traversée rejetés ; (P0-4) statut d'un loyer dérivé des paiements et de la date, statut d'un bail non saisissable et transitions Activate/Terminate/Cancel respectées. |
 | `verify-p0-7-list-endpoints.php` | Les trois endpoints de liste de location (`GET /api/v1/payments`, `GET /api/v1/leases`, `GET /api/v1/rents/overdue`) appelés réellement à travers le noyau avec un `PATRON` sur deux organisations concurrentes : réponse 200 et non 500, présence de la donnée attendue, liste vide et refus en 403/404 lorsque `organizationId` ou l'UUID désignent l'organisation concurrente. Couvre les régressions de repositories non injectés, de DTO de filtre non importé, de `MapRequestPayload` sur un GET, de route masquée et de filtre `organizationId` hors périmètre. |
+| `verify-parcel-coordinates.php` | Coordonnées GPS d'une `Parcel`, rejouées via l'API réelle : création sans coordonnées (201, nulles), création avec coordonnées soumises en nombre JSON (`-0.681` / `29.238`) persistées puis lues, mise à jour des coordonnées acceptée, round-trip base (DECIMAL), refus en 422 d'une coordonnée isolée (latitude sans longitude et inversement), hors plage (`95`, `181`) et non numérique, et absence d'écriture fantôme. |
 | `check-injected-dependencies.php` | Contrôle statique par réflexion : chaque accès `$this->…` d'un service désigne une propriété injectée par le constructeur ou une méthode héritée. Détecte sans exécuter de requête un repository ou une dépendance oublié dans un constructeur. |
 
 
