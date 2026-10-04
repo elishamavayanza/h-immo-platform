@@ -13,6 +13,7 @@
 //   - baseVariables/_mixins.scss
 // ============================================================
 
+@use 'sass:color';
 @use '../../baseVariables/variables' as *;
 @use '../../baseVariables/mixins' as *;
 
@@ -265,12 +266,12 @@
     border-color: $color-danger;
 
     &:hover:not(:disabled):not(.btn--disabled) {
-        background-color: darken($color-danger, 6%);
-        border-color: darken($color-danger, 6%);
+        background-color: color.adjust($color-danger, $lightness: -6%);
+        border-color: color.adjust($color-danger, $lightness: -6%);
     }
 
     &:active:not(:disabled):not(.btn--disabled) {
-        background-color: darken($color-danger, 12%);
+        background-color: color.adjust($color-danger, $lightness: -12%);
     }
 }
 
@@ -285,12 +286,12 @@
     border-color: $color-success;
 
     &:hover:not(:disabled):not(.btn--disabled) {
-        background-color: darken($color-success, 6%);
-        border-color: darken($color-success, 6%);
+        background-color: color.adjust($color-success, $lightness: -6%);
+        border-color: color.adjust($color-success, $lightness: -6%);
     }
 
     &:active:not(:disabled):not(.btn--disabled) {
-        background-color: darken($color-success, 12%);
+        background-color: color.adjust($color-success, $lightness: -12%);
     }
 }
 
