@@ -1,4 +1,5 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
+import { useIsMobile } from '../../../hooks/useIsMobile';
 import { SidebarItem, SidebarSubItem, SidebarGroup, SidebarData } from './types.ts';
 
 export interface UseSidebarProps {
@@ -37,6 +38,27 @@ export function useSidebar({
     const [internalMobileOpen, setInternalMobileOpen] = useState(mobileOpen);
 
     const isMobileOpen = mobileOpen !== undefined ? mobileOpen : internalMobileOpen;
+
+    // En mode bureau (`>= 768px`) la sidebar redevient statique dans le flux ;
+    // si le drawer mobile était resté ouvert, on le referme pour ne pas le
+    // rouvrir intempestivement quand on repasse sous le seuil.
+    const isMobile = useIsMobile();
+
+    useEffect(() => {
+        if (!isMobile && isMobileOpen) closeMobile();
+    }, [isMobile, isMobileOpen]);
+
+    // Le drawer mobile couvre l'écran : tant qu'il est ouvert, la page ne
+    // doit pas défiler derrière le panneau.
+    useEffect(() => {
+        if (!isMobileOpen || !isMobile) return;
+
+        document.body.style.overflow = 'hidden';
+
+        return () => {
+            document.body.style.overflow = '';
+        };
+    }, [isMobileOpen, isMobile]);
 
     const toggleCollapse = () => setIsCollapsed((prev) => !prev);
 

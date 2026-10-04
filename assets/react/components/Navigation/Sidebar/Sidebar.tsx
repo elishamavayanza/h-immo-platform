@@ -43,6 +43,7 @@ export function Sidebar({
         openSections,
         toggleSection,
         filteredItems,
+        isMobileOpen,
     } = useSidebar({
         items,
         groups,
@@ -68,6 +69,9 @@ export function Sidebar({
         onItemClick?.(item);
         if ('children' in item && item.children) {
             toggleSection(item.id);
+        } else if (isMobileOpen) {
+            // Navigation vers une feuille : le drawer mobile se referme
+            onMobileClose?.();
         }
     };
 

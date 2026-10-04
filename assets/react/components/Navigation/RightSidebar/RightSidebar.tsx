@@ -1,31 +1,6 @@
 import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { useRightSidebar, UseRightSidebarProps } from '../../../hook-components/Navigation/RightSidebar';
-
-// ============================================================
-// Hook local : détecte les écrans compacts (mobile / tablette)
-// ============================================================
-// Remplace `useIsCompact` en attendant que le hook officiel
-// soit disponible. Se met à jour au redimensionnement.
-// ============================================================
-function useIsCompact(breakpoint = 768): boolean {
-    const [isCompact, setIsCompact] = useState<boolean>(() =>
-        typeof window !== 'undefined' ? window.innerWidth < breakpoint : false
-    );
-
-    useEffect(() => {
-        const mq = window.matchMedia(`(max-width: ${breakpoint - 1}px)`);
-        const handle = (e: MediaQueryListEvent) => setIsCompact(e.matches);
-
-        // Sync initial
-        setIsCompact(mq.matches);
-
-        // Écoute les changements
-        mq.addEventListener('change', handle);
-        return () => mq.removeEventListener('change', handle);
-    }, [breakpoint]);
-
-    return isCompact;
-}
+import { useIsCompact } from '../../../hooks/useIsCompact';
 
 const CollapseIcon = () => (
     <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2">
