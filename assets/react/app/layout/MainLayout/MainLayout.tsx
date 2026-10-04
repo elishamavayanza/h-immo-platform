@@ -25,6 +25,7 @@ import { AppHeader } from './AppHeader';
 import { RequireRole } from './RequireRole';
 import type { AppMenuItem } from './sidebar/sidebar.types';
 import { resolveSidebar } from './sidebar/sidebar.config';
+import { SIDEBAR_ICON_MAP } from './sidebar/sidebar.icons';
 
 import './MainLayout.scss';
 
@@ -35,12 +36,13 @@ const BRAND = (
     </div>
 );
 
-/** Le sidebar générique comprend `route` ; on aligne `path` → `route`. */
+/** Le sidebar générique comprend `route` ; on aligne `path` → `route` et on
+ * résout le NOM d'icône de la config (module pur) en composant SVG. */
 function toSidebarItems(menu: AppMenuItem[]): SidebarProps['items'] {
     return menu.map(({ id, label, icon, path, children }) => ({
         id,
         label,
-        icon,
+        icon: icon !== undefined ? SIDEBAR_ICON_MAP[icon]?.() : undefined,
         ...(path !== undefined ? { route: path } : {}),
         ...(children !== undefined ? { children: toSidebarItems(children) } : {}),
     }));

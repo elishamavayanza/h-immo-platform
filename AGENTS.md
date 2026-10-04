@@ -565,6 +565,7 @@ php tests/verify-p0-7-list-endpoints.php # endpoints de liste rentals (200, pas 
 php tests/verify-parcel-coordinates.php # coordonnées GPS Parcel (201/422, round-trip)
 php tests/check-injected-dependencies.php # dépendances $this-> injectées (statique)
 node tests/verify-reset-password-form.ts # logique pure du formulaire React
+node tests/verify-sidebar-roles.ts # menu du sidebar vs matrice de rôles backend (Personnel pour ADMIN_IMMOBILIER, hors ADMIN_VILLE)
 ```
 
 Règles :

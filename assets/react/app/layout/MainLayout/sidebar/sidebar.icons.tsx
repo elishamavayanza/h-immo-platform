@@ -113,3 +113,23 @@ export const IconExchange = (): ReactNode => (
 
 /** Carte bâtiment — SUPER_ADMIN (alias). */
 export const IconAdminBuilding = IconBuilding;
+
+/** Signature d'un composant d'icône. */
+export type IconComponent = () => ReactNode;
+
+/**
+ * Résout le NOM d'icône déclaré dans `sidebar.config.ts` (module pur,
+ * sans JSX) vers le composant SVG correspondant au rendu.
+ */
+export const SIDEBAR_ICON_MAP: Record<string, IconComponent> = {
+    building: IconBuilding,
+    key: IconKey,
+    coins: IconCoins,
+    storefront: IconStorefront,
+    gear: IconGear,
+    'hard-hat': IconHardHat,
+    users: IconUsers,
+    organizations: IconOrganizations,
+    audit: IconAudit,
+    exchange: IconExchange,
+};

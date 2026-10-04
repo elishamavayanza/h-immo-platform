@@ -9,8 +9,6 @@
 // son propre contrôle côté API.
 // ============================================================
 
-import type { ReactNode } from 'react';
-
 import type { OrganizationRole, PlatformRole } from '../../../../../services/api/api.types';
 
 /** Rôle d'un item de menu : rôle métier d'organisation ou rôle plateforme. */
@@ -27,7 +25,15 @@ export type SidebarRole = OrganizationRole | PlatformRole;
 export interface AppMenuItem {
     id: string;
     label: string;
-    icon?: ReactNode;
+    /**
+     * Nom de l'icône, résolu par `SIDEBAR_ICON_MAP` au rendu.
+     *
+     * La configuration vit dans un module pur (sans JSX) pour être
+     * exécutable telle quelle par lecture (`node`), comme les autres
+     * scripts de logique front pure ; le JSX d'icônes reste dans
+     * `sidebar.icons.tsx`.
+     */
+    icon?: string;
     path?: string;
     children?: AppMenuItem[];
 }
