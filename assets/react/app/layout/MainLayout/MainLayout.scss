@@ -1,0 +1,256 @@
+// ============================================================
+// assets/react/app/layout/MainLayout/MainLayout.scss
+// Coquille du back-office : en-tête + body (sidebar + contenu).
+//
+// Le `.sidebar` générique écrit `height: 100vh` ; pris dans la grille du
+// layout, on le ramène à auto pour qu'il remplisse la ligne BODY (pas la
+// fenêtre), sinon la page défile sous l'en-tête. Sous 768px, la règle
+// `position: fixed` de `_Sidebar.scss` reprend la main (drawer off-canvas).
+// ============================================================
+
+@use '../../../../styles/baseVariables/variables' as *;
+@use '../../../../styles/baseVariables/mixins' as *;
+
+.main-layout {
+    display: grid;
+    grid-template-rows: auto minmax(0, 1fr);
+    height: 100dvh;
+    background-color: $color-bg-app;
+
+    // État « chargement » : tout centré, sans barre d'outils.
+    &--centered {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    &__body {
+        display: flex;
+        min-height: 0;
+    }
+
+    &__content {
+        flex: 1;
+        min-width: 0;
+        padding: $spacing-6;
+        overflow-y: auto;
+        background-color: $color-bg-app;
+    }
+
+    .sidebar {
+        @include flex(column, stretch, flex-start, 0);
+        height: auto;
+    }
+
+    &__brand {
+        @include flex(row, center, flex-start, $spacing-2);
+
+        &-mark {
+            @include flex-center;
+            width: 28px;
+            height: 28px;
+            border-radius: $radius-md;
+            background-color: $color-primary;
+            color: $color-text-inverse;
+            font-family: $font-family-heading;
+            font-weight: $font-weight-bold;
+        }
+
+        &-name {
+            font-size: $font-size-lg;
+        }
+    }
+
+    &__footer-user {
+        @include flex(column, stretch, flex-start, 2px);
+        min-width: 0;
+
+        &-name {
+            font-weight: $font-weight-medium;
+            color: $color-text-primary;
+            @include truncate;
+        }
+
+        &-email {
+            color: $color-text-muted;
+            @include truncate;
+        }
+    }
+}
+
+// ============================================================
+// EN-TÊTE
+// ============================================================
+
+.app-header {
+    @include flex(row, center, space-between, $spacing-3);
+    padding: $spacing-3 $spacing-4;
+    background-color: $color-bg-card;
+    border-bottom: 1px solid $color-border;
+
+    &__left {
+        @include flex(row, center, flex-start, $spacing-3);
+        min-width: 0;
+    }
+
+    &__menu-toggle {
+        @include flex-center;
+        width: 36px;
+        height: 36px;
+        padding: 0;
+        color: $color-text-secondary;
+        background: transparent;
+        border: 1px solid transparent;
+        border-radius: $radius-md;
+        cursor: pointer;
+
+        &:hover {
+            background-color: $color-bg-card-hover;
+            color: $color-text-primary;
+        }
+
+        // Le drawer mobile n'existe que sous 768px : le burger y est masqué.
+        @include responsive(tablet) {
+            display: none;
+        }
+    }
+
+    &__brand {
+        font-family: $font-family-heading;
+        font-size: $font-size-lg;
+        font-weight: $font-weight-semibold;
+        color: $color-text-primary;
+    }
+
+    &__center {
+        @include flex(row, center, center, $spacing-3);
+        flex: 1;
+        min-width: 0;
+        justify-content: center;
+    }
+
+    &__org-switcher {
+        max-width: 320px;
+    }
+
+    &__platform-badge {
+        padding: $spacing-1 $spacing-3;
+        border-radius: $radius-full;
+        background-color: $color-primary-light;
+        color: $color-primary;
+        font-size: $font-size-xs;
+        font-weight: $font-weight-semibold;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+    }
+
+    &__role {
+        padding: $spacing-1 $spacing-3;
+        border-radius: $radius-full;
+        background-color: $color-bg-elevated;
+        border: 1px solid $color-border-light;
+        color: $color-text-secondary;
+        font-size: $font-size-xs;
+        font-weight: $font-weight-medium;
+    }
+
+    &__right {
+        @include flex(row, center, flex-end, $spacing-3);
+    }
+
+    &__user-name {
+        font-size: $font-size-sm;
+        font-weight: $font-weight-medium;
+        color: $color-text-primary;
+
+        // Mis de côté sur les tout petits écrans (place pour le sélecteur).
+        @media (max-width: #{$breakpoint-tablet - 1px}) {
+            display: none;
+        }
+    }
+
+    &__logout {
+        padding: $spacing-2 $spacing-3;
+        font-size: $font-size-sm;
+        font-weight: $font-weight-medium;
+        color: $color-text-secondary;
+        background: transparent;
+        border: 1px solid $color-border;
+        border-radius: $radius-md;
+        cursor: pointer;
+        transition:
+            background-color $transition-fast,
+            color $transition-fast,
+            border-color $transition-fast;
+
+        &:hover {
+            color: $color-danger;
+            border-color: $color-danger;
+            background-color: transparent;
+        }
+    }
+}
+
+// ============================================================
+// CONTAINER TOAST
+// ============================================================
+
+.toast-container {
+    position: fixed;
+    top: $spacing-4;
+    right: $spacing-4;
+    z-index: $z-toast;
+    display: flex;
+    flex-direction: column;
+    gap: $spacing-2;
+    pointer-events: none;
+
+    .toast {
+        pointer-events: auto;
+        display: flex;
+        align-items: center;
+        gap: $spacing-3;
+        min-width: 280px;
+        max-width: 380px;
+        padding: $spacing-3 $spacing-4;
+        border-radius: $radius-md;
+        background-color: $color-bg-card;
+        border: 1px solid $color-border;
+        box-shadow: $shadow-lg;
+
+        &--success {
+            border-left: 3px solid $color-success;
+        }
+
+        &--error {
+            border-left: 3px solid $color-danger;
+        }
+
+        &--warning {
+            border-left: 3px solid $color-warning;
+        }
+
+        &--info {
+            border-left: 3px solid $color-info;
+        }
+
+        &__message {
+            flex: 1;
+            font-size: $font-size-sm;
+            color: $color-text-primary;
+        }
+
+        &__close {
+            flex-shrink: 0;
+            padding: 2px;
+            color: $color-text-muted;
+            background: transparent;
+            border: none;
+            cursor: pointer;
+
+            &:hover {
+                color: $color-text-primary;
+            }
+        }
+    }
+}

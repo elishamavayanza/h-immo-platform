@@ -1,0 +1,26 @@
+// ============================================================
+// assets/react/app/layout/AuthLayout/AuthLayout.scss
+// Ecrans hors session : carte centrée sur fond du thème.
+// ============================================================
+
+@use '../../../../styles/baseVariables/variables' as *;
+@use '../../../../styles/baseVariables/mixins' as *;
+
+.auth-layout {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 100dvh;
+    padding: $spacing-6;
+    background-color: $color-bg-app;
+
+    &__card {
+        width: 100%;
+        max-width: 440px;
+        padding: $spacing-8;
+        background-color: $color-bg-card;
+        border: 1px solid $color-border;
+        border-radius: $radius-lg;
+        box-shadow: $shadow-md;
+    }
+}

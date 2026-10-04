@@ -1,27 +1,33 @@
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
-import { ResetPasswordPage } from './ResetPasswordPage.tsx';
+import { BrowserRouter } from 'react-router-dom';
+
+import { AuthProvider } from './providers/AuthProvider.tsx';
+import { OrganizationProvider } from './providers/OrganizationProvider.tsx';
+import { ToastProvider } from './layout/MainLayout/contexts/ToastContext.tsx';
+import { AppRoutes } from './routes/AppRoutes.tsx';
+
+// Styles de la page de réinitialisation (indépendante) + partials du design
+// system utilisés par le back-office (Sidebar, Dropdown, Avatar). `main.scss`
+// (point d'entrée global du design system) n'est volontairement PAS branché :
+// son ordre de `@use` ne compile pas tel quel (position des règles).
 import './styles.css';
+import '../../styles/components/Navigation/_Sidebar.scss';
+import '../../styles/components/UI/_Dropdown.scss';
+import '../../styles/components/UI/_Avatar.scss';
+import '../../styles/components/UI/_Loading.scss';
 
-/**
- * Le projet n'embarque pas encore de routeur : le point d'entrée décide donc
- * lui-même de la page à afficher d'après le chemin de l'URL. Le serveur de
- * développement Vite sert `index.html` pour toute route inconnue
- * (`appType: 'spa'`, son comportement par défaut), ce qui permet à
- * `/reset-password` de fonctionner sans configuration supplémentaire.
- */
 function App() {
-    const { pathname, search } = window.location;
-
-    if (pathname === '/reset-password') {
-        return <ResetPasswordPage search={search} />;
-    }
-
     return (
-        <div>
-            <h1>Gestion H-Immo</h1>
-            <p>Frontend React 19 + TypeScript</p>
-        </div>
+        <BrowserRouter>
+            <AuthProvider>
+                <OrganizationProvider>
+                    <ToastProvider>
+                        <AppRoutes />
+                    </ToastProvider>
+                </OrganizationProvider>
+            </AuthProvider>
+        </BrowserRouter>
     );
 }
 

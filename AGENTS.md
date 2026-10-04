@@ -252,6 +252,14 @@ Autres enums métier à utiliser plutôt que des chaînes : `LeaseStatus`
   (voir `#[Route('/api/v1/payments')]`) ; certains contrôleurs Identity/Property
   sont sur `/api/…`. **Vérifie la route existante avant d'en créer une nouvelle**,
   et ne renumérote pas une famille d'Endpoints existante.
+- Résolution du rôle pour l'organization demandée :
+  `GET /api/v1/identity/organizations/{uuid}/membership` renvoie
+  `SessionOrganizationMembership` (uuid, code, name, role) de l'appelant POUR
+  cette organization. Garde : `checkOrganizationAccess` (403 si non membre),
+  rôle via `getOrganizationRole`. Il est l'opposé de `/auth/me` (qui liste
+  toutes les appartenances) : le front (OrganizationContext) l'appelle à chaque
+  bascule d'organization active, et ne déduit jamais le rôle d'une liste
+  globale filtrée côté client.
 - Codes HTTP usuels : 200 lecture, 201 création, 400 requête invalide, 401 non
   authentifié, 403 refus, 404 introuvable, 409 conflit métier, 422 validation.
 
