@@ -10,8 +10,8 @@ import { AppRoutes } from './routes/AppRoutes.tsx';
 // Partials du design system utilisés par les écrans (Sidebar, Dropdown,
 // Avatar, Formulaires). `main.scss` (point d'entrée global du design system)
 // n'est volontairement PAS branché : son ordre de `@use` ne compile pas tel
-// quel (position des règles). Les pages de connexion/mot de passe chargent
-// leur propre partial (`pages/auth/_auth-page.scss` + variantes).
+// quel (position des règles). Les écrans d'authentification chargent leur
+// socle `pages/auth/_auth-page.scss` via les partials de page importés ici.
 import '../../styles/components/Navigation/_Sidebar.scss';
 import '../../styles/components/UI/_Dropdown.scss';
 import '../../styles/components/UI/_Avatar.scss';
@@ -22,6 +22,9 @@ import '../../styles/components/Form/_Form.scss';
 import '../../styles/components/Form/_FormField.scss';
 import '../../styles/components/Form/_Input.scss';
 import '../../styles/components/Form/_Password.scss';
+import '../../styles/pages/auth/_login.scss';
+import '../../styles/pages/auth/_forgot-password.scss';
+import '../../styles/pages/auth/_reset-password.scss';
 
 function App() {
     return (

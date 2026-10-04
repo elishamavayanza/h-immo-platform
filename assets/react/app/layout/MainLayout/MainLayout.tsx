@@ -17,8 +17,8 @@
 import { useEffect, useState } from 'react';
 import { Navigate, Outlet, useLocation, useNavigate } from 'react-router-dom';
 
-import { Sidebar, type SidebarProps } from '../../../components/Navigation/Sidebar';
-import { Loading } from '../../../components/UI/Loading';
+import { Sidebar, type SidebarProps } from '../../../../../public/components/Navigation/Sidebar';
+import { Loading } from '../../../../../public/components/UI/Loading';
 import { useAuth } from '../../providers/AuthProvider';
 import { useOrganization } from '../../providers/OrganizationProvider';
 import { AppHeader } from './AppHeader';

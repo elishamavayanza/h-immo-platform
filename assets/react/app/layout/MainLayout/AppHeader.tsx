@@ -11,8 +11,8 @@
 // - Pastille du rôle résolu + identité de l'utilisateur + déconnexion.
 // ============================================================
 
-import { Avatar } from '../../../components/UI/Avatar/Avatar';
-import { Dropdown } from '../../../components/UI/Dropdown/Dropdown';
+import { Avatar } from '../../../../../public/components/UI/Avatar/Avatar';
+import { Dropdown } from '../../../../../public/components/UI/Dropdown/Dropdown';
 import { useAuth } from '../../providers/AuthProvider';
 import { useOrganization } from '../../providers/OrganizationProvider';
 

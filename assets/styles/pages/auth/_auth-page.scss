@@ -20,31 +20,16 @@
 .auth-page__header {
     display: flex;
     flex-direction: column;
+    align-items: center;
     gap: $spacing-2;
+    text-align: center;
 }
 
-.auth-page__brand {
-    @include flex(row, center, flex-start, $spacing-2);
-
-    &-mark {
-        @include flex-center;
-        flex-shrink: 0;
-        width: 36px;
-        height: 36px;
-        border-radius: $radius-md;
-        background-color: $color-primary;
-        color: $color-text-inverse;
-        font-family: $font-family-heading;
-        font-weight: $font-weight-bold;
-        font-size: $font-size-xl;
-    }
-
-    &-name {
-        font-family: $font-family-heading;
-        font-size: $font-size-xl;
-        font-weight: $font-weight-semibold;
-        color: $color-text-primary;
-    }
+.auth-page__logo {
+    display: block;
+    width: 180px;
+    max-width: 70%;
+    height: auto;
 }
 
 .auth-page__title {
