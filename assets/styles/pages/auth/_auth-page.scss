@@ -1,0 +1,82 @@
+// ============================================================
+// SOCLE COMMUN — ÉCRANS D'AUTHENTIFICATION
+// Fichier : pages/auth/_auth-page.scss
+// Classes `auth-page__*` partagées par la connexion, le mot de passe
+// oublié et la réinitialisation. Ce socle est chargé via `@use` par
+// chaque partial de page (chaque page est compilée indépendamment) : ne
+// pas y placer de règle propre à un seul écran.
+// ============================================================
+
+@use '../../baseVariables/variables' as *;
+@use '../../baseVariables/mixins' as *;
+
+.auth-page {
+    display: flex;
+    flex-direction: column;
+    gap: $spacing-6;
+    font-family: $font-family-base;
+}
+
+.auth-page__header {
+    display: flex;
+    flex-direction: column;
+    gap: $spacing-2;
+}
+
+.auth-page__brand {
+    @include flex(row, center, flex-start, $spacing-2);
+
+    &-mark {
+        @include flex-center;
+        flex-shrink: 0;
+        width: 36px;
+        height: 36px;
+        border-radius: $radius-md;
+        background-color: $color-primary;
+        color: $color-text-inverse;
+        font-family: $font-family-heading;
+        font-weight: $font-weight-bold;
+        font-size: $font-size-xl;
+    }
+
+    &-name {
+        font-family: $font-family-heading;
+        font-size: $font-size-xl;
+        font-weight: $font-weight-semibold;
+        color: $color-text-primary;
+    }
+}
+
+.auth-page__title {
+    margin: 0;
+    font-family: $font-family-heading;
+    font-size: $font-size-2xl;
+    font-weight: $font-weight-semibold;
+    color: $color-text-primary;
+}
+
+.auth-page__description {
+    margin: 0;
+    font-size: $font-size-sm;
+    line-height: $line-height-normal;
+    color: $color-text-secondary;
+}
+
+.auth-page__switch {
+    margin: 0;
+    text-align: center;
+    font-size: $font-size-sm;
+    color: $color-text-muted;
+}
+
+.auth-page__link {
+    color: $color-primary;
+    font-weight: $font-weight-medium;
+    transition: color $transition-fast;
+
+    @include focus-ring;
+
+    &:hover {
+        color: $color-primary-hover;
+    }
+}

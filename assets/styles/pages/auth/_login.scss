@@ -1,0 +1,8 @@
+// ============================================================
+// PAGE — CONNEXION
+// Fichier : pages/auth/_login.scss
+// Styles spécifiques de la page de connexion ; le socle commun
+// `auth-page__*` vit dans `_auth-page.scss` (chargé ci-dessous).
+// ============================================================
+
+@use './auth-page';

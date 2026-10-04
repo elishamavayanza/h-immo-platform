@@ -7,15 +7,21 @@ import { OrganizationProvider } from './providers/OrganizationProvider.tsx';
 import { ToastProvider } from './layout/MainLayout/contexts/ToastContext.tsx';
 import { AppRoutes } from './routes/AppRoutes.tsx';
 
-// Styles de la page de réinitialisation (indépendante) + partials du design
-// system utilisés par le back-office (Sidebar, Dropdown, Avatar). `main.scss`
-// (point d'entrée global du design system) n'est volontairement PAS branché :
-// son ordre de `@use` ne compile pas tel quel (position des règles).
-import './styles.css';
+// Partials du design system utilisés par les écrans (Sidebar, Dropdown,
+// Avatar, Formulaires). `main.scss` (point d'entrée global du design system)
+// n'est volontairement PAS branché : son ordre de `@use` ne compile pas tel
+// quel (position des règles). Les pages de connexion/mot de passe chargent
+// leur propre partial (`pages/auth/_auth-page.scss` + variantes).
 import '../../styles/components/Navigation/_Sidebar.scss';
 import '../../styles/components/UI/_Dropdown.scss';
 import '../../styles/components/UI/_Avatar.scss';
 import '../../styles/components/UI/_Loading.scss';
+import '../../styles/components/UI/_Button.scss';
+import '../../styles/components/UI/_Alert.scss';
+import '../../styles/components/Form/_Form.scss';
+import '../../styles/components/Form/_FormField.scss';
+import '../../styles/components/Form/_Input.scss';
+import '../../styles/components/Form/_Password.scss';
 
 function App() {
     return (

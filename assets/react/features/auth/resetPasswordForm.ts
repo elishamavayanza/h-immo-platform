@@ -1,10 +1,11 @@
 /**
  * Logique pure du formulaire « réinitialiser mon mot de passe ».
  *
- * Isoler ces règles dans un module sans React ni DOM permet de les tester
- * directement (voir `tests/verify-reset-password-form.ts`). Les contraintes
- * de longueur doivent rester alignées sur celles du DTO côté API
- * (`App\Dto\Request\Auth\ResetPasswordRequest`) : le client valide pour
+ * Anciennement `assets/react/app/password-form.ts`, migré dans la feature
+ * `auth`. Ces règles vivent dans un module sans React ni DOM pour être
+ * testables directement (voir `tests/verify-reset-password-form.ts`). Les
+ * contraintes de longueur doivent rester alignées sur celles du DTO côté
+ * API (`App\Dto\Request\Auth\ResetPasswordRequest`) : le client valide pour
  * donner un retour immédiat, le serveur reste seul juge de la sécurité.
  */
 

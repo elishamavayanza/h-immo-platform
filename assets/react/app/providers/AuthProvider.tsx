@@ -1,8 +1,8 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
 
-import { apiClient } from '../../../services/api/client';
 import { onSessionExpired } from '../../../services/api/interceptors';
-import { ApiError, type LoginResponse, type LogoutResponse, type SessionUserResponse } from '../../../services/api/api.types';
+import { ApiError, type SessionUserResponse } from '../../../services/api/api.types';
+import { authService } from '../../features/auth/services/authService';
 import { tokenStorage } from '../../../services/storage/storage.service';
 import { isTokenExpired } from '../../../services/security/security.utils';
 
@@ -51,7 +51,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             }
 
             try {
-                const { data } = await apiClient.get<SessionUserResponse>('/auth/me');
+                const { data } = await authService.me();
                 if (!cancelled) setUser(data);
             } catch {
                 // 401 ou réseau : le jeton n'est plus exploitable. Il est
@@ -80,7 +80,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const login = useCallback(async (email: string, password: string) => {
         setIsLoading(true);
         try {
-            const { data } = await apiClient.post<LoginResponse>('/auth/login', { email, password });
+            const { data } = await authService.login(email, password);
 
             // `expiresIn` sert de TTL côté client : le jeton disparaît du
             // stockage à l'heure où le serveur le considère expiré, donc il
@@ -101,7 +101,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             // La révocation serveur est ce qui rend la déconnexion réelle :
             // sans elle, un jeton intercepté resterait valable jusqu'à son
             // expiration.
-            await apiClient.post<LogoutResponse>('/auth/logout');
+            await authService.logout();
         } catch (error) {
             // Une déconnexion ne doit jamais rester bloquée sur le réseau.
             if (import.meta.env.DEV && !(error instanceof ApiError && error.status === 401)) {
