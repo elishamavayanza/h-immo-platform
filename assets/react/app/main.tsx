@@ -7,11 +7,14 @@ import { OrganizationProvider } from './providers/OrganizationProvider.tsx';
 import { ToastProvider } from './layout/MainLayout/contexts/ToastContext.tsx';
 import { AppRoutes } from './routes/AppRoutes.tsx';
 
-// Partials du design system utilisés par les écrans (Sidebar, Dropdown,
-// Avatar, Formulaires). `main.scss` (point d'entrée global du design system)
-// n'est volontairement PAS branché : son ordre de `@use` ne compile pas tel
-// quel (position des règles). Les écrans d'authentification chargent leur
-// socle `pages/auth/_auth-page.scss` via les partials de page importés ici.
+// Partials de style chargés dans l'ordre : reset navigateur d'abord,
+// puis les partials du design system utilisés par les écrans (Sidebar,
+// Dropdown, Avatar, Formulaires). `main.scss` (point d'entrée global du
+// design system) n'est volontairement PAS branché : son ordre de `@use`
+// ne compile pas tel quel (position des règles). Les écrans
+// d'authentification chargent leur socle `pages/auth/_auth-page.scss`
+// via les partials de page importés ici.
+import '../../styles/base/_reset.scss';
 import '../../styles/components/Navigation/_Sidebar.scss';
 import '../../styles/components/UI/_Dropdown.scss';
 import '../../styles/components/UI/_Avatar.scss';
