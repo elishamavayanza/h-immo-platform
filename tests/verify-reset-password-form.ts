@@ -3,9 +3,9 @@
  *
  * Le composant React ne peut pas être rendu sans navigateur, mais les règles
  * qui décident de l'acceptation du formulaire en sont volontairement
- * extraites dans `assets/app/password-form.ts`. Ce script les exécute
- * réellement : Node 24 supprime les types TypeScript nativement, aucun
- * transpiler n'est nécessaire.
+ * extraites dans `assets/react/features/auth/resetPasswordForm.ts`. Ce
+ * script les exécute réellement : Node 24 supprime les types TypeScript
+ * nativement, aucun transpiler n'est nécessaire.
  *
  *   node tests/verify-reset-password-form.ts
  */
@@ -15,7 +15,7 @@ import {
     MIN_PASSWORD_LENGTH,
     readTokenFromSearch,
     validatePasswordForm,
-} from '../assets/react/app/password-form.ts';
+} from '../assets/react/features/auth/resetPasswordForm.ts';
 
 let checks = 0;
 const failures: string[] = [];

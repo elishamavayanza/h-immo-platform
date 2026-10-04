@@ -5,7 +5,7 @@
 // `react-router-dom` (v7) est installé et `main.tsx` monte un
 // `<BrowserRouter>`. Deux familles de routes :
 //
-//   - Hors session (AuthLayout) : `/login`, `/reset-password`.
+//   - Hors session (AuthLayout) : `/login`, `/forgot-password`, `/reset-password`.
 //   - Back-office (`/app`, MainLayout) : sections chargées en
 //     `React.lazy`, feuilles affichant un placeholder « à venir », garde
 //     `RequireRole` (UX) positionnée par MainLayout.
@@ -16,14 +16,15 @@
 // ============================================================
 
 import { lazy, Suspense } from 'react';
-import { Navigate, Route, Routes, useLocation } from 'react-router-dom';
+import { Navigate, Route, Routes } from 'react-router-dom';
 
 import { Loading } from '../../components/UI/Loading/Loading';
 import { useOrganization } from '../providers/OrganizationProvider';
+import { ForgotPasswordPage } from '../../features/auth/pages/ForgotPasswordPage';
+import { LoginPage } from '../../features/auth/pages/LoginPage';
+import { ResetPasswordPage } from '../../features/auth/pages/ResetPasswordPage';
 import { AccessDeniedPage } from '../pages/AccessDeniedPage';
-import { LoginPage } from '../pages/LoginPage';
 import { PlaceholderScreen } from '../pages/PlaceholderScreen';
-import { ResetPasswordPage } from '../ResetPasswordPage';
 import { AuthLayout } from '../layout/AuthLayout/AuthLayout';
 import { MainLayout } from '../layout/MainLayout/MainLayout';
 import { defaultPathFor } from '../layout/MainLayout/sidebar/sidebar.config';
@@ -35,13 +36,6 @@ const VitrineSection = lazy(() => import('../pages/sections/VitrineSection'));
 const AdministrationSection = lazy(() => import('../pages/sections/AdministrationSection'));
 const PersonnelSection = lazy(() => import('../pages/sections/PersonnelSection'));
 const PlatformSection = lazy(() => import('../pages/sections/PlatformSection'));
-
-/** `/reset-password` lit `?token=…&email=…` depuis la query string. */
-function ResetPasswordRoute() {
-    const location = useLocation();
-
-    return <ResetPasswordPage search={location.search} />;
-}
 
 /** `/app` → première feuille du menu du rôle courant (suivie par le sidebar). */
 function AppLanding() {
@@ -56,7 +50,8 @@ export function AppRoutes() {
             <Routes>
                 <Route element={<AuthLayout />}>
                     <Route path="/login" element={<LoginPage />} />
-                    <Route path="/reset-password" element={<ResetPasswordRoute />} />
+                    <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+                    <Route path="/reset-password" element={<ResetPasswordPage />} />
                 </Route>
 
                 <Route path="/" element={<Navigate to="/app" replace />} />

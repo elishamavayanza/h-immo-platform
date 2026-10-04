@@ -23,4 +23,15 @@
         border-radius: $radius-lg;
         box-shadow: $shadow-md;
     }
+
+    // Écrans étroits : réduire marges et padding pour maximiser la zone de
+    // saisie. Le mixin `responsive` ne produit que des `min-width` (mobile-
+    // first), une requête max est nécessaire ici.
+    @media (max-width: $breakpoint-mobile) {
+        padding: $spacing-2;
+
+        &__card {
+            padding: $spacing-5;
+        }
+    }
 }

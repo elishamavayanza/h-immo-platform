@@ -62,10 +62,15 @@ est dans `assets/react/app` :
 assets/app/
 ├── index.html          # page Vite (appType: 'spa')
 ├── main.tsx            # point d'entrée React
-├── ResetPasswordPage.tsx
-├── password-form.ts    # logique pure testable hors navigateur
-├── styles.css
 └── vite-env.d.ts
+
+assets/react/features/auth/  # écrans hors session (design system)
+├── pages/              # LoginPage, ForgotPasswordPage, ResetPasswordPage
+├── components/         # LoginForm, ForgotPasswordForm, ResetPasswordForm
+├── hooks/              # useLoginForm, useForgotPasswordForm, useResetPasswordForm
+├── services/           # authService, forgotPasswordService, resetPasswordService
+├── types/              # auth.types, forgotPassword.types, resetPassword.types
+└── resetPasswordForm.ts # logique pure testable hors navigateur (`tests/verify-reset-password-form.ts`)
 ```
 
 `vite.config.ts` : `root: 'assets/app'`, `outDir: '../../public/build'`,
@@ -564,7 +569,7 @@ php tests/verify-p0-security.php        # rapports, dépenses, médias, statuts
 php tests/verify-p0-7-list-endpoints.php # endpoints de liste rentals (200, pas de fuite)
 php tests/verify-parcel-coordinates.php # coordonnées GPS Parcel (201/422, round-trip)
 php tests/check-injected-dependencies.php # dépendances $this-> injectées (statique)
-node tests/verify-reset-password-form.ts # logique pure du formulaire React
+node tests/verify-reset-password-form.ts # logique pure du formulaire de réinitialisation (features/auth)
 node tests/verify-sidebar-roles.ts # menu du sidebar vs matrice de rôles backend (Personnel pour ADMIN_IMMOBILIER, hors ADMIN_VILLE)
 ```
 
