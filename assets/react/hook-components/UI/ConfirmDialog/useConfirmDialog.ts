@@ -1,5 +1,4 @@
 import { useEffect, useMemo } from 'react';
-import { useI18n } from '@/react/i18n/I18nContext';
 
 export interface UseConfirmDialogProps {
     isOpen: boolean;
@@ -26,7 +25,6 @@ export function useConfirmDialog({
                                      size = 'medium',
                                      className = '',
                                  }: UseConfirmDialogProps) {
-    const { t } = useI18n();
     useEffect(() => {
         if (!isOpen) return;
         const handleKeyDown = (e: KeyboardEvent) => {
@@ -62,8 +60,8 @@ export function useConfirmDialog({
         classes,
         handleConfirm,
         handleCancel,
-        confirmLabel: t(confirmLabel),
-        cancelLabel: t(cancelLabel),
+        confirmLabel,
+        cancelLabel,
         title,
         message,
     };
