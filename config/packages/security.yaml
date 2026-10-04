@@ -14,8 +14,8 @@ security:
 
     firewalls:
         dev:
-            # Ensure dev tools and static assets are always allowed
-            pattern: ^/(_profiler|_wdt|assets|build)/
+            # Ensure dev tools and static upload are always allowed
+            pattern: ^/(_profiler|_wdt|upload|build)/
             security: false
 
         main:

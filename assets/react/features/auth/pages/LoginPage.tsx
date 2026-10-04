@@ -1,5 +1,5 @@
 // ============================================================
-// assets/react/features/auth/pages/LoginPage.tsx
+// upload/react/features/auth/pages/LoginPage.tsx
 // Page de connexion (route `/login`, hors session, sous `AuthLayout`).
 //
 // Pendant la restauration de session (`isLoading`), aucun formulaire

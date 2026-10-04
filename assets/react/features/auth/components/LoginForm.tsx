@@ -1,5 +1,5 @@
 // ============================================================
-// assets/react/features/auth/components/LoginForm.tsx
+// upload/react/features/auth/components/LoginForm.tsx
 // Formulaire de connexion (design system).
 //
 // Le succès navigue vers `/app` : c'est `AuthProvider` (via `useAuth`)
@@ -19,7 +19,7 @@ import { Password } from '../../../../../public/components/Forms/Password/Passwo
 
 import { useLoginForm } from '../hooks/useLoginForm';
 
-import logoUrl from '../../../app/assets/logo.png';
+import logoUrl from '../../../app/upload/logo.png';
 
 const MAIL_ICON = (
     <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">

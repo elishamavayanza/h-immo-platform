@@ -1,5 +1,5 @@
 // ============================================================
-// assets/react/app/layout/MainLayout/AppHeader.tsx
+// upload/react/app/layout/MainLayout/AppHeader.tsx
 // Barre supérieure du back-office.
 //
 // - Bouton « burger » : ouvre le drawer mobile du sidebar (< 768px,

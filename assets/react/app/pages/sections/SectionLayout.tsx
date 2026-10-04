@@ -1,5 +1,5 @@
 // ============================================================
-// assets/react/app/pages/sections/SectionLayout.tsx
+// upload/react/app/pages/sections/SectionLayout.tsx
 // Enveloppe commune d'une « grande section » du menu.
 //
 // Chaque section est chargée par `React.lazy` (découpage du bundle) et

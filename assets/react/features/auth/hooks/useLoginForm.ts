@@ -1,5 +1,5 @@
 // ============================================================
-// assets/react/features/auth/hooks/useLoginForm.ts
+// upload/react/features/auth/hooks/useLoginForm.ts
 // État et soumission du formulaire de connexion.
 //
 // La validation locale n'est qu'un confort d'affichage : les mêmes

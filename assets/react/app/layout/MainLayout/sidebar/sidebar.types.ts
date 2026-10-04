@@ -1,5 +1,5 @@
 // ============================================================
-// assets/react/app/layout/MainLayout/sidebar/sidebar.types.ts
+// upload/react/app/layout/MainLayout/sidebar/sidebar.types.ts
 // Types du menu latéral piloté par configuration.
 //
 // Le menu n'est qu'un confort d'affichage : il reflète le rôle

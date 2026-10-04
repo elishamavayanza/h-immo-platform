@@ -1,5 +1,5 @@
 // ============================================================
-// assets/react/features/auth/hooks/useResetPasswordForm.ts
+// upload/react/features/auth/hooks/useResetPasswordForm.ts
 // État et soumission du formulaire de réinitialisation.
 //
 // La validation locale est déléguée au module pur `resetPasswordForm.ts`

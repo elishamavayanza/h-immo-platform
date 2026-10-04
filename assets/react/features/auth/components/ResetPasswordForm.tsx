@@ -1,5 +1,5 @@
 // ============================================================
-// assets/react/features/auth/components/ResetPasswordForm.tsx
+// upload/react/features/auth/components/ResetPasswordForm.tsx
 // Formulaire de réinitialisation du mot de passe (design system).
 //
 // Trois états possibles :
@@ -19,7 +19,7 @@ import { Password } from '../../../../../public/components/Forms/Password/Passwo
 
 import { RESET_SUCCESS_MESSAGE, useResetPasswordForm } from '../hooks/useResetPasswordForm';
 
-import logoUrl from '../../../app/assets/logo.png';
+import logoUrl from '../../../app/upload/logo.png';
 
 export function ResetPasswordForm({ token }: { token: string }) {
     const form = useResetPasswordForm(token);

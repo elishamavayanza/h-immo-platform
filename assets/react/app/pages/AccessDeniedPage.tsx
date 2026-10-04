@@ -1,5 +1,5 @@
 // ============================================================
-// assets/react/app/pages/AccessDeniedPage.tsx
+// upload/react/app/pages/AccessDeniedPage.tsx
 // Page « accès non prévu ».
 //
 // Affichée par la garde de route (RequireRole) lorsqu'une URL n'appartient

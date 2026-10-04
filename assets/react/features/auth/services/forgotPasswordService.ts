@@ -1,5 +1,5 @@
 // ============================================================
-// assets/react/features/auth/services/forgotPasswordService.ts
+// upload/react/features/auth/services/forgotPasswordService.ts
 // Description typée de `POST /api/auth/forgot-password`.
 //
 // Le backend répond TOUJOURS 200 avec le même `Feedback` générique, que

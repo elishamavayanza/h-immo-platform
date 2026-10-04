@@ -1,5 +1,5 @@
 // ============================================================
-// assets/react/utils/authUtils.ts
+// upload/react/utils/authUtils.ts
 // Lecture du jeton pour l'affichage uniquement.
 //
 // Rappel : décoder un JWT côté client ne prouve rien. Le contenu du

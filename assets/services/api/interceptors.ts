@@ -1,5 +1,5 @@
 // ============================================================
-// assets/services/api/interceptors.ts
+// upload/services/api/interceptors.ts
 // Pipeline d'intercepteurs request/response (pattern Axios-like)
 //
 // ⚠️ Volontairement ABSENT : le renouvellement de jeton.

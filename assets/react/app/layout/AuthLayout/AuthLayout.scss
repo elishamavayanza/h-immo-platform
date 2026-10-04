@@ -1,6 +1,9 @@
 // ============================================================
-// assets/react/app/layout/AuthLayout/AuthLayout.scss
-// Ecrans hors session : carte centrée sur fond du thème.
+// upload/react/app/layout/AuthLayout/AuthLayout.scss
+// Ecrans hors session : carte centrée sur un fond décoratif sobre.
+// La décoration est purement statique (aucune animation) : deux halos
+// radiaux très légers aux coins et un voile vertical subtil, construits
+// avec les couleurs du thème sur le fond noir de l'application.
 // ============================================================
 
 @use '../../../../styles/baseVariables/variables' as *;

@@ -1,5 +1,5 @@
 // ============================================================
-// assets/react/utils/apiFeedback.ts
+// upload/react/utils/apiFeedback.ts
 // Helpers de lecture de l'enveloppe `Feedback` (App\Dto\Feedback)
 //
 // Rappel du contrat : une réponse métier est

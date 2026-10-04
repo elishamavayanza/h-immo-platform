@@ -1,5 +1,5 @@
 // ============================================================
-// assets/react/features/auth/pages/ForgotPasswordPage.tsx
+// upload/react/features/auth/pages/ForgotPasswordPage.tsx
 // Page « mot de passe oublié » (route `/forgot-password`, hors session,
 // sous `AuthLayout`). Cette route est publique dans `security.yaml`.
 // ============================================================

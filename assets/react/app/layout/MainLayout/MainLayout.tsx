@@ -1,5 +1,5 @@
 // ============================================================
-// assets/react/app/layout/MainLayout/MainLayout.tsx
+// upload/react/app/layout/MainLayout/MainLayout.tsx
 // Coquille du back-office authentifié.
 //
 // Compose :

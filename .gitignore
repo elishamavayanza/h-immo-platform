@@ -274,7 +274,7 @@ docker-compose.local.yml
 
 
 # ============================================================
-# Frontend generated assets
+# Frontend generated upload
 # ============================================================
 
 /assets/react/app/node_modules/

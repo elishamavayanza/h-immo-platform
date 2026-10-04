@@ -1,5 +1,5 @@
 // ============================================================
-// assets/react/app/layout/MainLayout/sidebar/sidebar.icons.tsx
+// upload/react/app/layout/MainLayout/sidebar/sidebar.icons.tsx
 // Jeu d'icônes SVG minimal du menu.
 //
 // Traits `currentColor` : l'icône hérite de la couleur du texte du

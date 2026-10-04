@@ -1,5 +1,5 @@
 // ============================================================
-// assets/services/storage/storage.service.ts
+// upload/services/storage/storage.service.ts
 // Abstraction du stockage navigateur (localStorage / sessionStorage)
 // avec sérialisation JSON et TTL optionnel.
 //
