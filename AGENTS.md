@@ -619,6 +619,47 @@ yarn type-check
 - Pas de dépendance React ajoutée sans justification : le front est aujourd'hui
   minimal (React + ReactDOM seuls en `dependencies`).
 
+### 16.1 Frontend — Architecture, composants et styles
+
+Le frontend doit respecter en priorité la structure et les composants déjà présents
+dans le dépôt. L'agent ne doit jamais reconstruire une architecture parallèle ou
+introduire une nouvelle organisation simplement parce qu'elle lui paraît plus propre.
+
+#### Règle fondamentale
+
+> Avant de créer un composant, une page, un fichier de style ou une abstraction,
+> l'agent doit rechercher ce qui existe déjà et déterminer si l'élément peut être
+> réutilisé, étendu ou composé.
+
+Le code existant est la source de vérité de l'architecture frontend.
+
+### Analyse obligatoire avant toute modification
+
+Avant toute création ou modification importante côté React, l'agent doit :
+
+1. Lire la page concernée.
+2. Identifier les composants utilisés par cette page.
+3. Rechercher les composants similaires ou équivalents déjà présents.
+4. Rechercher les fichiers SCSS/CSS associés.
+5. Identifier les variables, mixins, tokens et styles communs existants.
+6. Comprendre comment les autres pages réalisent le même besoin.
+7. Modifier uniquement la structure nécessaire.
+
+Ne jamais supposer qu'un composant n'existe pas simplement parce que son nom
+n'est pas connu.
+
+Utiliser la recherche du projet avant toute création :
+
+```text
+Composant recherché
+        ↓
+Recherche dans assets/
+        ↓
+Composant existant ?
+   ├── Oui → réutiliser
+   ├── Presque identique → factoriser ou étendre
+   └── Non → créer uniquement si nécessaire
+
 ---
 
 ## 17. Git
