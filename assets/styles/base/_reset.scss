@@ -1,0 +1,26 @@
+// ============================================================
+// RESET NAVIGATEUR — MARGES / PADDING / BOÎTE
+// Fichier : base/_reset.scss
+// Supprime les marges et paddings par défaut du navigateur (corps de
+// page) et unifie le modèle de boîte. Chargé en tête de `main.tsx`,
+// avant les partials : l'ordre du CSS suit l'ordre des imports.
+// Le reset universel (marges/paddings sur `*`) est volontairement
+// absent : certains composants du design system posent leurs marges
+// directement, il ne faut pas les écraser.
+// ============================================================
+
+*,
+*::before,
+*::after {
+    box-sizing: border-box;
+}
+
+html {
+    margin: 0;
+    padding: 0;
+}
+
+body {
+    margin: 0;
+    padding: 0;
+}
