@@ -15,6 +15,7 @@ use Doctrine\ORM\EntityManagerInterface;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\DependencyInjection\ParameterBag\ParameterBagInterface;
 use Symfony\Component\Mime\Email;
+use Symfony\Component\Mime\Part\DataPart;
 use Symfony\Component\Mailer\MailerInterface;
 
 /**
@@ -212,10 +213,14 @@ final readonly class PasswordResetService
             . '/reset-password?token=' . $rawToken;
 
         $email = (new Email())
-            ->from($this->params->get('mailer.from', 'noreply@soft-immo.local'))
+            ->from($this->params->get('mailer.from', 'noreply@h-immo.local'))
             ->to($user->getEmail())
-            ->subject('Réinitialisation de votre mot de passe - Soft-IMMO')
-            ->html($this->buildResetEmailHtml($user->getFullName(), $resetUrl))
+            ->subject('Réinitialisation de votre mot de passe - H-Immo');
+
+        $logoTag = $this->attachEmailLogo($email);
+
+        $email
+            ->html($this->buildResetEmailHtml($user->getFullName(), $resetUrl, $logoTag))
             ->text($this->buildResetEmailText($user->getFullName(), $resetUrl));
 
         try {
@@ -235,35 +240,86 @@ final readonly class PasswordResetService
         return true;
     }
 
-    private function buildResetEmailHtml(string $fullName, string $resetUrl): string
+    /**
+     * Joint le logo au message et renvoie la balise `<img>` à injecter.
+     *
+     * Le logo est embarqué en pièce jointe interne (`cid:`) plutôt que
+     * référencé par URL : aucun client ne dépend du domaine de l'API et
+     * l'image reste affichée même si les images distantes sont bloquées.
+     * Un logo absent ne doit jamais faire échouer l'envoi : l'email part
+     * sans image, le texte suffit à l'action.
+     */
+    private function attachEmailLogo(Email $email): string
+    {
+        $projectDir = $this->params->get('kernel.project_dir', '');
+
+        try {
+            $logoPart = DataPart::fromPath($projectDir.'/public/logo-email.png', 'logo-email.png')->asInline();
+            $cid = $logoPart->getContentId();
+            $email->addPart($logoPart);
+        } catch (\Throwable $exception) {
+            $this->logger->warning('Logo email introuvable, envoi sans image.', [
+                'projectDir' => $projectDir,
+                'exception' => $exception,
+            ]);
+
+            return '';
+        }
+
+        return '<img src="cid:'.$cid.'" alt="H-Immo" width="150" height="136" style="display:block;margin:0 auto 24px auto;border:0;outline:none;text-decoration:none;">';
+    }
+
+    private function buildResetEmailHtml(string $fullName, string $resetUrl, string $logoTag): string
     {
         return <<<HTML
 <!DOCTYPE html>
-<html>
+<html lang="fr">
 <head>
     <meta charset="UTF-8">
-    <style>
-        body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
-        .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-        .button { display: inline-block; padding: 12px 24px; background: #1a5276; color: white; text-decoration: none; border-radius: 4px; }
-        .footer { margin-top: 20px; font-size: 12px; color: #777; }
-    </style>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Réinitialisation de votre mot de passe</title>
 </head>
-<body>
-    <div class="container">
-        <h2>Réinitialisation de votre mot de passe</h2>
-        <p>Bonjour <strong>{$fullName}</strong>,</p>
-        <p>Vous avez demandé la réinitialisation de votre mot de passe sur <strong>Soft-IMMO</strong>.</p>
-        <p>Cliquez sur le bouton ci-dessous pour définir votre nouveau mot de passe :</p>
-        <p style="text-align: center; margin: 30px 0;">
-            <a href="{$resetUrl}" class="button">Réinitialiser mon mot de passe</a>
-        </p>
-        <p>Ce lien expire dans <strong>1 heure</strong> et ne peut être utilisé qu'une seule fois.</p>
-        <p>Si vous n'avez pas fait cette demande, ignorez simplement cet email.</p>
-        <div class="footer">
-            <p>Équipe Soft-IMMO</p>
-            <p>Ce message est automatique, merci de ne pas y répondre.</        </p>
-    </div>
+<body style="margin:0;padding:0;background-color:#0A0B0D;-webkit-text-size-adjust:100%;text-size-adjust:100%;">
+    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" bgcolor="#0A0B0D">
+        <tr>
+            <td align="center" style="padding:40px 16px;">
+                <table role="presentation" width="560" cellspacing="0" cellpadding="0" border="0" style="width:100%;max-width:560px;background-color:#15171A;border:1px solid #262A2E;border-radius:16px;">
+                    <tr>
+                        <td align="center" style="padding:36px 32px 4px 32px;">
+                            {$logoTag}
+                            <h1 style="margin:0;font-family:Inter,Arial,Helvetica,sans-serif;font-size:20px;font-weight:600;color:#F5F5F5;text-align:center;line-height:1.35;">Réinitialisation de votre mot de passe</h1>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td style="padding:20px 32px 8px 32px;font-family:Inter,Arial,Helvetica,sans-serif;font-size:14px;line-height:1.7;color:#A5A8AD;">
+                            <p style="margin:0 0 14px 0;">Bonjour <strong style="color:#F5F5F5;font-weight:600;">{$fullName}</strong>,</p>
+                            <p style="margin:0 0 14px 0;">Vous avez demandé la réinitialisation de votre mot de passe sur <strong style="color:#25BDE8;font-weight:600;">H-Immo</strong>.</p>
+                            <p style="margin:0;">Cliquez sur le bouton ci-dessous pour définir votre nouveau mot de passe :</p>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td align="center" style="padding:28px 32px;">
+                            <a href="{$resetUrl}" style="display:inline-block;background-color:#25BDE8;color:#0A0B0D;text-decoration:none;font-family:Inter,Arial,Helvetica,sans-serif;font-size:14px;font-weight:600;line-height:1;padding:15px 32px;border-radius:10px;">Réinitialiser mon mot de passe</a>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td style="padding:0 32px 8px 32px;font-family:Inter,Arial,Helvetica,sans-serif;font-size:13px;line-height:1.7;color:#A5A8AD;">
+                            <p style="margin:0 0 10px 0;">Ce lien expire dans <strong style="color:#F5F5F5;font-weight:600;">1 heure</strong> et ne peut être utilisé qu'une seule fois.</p>
+                            <p style="margin:0;">Si vous n'avez pas fait cette demande, ignorez simplement cet email.</p>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td style="padding:24px 32px 32px 32px;border-top:1px solid #262A2E;">
+                            <p style="margin:0;font-family:Inter,Arial,Helvetica,sans-serif;font-size:12px;line-height:1.6;color:#6B7077;">
+                                <strong style="color:#A5A8AD;font-weight:600;">Équipe H-Immo</strong><br>
+                                Ce message est automatique, merci de ne pas y répondre.
+                            </p>
+                        </td>
+                    </tr>
+                </table>
+            </td>
+        </tr>
+    </table>
 </body>
 </html>
 HTML;
@@ -276,7 +332,7 @@ Réinitialisation de votre mot de passe
 
 Bonjour {$fullName},
 
-Vous avez demandé la réinitialisation de votre mot de passe sur Soft-IMMO.
+Vous avez demandé la réinitialisation de votre mot de passe sur H-Immo.
 
 Cliquez sur le lien ci-dessous pour définir votre nouveau mot de passe :
 {$resetUrl}
@@ -286,7 +342,7 @@ Ce lien expire dans 1 heure et ne peut être utilisé qu'une seule fois.
 Si vous n'avez pas fait cette demande, ignorez simplement cet email.
 
 --
-Équipe Soft-IMMO
+Équipe H-Immo
 Ce message est automatique, merci de ne pas y répondre.
 TEXT;
     }
