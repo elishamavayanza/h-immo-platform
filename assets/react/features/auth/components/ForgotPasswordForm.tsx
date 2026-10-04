@@ -9,13 +9,15 @@
 
 import { Link } from 'react-router-dom';
 
-import { Alert } from '../../../components/UI/Alert/Alert';
-import { Button } from '../../../components/UI/Button/Button';
-import { Form } from '../../../components/Forms/Form/Form';
-import { FormField } from '../../../components/Forms/FormField/FormField';
-import { Input } from '../../../components/Forms/Input/Input';
+import { Alert } from '../../../../../public/components/UI/Alert/Alert';
+import { Button } from '../../../../../public/components/UI/Button/Button';
+import { Form } from '../../../../../public/components/Forms/Form/Form';
+import { FormField } from '../../../../../public/components/Forms/FormField/FormField';
+import { Input } from '../../../../../public/components/Forms/Input/Input';
 
 import { DEFAULT_FORGOT_RESET_MESSAGE, useForgotPasswordForm } from '../hooks/useForgotPasswordForm';
+
+import logoUrl from '../../../app/assets/logo.png';
 
 const MAIL_ICON = (
     <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
@@ -33,10 +35,11 @@ export function ForgotPasswordForm() {
         return (
             <main className="auth-page">
                 <header className="auth-page__header">
-                    <div className="auth-page__brand">
-                        <span className="auth-page__brand-mark" aria-hidden="true">H</span>
-                        <span className="auth-page__brand-name">Immo</span>
-                    </div>
+                    <img
+                        className="auth-page__logo"
+                        src={logoUrl}
+                        alt="H-Immo"
+                    />
                     <h1 className="auth-page__title">Email envoyé</h1>
                 </header>
 
@@ -56,10 +59,11 @@ export function ForgotPasswordForm() {
     return (
         <main className="auth-page">
             <header className="auth-page__header">
-                <div className="auth-page__brand">
-                    <span className="auth-page__brand-mark" aria-hidden="true">H</span>
-                    <span className="auth-page__brand-name">Immo</span>
-                </div>
+                <img
+                    className="auth-page__logo"
+                    src={logoUrl}
+                    alt="H-Immo"
+                />
                 <h1 className="auth-page__title">Mot de passe oublié</h1>
                 <p className="auth-page__description">
                     Saisissez votre adresse email. Si un compte existe, un lien de
