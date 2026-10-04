@@ -87,7 +87,10 @@
 // ============================================================
 
 .sidebar--mobile-open {
-    @include responsive(mobile) {
+    // Le panneau n'est off-canvas que sous le seuil tablette : il faut
+    // ramener la classe « open » dans cette même plage (et non pas à
+    // `min-width: 480px`, sinon le drawer reste invisible en dessous).
+    @media (max-width: #{$breakpoint-tablet - 1px}) {
         transform: translateX(0);
     }
 }
