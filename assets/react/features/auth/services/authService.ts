@@ -1,5 +1,5 @@
 // ============================================================
-// assets/react/features/auth/services/authService.ts
+// upload/react/features/auth/services/authService.ts
 // Description typée des endpoints d'authentification.
 //
 // Ce module est un contrat HTTP, PAS une autorité de session : le

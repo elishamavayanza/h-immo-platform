@@ -1,5 +1,5 @@
 // ============================================================
-// assets/react/app/layout/MainLayout/RequireRole.tsx
+// upload/react/app/layout/MainLayout/RequireRole.tsx
 // Garde de route D'AFFICHAGE (confort UX, aucune sécurité).
 //
 // Compare le `pathname` courant au menu résolu pour le rôle courant

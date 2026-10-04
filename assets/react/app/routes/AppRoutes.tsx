@@ -1,5 +1,5 @@
 // ============================================================
-// assets/react/app/routes/AppRoutes.tsx
+// upload/react/app/routes/AppRoutes.tsx
 // Table de routage du SPA.
 //
 // `react-router-dom` (v7) est installé et `main.tsx` monte un

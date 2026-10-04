@@ -1,5 +1,5 @@
 // ============================================================
-// assets/react/features/auth/hooks/useForgotPasswordForm.ts
+// upload/react/features/auth/hooks/useForgotPasswordForm.ts
 // État et soumission du formulaire « mot de passe oublié ».
 //
 // Contrairement au login, l'API répond toujours 200 : le champ d'erreur

@@ -1,5 +1,5 @@
 // ============================================================
-// assets/services/security/csrf.ts
+// upload/services/security/csrf.ts
 // Lecture d'un token CSRF dans le DOM.
 //
 // ⚠️ NON UTILISÉ PAR LE CLIENT HTTP, ET C'EST VOLONTAIRE.

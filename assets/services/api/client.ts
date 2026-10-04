@@ -1,5 +1,5 @@
 // ============================================================
-// assets/services/api/client.ts
+// upload/services/api/client.ts
 // Client HTTP basé sur Fetch — API Axios-like
 // ============================================================
 

@@ -1,9 +1,9 @@
 // ============================================================
-// assets/react/features/auth/types/auth.types.ts
+// upload/react/features/auth/types/auth.types.ts
 // Types du formulaire de connexion.
 //
 // Le contrat réseau (`LoginResponse`, `SessionUserResponse`,
-// `Feedback`) vit dans `assets/services/api/api.types.ts` : seuls les
+// `Feedback`) vit dans `upload/services/api/api.types.ts` : seuls les
 // types que le formulaire manipule sont définis ici. Le message d'erreur
 // affiché vient de l'`ApiError` (401 générique du firewall, 429 du
 // throttling) — le client n'invente jamais la cause.

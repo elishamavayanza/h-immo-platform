@@ -1,5 +1,5 @@
 // ============================================================
-// assets/services/api/errorDisplay.ts
+// upload/services/api/errorDisplay.ts
 // Normalisation des erreurs API → modèle d'affichage utilisateur
 // Chaque erreur produit un titre + message compréhensible et une
 // trace technique conservée pour le débogage (uniquement en log).

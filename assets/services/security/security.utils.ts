@@ -1,5 +1,5 @@
 // ============================================================
-// assets/services/security/security.utils.ts
+// upload/services/security/security.utils.ts
 // Utilitaires de sécurité (sanitisation, validation, chiffrement léger)
 // ============================================================
 

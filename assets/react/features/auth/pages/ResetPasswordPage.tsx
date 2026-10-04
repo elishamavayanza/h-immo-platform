@@ -1,5 +1,5 @@
 // ============================================================
-// assets/react/features/auth/pages/ResetPasswordPage.tsx
+// upload/react/features/auth/pages/ResetPasswordPage.tsx
 // Page de réinitialisation (route `/reset-password`, hors session, sous
 // `AuthLayout`). Cible du lien contenu dans l'email « mot de passe
 // oublié », qui délivre le jeton dans la query string (`?token=...`).

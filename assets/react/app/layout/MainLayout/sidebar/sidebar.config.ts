@@ -1,5 +1,5 @@
 // ============================================================
-// assets/react/app/layout/MainLayout/sidebar/sidebar.config.ts
+// upload/react/app/layout/MainLayout/sidebar/sidebar.config.ts
 // Configuration déclarative du menu latéral, PAR RÔLE.
 //
 // Module PUR (ni React ni JSX) : la logique `resolveSidebar` /

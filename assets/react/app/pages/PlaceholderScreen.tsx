@@ -1,5 +1,5 @@
 // ============================================================
-// assets/react/app/pages/PlaceholderScreen.tsx
+// upload/react/app/pages/PlaceholderScreen.tsx
 // Écran minimal « section à venir ».
 //
 // Les écrans métier réels ne sont pas encore écrits : chaque feuille du

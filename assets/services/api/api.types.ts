@@ -1,5 +1,5 @@
 // ============================================================
-// assets/services/api/api.types.ts
+// upload/services/api/api.types.ts
 // Types & interfaces partagés de la couche HTTP
 //
 // Les types marqués « contrat » reflètent exactement ce que le backend

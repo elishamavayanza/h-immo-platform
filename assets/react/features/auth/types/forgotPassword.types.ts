@@ -1,5 +1,5 @@
 // ============================================================
-// assets/react/features/auth/types/forgotPassword.types.ts
+// upload/react/features/auth/types/forgotPassword.types.ts
 // Types du formulaire « mot de passe oublié ».
 //
 // La réponse API est un `Feedback` toujours 200 : le message générique

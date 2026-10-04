@@ -1,5 +1,5 @@
 // ============================================================
-// assets/react/features/auth/types/resetPassword.types.ts
+// upload/react/features/auth/types/resetPassword.types.ts
 // Types du formulaire de réinitialisation du mot de passe.
 //
 // Le jeton ne vient pas du formulaire : il est lu dans l'URL (`?token=`),

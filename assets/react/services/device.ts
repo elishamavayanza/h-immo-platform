@@ -2,7 +2,7 @@
 // DÉTECTION D'APPAREIL — SOURCE UNIQUE DE VÉRITÉ
 // ------------------------------------------------------------
 // Les seuils sont alignés sur le design system SCSS
-// (`assets/styles/baseVariables/_variables.scss`, breakpoints
+// (`upload/styles/baseVariables/_variables.scss`, breakpoints
 // mobile-first) pour que le TypeScript et le CSS ne puissent pas
 // diverger :
 //     $breakpoint-mobile :  480px

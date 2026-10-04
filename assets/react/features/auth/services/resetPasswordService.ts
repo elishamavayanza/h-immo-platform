@@ -1,5 +1,5 @@
 // ============================================================
-// assets/react/features/auth/services/resetPasswordService.ts
+// upload/react/features/auth/services/resetPasswordService.ts
 // Description typée de `POST /api/auth/reset-password`.
 //
 // Le jeton vient UNIQUEMENT du lien de l'email (`?token=...`), jamais

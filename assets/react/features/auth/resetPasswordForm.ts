@@ -1,7 +1,7 @@
 /**
  * Logique pure du formulaire « réinitialiser mon mot de passe ».
  *
- * Anciennement `assets/react/app/password-form.ts`, migré dans la feature
+ * Anciennement `upload/react/app/password-form.ts`, migré dans la feature
  * `auth`. Ces règles vivent dans un module sans React ni DOM pour être
  * testables directement (voir `tests/verify-reset-password-form.ts`). Les
  * contraintes de longueur doivent rester alignées sur celles du DTO côté

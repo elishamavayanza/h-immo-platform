@@ -1,5 +1,5 @@
 // ============================================================
-// assets/react/app/providers/OrganizationProvider.tsx
+// upload/react/app/providers/OrganizationProvider.tsx
 // OrganizationContext — l'ORGANIZATION ACTIVE et son rôle.
 //
 // Le rôle métier n'est JAMAIS déduit d'un cache client : à chaque

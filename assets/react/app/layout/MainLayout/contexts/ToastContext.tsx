@@ -1,5 +1,5 @@
 // ============================================================
-// assets/react/app/layout/MainLayout/contexts/ToastContext.tsx
+// upload/react/app/layout/MainLayout/contexts/ToastContext.tsx
 // Notifications toast du back-office.
 //
 // Contexte minimal : `push(type, message)` ajoute une notification,
