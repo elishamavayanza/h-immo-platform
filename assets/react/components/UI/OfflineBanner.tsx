@@ -6,7 +6,6 @@
 //  * (voir services/api/client.ts) ; la bannière informe l'utilisateur.
 //  */
 // export function OfflineBanner() {
-//     const { t } = useI18n();
 //     const isOffline = useOnlineStatus();
 //
 //     if (!isOffline) {
@@ -16,7 +15,7 @@
 //     return (
 //         <div className="offline-banner" role="status" aria-live="polite">
 //             <span className="offline-banner__dot" aria-hidden="true" />
-//             <span>{t("Vous êtes hors-ligne. Les modifications ne seront pas synchronisées tant que la connexion n'est pas rétablie.")}</span>
+//             <span>{'Vous êtes hors-ligne. Les modifications ne seront pas synchronisées tant que la connexion n\'est pas rétablie.'}</span>
 //         </div>
 //     );
 // }
