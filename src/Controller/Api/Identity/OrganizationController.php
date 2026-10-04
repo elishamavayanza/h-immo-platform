@@ -8,6 +8,7 @@ use App\Dto\Feedback;
 use App\Dto\Request\Identity\OrganizationRequest;
 use App\Dto\Request\Identity\OrganizationShowcaseRequest;
 use App\Dto\Request\PaginationQuery;
+use App\Dto\Response\Identity\SessionOrganizationMembership;
 use App\Service\Identity\OrganizationService;
 use App\Trait\FeedbackTrait;
 use Nelmio\ApiDocBundle\Attribute\Model;
@@ -62,6 +63,44 @@ final class OrganizationController extends AbstractController
     public function show(string $uuid): JsonResponse
     {
         $feedback = $this->organizationService->getByUuid($uuid);
+
+        return $this->json($feedback, $feedback->getStatus());
+    }
+
+    /**
+     * Endpoint API résolvant le rôle métier de l'appelant pour l'organisation
+     * demandée. C'est la réponse POUR une organisation précise, jamais une
+     * liste globale : le client le rappelle à chaque sélection d'organisation.
+     */
+    #[Route('/{uuid}/membership', name: 'membership', methods: ['GET'])]
+    #[OA\Get(
+        summary: 'Rôle de l\'appelant pour une organisation',
+        description: 'Renvoie le rôle métier de l\'appelant pour l\'organisation demandée (SessionOrganizationMembership). Doit être rappelé à chaque changement d\'organisation active — le rôle est toujours résolu pour une organisation précise, jamais déduit globalement.',
+        security: [['bearer' => []]],
+    )]
+    #[OA\Parameter(
+        name: 'uuid',
+        in: 'path',
+        required: true,
+        schema: new OA\Schema(type: 'string', format: 'uuid'),
+        example: '7b2e0d1a-4c3f-4a2b-9e1d-5c6f7a8b9c0d'
+    )]
+    #[OA\Response(
+        response: 200,
+        description: 'Rôle résolu pour l\'organisation demandée',
+        content: new OA\JsonContent(ref: new Model(type: SessionOrganizationMembership::class))
+    )]
+    #[OA\Response(
+        response: 403,
+        description: 'Non membre de l\'organisation ou aucun rôle métier pour elle'
+    )]
+    #[OA\Response(
+        response: 404,
+        description: 'Organisation introuvable'
+    )]
+    public function membership(string $uuid): JsonResponse
+    {
+        $feedback = $this->organizationService->getMembership($uuid);
 
         return $this->json($feedback, $feedback->getStatus());
     }

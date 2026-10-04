@@ -744,6 +744,36 @@ try {
     check('Patron A peut lire un bail de son organization', false, $e->getMessage());
 }
 
+// ---------------------------------------------------------------------
+// getMembership : le rôle est résolu POUR l'organization demandée
+// ---------------------------------------------------------------------
+/** @var \App\Service\Identity\OrganizationService $organizationService */
+$organizationService = $container->get(\App\Service\Identity\OrganizationService::class);
+
+try {
+    $membershipA = $organizationService->getMembership((string) $orgA->getUuid());
+    $dataA = $membershipA->getData();
+    check(
+        'getMembership(orgA) : Patron A obtient PATRON pour son organization',
+        $membershipA->getStatus() === 200
+            && $dataA instanceof \App\Dto\Response\Identity\SessionOrganizationMembership
+            && $dataA->role === \App\Enum\OrganizationRole::PATRON
+            && $dataA->uuid === (string) $orgA->getUuid(),
+        $membershipA->getStatus() . ' — ' . (is_object($dataA) ? $dataA->role->value : get_debug_type($dataA))
+    );
+} catch (\Throwable $e) {
+    check('getMembership(orgA) : Patron A obtient PATRON pour son organization', false, $e->getMessage());
+}
+
+try {
+    $organizationService->getMembership((string) $orgB->getUuid());
+    check('getMembership(orgB) : Patron A refuse (non membre de B)', false, 'aucune exception levée');
+} catch (\App\Exception\AccessDeniedException) {
+    check('getMembership(orgB) : Patron A refuse (non membre de B)', true);
+} catch (\Throwable $e) {
+    check('getMembership(orgB) : Patron A refuse (non membre de B)', false, get_class($e) . ': ' . $e->getMessage());
+}
+
 try {
     $cities = $security->getScopedCities();
     $codes = array_map(static fn (City $c): string => $c->getCode(), $cities);
@@ -870,6 +900,24 @@ try {
         false,
         get_class($e) . ': ' . $e->getMessage()
     );
+}
+
+// Le même compte porte deux rôles selon l'organization : getMembership doit
+// répondre le rôle POUR l'organization demandée, jamais un rôle global.
+try {
+    $roleInA = $organizationService->getMembership((string) $orgA->getUuid())->getData();
+    $roleInB = $organizationService->getMembership((string) $orgB->getUuid())->getData();
+    check(
+        'getMembership : PATRON résolu pour A, ADMIN_VILLE pour B (même compte)',
+        $roleInA instanceof \App\Dto\Response\Identity\SessionOrganizationMembership
+            && $roleInA->role === \App\Enum\OrganizationRole::PATRON
+            && $roleInB instanceof \App\Dto\Response\Identity\SessionOrganizationMembership
+            && $roleInB->role === \App\Enum\OrganizationRole::ADMIN_VILLE,
+        'A=' . (is_object($roleInA) ? $roleInA->role->value : get_debug_type($roleInA))
+            . ' B=' . (is_object($roleInB) ? $roleInB->role->value : get_debug_type($roleInB))
+    );
+} catch (\Throwable $e) {
+    check('getMembership : PATRON résolu pour A, ADMIN_VILLE pour B (même compte)', false, $e->getMessage());
 }
 
 $tokenStorage->setToken(null);

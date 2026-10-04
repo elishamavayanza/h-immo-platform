@@ -6,6 +6,7 @@ namespace App\Service\Identity;
 
 use App\Dto\Feedback;
 use App\Dto\Request\Identity\OrganizationRequest;
+use App\Dto\Response\Identity\SessionOrganizationMembership;
 use App\Dto\Request\Identity\OrganizationShowcaseRequest;
 use App\Dto\Request\PaginationQuery;
 use App\Entity\Identity\Organization;
@@ -113,6 +114,61 @@ final readonly class OrganizationService
         return $feedback
             ->setData($this->mapper->toResponse($organization))
             ->setFlushDescription('Organisation trouvée.')
+            ->setStatus(200)
+            ->autoInitFlush();
+    }
+
+    /**
+     * Rôle métier de l'appelant pour UNE Organization donnée.
+     *
+     * C'est l'opposé de `/auth/me` : au lieu de renvoyer toutes les
+     * appartenances, on résout le rôle POUR l'Organization demandée
+     * uniquement, et on REFUSE (403) si l'appelant n'en est pas membre.
+     * Le client rappelle cet endpoint à chaque changement d'Organization
+     * active : il ne doit jamais déduire le rôle d'une organisation à
+     * partir du rôle global d'un compte (un utilisateur multi-Organization
+     * porte un rôle différent par Organization, cf. `getOrganizationRole`).
+     *
+     * `checkOrganizationAccess` départage aussi la lecture d'un
+     * SUPER_ADMIN qui n'est pas membre : le contrôle d'appartenance est
+     * levé pour lui, mais `getOrganizationRole` restera null, donc la
+     * réponse reste un 403 « pas de rôle métier » plutôt qu'un rôle
+     * inventé.
+     */
+    public function getMembership(string $uuid): Feedback
+    {
+        $feedback = new Feedback();
+        $organization = $this->repository->findOneBy(['uuid' => $uuid]);
+
+        if (!$organization) {
+            return $feedback
+                ->addError('uuid', 'L\'organisation spécifiée n\'existe pas.')
+                ->setErrorFlushDescription('Organisation introuvable.')
+                ->setStatus(404)
+                ->autoInitFlush();
+        }
+
+        $this->security->checkOrganizationAccess($organization, SecurityAction::VIEW_ORGANIZATION);
+
+        $user = $this->security->getCurrentUser();
+        $role = $this->security->getOrganizationRole($user, $organization);
+
+        if ($role === null) {
+            return $feedback
+                ->addError('uuid', 'Vous n\'avez aucun rôle métier dans cette organisation.')
+                ->setErrorFlushDescription('Accès refusé : pas de rôle pour cette organisation.')
+                ->setStatus(403)
+                ->autoInitFlush();
+        }
+
+        return $feedback
+            ->setData(new SessionOrganizationMembership(
+                uuid: (string) $organization->getUuid(),
+                code: $organization->getCode(),
+                name: $organization->getName(),
+                role: $role,
+            ))
+            ->setFlushDescription('Rôle récupéré pour l\'organisation sélectionnée.')
             ->setStatus(200)
             ->autoInitFlush();
     }
