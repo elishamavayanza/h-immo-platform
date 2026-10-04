@@ -28,14 +28,15 @@ php tests/verify-p0-7-list-endpoints.php
 php tests/verify-parcel-coordinates.php
 php tests/check-injected-dependencies.php
 node tests/verify-reset-password-form.ts
+node tests/verify-sidebar-roles.ts
 ```
 
-Les onze premiers scripts s'exécutent avec PHP. Le dernier est un script
-Node : il vérifie la logique pure du formulaire React
-(`../assets/react/app`), que Node 24 exécute nativement sans
-transpiler. Il exige l'API démarrée sur le port 8000 uniquement pour
-confronter ses contraintes de longueur au schéma OpenAPI ; sans elle, ce
-contrôle est ignoré et les autres restent exécutés.
+Les onze premiers scripts s'exécutent avec PHP. Les deux derniers sont des
+scripts Node : ils vérifient la logique pure des modules React
+(`../assets/react/app`), que Node 24 exécute nativement sans transpiler.
+`verify-reset-password-form.ts` exige l'API démarrée sur le port 8000
+uniquement pour confronter ses contraintes de longueur au schéma OpenAPI ;
+sans elle, ce contrôle est ignoré et les autres restent exécutés.
 
 ## Contrôles
 
@@ -49,6 +50,7 @@ contrôle est ignoré et les autres restent exécutés.
 | `verify-password-reset.php` | Flux « mot de passe oublié » complet : création du jeton, condensat SHA-256, expiration, usage unique, anti-énumération, refus des jetons expirés/inconnus/consommés et connexion avec le nouveau mot de passe. |
 | `verify-api-token.php` | Émission du jeton (`accessToken`, `tokenType`, `expiresIn`, structure JWT en trois segments, en-tête `alg: HS256`) et contenu de ses revendications (`sub`, `jti`, `email`, `platformRole`, `roles`, `cityScope`, `organizations`, `exp`), puis son refus quand la signature, la charge utile ou l'expiration sont falsifiées, quand il est en `alg: none`, quand le compte a disparu, et après une déconnexion. Également : en-tête `WWW-Authenticate` et absence de trace d'exécution sur un 401, charge utile de `POST /api/auth/login` et `GET /api/auth/me` (rôles Symfony, rôles métier par Organization triés, villes accessibles avec exclusion des villes inactives, `cityScope` `platform`/`assigned`/`none`, horodatage ISO-8601), absence de fuite de secret, et schéma de sécurité `bearer` sans résidu de cookie. |
 | `verify-reset-password-form.ts` | Formulaire de réinitialisation côté client : extraction du jeton depuis l'URL, validation des deux champs (mot de passe + confirmation), cohérence de la longueur minimale avec le schéma OpenAPI de l'API. |
+| `verify-sidebar-roles.ts` | Menu du sidebar côté client vs matrice de rôles backend : `resolveSidebar()`/`isPathInMenu()`/`defaultPathFor()` projetés sur `SecurityService::checkAdminImmobilierAction()` et `checkAdminVilleAction()` (Personnel visible pour `ADMIN_IMMOBILIER` — droits complet Worker — mais pas pour `ADMIN_VILLE`, Administration réservée au PATRON, SUPER_ADMIN sans entrée métier). |
 | `verify-mariadb.php` | Cible SGBD : plateforme DBAL et serveur réellement MariaDB, base en `utf8mb4`, absence de PostgreSQL dans `compose.yaml`, `compose.override.yaml`, `.env` et `config/packages/doctrine.yaml`, présence de toutes les tables attendues, absence de version de migration orpheline, et exécution des deux agrégats mensuels qui s'appuient sur `DATE_FORMAT()`. |
 | `verify-p0-security.php` | Les quatre correctifs P0, rejoués de bout en bout à travers le noyau et sur deux organisations concurrentes : (P0-1) rapports exigeant l'organisation visée et le rôle réellement détenu, y compris le compte à double appartenance ; (P0-2) cumul des dépenses borné aux villes du lecteur, sans fuite du chiffre d'une organisation concurrente ; (P0-3) médias refusés hors de leur organisation et chemins de traversée rejetés ; (P0-4) statut d'un loyer dérivé des paiements et de la date, statut d'un bail non saisissable et transitions Activate/Terminate/Cancel respectées. |
 | `verify-p0-7-list-endpoints.php` | Les trois endpoints de liste de location (`GET /api/v1/payments`, `GET /api/v1/leases`, `GET /api/v1/rents/overdue`) appelés réellement à travers le noyau avec un `PATRON` sur deux organisations concurrentes : réponse 200 et non 500, présence de la donnée attendue, liste vide et refus en 403/404 lorsque `organizationId` ou l'UUID désignent l'organisation concurrente. Couvre les régressions de repositories non injectés, de DTO de filtre non importé, de `MapRequestPayload` sur un GET, de route masquée et de filtre `organizationId` hors périmètre. |

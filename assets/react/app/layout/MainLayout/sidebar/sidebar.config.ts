@@ -1,6 +1,12 @@
 // ============================================================
-// assets/react/app/layout/MainLayout/sidebar/sidebar.config.tsx
+// assets/react/app/layout/MainLayout/sidebar/sidebar.config.ts
 // Configuration déclarative du menu latéral, PAR RÔLE.
+//
+// Module PUR (ni React ni JSX) : la logique `resolveSidebar` /
+// `isPathInMenu` / `defaultPathFor` est exécutable par Node
+// (`tests/verify-sidebar-roles.ts`). Les icônes sont référencées par
+// NOM (string) et résolues au rendu via `SIDEBAR_ICON_MAP` dans
+// `sidebar.icons.tsx`.
 //
 // Deux familles :
 //   - PLATFORM_SIDEBAR        : menu SUPER_ADMIN (plateforme)
@@ -12,10 +18,17 @@
 // l'Organization ACTIVE (jamais un rôle global de compte).
 //
 // Règle d'affichage (acceptance) :
-//   - PATRON          : 6 entrées avec sous-menus
-//   - ADMIN_IMMOBILIER: 4 entrées (sans Administration ni Personnel)
-//   - ADMIN_VILLE     : 4 entrées (sans Administration ni Personnel)
-//   - SUPER_ADMIN     : aucune entrée métier d'organisation
+//   - PATRON           : 6 entrées avec sous-menus
+//   - ADMIN_IMMOBILIER : 5 entrées (sans Administration, AVEC Personnel :
+//                        le backend lui accorde VIEW/CREATE/UPDATE/DELETE
+//                        sur Worker et WorkerAssignment)
+//   - ADMIN_VILLE      : 4 entrées (sans Administration ni Personnel :
+//                        VIEW_WORKER seul ne justifie pas une entrée)
+//   - SUPER_ADMIN      : aucune entrée métier d'organisation
+//
+// Ce menu reflète la matrice `SecurityService::checkXxxAction()` : toute
+// divergence entre une capacité réellement accordée par l'API et un item
+// ici est un bug de UX (capacité inatteignable), pas un trou de sécurité.
 //
 // ⚠️ Confinement : les seuls `if (role === …)` du front qui décident du
 // menu et de la garde de route vivent ici (et dans RequireRole, qui
@@ -25,23 +38,11 @@
 
 import type { AppMenuItem, SidebarMenu } from './sidebar.types';
 import type { OrganizationRole, PlatformRole } from '../../../../../services/api/api.types';
-import {
-    IconBuilding,
-    IconKey,
-    IconCoins,
-    IconStorefront,
-    IconGear,
-    IconHardHat,
-    IconUsers,
-    IconOrganizations,
-    IconAudit,
-    IconExchange,
-} from './sidebar.icons';
 
 const PATRIMOINE: AppMenuItem = {
     id: 'patrimoine',
     label: 'Patrimoine',
-    icon: <IconBuilding />,
+    icon: 'building',
     children: [
         { id: 'patrimoine-villes', label: 'Cités', path: '/app/patrimoine/villes' },
         { id: 'patrimoine-parcelles', label: 'Parcelles', path: '/app/patrimoine/parcelles' },
@@ -53,7 +54,7 @@ const PATRIMOINE: AppMenuItem = {
 const LOCATION: AppMenuItem = {
     id: 'location',
     label: 'Location',
-    icon: <IconKey />,
+    icon: 'key',
     children: [
         { id: 'location-locataires', label: 'Locataires', path: '/app/location/locataires' },
         { id: 'location-baux', label: 'Baux', path: '/app/location/baux' },
@@ -65,7 +66,7 @@ const LOCATION: AppMenuItem = {
 const FINANCES: AppMenuItem = {
     id: 'finances',
     label: 'Finances',
-    icon: <IconCoins />,
+    icon: 'coins',
     children: [
         { id: 'finances-depenses', label: 'Dépenses', path: '/app/finances/depenses' },
         { id: 'finances-rapports', label: 'Rapports', path: '/app/finances/rapports' },
@@ -76,14 +77,14 @@ const FINANCES: AppMenuItem = {
 const VITRINE: AppMenuItem = {
     id: 'vitrine',
     label: 'Vitrine',
-    icon: <IconStorefront />,
+    icon: 'storefront',
     path: '/app/vitrine',
 };
 
 const ADMINISTRATION: AppMenuItem = {
     id: 'administration',
     label: 'Administration',
-    icon: <IconGear />,
+    icon: 'gear',
     children: [
         { id: 'administration-equipe', label: 'Équipe', path: '/app/administration/equipe' },
         { id: 'administration-villes', label: 'Villes', path: '/app/administration/villes' },
@@ -93,7 +94,7 @@ const ADMINISTRATION: AppMenuItem = {
 const PERSONNEL: AppMenuItem = {
     id: 'personnel',
     label: 'Personnel',
-    icon: <IconHardHat />,
+    icon: 'hard-hat',
     children: [
         { id: 'personnel-ouvriers', label: 'Ouvriers', path: '/app/personnel/ouvriers' },
         { id: 'personnel-affectations', label: 'Affectations', path: '/app/personnel/affectations' },
@@ -103,13 +104,18 @@ const PERSONNEL: AppMenuItem = {
 /**
  * Menu des rôles métier d'organisation, par rôle.
  *
- * `admin_immobilier` et `admin_ville` partagent les entrées opérationnelles
- * (Patrimoine, Location, Finances, Vitrine) et ne voient NI Administration
- * NI Personnel : ces deux sections sont réservées au PATRON.
+ * - `patron` : tout le menu.
+ * - `admin_immobilier` : opérations + Personnel, qui est la 5e entrée
+ *   (le backend lui accorde CREATE/UPDATE/DELETE sur Worker, cf.
+ *   `SecurityService::checkAdminImmobilierAction`). Seule l'Administration
+ *   reste réservée au PATRON.
+ * - `admin_ville` : opérations sans Personnel (`VIEW_WORKER` seul : une
+ *   entrée dédiée laisserait croire à des droits d'écriture) et sans
+ *   Administration.
  */
 export const ORGANIZATION_SIDEBAR: Record<OrganizationRole, SidebarMenu> = {
     patron: [PATRIMOINE, LOCATION, FINANCES, VITRINE, ADMINISTRATION, PERSONNEL],
-    admin_immobilier: [PATRIMOINE, LOCATION, FINANCES, VITRINE],
+    admin_immobilier: [PATRIMOINE, LOCATION, FINANCES, VITRINE, PERSONNEL],
     admin_ville: [PATRIMOINE, LOCATION, FINANCES, VITRINE],
 };
 
@@ -118,25 +124,25 @@ export const PLATFORM_SIDEBAR: SidebarMenu = [
     {
         id: 'plateforme-organisations',
         label: 'Organisations',
-        icon: <IconOrganizations />,
+        icon: 'organizations',
         path: '/app/admin/organisations',
     },
     {
         id: 'plateforme-utilisateurs',
         label: 'Utilisateurs',
-        icon: <IconUsers />,
+        icon: 'users',
         path: '/app/admin/utilisateurs',
     },
     {
         id: 'plateforme-audit',
         label: 'Journal d\'audit',
-        icon: <IconAudit />,
+        icon: 'audit',
         path: '/app/admin/audit',
     },
     {
         id: 'plateforme-taux-change',
         label: 'Taux de change',
-        icon: <IconExchange />,
+        icon: 'exchange',
         path: '/app/admin/taux-change',
     },
 ];
