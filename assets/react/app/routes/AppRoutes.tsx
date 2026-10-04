@@ -2,72 +2,110 @@
 // assets/react/app/routes/AppRoutes.tsx
 // Table de routage du SPA.
 //
-// ⚠️ AUCUN ROUTEUR N'EST INSTALLÉ.
+// `react-router-dom` (v7) est installé et `main.tsx` monte un
+// `<BrowserRouter>`. Deux familles de routes :
 //
-// `react-router-dom` n'est pas une dépendance du projet, et `AGENTS.md`
-// interdit d'ajouter une dépendance React sans justification explicite.
-// `main.tsx` fonctionne donc par simple lecture de `window.location.pathname`
-// (Vite sert `index.html` pour toute route inconnue grâce à
-// `appType: 'spa'`), ce qui suffit à l'unique page existante
-// (`/reset-password`).
+//   - Hors session (AuthLayout) : `/login`, `/reset-password`.
+//   - Back-office (`/app`, MainLayout) : sections chargées en
+//     `React.lazy`, feuilles affichant un placeholder « à venir », garde
+//     `RequireRole` (UX) positionnée par MainLayout.
 //
-// Ce module centralise la table des routes connues pour que le
-// branchement reste explicite et vérifiable. Il ne rend volontairement
-// aucun composant : les écrans de la vitrine publique et du
-// back-office ne sont pas encore écrits. Brancher une page se fait en
-// ajoutant son chemin ici PUIS une entrée dans le `switch` de `main.tsx`.
-//
-// Si le nombre de pages croît au point où ce `switch` devient
-// impossible à maintenir, c'est le moment de discuter l'ajout d'un
-// routeur — pas avant.
+// Les chemins des feuilles sont LES MÊMES que ceux du `sidebar.config` :
+// si un chemin du menu disparaît, il disparaît aussi du routeur (et vice
+// versa) — la garde `isPathInMenu` départage alors les rôles.
 // ============================================================
 
-/** Chemins gérés par le SPA. */
-export const ROUTES = {
-    resetPassword: '/reset-password',
-    showcase: '/showcase',
-    login: '/login',
-    dashboard: '/dashboard',
-} as const;
+import { lazy, Suspense } from 'react';
+import { Navigate, Route, Routes, useLocation } from 'react-router-dom';
 
-export type RouteKey = keyof typeof ROUTES;
+import { Loading } from '../../components/UI/Loading/Loading';
+import { useOrganization } from '../providers/OrganizationProvider';
+import { AccessDeniedPage } from '../pages/AccessDeniedPage';
+import { LoginPage } from '../pages/LoginPage';
+import { PlaceholderScreen } from '../pages/PlaceholderScreen';
+import { ResetPasswordPage } from '../ResetPasswordPage';
+import { AuthLayout } from '../layout/AuthLayout/AuthLayout';
+import { MainLayout } from '../layout/MainLayout/MainLayout';
+import { defaultPathFor } from '../layout/MainLayout/sidebar/sidebar.config';
 
-export interface RouteMatch {
-    key: RouteKey;
-    path: string;
-    /**
-     * Paramètre de chemin, le cas échéant. La vitrine publique est
-     * `/showcase/{slug}` : le slug identifie l'Organization dont on
-     * affiche le parc, et c'est le seul segment dynamique pour l'instant.
-     */
-    params: Record<string, string>;
+const PatrimoineSection = lazy(() => import('../pages/sections/PatrimoineSection'));
+const LocationSection = lazy(() => import('../pages/sections/LocationSection'));
+const FinancesSection = lazy(() => import('../pages/sections/FinancesSection'));
+const VitrineSection = lazy(() => import('../pages/sections/VitrineSection'));
+const AdministrationSection = lazy(() => import('../pages/sections/AdministrationSection'));
+const PersonnelSection = lazy(() => import('../pages/sections/PersonnelSection'));
+const PlatformSection = lazy(() => import('../pages/sections/PlatformSection'));
+
+/** `/reset-password` lit `?token=…&email=…` depuis la query string. */
+function ResetPasswordRoute() {
+    const location = useLocation();
+
+    return <ResetPasswordPage search={location.search} />;
 }
 
-/** Liste des routes à motif, dans l'ordre de tests. */
-const PATTERNS: ReadonlyArray<{ key: RouteKey; regex: RegExp; params: string[] }> = [
-    { key: 'showcase', regex: /^\/showcase\/([^/]+)\/?$/, params: ['slug'] },
-    { key: 'resetPassword', regex: /^\/reset-password\/?$/, params: [] },
-    { key: 'login', regex: /^\/login\/?$/, params: [] },
-    { key: 'dashboard', regex: /^\/dashboard\/?$/, params: [] },
-];
+/** `/app` → première feuille du menu du rôle courant (suivie par le sidebar). */
+function AppLanding() {
+    const { platformRole, organizationRole } = useOrganization();
 
-/**
- * Résout un chemin en route connue.
- * Retourne `null` si aucune route ne correspond : l'appelant affiche
- * alors son écran « introuvable » plutôt que de faire semblant.
- */
-export function resolveRoute(pathname: string): RouteMatch | null {
-    for (const pattern of PATTERNS) {
-        const match = pattern.regex.exec(pathname);
-        if (!match) continue;
+    return <Navigate to={defaultPathFor(platformRole, organizationRole)} replace />;
+}
 
-        const params: Record<string, string> = {};
-        pattern.params.forEach((name, index) => {
-            params[name] = decodeURIComponent(match[index + 1]);
-        });
+export function AppRoutes() {
+    return (
+        <Suspense fallback={<Loading text="Chargement de la section..." />}>
+            <Routes>
+                <Route element={<AuthLayout />}>
+                    <Route path="/login" element={<LoginPage />} />
+                    <Route path="/reset-password" element={<ResetPasswordRoute />} />
+                </Route>
 
-        return { key: pattern.key, path: ROUTES[pattern.key], params };
-    }
+                <Route path="/" element={<Navigate to="/app" replace />} />
 
-    return null;
+                <Route path="/app" element={<MainLayout />}>
+                    <Route index element={<AppLanding />} />
+                    <Route path="access-denied" element={<AccessDeniedPage />} />
+
+                    <Route path="patrimoine" element={<PatrimoineSection />}>
+                        <Route path="villes" element={<PlaceholderScreen title="Cités" />} />
+                        <Route path="parcelles" element={<PlaceholderScreen title="Parcelles" />} />
+                        <Route path="batiments" element={<PlaceholderScreen title="Bâtiments" />} />
+                        <Route path="unites" element={<PlaceholderScreen title="Unités" />} />
+                    </Route>
+
+                    <Route path="location" element={<LocationSection />}>
+                        <Route path="locataires" element={<PlaceholderScreen title="Locataires" />} />
+                        <Route path="baux" element={<PlaceholderScreen title="Baux" />} />
+                        <Route path="loyers" element={<PlaceholderScreen title="Loyers" />} />
+                        <Route path="paiements" element={<PlaceholderScreen title="Paiements" />} />
+                    </Route>
+
+                    <Route path="finances" element={<FinancesSection />}>
+                        <Route path="depenses" element={<PlaceholderScreen title="Dépenses" />} />
+                        <Route path="rapports" element={<PlaceholderScreen title="Rapports" />} />
+                    </Route>
+
+                    <Route path="vitrine" element={<VitrineSection />} />
+
+                    <Route path="administration" element={<AdministrationSection />}>
+                        <Route path="equipe" element={<PlaceholderScreen title="Équipe" />} />
+                        <Route path="villes" element={<PlaceholderScreen title="Villes" />} />
+                    </Route>
+
+                    <Route path="personnel" element={<PersonnelSection />}>
+                        <Route path="ouvriers" element={<PlaceholderScreen title="Ouvriers" />} />
+                        <Route path="affectations" element={<PlaceholderScreen title="Affectations" />} />
+                    </Route>
+
+                    <Route path="admin" element={<PlatformSection />}>
+                        <Route path="organisations" element={<PlaceholderScreen title="Organisations" />} />
+                        <Route path="utilisateurs" element={<PlaceholderScreen title="Utilisateurs" />} />
+                        <Route path="audit" element={<PlaceholderScreen title="Journal d'audit" />} />
+                        <Route path="taux-change" element={<PlaceholderScreen title="Taux de change" />} />
+                    </Route>
+                </Route>
+
+                <Route path="*" element={<Navigate to="/app" replace />} />
+            </Routes>
+        </Suspense>
+    );
 }
