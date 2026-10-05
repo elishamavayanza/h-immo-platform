@@ -187,11 +187,11 @@ export function Sidebar({
         handleItemClick(item);
     };
 
-    // Sur mobile, le parent ouvre la section dans le tiroir (pas de flyout).
+    // Sur mobile, le parent bascule la section dans le tiroir (toggle).
     // Sur desktop, handleItemClick gère flyout / toggle section.
     const handleBranchClick = (item: SidebarItem) => {
         if (isMobileOpen) {
-            openSection(item.id);
+            toggleSection(item.id);
             return;
         }
         handleItemClick(item);
