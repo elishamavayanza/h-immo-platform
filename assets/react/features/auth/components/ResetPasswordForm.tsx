@@ -11,11 +11,11 @@
 
 import { Link } from 'react-router-dom';
 
-import { Alert } from '../../../../../public/components/UI/Alert/Alert';
-import { Button } from '../../../../../public/components/UI/Button/Button';
-import { Form } from '../../../../../public/components/Forms/Form/Form';
-import { FormField } from '../../../../../public/components/Forms/FormField/FormField';
-import { Password } from '../../../../../public/components/Forms/Password/Password';
+import { Alert } from '../../../components/UI/Alert/Alert';
+import { Button } from '../../../components/UI/Button/Button';
+import { Form } from '../../../components/Forms/Form/Form';
+import { FormField } from '../../../components/Forms/FormField/FormField';
+import { Password } from '../../../components/Forms/Password/Password';
 
 import { RESET_SUCCESS_MESSAGE, useResetPasswordForm } from '../hooks/useResetPasswordForm';
 

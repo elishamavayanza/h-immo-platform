@@ -18,7 +18,7 @@
 import { lazy, Suspense } from 'react';
 import { Navigate, Route, Routes } from 'react-router-dom';
 
-import { Loading } from '../../../../public/components/UI/Loading/Loading';
+import { Loading } from '../../components/UI/Loading/Loading';
 import { useOrganization } from '../providers/OrganizationProvider';
 import { ForgotPasswordPage } from '../../features/auth/pages/ForgotPasswordPage';
 import { LoginPage } from '../../features/auth/pages/LoginPage';

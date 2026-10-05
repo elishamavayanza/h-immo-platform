@@ -17,12 +17,11 @@
 import { useEffect, useState } from 'react';
 import { Navigate, Outlet, useLocation, useNavigate } from 'react-router-dom';
 
-import { Sidebar, type SidebarProps } from '../../../../../public/components/Navigation/Sidebar';
-import { Loading } from '../../../../../public/components/UI/Loading';
+import { Sidebar, type SidebarProps } from '../../../components/Navigation/Sidebar';
+import { Loading } from '../../../components/UI/Loading';
 import { useAuth } from '../../providers/AuthProvider';
 import { useOrganization } from '../../providers/OrganizationProvider';
 import { AppHeader } from './AppHeader';
-import { RequireRole } from './RequireRole';
 import type { AppMenuItem } from './sidebar/sidebar.types';
 import { resolveSidebar } from './sidebar/sidebar.config';
 import { SIDEBAR_ICON_MAP } from './sidebar/sidebar.icons';
@@ -106,9 +105,7 @@ export function MainLayout() {
                 />
 
                 <main className="main-layout__content">
-                    <RequireRole>
-                        <Outlet />
-                    </RequireRole>
+
                 </main>
             </div>
         </div>
