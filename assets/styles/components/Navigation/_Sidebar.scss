@@ -361,6 +361,13 @@
         transform: translateY(-50%);
         opacity: 0.55;
     }
+
+    // Centrer le brand (logo) quand le sidebar est replié : le bouton
+    // collapse est masqué, on veut le logo seul au centre.
+    .sidebar__header-brand {
+        @include flex-center;
+        justify-content: center;
+    }
 }
 
 .sidebar__label {
