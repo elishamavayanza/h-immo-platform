@@ -19,16 +19,25 @@ import './MainLayout.scss';
 import { Sidebar, SidebarProps } from '../../../components/Navigation/Sidebar';
 import { Loading } from '../../../components/UI/Loading';
 
-const BRAND = (
-    <div className="main-layout__brand">
-        <img
-            src="/assets/logo.png"
-            alt="H-Immo"
-            className="main-layout__brand-logo"
-        />
-        <span className="main-layout__brand-name">IMMO</span>
-    </div>
-);
+/**
+ * Marque du sidebar : logo + "IMMO" + nom de l'organisation active.
+ * Composant pur pour éviter de le recréer à chaque rendu.
+ */
+function Brand({ organizationName }: { organizationName?: string }) {
+    return (
+        <div className="main-layout__brand">
+            <img
+                src="/assets/logo.png"
+                alt="H-Immo"
+                className="main-layout__brand-logo"
+            />
+            <span className="main-layout__brand-name">IMMO</span>
+            {organizationName && (
+                <span className="main-layout__brand-org">{organizationName}</span>
+            )}
+        </div>
+    );
+}
 
 /**
  * Traduit le menu de configuration en items du composant <Sidebar />.
@@ -57,7 +66,7 @@ function toSidebarItems(menu: AppMenuItem[], activeIds: ReadonlySet<string>): Si
 
 export function MainLayout() {
     const { user, isAuthenticated, isLoading: isAuthLoading, logout } = useAuth();
-    const { platformRole, organizationRole, isLoading: isOrgLoading } = useOrganization();
+    const { currentOrganization, platformRole, organizationRole, isLoading: isOrgLoading } = useOrganization();
     const [isMobileOpen, setIsMobileOpen] = useState(false);
     const location = useLocation();
     const navigate = useNavigate();
@@ -161,7 +170,7 @@ export function MainLayout() {
                     collapsible
                     defaultCollapsed={false}
                     width="264px"
-                    header={BRAND}
+                    header={<Brand organizationName={currentOrganization?.name} />}
                     activeRoute={location.pathname}
                     activeIds={activeIds}
                     mobileOpen={isMobileOpen}
