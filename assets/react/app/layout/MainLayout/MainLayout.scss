@@ -271,10 +271,12 @@
 // ============================================================
 // Quand le sidebar est déployé, on regroupe avatar + nom + rôle dans
 // un conteneur unique avec fond et arrondi, pour un aspect "carte"
-// cohérent. En collapsed, le CSS ci-dessus masque nom/rôle/chevron
-// et centre l'avatar — le wrapper n'a alors plus d'effet visuel.
+// cohérent. Le contenu est centré (justify-content: center) pour avoir
+// des marges gauche/droite égales visuellement. En collapsed, le CSS
+// ci-dessus masque nom/rôle/chevron et centre l'avatar — le wrapper
+// n'a alors plus d'effet visuel.
 .user-menu__wrapper {
-    @include flex(row, center, flex-start, $spacing-3);
+    @include flex(row, center, center, $spacing-3);
     width: 100%;
     padding: $spacing-2 $spacing-3;
     background-color: $color-bg-card;
