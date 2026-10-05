@@ -1,9 +1,20 @@
 // ============================================================
-// upload/react/app/layout/MainLayout/sidebar/sidebar.icons.tsx
+// assets/react/app/layout/MainLayout/sidebar/sidebar.icons.tsx
 // Jeu d'icônes SVG minimal du menu.
 //
 // Traits `currentColor` : l'icône hérite de la couleur du texte du
 // menu (`_Sidebar.scss`), active ou non, sans surcharge par icône.
+//
+// Choix des icônes : chacune doit évoquer SANS AMBIGUÏTÉ la destination,
+// sans lire le libellé. Deux corrections par rapport à la version
+// précédente :
+//   - Administration (équipe & rôles) utilisait un engrenage, trop proche
+//     visuellement de « réglages de l'application » — remplacé par un
+//     badge d'identité, cohérent avec le module « Identity & Access ».
+//   - Organisations (plateau SUPER_ADMIN) utilisait une grille 2x2
+//     abstraite, trop proche d'une icône générique de « menu d'apps » ou
+//     de « tableau de bord » — remplacé par une mallette, qui évoque une
+//     entreprise cliente sans ambiguïté.
 // ============================================================
 
 import type { ReactNode } from 'react';
@@ -18,6 +29,15 @@ const STROKE = {
     strokeLinecap: 'round',
     strokeLinejoin: 'round',
 } as const;
+
+/** Compteur/jauge — Tableau de bord. */
+export const IconGauge = (): ReactNode => (
+    <svg {...STROKE}>
+        <path d="M12 21a9 9 0 1 1 9-9" />
+        <path d="M12 12 16 8" />
+        <path d="M12 21v-1M4.2 15H3M6 7.8 5.3 7M21 15h-1.2M18 7.8l.7-.8" />
+    </svg>
+);
 
 /** Bâtiment — Patrimoine. */
 export const IconBuilding = (): ReactNode => (
@@ -38,7 +58,7 @@ export const IconKey = (): ReactNode => (
     </svg>
 );
 
-/** Devise — Finances. */
+/** Devise — Dépenses. */
 export const IconCoins = (): ReactNode => (
     <svg {...STROKE}>
         <circle cx="9" cy="9" r="6" />
@@ -57,11 +77,13 @@ export const IconStorefront = (): ReactNode => (
     </svg>
 );
 
-/** Engrenage — Administration. */
-export const IconGear = (): ReactNode => (
+/** Badge d'identité — Administration (équipe & rôles). */
+export const IconIdBadge = (): ReactNode => (
     <svg {...STROKE}>
-        <circle cx="12" cy="12" r="3" />
-        <path d="M19.4 15a1.7 1.7 0 0 0 .34 1.87l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.7 1.7 0 0 0-1.87-.34 1.7 1.7 0 0 0-1 1.55V21a2 2 0 1 1-4 0v-.09a1.7 1.7 0 0 0-1-1.55 1.7 1.7 0 0 0-1.87.34l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.7 1.7 0 0 0 4.6 15a1.7 1.7 0 0 0-1.55-1H3a2 2 0 1 1 0-4h.09a1.7 1.7 0 0 0 1.55-1 1.7 1.7 0 0 0-.34-1.87l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.7 1.7 0 0 0 1.87.34h0a1.7 1.7 0 0 0 1-1.55V3a2 2 0 1 1 4 0v.09a1.7 1.7 0 0 0 1 1.55h0a1.7 1.7 0 0 0 1.87-.34l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.7 1.7 0 0 0-.34 1.87v0a1.7 1.7 0 0 0 1.55 1H21a2 2 0 1 1 0 4h-.09a1.7 1.7 0 0 0-1.55 1Z" />
+        <rect x="5" y="3" width="14" height="18" rx="2" />
+        <circle cx="12" cy="10" r="2.5" />
+        <path d="M8 17c.6-2 2-3 4-3s3.4 1 4 3" />
+        <path d="M9 3v2M15 3v2" />
     </svg>
 );
 
@@ -85,13 +107,13 @@ export const IconUsers = (): ReactNode => (
     </svg>
 );
 
-/** Organisation (carte grille) — plateau SUPER_ADMIN. */
-export const IconOrganizations = (): ReactNode => (
+/** Mallette — Organisations (entreprises clientes, plateau SUPER_ADMIN). */
+export const IconBriefcase = (): ReactNode => (
     <svg {...STROKE}>
-        <rect x="3" y="3" width="7" height="7" rx="1" />
-        <rect x="14" y="3" width="7" height="7" rx="1" />
-        <rect x="3" y="14" width="7" height="7" rx="1" />
-        <rect x="14" y="14" width="7" height="7" rx="1" />
+        <rect x="3" y="8" width="18" height="12" rx="2" />
+        <path d="M8 8V6a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+        <path d="M3 13h18" />
+        <path d="M10 13v2h4v-2" />
     </svg>
 );
 
@@ -111,9 +133,6 @@ export const IconExchange = (): ReactNode => (
     </svg>
 );
 
-/** Carte bâtiment — SUPER_ADMIN (alias). */
-export const IconAdminBuilding = IconBuilding;
-
 /** Signature d'un composant d'icône. */
 export type IconComponent = () => ReactNode;
 
@@ -122,14 +141,15 @@ export type IconComponent = () => ReactNode;
  * sans JSX) vers le composant SVG correspondant au rendu.
  */
 export const SIDEBAR_ICON_MAP: Record<string, IconComponent> = {
+    gauge: IconGauge,
     building: IconBuilding,
     key: IconKey,
     coins: IconCoins,
     storefront: IconStorefront,
-    gear: IconGear,
+    'id-badge': IconIdBadge,
     'hard-hat': IconHardHat,
     users: IconUsers,
-    organizations: IconOrganizations,
+    briefcase: IconBriefcase,
     audit: IconAudit,
     exchange: IconExchange,
 };

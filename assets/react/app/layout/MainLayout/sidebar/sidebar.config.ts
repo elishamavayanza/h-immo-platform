@@ -1,5 +1,5 @@
 // ============================================================
-// upload/react/app/layout/MainLayout/sidebar/sidebar.config.ts
+// assets/react/app/layout/MainLayout/sidebar/sidebar.config.ts
 // Configuration déclarative du menu latéral, PAR RÔLE.
 //
 // Module PUR (ni React ni JSX) : la logique `resolveSidebar` /
@@ -18,17 +18,24 @@
 // l'Organization ACTIVE (jamais un rôle global de compte).
 //
 // Règle d'affichage (acceptance) :
-//   - PATRON           : 6 entrées avec sous-menus
-//   - ADMIN_IMMOBILIER : 5 entrées (sans Administration, AVEC Personnel :
+//   - PATRON           : 7 entrées (Tableau de bord + 6 opérationnelles)
+//   - ADMIN_IMMOBILIER : 6 entrées (sans Administration, AVEC Personnel :
 //                        le backend lui accorde VIEW/CREATE/UPDATE/DELETE
 //                        sur Worker et WorkerAssignment)
-//   - ADMIN_VILLE      : 4 entrées (sans Administration ni Personnel :
+//   - ADMIN_VILLE      : 5 entrées (sans Administration ni Personnel :
 //                        VIEW_WORKER seul ne justifie pas une entrée)
-//   - SUPER_ADMIN      : aucune entrée métier d'organisation
+//   - SUPER_ADMIN      : 5 entrées, toutes au niveau plateforme
 //
 // Ce menu reflète la matrice `SecurityService::checkXxxAction()` : toute
 // divergence entre une capacité réellement accordée par l'API et un item
 // ici est un bug de UX (capacité inatteignable), pas un trou de sécurité.
+//
+// « Tableau de bord » est toujours la première entrée, pour chaque rôle :
+// c'est l'écran de synthèse (KPI, occupation, loyers attendus/encaissés,
+// impayés — cf. ReportController déjà en place) explicitement demandé par
+// le cahier des charges d'origine (« le Patron suit son patrimoine à
+// distance depuis son tableau de bord »). Il ne doit jamais être omis au
+// profit d'un atterrissage direct sur une liste opérationnelle.
 //
 // ⚠️ Confinement : les seuls `if (role === …)` du front qui décident du
 // menu et de la garde de route vivent ici (et dans RequireRole, qui
@@ -39,12 +46,25 @@
 import type { AppMenuItem, SidebarMenu } from './sidebar.types';
 import type { OrganizationRole, PlatformRole } from '../../../../../services/api/api.types';
 
+/**
+ * Tableau de bord : toujours en premier. Une seule page par rôle, qui
+ * consomme l'endpoint de rapport déjà résolu côté backend pour ce rôle
+ * (patron/admin_immobilier/admin_ville) — pas de sous-menu : un tableau de
+ * bord est une destination, pas une catégorie à déplier.
+ */
+const DASHBOARD: AppMenuItem = {
+    id: 'dashboard',
+    label: 'Tableau de bord',
+    icon: 'gauge',
+    path: '/app/dashboard',
+};
+
 const PATRIMOINE: AppMenuItem = {
     id: 'patrimoine',
     label: 'Patrimoine',
     icon: 'building',
     children: [
-        { id: 'patrimoine-villes', label: 'Cités', path: '/app/patrimoine/villes' },
+        { id: 'patrimoine-villes', label: 'Villes', path: '/app/patrimoine/villes' },
         { id: 'patrimoine-parcelles', label: 'Parcelles', path: '/app/patrimoine/parcelles' },
         { id: 'patrimoine-batiments', label: 'Bâtiments', path: '/app/patrimoine/batiments' },
         { id: 'patrimoine-unites', label: 'Unités', path: '/app/patrimoine/unites' },
@@ -63,14 +83,18 @@ const LOCATION: AppMenuItem = {
     ],
 };
 
-const FINANCES: AppMenuItem = {
-    id: 'finances',
-    label: 'Finances',
+/**
+ * Dépenses : feuille directe, plus de sous-menu « Finances > Dépenses /
+ * Rapports ». « Rapports » a migré vers le Tableau de bord (c'est la même
+ * donnée — pas de raison de la dupliquer à deux endroits du menu), ce qui
+ * ne laissait plus qu'un seul enfant ici : un sous-menu à un seul item est
+ * un clic inutile, donc on le supprime plutôt que de le garder « au cas où ».
+ */
+const DEPENSES: AppMenuItem = {
+    id: 'depenses',
+    label: 'Dépenses',
     icon: 'coins',
-    children: [
-        { id: 'finances-depenses', label: 'Dépenses', path: '/app/finances/depenses' },
-        { id: 'finances-rapports', label: 'Rapports', path: '/app/finances/rapports' },
-    ],
+    path: '/app/depenses',
 };
 
 /** Vitrine publique : feuille sans sous-menu (vitrine/page publique à venir). */
@@ -84,10 +108,10 @@ const VITRINE: AppMenuItem = {
 const ADMINISTRATION: AppMenuItem = {
     id: 'administration',
     label: 'Administration',
-    icon: 'gear',
+    icon: 'id-badge',
     children: [
         { id: 'administration-equipe', label: 'Équipe', path: '/app/administration/equipe' },
-        { id: 'administration-villes', label: 'Villes', path: '/app/administration/villes' },
+        { id: 'administration-villes', label: 'Villes assignées', path: '/app/administration/villes' },
     ],
 };
 
@@ -105,7 +129,7 @@ const PERSONNEL: AppMenuItem = {
  * Menu des rôles métier d'organisation, par rôle.
  *
  * - `patron` : tout le menu.
- * - `admin_immobilier` : opérations + Personnel, qui est la 5e entrée
+ * - `admin_immobilier` : opérations + Personnel, qui est la 6e entrée
  *   (le backend lui accorde CREATE/UPDATE/DELETE sur Worker, cf.
  *   `SecurityService::checkAdminImmobilierAction`). Seule l'Administration
  *   reste réservée au PATRON.
@@ -114,17 +138,23 @@ const PERSONNEL: AppMenuItem = {
  *   Administration.
  */
 export const ORGANIZATION_SIDEBAR: Record<OrganizationRole, SidebarMenu> = {
-    patron: [PATRIMOINE, LOCATION, FINANCES, VITRINE, ADMINISTRATION, PERSONNEL],
-    admin_immobilier: [PATRIMOINE, LOCATION, FINANCES, VITRINE, PERSONNEL],
-    admin_ville: [PATRIMOINE, LOCATION, FINANCES, VITRINE],
+    patron: [DASHBOARD, PATRIMOINE, LOCATION, DEPENSES, VITRINE, PERSONNEL, ADMINISTRATION],
+    admin_immobilier: [DASHBOARD, PATRIMOINE, LOCATION, DEPENSES, VITRINE, PERSONNEL],
+    admin_ville: [DASHBOARD, PATRIMOINE, LOCATION, DEPENSES, VITRINE],
 };
 
 /** Menu SUPER_ADMIN : aucune entrée métier d'organisation. */
 export const PLATFORM_SIDEBAR: SidebarMenu = [
     {
+        id: 'plateforme-dashboard',
+        label: 'Tableau de bord',
+        icon: 'gauge',
+        path: '/app/admin/dashboard',
+    },
+    {
         id: 'plateforme-organisations',
         label: 'Organisations',
-        icon: 'organizations',
+        icon: 'briefcase',
         path: '/app/admin/organisations',
     },
     {
@@ -185,8 +215,9 @@ export function isPathInMenu(menu: SidebarMenu, pathname: string): boolean {
 }
 
 /**
- * Chemin d'atterrissage par défaut pour un rôle donné : première feuille
- * du menu résolu (utilisé pour la redirection `/app` → première section).
+ * Chemin d'atterrissage par défaut pour un rôle donné : toujours le
+ * Tableau de bord quand il existe (première entrée de chaque menu), sinon
+ * la première feuille rencontrée.
  */
 export function defaultPathFor(platformRole: PlatformRole | null, organizationRole: OrganizationRole | null): string {
     const menu = resolveSidebar(platformRole, organizationRole);
