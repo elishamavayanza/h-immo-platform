@@ -33,7 +33,7 @@ export function ForgotPasswordForm() {
 
     if (form.isDone) {
         return (
-            <main className="auth-page">
+            <main className="auth-form">
                 <header className="auth-page__header">
                     <img
                         className="auth-page__logo"
@@ -57,7 +57,7 @@ export function ForgotPasswordForm() {
     }
 
     return (
-        <main className="auth-page">
+        <main className="auth-form">
             <header className="auth-page__header">
                 <img
                     className="auth-page__logo"

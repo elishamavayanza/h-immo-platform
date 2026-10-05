@@ -10,8 +10,8 @@ import './AuthLayout.scss';
 
 export function AuthLayout() {
     return (
-        <div className="auth-layout">
-            <div className="auth-layout__card">
+        <div className="auth-page">
+            <div className="auth-page__card">
                 <Outlet />
             </div>
         </div>
