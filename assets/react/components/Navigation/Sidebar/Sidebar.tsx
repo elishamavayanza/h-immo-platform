@@ -70,6 +70,7 @@ export function Sidebar({
         isVisuallyCollapsed,
         isRail,
         openMobile,
+        closeMobile,
         isFlyoutEnabled,
         flyoutItemId,
         isFlyoutOpen,
@@ -172,7 +173,7 @@ export function Sidebar({
         // Navigation vers une feuille : le drawer mobile se referme et le
         // flyout se replie, pour ne pas laisser un panneau flottant au-dessus
         // de la nouvelle page.
-        if (isMobileOpen) onMobileClose?.();
+        if (isMobileOpen) closeMobile();
         closeFlyout();
     };
 
@@ -201,7 +202,7 @@ export function Sidebar({
     //   - desktop               → replie ou déplie le menu.
     const handleBrandClick = () => {
         if (isMobileOpen) {
-            onMobileClose?.();
+            closeMobile();
             return;
         }
         if (collapsible) {
