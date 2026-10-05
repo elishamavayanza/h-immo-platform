@@ -145,12 +145,16 @@
     }
 }
 
-// Nom de l'organisation active : sur sa propre ligne, plus petit,
-// opacité réduite, truncate — ne déstabilise pas la ligne principale.
+// Nom de l'organisation active : sur sa propre ligne, dans un badge
+// arrondi avec fond discret — ne déstabilise pas la ligne principale.
 .main-layout__brand-org {
+    @include flex-center;
     font-size: $font-size-xs;  // 12px
     font-weight: $font-weight-medium;
-    color: $color-text-secondary;  // opacité ~60%
+    color: $color-text-primary;
+    background-color: $color-primary-soft;  // fond accent léger
+    border-radius: $radius-full;  // pilule
+    padding: 1px $spacing-2;  // hauteur compacte, padding horizontal
     @include truncate;
     text-transform: uppercase;
     letter-spacing: 0.02em;
