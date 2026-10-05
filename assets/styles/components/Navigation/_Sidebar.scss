@@ -468,75 +468,55 @@
 
 
 // ============================================================
-// RESPONSIVE — SOUS 768px : RAIL PERMANENT + TIROIR
+// RESPONSIVE — SOUS 768px : TIROIR CACHÉ PAR DÉFAUT + HAMBURGER
 // ============================================================
 // Ce bloc est placé en FIN de fichier, après les règles de base, pour une
 // raison précise : une media query n'ajoute aucune spécificité, donc
 // `display: none` posé ici avant le `display: flex` de `.sidebar__collapse`
 // serait purement et simplement ignoré.
 //
-// Sous 768px le menu n'est PLUS hors écran : il reste un rail de 72px à
-// gauche (donc la largeur et les visuels du mode replié, donc la classe
-// `sidebar--collapsed` posée par le hook), et le logo l'ouvre en tiroir.
-// Un tiroir entièrement sorti rendait le sidebar inaccessible dès qu'on
-// retirait le bouton burger : il n'existait plus aucun moyen de l'ouvrir.
-
+// Sous 768px le menu est COMPLÈTEMENT CACHÉ par défaut (pas de rail).
+// Un bouton hamburger dans l'en-tête mobile l'ouvre en tiroir qui glisse
+// depuis la gauche. Le contenu principal prend 100% de la largeur.
+//
+// États :
+//   - Fermé : sidebar en `translateX(-100%)` (hors écran), pas de rail
+//   - Ouvert : sidebar en `translateX(0)` (pleine largeur), overlay visible
+//
+// La transition utilise `transform` (GPU) plutôt que `width` pour éviter
+// les recalculs de layout. `will-change: transform` optimise l'animation.
+//
 @media (max-width: #{$breakpoint-tablet - 1px}) {
     .sidebar {
         position: fixed;
         top: 0;
         left: 0;
         height: 100dvh;
-        box-shadow: none;
+        width: $sidebar-width;
+        max-width: 100vw;
+        box-shadow: $shadow-lg;
+        transform: translateX(-100%);
+        transition: transform $transition-normal ease-out;
+        will-change: transform;
+        z-index: $z-modal;
     }
 
-    // ── Tiroir : ce qui anime réellement ──────────────────────
-    // Le tiroir ne part JAMAIS hors écran : tant qu'il est fermé, c'est le
-    // rail de 72px qui est visible. L'ouverture fait donc passer le panneau
-    // de 72px à sa largeur pleine, ce que la transition `width` du
-    // conteneur (.sidebar) anime déjà.
-    //
-    // Un `translateX(-100%)` « tiroir hors écran » a été envisagé, puis
-    // retiré : il ne s'applique jamais, le rail étant visible dans ce même
-    // état. Le garder aurait été une transition morte.
-    //
-    // `sidebar--rail` n'a volontairement AUCUNE règle ici : le rail est déjà
-    // entièrement décrit par `sidebar--collapsed`, posé dans le même temps
-    // par le hook. La classe ne sert qu'à distinguer « mobile, tiroir
-    // fermé » dans le DOM, et aux tests.
-    //
-    // Ce qui est réellement animé :
-    //   - la largeur du panneau (transition `width` du conteneur) ;
-    //   - l'apparition du contenu, via `--sidebar-label-opacity` /
-    //     `--sidebar-label-shift` posés par les classes d'état.
-    // Le rail et le tiroir ouvert partagent le même élément, donc un
-    // glissement latéral ferait « sauter » le rail : on anime donc une
-    // entrée de contenu, pas une translation du panneau.
-
-    // Contenu visible (tiroir ouvert ou desktop déployé).
-    .sidebar:not(.sidebar--collapsed) {
-        --sidebar-label-opacity: 1;
-        --sidebar-label-shift: 0;
+    // Ouvert : le tiroir glisse depuis la gauche
+    .sidebar--mobile-open {
+        transform: translateX(0);
+        box-shadow: $shadow-lg;
     }
 
-    // Contenu masqué (rail) : opacité 0 + léger décalage. `visibility`
-    // différé à la fin de la transition pour que le texte ne reste pas
-    // sélectionnable une fois le rail en place.
-    .sidebar--collapsed {
-        --sidebar-label-opacity: 0;
-        --sidebar-label-shift: -$spacing-1;
-    }
-
-    // Le rail n'a pas besoin d'êtreiel de repli : le logo joue déjà ce
-    // rôle, et le tiroir ouvert occupe déjà toute la largeur.
+    // Le bouton de repli n'a pas de sens sur mobile (pas de rail)
     .sidebar__collapse {
         display: none;
     }
 
-    // Le tiroir : largeur pleine pendant que le rail (72px) se fait la
-    // place. `will-change` évite un recalcul de layout sur chaque frame.
-    .sidebar--mobile-open {
-        will-change: width;
+    // Le contenu (labels, flèches) est toujours visible dans le tiroir ouvert
+    // car il n'y a pas d'état « collapsed » sur mobile.
+    .sidebar {
+        --sidebar-label-opacity: 1;
+        --sidebar-label-shift: 0;
     }
 }
 
