@@ -250,12 +250,12 @@ export function Sidebar({
                     className={`sidebar__item ${branchActive(item) ? 'sidebar__item--active' : ''} ${item.disabled ? 'sidebar__item--disabled' : ''}`}
                     onClick={() => handleBranchClick(item)}
                     onMouseEnter={() => {
-                        if (!hasChildren || !isFlyoutEnabled || item.disabled) return;
+                        if (!hasChildren || !isFlyoutEnabled || item.disabled || isFlyoutOpen(item.id)) return;
 
                         openFlyout(item.id);
                     }}
                     onMouseLeave={() => {
-                        if (!hasChildren || !isFlyoutEnabled) return;
+                        if (!hasChildren || !isFlyoutEnabled || isFlyoutOpen(item.id)) return;
 
                         scheduleFlyoutClose();
                     }}
