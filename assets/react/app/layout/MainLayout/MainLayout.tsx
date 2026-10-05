@@ -10,7 +10,6 @@ import { Navigate, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../providers/AuthProvider';
 import { useOrganization } from '../../providers/OrganizationProvider';
 import { UserMenu, ROLE_LABELS } from './UserMenu';
-import { MobileHeader } from './MobileHeader';
 import type { AppMenuItem } from './sidebar/sidebar.types';
 import { resolveSidebar } from './sidebar/sidebar.config';
 import { resolveActiveMenu } from './sidebar/sidebar.active';
@@ -149,13 +148,22 @@ export function MainLayout() {
 
 return (
         <div className="main-layout">
-            {/* En-tête mobile avec hamburger — visible UNIQUEMENT < 768px.
-                Sur desktop/tablette, le sidebar reste visible en permanence. */}
-            <MobileHeader
-                onOpenSidebar={() => setIsMobileOpen(true)}
-                isSidebarOpen={isMobileOpen}
-                organizationName={currentOrganization?.name}
-            />
+            {/* Bouton hamburger flottant — visible UNIQUEMENT sur mobile (< 768px).
+                Fixed en bas à gauche, au-dessus du contenu, z-index sous le drawer. */}
+            <button
+                type="button"
+                className="main-layout__mobile-toggle"
+                onClick={() => setIsMobileOpen(true)}
+                aria-expanded={isMobileOpen}
+                aria-controls="main-sidebar"
+                aria-label={isMobileOpen ? 'Fermer le menu' : 'Ouvrir le menu'}
+            >
+                <span className="main-layout__mobile-toggle-box" aria-hidden="true">
+                    <span className="main-layout__mobile-toggle-line" />
+                    <span className="main-layout__mobile-toggle-line" />
+                    <span className="main-layout__mobile-toggle-line" />
+                </span>
+            </button>
 
             {/* Backdrop mobile : rend le tiroir modal (clic dehors ferme). */}
             {isMobileOpen && (
