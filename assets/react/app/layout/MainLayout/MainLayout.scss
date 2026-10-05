@@ -121,37 +121,40 @@
     @include flex(row, center, flex-start, $spacing-2);
     min-width: 0;
 
-    &-mark {
-        @include flex-center;
+    &-logo {
         width: 28px;
         height: 28px;
-        border-radius: $radius-md;
-        background-color: $color-primary;
-        color: $color-text-inverse;
-        font-family: $font-family-heading;
-        font-weight: $font-weight-bold;
+        border-radius: $radius-sm;
+        object-fit: cover;
         flex-shrink: 0;
     }
 
     &-name {
-        font-size: $font-size-lg;
-        font-weight: $font-weight-semibold;
+        font-size: $font-size-xl;  // plus grand : 1.25rem (20px)
+        font-weight: $font-weight-bold;
         color: $color-text-primary;
         @include truncate;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
     }
 }
 
-// Sidebar replié : le rail ne garde que la marque « H », centrée. Le nom
-// « Immo» est masqué (et non tronqué) pour ne pas déborder sur 72px.
+// Sidebar replié : le rail ne garde que le logo, centré. Le nom
+// « IMMO » est masqué pour ne pas déborder sur 72px.
 .sidebar--collapsed .main-layout__brand {
     justify-content: center;
 
     &-name {
         display: none;
     }
+
+    &-logo {
+        width: 24px;
+        height: 24px;
+    }
 }
 
-
+    
 // ============================================================
 // USER MENU (bas du sidebar)
 // ============================================================
