@@ -97,7 +97,6 @@ export function UserMenu({
             icon: <SettingsIcon />,
             onClick: onOpenSettings,
         },
-        { id: 'sep', label: '', separator: true },
         {
             id: 'logout',
             label: 'Déconnexion',
