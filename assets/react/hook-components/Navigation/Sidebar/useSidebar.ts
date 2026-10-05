@@ -78,32 +78,28 @@ export function useSidebar({
     // rouvrir intempestivement quand on repasse sous le seuil.
     const isMobile = useIsMobile();
 
-    // Sous 768px le panneau n'est plus « sorti de l'écran » : il reste
-    // visible sous forme de rail de 72px, et c'est le logo qui ouvre le
-    // tiroir. `isRail` dit qu'on est précisément dans cet état, ce qui
-    // permet au composant de faire du logo le bouton d'ouverture.
-    const isRail = isMobile && !isMobileOpen;
+    // Nouveau comportement mobile : PAS de rail permanent.
+    // Le sidebar est soit complètement caché (fermé), soit pleinement ouvert (tiroir).
+    // `isRail` est toujours false — conservé pour compatibilité si du code l'utilise.
+    const isRail = false;
 
-    // Le rail est un état distinct du tiroir fermé : il doit rester visible
-    // en permanence, alors que le tiroir fermé est hors écran. Sans cette
-    // classe, le SCSS ne peut pas distinguer « rail visible » de « fermé »
-    // pour animer l'un et pas l'autre.
-    const railClass = isRail ? 'sidebar--rail' : '';
+    // `sidebar--rail` n'est plus utilisé (plus de rail mobile).
+    const railClass = '';
 
-    // Sur mobile, `sidebar--collapsed` décrit le rail et le tiroir ouvert
-    // son contraire : l'état visuel est donc piloté par l'état du tiroir,
-    // et non par le choix de repli fait sur desktop (sans quoi un menu
-    // replié sur desktop resterait en rail dans le tiroir ouvert, avec
-    // deux séries de règles qui se contredisent).
+    // Sur mobile, le sidebar est COMPLÈTEMENT CACHÉ par défaut (pas de rail).
+    // Il n'y a plus d'état « replié » sur mobile : soit le tiroir est ouvert
+    // (largeur pleine, libellés visibles), soit il est fermé (sidebar hors écran).
+    // Le `sidebar--collapsed` ne s'applique donc QUE sur desktop/tablette.
     //
-    // Ces deux règles sont pures et vivent dans `sidebar.state.ts`, ce qui
-    // les rend testables sans DOM.
+    // Les règles pures vivent dans `sidebar.state.ts`, testables sans DOM.
     const displayState = { isMobile, isRail, isCollapsed, collapsible };
-    const isVisuallyCollapsed = isLabelHidden(displayState);
+    // Sur mobile : jamais « visually collapsed » (pas de rail).
+    // Sur desktop : collapsed = replié par l'utilisateur.
+    const isVisuallyCollapsed = isMobile ? false : isLabelHidden(displayState);
 
     // Le flyout n'a de sens que là où les libellés sont masqués ET où aucun
-    // tiroir ne peut les révéler : sur mobile le rail s'ouvre en tiroir, donc
-    // un panneau flottant y ferait doublon.
+    // tiroir ne peut les révéler : sur mobile le tiroir affiche tout, donc
+    // pas de flyout.
     const isFlyoutEnabled = isFlyoutAvailable(displayState);
 
     // Le flyout est un état dérivé d'un mode d'affichage : dès que les libellés

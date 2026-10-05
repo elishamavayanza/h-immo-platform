@@ -15,6 +15,117 @@
 
 .main-layout {
     display: flex;
+    flex-direction: column;
+    height: 100dvh;
+    background-color: $color-bg-app;
+    overflow: hidden;
+
+    &--centered {
+        align-items: center;
+        justify-content: center;
+    }
+}
+
+
+// ============================================================
+// EN-TÊTE MOBILE (hamburger) — VISIBLE < 768px UNIQUEMENT
+// ============================================================
+
+.mobile-header {
+    display: none;
+    @include flex(row, center, space-between, $spacing-3);
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 56px;
+    padding: 0 $spacing-4;
+    background-color: $color-bg-card;
+    border-bottom: 1px solid $color-border;
+    z-index: $z-fixed;
+    box-shadow: $shadow-sm;
+
+    @include responsive(mobile) {
+        display: flex;
+    }
+}
+
+.mobile-header__hamburger {
+    @include flex-center;
+    width: 44px;
+    height: 44px;
+    padding: 0;
+    background: none;
+    border: 0;
+    border-radius: $radius-md;
+    cursor: pointer;
+    transition: background-color $transition-fast;
+
+    &:hover {
+        background-color: $color-bg-card-hover;
+    }
+
+    &:focus-visible {
+        outline: none;
+        box-shadow: $shadow-focus;
+    }
+}
+
+.mobile-header__hamburger-box {
+    @include flex(column, center, center, 4px);
+    width: 24px;
+    height: 18px;
+}
+
+.mobile-header__hamburger-line {
+    display: block;
+    width: 100%;
+    height: 2px;
+    background-color: $color-text-primary;
+    border-radius: 1px;
+    transition:
+        transform $transition-fast,
+        opacity $transition-fast,
+        background-color $transition-fast;
+}
+
+.mobile-header__title {
+    @include flex(column, flex-start, center, 1px);
+    min-width: 0;
+    flex: 1;
+    text-align: center;
+}
+
+.mobile-header__brand {
+    font-size: $font-size-lg;
+    font-weight: $font-weight-bold;
+    color: $color-text-primary;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    @include truncate;
+}
+
+.mobile-header__org {
+    font-size: $font-size-xs;
+    font-weight: $font-weight-medium;
+    color: $color-text-secondary;
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
+    @include truncate;
+}
+
+.mobile-header__spacer {
+    width: 44px; // même largeur que le hamburger pour centrer le titre
+}
+
+
+// ============================================================
+// CONTENEUR RACINE
+// ============================================================
+
+.main-layout {
+    display: flex;
+    flex-direction: column;
     height: 100dvh;
     background-color: $color-bg-app;
     overflow: hidden;
@@ -36,12 +147,10 @@
     min-width: 0;
     min-height: 0;
 
-    // Sous 768px le sidebar est `position: fixed` (voir `_Sidebar.scss`) :
-    // il sort donc du flux et le contenu passerait dessous. On lui réserve
-    // la largeur du rail — constante, que le tiroir soit fermé ou ouvert,
-    // donc aucun saut de mise en page à l'ouverture.
+    // Sur mobile, le sidebar est un tiroir qui glisse par-dessus le contenu
+    // (pas de rail permanent). Le contenu prend toute la largeur.
     @media (max-width: #{$breakpoint-tablet - 1px}) {
-        padding-left: $sidebar-width-collapsed;
+        padding-left: 0;
     }
 }
 

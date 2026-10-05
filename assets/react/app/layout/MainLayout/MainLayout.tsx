@@ -10,6 +10,7 @@ import { Navigate, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../providers/AuthProvider';
 import { useOrganization } from '../../providers/OrganizationProvider';
 import { UserMenu, ROLE_LABELS } from './UserMenu';
+import { MobileHeader } from './MobileHeader';
 import type { AppMenuItem } from './sidebar/sidebar.types';
 import { resolveSidebar } from './sidebar/sidebar.config';
 import { resolveActiveMenu } from './sidebar/sidebar.active';
@@ -146,15 +147,17 @@ export function MainLayout() {
             ? ROLE_LABELS[organizationRole] ?? organizationRole
             : undefined;
 
-    return (
+return (
         <div className="main-layout">
-            {/* Aucun bouton burger : le sidebar reste visible en rail de 72px
-                sous 768px, et c'est son logo qui ouvre le tiroir. Ce qui
-                était ici faisait doublon avec le logo et laissait le rail
-                mobile sans point d'entrée dès qu'on le retirait. */}
+            {/* En-tête mobile avec hamburger — visible UNIQUEMENT < 768px.
+                Sur desktop/tablette, le sidebar reste visible en permanence. */}
+            <MobileHeader
+                onOpenSidebar={() => setIsMobileOpen(true)}
+                isSidebarOpen={isMobileOpen}
+                organizationName={currentOrganization?.name}
+            />
 
-            {/* Backdrop mobile : rend le tiroir modal (cliquer dehors ferme),
-                et le `aria-modal` du tiroir est posé plus bas côté Sidebar. */}
+            {/* Backdrop mobile : rend le tiroir modal (clic dehors ferme). */}
             {isMobileOpen && (
                 <button
                     type="button"

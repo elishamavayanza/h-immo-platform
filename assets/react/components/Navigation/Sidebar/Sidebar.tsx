@@ -144,40 +144,28 @@ export function Sidebar({
         if (hasChildren) {
             const sectionId = item.id;
 
-            // Rail mobile : le tiroir est fermé, un parent n'a nulle part où
-            // montrer son sous-menu. Déplier « le rail » n'aurait aucun
-            // effet visible ici (il EST déjà le rail), et cela reviendrait à
-            // faire ce que fait le logo. On ouvre donc le tiroir — c'est le
-            // seul geste qui mène à la section.
-            if (isRail) {
+            // Mobile drawer : un parent n'a pas de sous-menu inline (le tiroir
+            // est déjà ouvert en pleine largeur). Le flyout gère les sous-menus
+            // sur desktop/tablette replié.
+            if (isMobileOpen) {
                 openSection(sectionId);
-                openMobile();
-
                 return;
             }
 
-            // Rail desktop / tablette : les libellés sont masqués, un clic sur
-            // le parent n'a donc rien à déplier sur place. On affiche son
-            // sous-menu dans un panneau ancré (flyout) : déplier le rail à la
-            // place laisserait le sous-menu inaccessible tant que le panneau
-            // reste en 72px.
+            // Desktop/tablette replié : flyout pour les sous-menus.
             if (isFlyoutEnabled) {
                 isFlyoutOpen(sectionId) ? closeFlyout() : openFlyout(sectionId);
-
                 return;
             }
 
-            // Repli sans flyout possible (composant autonome sans rail) : on
-            // déplie le menu pour rendre les libellés visibles.
+            // Desktop déplié : toggle section inline.
             if (displayCollapsed) {
                 toggleCollapse();
                 openSection(sectionId);
-
                 return;
             }
 
             toggleSection(sectionId);
-
             return;
         }
 
@@ -198,51 +186,36 @@ export function Sidebar({
         handleItemClick(item);
     };
 
-    // Parent ou enfant à la volée selon l'état courant du rail : le clic sur un
-    // parent ouvre/ferme le flyout, un clic sur un parent en tiroir déplie la
-    // section. Résolu ici pour que la branche mobile reste le comportement par
-    // défaut et non une réflexion à chaque rendu.
+    // Sur mobile, le parent ouvre la section dans le tiroir (pas de flyout).
+    // Sur desktop, handleItemClick gère flyout / toggle section.
     const handleBranchClick = (item: SidebarItem) => {
-        if (isRail) {
+        if (isMobileOpen) {
             openSection(item.id);
-            openMobile();
-
             return;
         }
-
         handleItemClick(item);
     };
 
-    // Clic sur le logo — un seul contrôle pour les trois états :
-    //   - tiroir mobile ouvert  → ferme le tiroir ;
-    //   - rail mobile (fermé)    → ouvre le tiroir (c'est la seule entrée) ;
+    // Clic sur le logo (dans le sidebar) :
+    //   - tiroir mobile ouvert  → ferme le tiroir (via onMobileClose) ;
     //   - desktop               → replie ou déplie le menu.
     const handleBrandClick = () => {
         if (isMobileOpen) {
             onMobileClose?.();
-
             return;
         }
-
-        if (isRail) {
-            openMobile();
-
-            return;
-        }
-
         if (collapsible) {
             toggleCollapse();
         }
     };
 
-    const isBrandInteractive = collapsible || isRail || !!onMobileClose;
+    // Le brand est interactif : sur mobile il ferme le tiroir, sur desktop il replie/déplie.
+    const isBrandInteractive = collapsible || !!onMobileClose;
     const brandLabel = isMobileOpen
         ? 'Fermer le menu'
-        : isRail
-            ? 'Ouvrir le menu'
-            : displayCollapsed
-                ? 'Déplier le menu'
-                : 'Replier le menu';
+        : displayCollapsed
+            ? 'Déplier le menu'
+            : 'Replier le menu';
 
     const renderItem = (item: SidebarItem, collapsed: boolean) => {
         const textLabel = toTextLabel(item.label);
@@ -385,10 +358,9 @@ export function Sidebar({
                 ) : (
                     <div className="sidebar__header-brand">{header}</div>
                 )}
-                {/* Le repli n'a pas de sens dans un tiroir plein écran, ni sur le rail
-                    mobile où le logo tient déjà ce rôle : le bouton n'est pas
-                    rendu du tout (pas seulement masqué par le CSS). */}
-                {collapsible && !isRail && (
+                {/* Le repli n'a pas de sens dans un tiroir plein écran (mobile).
+                    Sur desktop/tablette, le bouton replie/déploie le menu. */}
+                {!isMobile && collapsible && (
                     <button
                         type="button"
                         className="sidebar__collapse"
