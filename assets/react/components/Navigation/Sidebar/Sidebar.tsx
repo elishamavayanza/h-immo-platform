@@ -360,8 +360,9 @@ export function Sidebar({
                     <div className="sidebar__header-brand">{header}</div>
                 )}
                 {/* Le repli n'a pas de sens dans un tiroir plein écran (mobile).
-                    Sur desktop/tablette, le bouton replie/déploie le menu. */}
-                {!isMobile && collapsible && (
+                    Sur desktop/tablette, le bouton replie/déploie le menu.
+                    Masqué quand le sidebar est replié : seul le logo reste visible. */}
+                {!isMobile && collapsible && !displayCollapsed && (
                     <button
                         type="button"
                         className="sidebar__collapse"
@@ -371,7 +372,7 @@ export function Sidebar({
                         aria-label={displayCollapsed ? 'Déplier le menu' : 'Replier le menu'}
                         title={displayCollapsed ? 'Déplier le menu' : 'Replier le menu'}
                     >
-                        {displayCollapsed ? <ExpandIcon /> : <CollapseIcon />}
+                        <CollapseIcon />
                     </button>
                 )}
             </div>
