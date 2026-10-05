@@ -16,6 +16,9 @@ import { AppRoutes } from './routes/AppRoutes.tsx';
 // via les partials de page importés ici.
 import '../../styles/base/_reset.scss';
 import '../../styles/components/Navigation/_Sidebar.scss';
+// Sous-menu flottant du rail : sans cet import, le panneau s'affiche en texte
+// brut au-dessus du contenu, sans fond, sans bordure et sans confines.
+import '../../styles/components/Navigation/_SidebarFlyout.scss';
 import '../../styles/components/UI/_Dropdown.scss';
 // Sans cet import, <PopoverMenu /> (menu utilisateur du footer du sidebar)
 // rendait une liste sans aucun style : ni panneau, ni survol, ni focus.

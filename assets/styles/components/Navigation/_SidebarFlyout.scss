@@ -1,0 +1,199 @@
+// ============================================================
+// COMPOSANT — FLYOUT DE SOUS-MENU DU SIDEBAR
+// Fichier : components/Navigation/Sidebar/_SidebarFlyout.scss
+// ------------------------------------------------------------
+// Rôle :
+//   Styles du panneau <SidebarFlyout />, sous-menu des parents
+//   affiché dans un portal quand le sidebar est réduit au rail
+//   (desktop et tablette). Position fixed définie côté React
+//   via `useFloatingPosition` : ici on ne gère que l'apparence.
+//
+// Dépendances :
+//   - baseVariables/_variables.scss
+//   - baseVariables/_mixins.scss
+// ============================================================
+
+@use '../../baseVariables/variables' as *;
+@use '../../baseVariables/mixins' as *;
+
+
+// ============================================================
+// PANNEAU
+// ============================================================
+
+.sidebar-flyout {
+    @include elevation(lg);
+    // Au-dessus du rail (`$z-fixed`) et du voile du tiroir mobile
+    // (`$z-modal-backdrop`), mais sous la modale : même rang que le menu
+    // contextuel de l'avatar, qui partage ce même moteur de placement.
+    z-index: $z-popover;
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    width: $sidebar-flyout-width;
+    // `min-width` sans `max-width` : le panneau suit la largeur du parent
+    // quant au remplissage, mais son contenu long (traduction, nom de ville)
+    // est tronqué plutôt que de faire déborder le panneau hors du viewport.
+    min-width: $sidebar-flyout-min-width;
+    max-width: $sidebar-flyout-width;
+    overflow: hidden;
+    background-color: $color-bg-elevated;
+    border: 1px solid $color-border-light;
+    border-radius: $radius-md;
+    font-family: $font-family-base;
+    // L'ombre porte sur toute la boîte : le panneau « flotte » au-dessus du
+    // contenu de la page, exactement comme le menu contextuel existant.
+    animation: sidebar-flyout-in $transition-fast both;
+
+    // Le panneau est portalé dans `document.body` : il doit contrôle lui-même
+    // son focus visible, sans quoi l'anneau serait dessiné sur le `<body>` et
+    // invisible.
+    @include focus-ring;
+}
+
+
+// ============================================================
+// ANIMATION
+// ============================================================
+// Volet depuis la gauche du panneau : il apparaît du côté du rail, ce qui
+// exprime « ce contenu sort de ce bouton ». `opacity` est partagé pour que le
+// panneau ne soit jamais à moitié visible.
+
+@keyframes sidebar-flyout-in {
+    from { opacity: 0; transform: translateX(-6px); }
+    to   { opacity: 1; transform: translateX(0); }
+}
+
+
+// ============================================================
+// TITRE
+// ============================================================
+
+.sidebar-flyout__title {
+    @include truncate;
+    display: flex;
+    align-items: center;
+    flex: 0 0 auto;
+    // Hauteur alignée sur `$sidebar-item-min-height` divisée par deux : le
+    // bandeau ne doit jamais peser plus lourd que les lignes de menu qu'il
+    // introduit.
+    min-height: $sidebar-flyout-title-height;
+    padding: 0 $spacing-3;
+    border-bottom: 1px solid $color-border;
+    background-color: $color-bg-card;
+    color: $color-text-secondary;
+    font-size: $font-size-xs;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+}
+
+
+// ============================================================
+// ITEMS
+// ============================================================
+
+.sidebar-flyout__items {
+    // Plusieurs sous-items : la liste peut dépasser la hauteur disponible sur
+    // un écran court. Le défilement est local au panneau, sinon c'est la page
+    // entière qui défile en dépliant un menu.
+    max-height: 60vh;
+    overflow-y: auto;
+    padding: $spacing-1;
+    @include scrollbar(6px);
+}
+
+.sidebar-flyout__item {
+    @include flex;
+    align-items: center;
+    gap: $spacing-3;
+    width: 100%;
+    // Même cible tactile que les sous-items du sidebar : le flyout est le
+    // même contenu, il ne doit pas devenir plus difficile à toucher parce
+    // qu'il est flottant.
+    min-height: $sidebar-subitem-min-height;
+    padding: 0 $spacing-3;
+    background: none;
+    border: 0;
+    border-radius: $radius-sm;
+    color: $color-text-secondary;
+    font-family: $font-family-base;
+    font-size: $font-size-sm;
+    text-align: left;
+    cursor: pointer;
+    transition: background-color $transition-fast, color $transition-fast;
+
+    &:hover:not(:disabled) {
+        background-color: $color-bg-card-hover;
+        color: $color-text-primary;
+    }
+
+    &:focus-visible {
+        outline: none;
+        box-shadow: $shadow-focus;
+    }
+
+    &:disabled {
+        color: $color-text-disabled;
+        cursor: not-allowed;
+    }
+}
+
+// Item courant : la même couleur d'accent et le même filet que
+// `.sidebar__subitem--active`, pour que l'image de la navigation soit la même
+// que le sous-menu soit en ligne ou flottant. Le repère est porté par le fond
+// accentué, pas seulement par la couleur du texte (lisibilité) ni seulement
+// par `aria-current` (invisible).
+.sidebar-flyout__item--active {
+    background-color: $color-primary-light;
+    color: $color-primary;
+
+    &:hover:not(:disabled) {
+        background-color: $color-primary-soft;
+        color: $color-primary;
+    }
+}
+
+.sidebar-flyout__icon {
+    @include flex-center;
+    flex: 0 0 auto;
+    width: 20px;
+    height: 20px;
+    color: inherit;
+    opacity: 0.85;
+
+    svg {
+        width: 100%;
+        height: 100%;
+    }
+}
+
+.sidebar-flyout__label {
+    @include truncate;
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+.sidebar-flyout__badge {
+    @include flex-center;
+    flex: 0 0 auto;
+    min-width: 20px;
+    height: 20px;
+    padding: 0 $spacing-1;
+    border-radius: $radius-full;
+    background-color: $color-primary-soft;
+    color: $color-primary;
+    font-size: $font-size-xs;
+    font-weight: 600;
+}
+
+
+// ============================================================
+// PRÉFÉRENCES SYSTÈME
+// ============================================================
+
+@media (prefers-reduced-motion: reduce) {
+    .sidebar-flyout {
+        animation: none;
+    }
+}

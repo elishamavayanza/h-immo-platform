@@ -58,9 +58,38 @@ export function MainLayout() {
     const location = useLocation();
     const navigate = useNavigate();
 
-    // Ferme le drawer à chaque navigation
+    // ── Verrou de scroll pendant l'ouverture du tiroir ──────────
+    // Le tiroir ne couvre qu'une bande de l'écran : sans ce verrou, la page
+    // défile derrière pendant qu'on parcourt le menu au doigt, et le contenu
+    // bouge sous le doigt — sensation de menu cassé. `useSidebar` pose déjà
+    // ce verrou pour lui-même ; celui-ci couvre le délai d'ouverture, pendant
+    // lequel le composant enfant n'est pas encore monté.
+    //
+    // Le corps ne défile plus, mais `overscroll-behavior` évite qu'un geste
+    // au bord ne fasse rebondir la page sous le panneau.
     useEffect(() => {
-        setIsMobileOpen(false);
+        if (!isMobileOpen) return;
+
+        const { body } = document;
+        const previousOverflow = body.style.overflow;
+
+        body.style.overflow = 'hidden';
+
+        return () => {
+            body.style.overflow = previousOverflow;
+        };
+    }, [isMobileOpen]);
+
+    // Ferme le drawer à chaque navigation. `setTimeout(0)` : fermer dans le
+    // même cycle que la navigation ferait disparaître le tiroir ET son voile
+    // d'un seul coup, sans transition — le glissement de fermeture ne serait
+    // jamais vu. En différant d'un tick, la classe `sidebar--mobile-open`
+    // disparaît d'abord (le tiroir glisse hors écran), puis le composant
+    // est démonté à la fin de la transition.
+    useEffect(() => {
+        const timer = setTimeout(() => setIsMobileOpen(false), 0);
+
+        return () => clearTimeout(timer);
     }, [location.pathname]);
 
     // Ferme le drawer à Échap
@@ -109,11 +138,13 @@ export function MainLayout() {
                 était ici faisait doublon avec le logo et laissait le rail
                 mobile sans point d'entrée dès qu'on le retirait. */}
 
-            {/* Backdrop mobile */}
+            {/* Backdrop mobile : rend le tiroir modal (cliquer dehors ferme),
+                et le `aria-modal` du tiroir est posé plus bas côté Sidebar. */}
             {isMobileOpen && (
-                <div
+                <button
+                    type="button"
                     className="main-layout__backdrop"
-                    aria-hidden="true"
+                    aria-label="Fermer le menu"
                     onClick={() => setIsMobileOpen(false)}
                 />
             )}
@@ -128,8 +159,10 @@ export function MainLayout() {
                     width="264px"
                     header={BRAND}
                     activeRoute={location.pathname}
+                    activeIds={activeIds}
                     mobileOpen={isMobileOpen}
                     onMobileClose={() => setIsMobileOpen(false)}
+                    onMobileOpen={() => setIsMobileOpen(true)}
                     onItemClick={(item) => {
                         const target = 'route' in item ? item.route : undefined;
                         if (target) navigate(target);

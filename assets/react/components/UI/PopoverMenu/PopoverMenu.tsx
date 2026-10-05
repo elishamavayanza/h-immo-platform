@@ -29,16 +29,17 @@ export function PopoverMenu({
     } = usePopoverMenu({ items, placement, offset, closeOnClickItem, closeOnOutsideClick, closeOnEscape, className });
 
     // `top`/`left` sont déjà des pixels finaux, bornés dans le viewport
-    // par le hook : plus aucun `transform` de positionnement (c'est
-    // l'animation CSS qui utilise `transform`, sans conflit).
+    // par `useFloatingPosition` : plus aucun `transform` de positionnement
+    // (c'est l'animation CSS qui utilise `transform`, sans conflit).
     // `visibility: hidden` tant que la mesure n'est pas faite, pour ne
     // pas peindre une frame le menu en (0, 0).
+    // Le `z-index` vient de la classe CSS (`$z-popover`) et non d'un
+    // littéral inline, pour rester cohérent avec les autres panneaux.
     const style: React.CSSProperties = {
         position: 'fixed',
         top: coords?.top ?? 0,
         left: coords?.left ?? 0,
         visibility: coords === null ? 'hidden' : 'visible',
-        zIndex: 3000,
     };
 
     return (

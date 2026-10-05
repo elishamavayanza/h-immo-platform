@@ -50,6 +50,9 @@
 
 .popover-menu {
     @include elevation(lg);
+    // Au-dessus de la modale (`$z-modal`) : un menu contextuel doit rester
+    // lisible au-dessus d'un drawer, pas passer dessous.
+    z-index: $z-popover;
     min-width: 180px;
     max-width: 280px;
     padding: $spacing-1;

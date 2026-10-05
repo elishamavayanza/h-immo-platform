@@ -65,10 +65,10 @@ const PATRIMOINE: AppMenuItem = {
     label: 'Patrimoine',
     icon: 'building',
     children: [
-        { id: 'patrimoine-villes', label: 'Villes', path: '/app/patrimoine/villes' },
-        { id: 'patrimoine-parcelles', label: 'Parcelles', path: '/app/patrimoine/parcelles' },
-        { id: 'patrimoine-batiments', label: 'Bâtiments', path: '/app/patrimoine/batiments' },
-        { id: 'patrimoine-unites', label: 'Unités', path: '/app/patrimoine/unites' },
+        { id: 'patrimoine-villes', label: 'Villes', icon: 'map-pin', path: '/app/patrimoine/villes' },
+        { id: 'patrimoine-parcelles', label: 'Parcelles', icon: 'land-plot', path: '/app/patrimoine/parcelles' },
+        { id: 'patrimoine-batiments', label: 'Bâtiments', icon: 'office-building', path: '/app/patrimoine/batiments' },
+        { id: 'patrimoine-unites', label: 'Unités', icon: 'door', path: '/app/patrimoine/unites' },
     ],
 };
 
@@ -77,10 +77,10 @@ const LOCATION: AppMenuItem = {
     label: 'Location',
     icon: 'key',
     children: [
-        { id: 'location-locataires', label: 'Locataires', path: '/app/location/locataires' },
-        { id: 'location-baux', label: 'Baux', path: '/app/location/baux' },
-        { id: 'location-loyers', label: 'Loyers', path: '/app/location/loyers' },
-        { id: 'location-paiements', label: 'Paiements', path: '/app/location/paiements' },
+        { id: 'location-locataires', label: 'Locataires', icon: 'user-single', path: '/app/location/locataires' },
+        { id: 'location-baux', label: 'Baux', icon: 'file-signature', path: '/app/location/baux' },
+        { id: 'location-loyers', label: 'Loyers', icon: 'calendar-due', path: '/app/location/loyers' },
+        { id: 'location-paiements', label: 'Paiements', icon: 'credit-card', path: '/app/location/paiements' },
     ],
 };
 
@@ -111,8 +111,8 @@ const ADMINISTRATION: AppMenuItem = {
     label: 'Administration',
     icon: 'id-badge',
     children: [
-        { id: 'administration-equipe', label: 'Équipe', path: '/app/administration/equipe' },
-        { id: 'administration-villes', label: 'Villes assignées', path: '/app/administration/villes' },
+        { id: 'administration-equipe', label: 'Équipe', icon: 'user-cog', path: '/app/administration/equipe' },
+        { id: 'administration-villes', label: 'Villes assignées', icon: 'map-pins', path: '/app/administration/villes' },
     ],
 };
 
@@ -121,8 +121,8 @@ const PERSONNEL: AppMenuItem = {
     label: 'Personnel',
     icon: 'hard-hat',
     children: [
-        { id: 'personnel-ouvriers', label: 'Ouvriers', path: '/app/personnel/ouvriers' },
-        { id: 'personnel-affectations', label: 'Affectations', path: '/app/personnel/affectations' },
+        { id: 'personnel-ouvriers', label: 'Ouvriers', icon: 'tools', path: '/app/personnel/ouvriers' },
+        { id: 'personnel-affectations', label: 'Affectations', icon: 'clipboard-check', path: '/app/personnel/affectations' },
     ],
 };
 

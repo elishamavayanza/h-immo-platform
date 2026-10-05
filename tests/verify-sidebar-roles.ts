@@ -23,6 +23,11 @@
  * exigent que la table des routes couvre le menu et que chaque destination
  * d'atterrissage soit routée (invariant anti-boucle).
  *
+ * Quatrième partie — icônes. Sous 768px le menu devient un rail de 72px où le
+ * libellé est masqué : une entrée sans icône y est un composant sans aucun
+ * visuel. Seules les entrées de premier niveau étaient iconifiées, le rail
+ * n'offrait donc que trois destinations.
+ *
  * Modules purs (ni React ni JSX), exécutables par Node 24 (type
  * stripping) :
  *
@@ -39,6 +44,11 @@ import {
     resolveActiveMenu,
 } from '../assets/react/app/layout/MainLayout/sidebar/sidebar.active.ts';
 import {
+    isFlyoutAvailable,
+    isLabelHidden,
+    isBranchActive,
+} from '../assets/react/hook-components/Navigation/Sidebar/sidebar.state.ts';
+import {
     ACCESS_DENIED_PATH,
     APP_ROOT,
     buildAppRoutes,
@@ -48,6 +58,7 @@ import {
     toRelativeAppRoutePath,
 } from '../assets/react/app/routes/appRoutes.config.ts';
 import type { OrganizationRole, PlatformRole } from '../assets/services/api/api.types.ts';
+import { readFileSync } from 'node:fs';
 
 let checks = 0;
 const failures: string[] = [];
@@ -267,6 +278,107 @@ check(
     'Un rôle d\'organisation atterrit sur une route du back-office',
     landings.slice(1, 4).every(path => routePaths.includes(path)),
     landings.slice(1, 4).join(', ')
+);
+
+console.log('\n' + '-'.repeat(60) + '\n');
+
+
+// ============================================================
+// FLYOUT — règles pures d'affichage (sans DOM)
+// ============================================================
+// Ces contrôles testent `sidebar.state.ts` : la logique de décision
+// (flyout disponible, libellés masqués, parent actif) est pure et
+// exécutable par Node, ce qui garantit qu'un refacto ne casse pas
+// l'invariant « flyout uniquement en rail desktop/tablette » et
+// « parent actif quand une feuille l'est » sans navigateur.
+
+console.log('=== Flyout : règles pures d\'affichage ===\n');
+
+const desktopCollapsed = { isMobile: false, isRail: false, isCollapsed: true, collapsible: true };
+const desktopExpanded = { isMobile: false, isRail: false, isCollapsed: false, collapsible: true };
+const desktopNotCollapsible = { isMobile: false, isRail: false, isCollapsed: true, collapsible: false };
+const mobileRail = { isMobile: true, isRail: true, isCollapsed: false, collapsible: true };
+const mobileDrawer = { isMobile: true, isRail: false, isCollapsed: false, collapsible: true };
+
+check('Desktop replié : libellés masqués', isLabelHidden(desktopCollapsed) === true);
+check('Desktop déplié : libellés visibles', isLabelHidden(desktopExpanded) === false);
+check('Desktop non repliable : libellés visibles', isLabelHidden(desktopNotCollapsible) === false);
+check('Mobile rail : libellés masqués', isLabelHidden(mobileRail) === true);
+check('Mobile tiroir : libellés visibles', isLabelHidden(mobileDrawer) === false);
+
+check('Desktop replié : flyout disponible', isFlyoutAvailable(desktopCollapsed) === true);
+check('Desktop déplié : flyout indisponible', isFlyoutAvailable(desktopExpanded) === false);
+check('Desktop non repliable : flyout indisponible', isFlyoutAvailable(desktopNotCollapsible) === false);
+check('Mobile rail : flyout indisponible (tiroir disponible)', isFlyoutAvailable(mobileRail) === false);
+check('Mobile tiroir : flyout indisponible', isFlyoutAvailable(mobileDrawer) === false);
+
+// `isBranchActive` : arbre de test minimal (2 niveaux)
+const testItem: typeof PATRON[0] = {
+    id: 'parent',
+    label: 'Parent',
+    children: [
+        { id: 'child1', label: 'Enfant 1' },
+        { id: 'child2', label: 'Enfant 2', children: [{ id: 'grandchild', label: 'Petit-enfant' }] },
+    ],
+} as typeof PATRON[0];
+
+check('Parent actif : isBranchActive(true)', isBranchActive(testItem, new Set(['parent'])));
+check('Enfant direct actif : isBranchActive(true)', isBranchActive(testItem, new Set(['child1'])));
+check('Petit-enfant actif : isBranchActive(true)', isBranchActive(testItem, new Set(['grandchild'])));
+check('Aucun actif : isBranchActive(false)', isBranchActive(testItem, new Set(['inconnu'])) === false);
+check('Feuille sans enfants : isBranchActive(false)', isBranchActive({ id: 'leaf', label: 'Feuille' } as typeof PATRON[0], new Set(['inconnu'])) === false);
+
+console.log('\n' + '-'.repeat(60) + '\n');
+// Sous 768px le menu se réduit à un rail de 72px : le libellé disparaît et
+// seule l'icône subsiste. Une feuille sans icône y devient un composant sans
+// aucun visuel, impossible à identifier au doigt ni à distinguer d'une autre.
+// Régression : seules les entrées de premier niveau étaient iconifiées, le
+// rail n'affichait donc que « Patrimoine / Location / Dépenses » et les
+// feuilles，// rail n'affichait donc que « Patrimoine / Location / Dépenses », et les
+// feuilles exigeaient d'ouvrir le tiroir pour être atteintes.
+
+console.log('=== Icônes : chaque entrée du menu est identifiable en rail ===\n');
+
+const iconsSrc = readFileSync(
+    new URL('../assets/react/app/layout/MainLayout/sidebar/sidebar.icons.tsx', import.meta.url),
+    'utf-8'
+);
+const declaredIcons = new Set(
+    [...iconsSrc.slice(iconsSrc.indexOf('SIDEBAR_ICON_MAP')).matchAll(/^\s{4}'?([a-z-]+)'?:\s*Icon/gm)]
+        .map(match => match[1])
+);
+
+const allItems: { id: string; icon?: string; hasChildren: boolean }[] = [];
+const collectItems = (menu: typeof PATRON): void => {
+    for (const item of menu) {
+        allItems.push({ id: item.id, icon: item.icon, hasChildren: item.children !== undefined });
+        if (item.children !== undefined) collectItems(item.children);
+    }
+};
+for (const menu of [PATRON, ADMIN_IMMOBILIER, ADMIN_VILLE, PLATFORM]) collectItems(menu);
+
+const withoutIcon = allItems.filter(item => item.icon === undefined).map(item => item.id);
+const unknownIcon = allItems
+    .filter(item => item.icon !== undefined && !declaredIcons.has(item.icon))
+    .map(item => `${item.id} → ${item.icon}`);
+const leavesWithoutIcon = allItems
+    .filter(item => !item.hasChildren && item.icon === undefined)
+    .map(item => item.id);
+
+check(
+    `Chaque entrée du menu porte une icône (${allItems.length} entrées)`,
+    withoutIcon.length === 0,
+    withoutIcon.join(', ')
+);
+check(
+    'Les sous-menus (feuilles) sont iconifiés, pas seulement les parents',
+    leavesWithoutIcon.length === 0,
+    leavesWithoutIcon.join(', ')
+);
+check(
+    `Chaque nom d'icône du menu existe dans SIDEBAR_ICON_MAP (${declaredIcons.size} icônes)`,
+    unknownIcon.length === 0,
+    unknownIcon.join(', ')
 );
 
 console.log('\n' + '-'.repeat(60) + '\n');
