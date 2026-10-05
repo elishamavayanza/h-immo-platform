@@ -26,6 +26,7 @@
     @include flex(row, center, center, $spacing-2);
     @include focus-ring;
     display: inline-flex;
+    position: relative;
     font-family: $font-family-base;
     font-weight: $font-weight-semibold;
     text-decoration: none;
@@ -58,9 +59,23 @@
     }
 
     // État loading : curseur d’attente
+    // Le spinner est sorti du flux (positionné dans la marge gauche) au lieu
+    // d'être ajouté avant le libellé : sinon le bouton change de largeur et
+    // le texte glisse de quelques pixels à l'envoi, ce qui fait « clignoter »
+    // l'action en cours. Le libellé reste donc centré sur toute la durée.
     &.btn--loading {
         cursor: progress;
         pointer-events: none;
+
+        .btn__spinner {
+            position: absolute;
+            left: $spacing-3;
+            // Centrage vertical par marges auto et non `translateY` :
+            // l'animation `btn-spin` pilote déjà `transform` (rotation),
+            // une valeur de transform ici écraserait la rotation.
+            inset-block: 0;
+            margin-block: auto;
+        }
     }
 }
 

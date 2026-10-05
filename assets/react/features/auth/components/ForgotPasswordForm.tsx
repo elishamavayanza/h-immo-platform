@@ -9,11 +9,11 @@
 
 import { Link } from 'react-router-dom';
 
-import { Alert } from '../../../../../public/components/UI/Alert/Alert';
-import { Button } from '../../../../../public/components/UI/Button/Button';
-import { Form } from '../../../../../public/components/Forms/Form/Form';
-import { FormField } from '../../../../../public/components/Forms/FormField/FormField';
-import { Input } from '../../../../../public/components/Forms/Input/Input';
+import { Alert } from '../../../components/UI/Alert/Alert';
+import { Button } from '../../../components/UI/Button/Button';
+import { Form } from '../../../components/Forms/Form/Form';
+import { FormField } from '../../../components/Forms/FormField/FormField';
+import { Input } from '../../../components/Forms/Input/Input';
 
 import { DEFAULT_FORGOT_RESET_MESSAGE, useForgotPasswordForm } from '../hooks/useForgotPasswordForm';
 
