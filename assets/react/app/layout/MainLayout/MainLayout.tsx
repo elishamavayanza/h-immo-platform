@@ -21,8 +21,12 @@ import { Loading } from '../../../components/UI/Loading';
 
 const BRAND = (
     <div className="main-layout__brand">
-        <span className="main-layout__brand-mark">H</span>
-        <span className="main-layout__brand-name">Immo</span>
+        <img
+            src="/assets/logo.png"
+            alt="H-Immo"
+            className="main-layout__brand-logo"
+        />
+        <span className="main-layout__brand-name">IMMO</span>
     </div>
 );
 
