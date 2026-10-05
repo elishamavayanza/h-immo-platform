@@ -1,14 +1,6 @@
 // ============================================================
 // upload/react/app/layout/MainLayout/AppHeader.tsx
 // Barre supérieure du back-office.
-//
-// - Bouton « burger » : ouvre le drawer mobile du sidebar (< 768px,
-//   masqué en bureau par CSS).
-// - Sélecteur d'organization (comptes métier uniquement) : propose les
-//   appartenances de `/auth/me`, mais la bascule est confirmée par
-//   `switchOrganization()` qui re-résout le rôle côté API. Un SUPER_ADMIN
-//   n'a pas de sélecteur : le contexte met sa `currentOrganization` à null.
-// - Pastille du rôle résolu + identité de l'utilisateur + déconnexion.
 // ============================================================
 
 import { Avatar } from '../../../components/UI/Avatar/Avatar';
@@ -16,13 +8,20 @@ import { Dropdown } from '../../../components/UI/Dropdown/Dropdown';
 import { useAuth } from '../../providers/AuthProvider';
 import { useOrganization } from '../../providers/OrganizationProvider';
 
-const BURGER_ICON = (
-    <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" strokeWidth="2">
-        <line x1="4" y1="7" x2="20" y2="7" />
-        <line x1="4" y1="12" x2="20" y2="12" />
-        <line x1="4" y1="17" x2="20" y2="17" />
-    </svg>
-);
+// Icône burger — change en croix quand le menu est ouvert
+const BurgerIcon = ({ open }: { open: boolean }) =>
+    open ? (
+        <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" strokeWidth="2">
+            <line x1="18" y1="6" x2="6" y2="18" />
+            <line x1="6" y1="6" x2="18" y2="18" />
+        </svg>
+    ) : (
+        <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" strokeWidth="2">
+            <line x1="4" y1="7" x2="20" y2="7" />
+            <line x1="4" y1="12" x2="20" y2="12" />
+            <line x1="4" y1="17" x2="20" y2="17" />
+        </svg>
+    );
 
 const ROLE_LABELS: Record<string, string> = {
     patron: 'Patron',
@@ -33,58 +32,79 @@ const ROLE_LABELS: Record<string, string> = {
 
 interface AppHeaderProps {
     onOpenMenu: () => void;
+    isMobileMenuOpen?: boolean;
 }
 
-export function AppHeader({ onOpenMenu }: AppHeaderProps) {
+export function AppHeader({ onOpenMenu, isMobileMenuOpen = false }: AppHeaderProps) {
     const { user, logout } = useAuth();
-    const { currentOrganization, organizationRole, platformRole, switchOrganization } = useOrganization();
+    const {
+        currentOrganization,
+        organizationRole,
+        platformRole,
+        switchOrganization,
+    } = useOrganization();
 
     if (!user) return null;
 
     const isPlatform = platformRole === 'super_admin';
     const roleLabel = isPlatform
         ? (ROLE_LABELS['super_admin'] ?? 'Super admin')
-        : (organizationRole ? (ROLE_LABELS[organizationRole] ?? organizationRole) : 'Aucun rôle');
+        : organizationRole
+            ? (ROLE_LABELS[organizationRole] ?? organizationRole)
+            : 'Aucun rôle';
 
     return (
         <header className="app-header">
+            {/* ===================== GAUCHE ===================== */}
             <div className="app-header__left">
                 <button
                     type="button"
                     className="app-header__menu-toggle"
-                    aria-label="Ouvrir le menu"
+                    aria-label={isMobileMenuOpen ? 'Fermer le menu' : 'Ouvrir le menu'}
+                    aria-expanded={isMobileMenuOpen}
+                    aria-controls="main-sidebar"
                     onClick={onOpenMenu}
                 >
-                    {BURGER_ICON}
+                    <BurgerIcon open={isMobileMenuOpen} />
                 </button>
                 <span className="app-header__brand">H-Immo</span>
             </div>
 
+            {/* ===================== CENTRE ===================== */}
             <div className="app-header__center">
                 {isPlatform ? (
                     <span className="app-header__platform-badge">Plateforme</span>
                 ) : (
                     <Dropdown
                         className="app-header__org-switcher"
-                        options={(user.organizations ?? []).map(org => ({
+                        options={(user.organizations ?? []).map((org) => ({
                             value: org.uuid,
                             label: `${org.name} — ${ROLE_LABELS[org.role] ?? org.role}`,
                         }))}
                         value={currentOrganization?.uuid}
-                        onSelect={(uuid) => { void switchOrganization(uuid); }}
+                        onSelect={(uuid) => {
+                            void switchOrganization(uuid);
+                        }}
                         placeholder="Choisir une organisation..."
                     />
                 )}
                 <span className="app-header__role">{roleLabel}</span>
             </div>
 
+            {/* ===================== DROITE ===================== */}
             <div className="app-header__right">
-                <Avatar name={user.fullName} src={user.profilePhoto ?? undefined} size="small" />
+                <Avatar
+                    name={user.fullName}
+                    src={user.profilePhoto ?? undefined}
+                    size="small"
+                />
                 <span className="app-header__user-name">{user.fullName}</span>
                 <button
                     type="button"
                     className="app-header__logout"
-                    onClick={() => { void logout(); }}
+                    onClick={() => {
+                        void logout();
+                    }}
                 >
                     Déconnexion
                 </button>

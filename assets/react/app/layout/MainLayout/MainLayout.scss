@@ -1,82 +1,163 @@
 // ============================================================
 // upload/react/app/layout/MainLayout/MainLayout.scss
 // Coquille du back-office : en-tête + body (sidebar + contenu).
-//
-// Le `.sidebar` générique écrit `height: 100vh` ; pris dans la grille du
-// layout, on le ramène à auto pour qu'il remplisse la ligne BODY (pas la
-// fenêtre), sinon la page défile sous l'en-tête. Sous 768px, la règle
-// `position: fixed` de `_Sidebar.scss` reprend la main (drawer off-canvas).
 // ============================================================
 
 @use '../../../../styles/baseVariables/variables' as *;
 @use '../../../../styles/baseVariables/mixins' as *;
+
+
+// ============================================================
+// CONTENEUR RACINE
+// ============================================================
 
 .main-layout {
     display: grid;
     grid-template-rows: auto minmax(0, 1fr);
     height: 100dvh;
     background-color: $color-bg-app;
+    overflow: hidden;
 
-    // État « chargement » : tout centré, sans barre d'outils.
     &--centered {
         display: flex;
         align-items: center;
         justify-content: center;
     }
+}
 
-    &__body {
-        display: flex;
-        min-height: 0;
-    }
 
-    &__content {
-        flex: 1;
-        min-width: 0;
-        padding: $spacing-6;
-        overflow-y: auto;
-        background-color: $color-bg-app;
-    }
+// ============================================================
+// BODY (sidebar + contenu)
+// ============================================================
 
-    .sidebar {
-        @include flex(column, stretch, flex-start, 0);
-        height: auto;
-    }
+.main-layout__body {
+    display: flex;
+    min-height: 0;
+    position: relative;
+}
 
-    &__brand {
-        @include flex(row, center, flex-start, $spacing-2);
 
-        &-mark {
-            @include flex-center;
-            width: 28px;
-            height: 28px;
-            border-radius: $radius-md;
-            background-color: $color-primary;
-            color: $color-text-inverse;
-            font-family: $font-family-heading;
-            font-weight: $font-weight-bold;
-        }
+// ============================================================
+// CONTENU PRINCIPAL
+// ============================================================
+// Zone scrollable indépendante. Padding généreux en desktop,
+// réduit en mobile.
+// ============================================================
 
-        &-name {
-            font-size: $font-size-lg;
-        }
-    }
+.main-layout__content {
+    flex: 1;
+    min-width: 0;
+    padding: $spacing-6;
+    overflow-y: auto;
+    background-color: $color-bg-app;
 
-    &__footer-user {
-        @include flex(column, stretch, flex-start, 2px);
-        min-width: 0;
-
-        &-name {
-            font-weight: $font-weight-medium;
-            color: $color-text-primary;
-            @include truncate;
-        }
-
-        &-email {
-            color: $color-text-muted;
-            @include truncate;
-        }
+    @include responsive(mobile) {
+        padding: $spacing-4;
     }
 }
+
+
+// ============================================================
+// BACKDROP MOBILE
+// ============================================================
+// Affiché sous le drawer mobile pour permettre la fermeture
+// d'un tap à l'extérieur. Animation de fade-in douce.
+// ============================================================
+
+.main-layout__backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: $z-modal-backdrop;
+    background-color: rgba(0, 0, 0, 0.55);
+    backdrop-filter: blur(2px);
+    animation: main-layout-backdrop-in $transition-fast both;
+
+    @include responsive(tablet) {
+        display: none;
+    }
+}
+
+@keyframes main-layout-backdrop-in {
+    from { opacity: 0; }
+    to   { opacity: 1; }
+}
+
+
+// ============================================================
+// SIDEBAR — AJUSTEMENTS POUR LA GRILLE
+// ============================================================
+// Le composant <Sidebar /> générique définit `height: 100vh`,
+// ce qui déborde de la grille (il faudrait soustraire la hauteur
+// de l'en-tête). On le ramène à `100%` du parent flex.
+//
+// En mobile (< 768px), `_Sidebar.scss` reprend la main avec
+// `position: fixed` (drawer off-canvas).
+// ============================================================
+
+.main-layout .sidebar {
+    height: 100%;
+
+    @media (max-width: #{$breakpoint-tablet - 1px}) {
+        height: 100vh; // drawer plein écran en mobile
+    }
+}
+
+
+// ============================================================
+// BRAND (logo + nom)
+// ============================================================
+
+.main-layout__brand {
+    @include flex(row, center, flex-start, $spacing-2);
+
+    &-mark {
+        @include flex-center;
+        width: 28px;
+        height: 28px;
+        border-radius: $radius-md;
+        background-color: $color-primary;
+        color: $color-text-inverse;
+        font-family: $font-family-heading;
+        font-weight: $font-weight-bold;
+        flex-shrink: 0;
+    }
+
+    &-name {
+        font-size: $font-size-lg;
+        font-weight: $font-weight-semibold;
+        color: $color-text-primary;
+        @include truncate;
+    }
+}
+
+
+// ============================================================
+// FOOTER USER (sidebar)
+// ============================================================
+// ⚠️ Les classes correspondent désormais au TSX :
+//   .main-layout__footer-user
+//   .main-layout__footer-name
+//   .main-layout__footer-email
+// ============================================================
+
+.main-layout__footer-user {
+    @include flex(column, stretch, flex-start, 2px);
+    min-width: 0;
+}
+
+.main-layout__footer-name {
+    font-size: $font-size-sm;
+    font-weight: $font-weight-medium;
+    color: $color-text-primary;
+    @include truncate;
+}
+
+.main-layout__footer-email {
+    font-size: $font-size-xs;
+    color: $color-text-muted;
+    @include truncate;
+}
+
 
 // ============================================================
 // EN-TÊTE
@@ -87,170 +168,182 @@
     padding: $spacing-3 $spacing-4;
     background-color: $color-bg-card;
     border-bottom: 1px solid $color-border;
+    z-index: $z-sticky;
 
-    &__left {
-        @include flex(row, center, flex-start, $spacing-3);
-        min-width: 0;
-    }
-
-    &__menu-toggle {
-        @include flex-center;
-        width: 36px;
-        height: 36px;
-        padding: 0;
-        color: $color-text-secondary;
-        background: transparent;
-        border: 1px solid transparent;
-        border-radius: $radius-md;
-        cursor: pointer;
-
-        &:hover {
-            background-color: $color-bg-card-hover;
-            color: $color-text-primary;
-        }
-
-        // Le drawer mobile n'existe que sous 768px : le burger y est masqué.
-        @include responsive(tablet) {
-            display: none;
-        }
-    }
-
-    &__brand {
-        font-family: $font-family-heading;
-        font-size: $font-size-lg;
-        font-weight: $font-weight-semibold;
-        color: $color-text-primary;
-    }
-
-    &__center {
-        @include flex(row, center, center, $spacing-3);
-        flex: 1;
-        min-width: 0;
-        justify-content: center;
-    }
-
-    &__org-switcher {
-        max-width: 320px;
-    }
-
-    &__platform-badge {
-        padding: $spacing-1 $spacing-3;
-        border-radius: $radius-full;
-        background-color: $color-primary-light;
-        color: $color-primary;
-        font-size: $font-size-xs;
-        font-weight: $font-weight-semibold;
-        text-transform: uppercase;
-        letter-spacing: 0.05em;
-    }
-
-    &__role {
-        padding: $spacing-1 $spacing-3;
-        border-radius: $radius-full;
-        background-color: $color-bg-elevated;
-        border: 1px solid $color-border-light;
-        color: $color-text-secondary;
-        font-size: $font-size-xs;
-        font-weight: $font-weight-medium;
-    }
-
-    &__right {
-        @include flex(row, center, flex-end, $spacing-3);
-    }
-
-    &__user-name {
-        font-size: $font-size-sm;
-        font-weight: $font-weight-medium;
-        color: $color-text-primary;
-
-        // Mis de côté sur les tout petits écrans (place pour le sélecteur).
-        @media (max-width: #{$breakpoint-tablet - 1px}) {
-            display: none;
-        }
-    }
-
-    &__logout {
+    @include responsive(mobile) {
         padding: $spacing-2 $spacing-3;
-        font-size: $font-size-sm;
-        font-weight: $font-weight-medium;
-        color: $color-text-secondary;
-        background: transparent;
-        border: 1px solid $color-border;
-        border-radius: $radius-md;
-        cursor: pointer;
-        transition:
-            background-color $transition-fast,
-            color $transition-fast,
-            border-color $transition-fast;
+    }
+}
 
-        &:hover {
-            color: $color-danger;
-            border-color: $color-danger;
-            background-color: transparent;
+
+// ============================================================
+// HEADER — GAUCHE
+// ============================================================
+
+.app-header__left {
+    @include flex(row, center, flex-start, $spacing-3);
+    min-width: 0;
+}
+
+.app-header__menu-toggle {
+    @include flex-center;
+    @include focus-ring;
+    width: 40px;
+    height: 40px;
+    padding: 0;
+    color: $color-text-secondary;
+    background: transparent;
+    border: 1px solid transparent;
+    border-radius: $radius-md;
+    cursor: pointer;
+    transition:
+        background-color $transition-fast,
+        color $transition-fast,
+        border-color $transition-fast;
+
+    &:hover {
+        background-color: $color-bg-card-hover;
+        color: $color-text-primary;
+        border-color: $color-border-light;
+    }
+
+    &:active {
+        transform: scale(0.96);
+    }
+
+    // Le burger n'a de sens que sur mobile/tablette
+    @include responsive(tablet) {
+        display: none;
+    }
+}
+
+.app-header__brand {
+    font-family: $font-family-heading;
+    font-size: $font-size-lg;
+    font-weight: $font-weight-semibold;
+    color: $color-text-primary;
+    white-space: nowrap;
+}
+
+
+// ============================================================
+// HEADER — CENTRE
+// ============================================================
+
+.app-header__center {
+    @include flex(row, center, center, $spacing-3);
+    flex: 1;
+    min-width: 0;
+
+    @include responsive(mobile) {
+        // Sur très petits écrans, on cache le badge de rôle pour
+        // laisser la place au sélecteur d'organisation.
+        .app-header__role {
+            display: none;
         }
     }
 }
 
+.app-header__org-switcher {
+    max-width: 320px;
+    min-width: 0;
+
+    @include responsive(mobile) {
+        max-width: 200px;
+    }
+}
+
+.app-header__platform-badge {
+    padding: $spacing-1 $spacing-3;
+    border-radius: $radius-full;
+    background-color: $color-primary-light;
+    color: $color-primary;
+    font-size: $font-size-xs;
+    font-weight: $font-weight-semibold;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    white-space: nowrap;
+}
+
+.app-header__role {
+    padding: $spacing-1 $spacing-3;
+    border-radius: $radius-full;
+    background-color: $color-bg-elevated;
+    border: 1px solid $color-border-light;
+    color: $color-text-secondary;
+    font-size: $font-size-xs;
+    font-weight: $font-weight-medium;
+    white-space: nowrap;
+}
+
+
 // ============================================================
-// CONTAINER TOAST
+// HEADER — DROITE
 // ============================================================
 
-.toast-container {
-    position: fixed;
-    top: $spacing-4;
-    right: $spacing-4;
-    z-index: $z-toast;
-    display: flex;
-    flex-direction: column;
-    gap: $spacing-2;
-    pointer-events: none;
+.app-header__right {
+    @include flex(row, center, flex-end, $spacing-2);
+    flex-shrink: 0;
+}
 
-    .toast {
-        pointer-events: auto;
-        display: flex;
-        align-items: center;
-        gap: $spacing-3;
-        min-width: 280px;
-        max-width: 380px;
-        padding: $spacing-3 $spacing-4;
-        border-radius: $radius-md;
-        background-color: $color-bg-card;
-        border: 1px solid $color-border;
-        box-shadow: $shadow-lg;
+.app-header__user-name {
+    font-size: $font-size-sm;
+    font-weight: $font-weight-medium;
+    color: $color-text-primary;
+    @include truncate;
+    max-width: 140px;
 
-        &--success {
-            border-left: 3px solid $color-success;
-        }
+    // Masqué sur mobile — l'avatar suffit
+    @media (max-width: #{$breakpoint-tablet - 1px}) {
+        display: none;
+    }
+}
 
-        &--error {
-            border-left: 3px solid $color-danger;
-        }
+.app-header__logout {
+    @include focus-ring;
+    padding: $spacing-2 $spacing-3;
+    font-family: $font-family-base;
+    font-size: $font-size-sm;
+    font-weight: $font-weight-medium;
+    color: $color-text-secondary;
+    background: transparent;
+    border: 1px solid $color-border;
+    border-radius: $radius-md;
+    cursor: pointer;
+    transition:
+        background-color $transition-fast,
+        color $transition-fast,
+        border-color $transition-fast;
 
-        &--warning {
-            border-left: 3px solid $color-warning;
-        }
+    &:hover {
+        color: $color-danger;
+        border-color: $color-danger;
+        background-color: $color-danger-light;
+    }
 
-        &--info {
-            border-left: 3px solid $color-info;
-        }
+    &:active {
+        transform: scale(0.97);
+    }
 
-        &__message {
-            flex: 1;
-            font-size: $font-size-sm;
-            color: $color-text-primary;
-        }
+    // Sur mobile, on garde uniquement le label court
+    @include responsive(mobile) {
+        padding: $spacing-2;
+        font-size: $font-size-xs;
+    }
+}
 
-        &__close {
-            flex-shrink: 0;
-            padding: 2px;
-            color: $color-text-muted;
-            background: transparent;
-            border: none;
-            cursor: pointer;
 
-            &:hover {
-                color: $color-text-primary;
-            }
-        }
+// ============================================================
+// ACCESSIBILITÉ — RÉDUCTION DES ANIMATIONS
+// ============================================================
+
+@media (prefers-reduced-motion: reduce) {
+    .app-header__menu-toggle,
+    .app-header__logout {
+        transition: none;
+    }
+
+    .main-layout__backdrop {
+        animation: none;
     }
 }

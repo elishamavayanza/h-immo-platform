@@ -1,32 +1,22 @@
 // ============================================================
 // upload/react/app/layout/MainLayout/MainLayout.tsx
 // Coquille du back-office authentifié.
-//
-// Compose :
-//   - AppHeader (burger, sélecteur d'organization, identité)
-//   - le sidebar générique (`components/Navigation/Sidebar`) alimenté par
-//     `resolveSidebar()` — jamais par un test de rôle local
-//   - la garde de route UX (`RequireRole`)
-//   - `<Outlet/>` pour la page courante
-//
-// Le SUPER_ADMIN partage la même coquille mais son layout diffère :
-// pas de sélecteur d'organization dans l'en-tête (le contexte met sa
-// `currentOrganization` à null) et menu plateforme uniquement.
 // ============================================================
 
 import { useEffect, useState } from 'react';
 import { Navigate, Outlet, useLocation, useNavigate } from 'react-router-dom';
 
-import { Sidebar, type SidebarProps } from '../../../components/Navigation/Sidebar';
-import { Loading } from '../../../components/UI/Loading';
 import { useAuth } from '../../providers/AuthProvider';
 import { useOrganization } from '../../providers/OrganizationProvider';
 import { AppHeader } from './AppHeader';
+import { RequireRole } from './RequireRole';
 import type { AppMenuItem } from './sidebar/sidebar.types';
 import { resolveSidebar } from './sidebar/sidebar.config';
 import { SIDEBAR_ICON_MAP } from './sidebar/sidebar.icons';
 
 import './MainLayout.scss';
+import {Sidebar, SidebarProps} from "../../../components/Navigation/Sidebar";
+import {Loading} from "../../../components/UI/Loading";
 
 const BRAND = (
     <div className="main-layout__brand">
@@ -35,8 +25,6 @@ const BRAND = (
     </div>
 );
 
-/** Le sidebar générique comprend `route` ; on aligne `path` → `route` et on
- * résout le NOM d'icône de la config (module pur) en composant SVG. */
 function toSidebarItems(menu: AppMenuItem[]): SidebarProps['items'] {
     return menu.map(({ id, label, icon, path, children }) => ({
         id,
@@ -54,11 +42,28 @@ export function MainLayout() {
     const location = useLocation();
     const navigate = useNavigate();
 
-    // Toute navigation referme le drawer mobile : on ne quitte jamais le
-    // panneau ouvert sur une autre page.
+    // Ferme le drawer à chaque navigation
     useEffect(() => {
         setIsMobileOpen(false);
     }, [location.pathname]);
+
+    // Ferme le drawer à la touche Échap
+    useEffect(() => {
+        if (!isMobileOpen) return;
+        const onKey = (e: KeyboardEvent) => {
+            if (e.key === 'Escape') setIsMobileOpen(false);
+        };
+        document.addEventListener('keydown', onKey);
+        return () => document.removeEventListener('keydown', onKey);
+    }, [isMobileOpen]);
+
+    // Bloque le scroll du body quand le drawer est ouvert (mobile)
+    useEffect(() => {
+        document.body.style.overflow = isMobileOpen ? 'hidden' : '';
+        return () => {
+            document.body.style.overflow = '';
+        };
+    }, [isMobileOpen]);
 
     if (isAuthLoading || isOrgLoading) {
         return (
@@ -77,9 +82,21 @@ export function MainLayout() {
 
     return (
         <div className="main-layout">
-            <AppHeader onOpenMenu={() => setIsMobileOpen(true)} />
+            <AppHeader
+                onOpenMenu={() => setIsMobileOpen(true)}
+                isMobileMenuOpen={isMobileOpen}
+            />
 
             <div className="main-layout__body">
+                {/* Backdrop mobile : clic à l'extérieur ferme le drawer */}
+                {isMobileOpen && (
+                    <div
+                        className="main-layout__backdrop"
+                        aria-hidden="true"
+                        onClick={() => setIsMobileOpen(false)}
+                    />
+                )}
+
                 <Sidebar
                     items={items}
                     variant="dark"
@@ -95,17 +112,17 @@ export function MainLayout() {
                         if (target) navigate(target);
                     }}
                     footer={
-                        user ? (
-                            <div className="main-layout__footer-user">
-                                <span className="main-layout__footer-name">{user.fullName}</span>
-                                <span className="main-layout__footer-email">{user.email}</span>
-                            </div>
-                        ) : undefined
+                        <div className="main-layout__footer-user">
+                            <span className="main-layout__footer-name">{user.fullName}</span>
+                            <span className="main-layout__footer-email">{user.email}</span>
+                        </div>
                     }
                 />
 
                 <main className="main-layout__content">
-
+                    <RequireRole>
+                        <Outlet />
+                    </RequireRole>
                 </main>
             </div>
         </div>
