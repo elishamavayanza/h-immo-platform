@@ -28,94 +28,75 @@
 
 
 // ============================================================
-// EN-TÊTE MOBILE (hamburger) — VISIBLE < 768px UNIQUEMENT
+// BOUTON HAMBURGER FLOTTANT MOBILE — VISIBLE < 768px UNIQUEMENT
 // ============================================================
 
-.mobile-header {
+.main-layout__mobile-toggle {
     display: none;
-    @include flex(row, center, space-between, $spacing-3);
+    @include flex-center;
     position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    height: 56px;
-    padding: 0 $spacing-4;
-    background-color: $color-bg-card;
-    border-bottom: 1px solid $color-border;
-    z-index: $z-fixed;
-    box-shadow: $shadow-sm;
+    bottom: $spacing-6;
+    left: $spacing-4;
+    width: 48px;
+    height: 48px;
+    padding: 0;
+    background-color: $color-primary;
+    border: 0;
+    border-radius: $radius-full;
+    box-shadow: $shadow-lg;
+    cursor: pointer;
+    transition:
+        background-color $transition-fast,
+        transform $transition-fast,
+        box-shadow $transition-fast;
+    z-index: $z-fixed; // au-dessus du contenu, sous le drawer/backdrop
 
     @include responsive(mobile) {
         display: flex;
     }
-}
-
-.mobile-header__hamburger {
-    @include flex-center;
-    width: 44px;
-    height: 44px;
-    padding: 0;
-    background: none;
-    border: 0;
-    border-radius: $radius-md;
-    cursor: pointer;
-    transition: background-color $transition-fast;
 
     &:hover {
-        background-color: $color-bg-card-hover;
+        background-color: $color-primary-hover;
+        transform: scale(1.05);
+        box-shadow: $shadow-lg, 0 0 0 4px $color-primary-light;
     }
 
     &:focus-visible {
         outline: none;
-        box-shadow: $shadow-focus;
+        box-shadow: $shadow-focus, 0 0 0 4px $color-primary-light;
+    }
+
+    &:active {
+        transform: scale(0.98);
     }
 }
 
-.mobile-header__hamburger-box {
+.main-layout__mobile-toggle-box {
     @include flex(column, center, center, 4px);
     width: 24px;
     height: 18px;
 }
 
-.mobile-header__hamburger-line {
+.main-layout__mobile-toggle-line {
     display: block;
     width: 100%;
     height: 2px;
-    background-color: $color-text-primary;
+    background-color: $color-text-inverse; // blanc sur fond primary
     border-radius: 1px;
     transition:
         transform $transition-fast,
-        opacity $transition-fast,
-        background-color $transition-fast;
+        opacity $transition-fast;
 }
 
-.mobile-header__title {
-    @include flex(column, flex-start, center, 1px);
-    min-width: 0;
-    flex: 1;
-    text-align: center;
+// Animation du hamburger → croix quand ouvert (via aria-expanded)
+.main-layout__mobile-toggle[aria-expanded='true'] .main-layout__mobile-toggle-line:nth-child(1) {
+    transform: translateY(7px) rotate(45deg);
 }
-
-.mobile-header__brand {
-    font-size: $font-size-lg;
-    font-weight: $font-weight-bold;
-    color: $color-text-primary;
-    text-transform: uppercase;
-    letter-spacing: 0.04em;
-    @include truncate;
+.main-layout__mobile-toggle[aria-expanded='true'] .main-layout__mobile-toggle-line:nth-child(2) {
+    opacity: 0;
 }
-
-.mobile-header__org {
-    font-size: $font-size-xs;
-    font-weight: $font-weight-medium;
-    color: $color-text-secondary;
-    text-transform: uppercase;
-    letter-spacing: 0.02em;
-    @include truncate;
-}
-
-.mobile-header__spacer {
-    width: 44px; // même largeur que le hamburger pour centrer le titre
+.main-layout__mobile-toggle[aria-expanded='true'] .main-layout__mobile-toggle-line:nth-child(3) {
+    transform: translateY(-7px) rotate(-45deg);
 }
 
 
