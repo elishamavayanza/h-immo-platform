@@ -114,12 +114,18 @@
 
 
 // ============================================================
-// BRAND (logo + nom)
+// BRAND (logo + IMMO + nom org sur ligne séparée)
 // ============================================================
 
 .main-layout__brand {
-    @include flex(row, center, flex-start, $spacing-2);
+    @include flex(column, flex-start, center, $spacing-1);
     min-width: 0;
+    align-items: flex-start;
+
+    &-main {
+        @include flex(row, center, flex-start, $spacing-2);
+        min-width: 0;
+    }
 
     &-logo {
         width: 28px;
@@ -139,7 +145,8 @@
     }
 }
 
-// Nom de l'organisation active : plus petit, opacité réduite, truncate.
+// Nom de l'organisation active : sur sa propre ligne, plus petit,
+// opacité réduite, truncate — ne déstabilise pas la ligne principale.
 .main-layout__brand-org {
     font-size: $font-size-xs;  // 12px
     font-weight: $font-weight-medium;
@@ -150,12 +157,18 @@
     max-width: 100%;
     white-space: nowrap;
     overflow: hidden;
+    margin-left: 30px;  // aligné sous "IMMO" (logo 28px + gap 2px)
 }
 
 // Sidebar replié : le rail ne garde que le logo, centré.
 // « IMMO » et le nom d'org sont masqués pour ne pas déborder sur 72px.
 .sidebar--collapsed .main-layout__brand {
     justify-content: center;
+    align-items: center;
+
+    &-main {
+        justify-content: center;
+    }
 
     &-name,
     &-org {

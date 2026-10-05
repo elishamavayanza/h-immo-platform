@@ -20,18 +20,20 @@ import { Sidebar, SidebarProps } from '../../../components/Navigation/Sidebar';
 import { Loading } from '../../../components/UI/Loading';
 
 /**
- * Marque du sidebar : logo + "IMMO" + nom de l'organisation active.
+ * Marque du sidebar : logo + "IMMO" + nom de l'organisation active sur sa propre ligne.
  * Composant pur pour éviter de le recréer à chaque rendu.
  */
 function Brand({ organizationName }: { organizationName?: string }) {
     return (
         <div className="main-layout__brand">
-            <img
-                src="/assets/logo.png"
-                alt="H-Immo"
-                className="main-layout__brand-logo"
-            />
-            <span className="main-layout__brand-name">IMMO</span>
+            <div className="main-layout__brand-main">
+                <img
+                    src="/assets/logo.png"
+                    alt="H-Immo"
+                    className="main-layout__brand-logo"
+                />
+                <span className="main-layout__brand-name">IMMO</span>
+            </div>
             {organizationName && (
                 <span className="main-layout__brand-org">{organizationName}</span>
             )}
