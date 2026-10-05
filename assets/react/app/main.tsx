@@ -17,8 +17,15 @@ import { AppRoutes } from './routes/AppRoutes.tsx';
 import '../../styles/base/_reset.scss';
 import '../../styles/components/Navigation/_Sidebar.scss';
 import '../../styles/components/UI/_Dropdown.scss';
+// Sans cet import, <PopoverMenu /> (menu utilisateur du footer du sidebar)
+// rendait une liste sans aucun style : ni panneau, ni survol, ni focus.
+import '../../styles/components/UI/_PopoverMenu.scss';
 import '../../styles/components/UI/_Avatar.scss';
 import '../../styles/components/UI/_Loading.scss';
+// `<ErrorState />` sert aux écrans 403 du back-office (`AppRouteGuard`,
+// `/app/access-denied`) : sans ce partial, ces 403 s'affichaient sans
+// aucun style.
+import '../../styles/components/UI/_ErrorState.scss';
 import '../../styles/components/UI/_Button.scss';
 import '../../styles/components/UI/_Alert.scss';
 import '../../styles/components/Form/_Form.scss';
@@ -28,6 +35,7 @@ import '../../styles/components/Form/_Password.scss';
 import '../../styles/pages/auth/_login.scss';
 import '../../styles/pages/auth/_forgot-password.scss';
 import '../../styles/pages/auth/_reset-password.scss';
+import '../../styles/pages/_placeholder.scss';
 
 function App() {
     return (

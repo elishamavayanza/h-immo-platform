@@ -10,6 +10,14 @@ export interface SidebarItemBase {
     disabled?: boolean;
     permission?: string;            // permission requise
     badge?: number | string;        // badge (compteur)
+    /**
+     * Section ouverte d'emblée (sous-menu déjà déplié au premier rendu).
+     * L'appelant le positionne à `true` sur la section qui contient la
+     * route active : le sous-menu est alors cohérent avec la page
+     * affichée, y compris après un rechargement direct sur une URL
+     * profonde. Un clic utilisateur prend le dessus (voir `useSidebar`).
+     */
+    defaultOpen?: boolean;
 }
 
 export interface SidebarSubItem extends SidebarItemBase {}

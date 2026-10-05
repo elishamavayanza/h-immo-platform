@@ -13,13 +13,28 @@ const ExpandIcon = () => (
     </svg>
 );
 
+/**
+ * Libellé textuel d'un item.
+ *
+ * `label` est typé `ReactNode` (le design system autorise un nœud), mais le
+ * nom accessible doit rester une chaîne : on ne descend pas dans l'arbre
+ * React pour le produire. Un item sans libellé exploitable est traité comme
+ * anonyme par les lecteurs d'écran, ce qui est pourquoi le menu latéral
+ * en fournit toujours un.
+ */
+const toTextLabel = (label: SidebarItem['label']): string =>
+    typeof label === 'string' ? label : '';
+
 export interface SidebarProps extends UseSidebarProps {
     header?: React.ReactNode;
     footer?: React.ReactNode;
     activeRoute?: string;
+    /** Identifiant du `<aside>`, cible des `aria-controls` externes. */
+    id?: string;
 }
 
 export function Sidebar({
+                            id,
                             items,
                             groups,
                             variant,
@@ -38,12 +53,16 @@ export function Sidebar({
                         }: SidebarProps) {
     const {
         classes: hookClasses,
-        isCollapsed,
+        style,
         toggleCollapse,
-        openSections,
+        isSectionOpen,
         toggleSection,
+        openSection,
         filteredItems,
         isMobileOpen,
+        isVisuallyCollapsed,
+        isRail,
+        openMobile,
     } = useSidebar({
         items,
         groups,
@@ -59,81 +78,148 @@ export function Sidebar({
         onMobileClose,
     });
 
-    // Forcer l’affichage des textes sur mobile (collapsible=false)
-    const displayCollapsed = collapsible ? isCollapsed : false;
-    const classes = collapsible
-        ? hookClasses
-        : hookClasses.replace(' sidebar--collapsed', '');
+    // L'état visuel vient du hook : il vaut `isCollapsed` sur desktop, et
+    // « tiroir fermé » sur mobile (où le rail remplace le menu replié). Un
+    // simple `collapsible && isCollapsed` afficherait les libellés dans le
+    // rail mobile, et le tiroir ouvert resterait figé en 72px.
+    const displayCollapsed = isVisuallyCollapsed;
+    const classes = hookClasses;
 
-    const handleItemClick = (item: SidebarItem | SidebarSubItem) => {
-        onItemClick?.(item);
-        if ('children' in item && item.children) {
-            toggleSection(item.id);
-        } else if (isMobileOpen) {
-            // Navigation vers une feuille : le drawer mobile se referme
-            onMobileClose?.();
-        }
+    /**
+     * Correspondance par segment de chemin : `/app/patrimoine/villes` doit
+     * rester actif sur une route fille (`/app/patrimoine/villes/42`) sans
+     * qu'une comparaison par préfixe simple n'allume `/app/location` pour
+     * `/app/location-paiements`.
+     */
+    const isRouteActive = (route: string | undefined): boolean => {
+        if (route === undefined || activeRoute === undefined) return false;
+        if (route === activeRoute) return true;
+
+        const base = route.endsWith('/') ? route.slice(0, -1) : route;
+
+        return activeRoute === base || activeRoute.startsWith(`${base}/`);
     };
 
     const isItemActive = (item: SidebarItem | SidebarSubItem): boolean => {
         if (item.active) return true;
         if (activeId && item.id === activeId) return true;
-        if (activeRoute && 'route' in item && item.route === activeRoute) return true;
+        if ('route' in item && isRouteActive(item.route)) return true;
         return false;
     };
 
-    // Clic sur le logo : replie/déplie si collapsible, sinon ferme le mobile
+    const handleItemClick = (item: SidebarItem | SidebarSubItem) => {
+        onItemClick?.(item);
+
+        const hasChildren = 'children' in item && item.children !== undefined && item.children.length > 0;
+
+        if (hasChildren) {
+            const sectionId = item.id;
+
+            // Replié, un parent n'a nowhere où afficher son sous-menu :
+            // le clic déplie donc le rail ET ouvre la section. C'est le
+            // comportement le plus prévisible sans introduire de panneau
+            // flottant, et le clic n'est jamais perdu.
+            if (displayCollapsed) {
+                toggleCollapse();
+                openSection(sectionId);
+
+                return;
+            }
+
+            toggleSection(sectionId);
+
+            return;
+        }
+
+        // Navigation vers une feuille : le drawer mobile se referme.
+        if (isMobileOpen) onMobileClose?.();
+    };
+
+    // Clic sur le logo — un seul contrôle pour les trois états :
+    //   - tiroir mobile ouvert  → ferme le tiroir ;
+    //   - rail mobile (fermé)    → ouvre le tiroir (c'est la seule entrée) ;
+    //   - desktop               → replie ou déplie le menu.
     const handleBrandClick = () => {
+        if (isMobileOpen) {
+            onMobileClose?.();
+
+            return;
+        }
+
+        if (isRail) {
+            openMobile();
+
+            return;
+        }
+
         if (collapsible) {
             toggleCollapse();
-        } else if (onMobileClose) {
-            onMobileClose();
         }
     };
 
-    const handleBrandKeyDown = (e: React.KeyboardEvent) => {
-        if (e.key === 'Enter' || e.key === ' ') {
-            e.preventDefault();
-            handleBrandClick();
-        }
-    };
+    const isBrandInteractive = collapsible || isRail || !!onMobileClose;
+    const brandLabel = isMobileOpen
+        ? 'Fermer le menu'
+        : isRail
+            ? 'Ouvrir le menu'
+            : displayCollapsed
+                ? 'Déplier le menu'
+                : 'Replier le menu';
 
-    const isBrandInteractive = collapsible || !!onMobileClose;
+    const renderItem = (item: SidebarItem, collapsed: boolean) => {
+        const textLabel = toTextLabel(item.label);
+        const hasChildren = item.children !== undefined && item.children.length > 0;
+        const sectionOpen = isSectionOpen(item.id);
+        const subitemsId = `sidebar-subitems-${item.id}`;
+        // Replié, le libellé est masqué (display: none) : `title` et
+        // `aria-label` le rendent à nouveau disponible au survol et aux
+        // lecteurs d'écran, qui n'auraient sinon qu'une icône sans nom.
+        const accessibleName = collapsed ? textLabel : undefined;
 
-    const renderItem = (item: SidebarItem, collapsed: boolean) => (
-        <div key={item.id} className="sidebar__group">
-            <div
-                className={`sidebar__item ${isItemActive(item) ? 'sidebar__item--active' : ''} ${item.disabled ? 'sidebar__item--disabled' : ''}`}
-                onClick={() => handleItemClick(item)}
-                role="button"
-                tabIndex={item.disabled ? -1 : 0}
-            >
-                {item.icon && <span className="sidebar__icon">{item.icon}</span>}
-                {!collapsed && <span className="sidebar__label">{item.label}</span>}
-                {!collapsed && item.children && (
-                    <span className="sidebar__arrow">
-                        {openSections[item.id] ? '▾' : '▸'}
-                    </span>
+        return (
+            <div key={item.id} className="sidebar__group">
+                <button
+                    type="button"
+                    className={`sidebar__item ${isItemActive(item) ? 'sidebar__item--active' : ''} ${item.disabled ? 'sidebar__item--disabled' : ''}`}
+                    onClick={() => handleItemClick(item)}
+                    disabled={item.disabled}
+                    aria-expanded={hasChildren ? sectionOpen : undefined}
+                    aria-controls={hasChildren ? subitemsId : undefined}
+                    aria-label={accessibleName}
+                    title={accessibleName}
+                >
+                    {item.icon && <span className="sidebar__icon">{item.icon}</span>}
+                    {!collapsed && <span className="sidebar__label">{item.label}</span>}
+                    {!collapsed && hasChildren && (
+                        <span className="sidebar__arrow" aria-hidden="true">
+                            {sectionOpen ? '▾' : '▸'}
+                        </span>
+                    )}
+                </button>
+                {!collapsed && hasChildren && sectionOpen && (
+                    <div className="sidebar__subitems" id={subitemsId}>
+                        {item.children!.map((child) => {
+                            const childTextLabel = toTextLabel(child.label);
+
+                            return (
+                                <button
+                                    key={child.id}
+                                    type="button"
+                                    className={`sidebar__subitem ${isItemActive(child) ? 'sidebar__subitem--active' : ''}`}
+                                    onClick={() => handleItemClick(child)}
+                                    aria-current={isItemActive(child) ? 'page' : undefined}
+                                    aria-label={childTextLabel}
+                                >
+                                    {child.icon && <span className="sidebar__icon">{child.icon}</span>}
+                                    <span className="sidebar__label">{child.label}</span>
+                                </button>
+                            );
+                        })}
+                    </div>
                 )}
             </div>
-            {!collapsed && item.children && openSections[item.id] && (
-                <div className="sidebar__subitems">
-                    {item.children.map((child) => (
-                        <div
-                            key={child.id}
-                            className={`sidebar__subitem ${isItemActive(child) ? 'sidebar__subitem--active' : ''}`}
-                            onClick={() => handleItemClick(child)}
-                            role="button"
-                            tabIndex={0}
-                        >
-                            {child.icon && <span className="sidebar__icon">{child.icon}</span>}
-                            <span className="sidebar__label">{child.label}</span>
-                        </div>
-                    ))}
-                </div>
-            )}
-        </div>
-    );
+        );
+    };
 
     const renderContent = () => {
         if (groups) {
@@ -150,37 +236,40 @@ export function Sidebar({
     };
 
     return (
-        <aside className={classes}>
+        <aside className={classes} style={style} id={id}>
             <div className="sidebar__header">
-                <div
-                    className="sidebar__header-brand"
-                    onClick={handleBrandClick}
-                    role={isBrandInteractive ? 'button' : undefined}
-                    tabIndex={isBrandInteractive ? 0 : undefined}
-                    onKeyDown={isBrandInteractive ? handleBrandKeyDown : undefined}
-                    title={
-                        collapsible
-                            ? (displayCollapsed ? ('Déplier le menu') : ('Replier le menu'))
-                            : onMobileClose
-                                ? ('Fermer le menu')
-                                : undefined
-                    }
-                >
-                    {header}
-                </div>
-                {collapsible && !displayCollapsed && (
+                {isBrandInteractive ? (
                     <button
+                        type="button"
+                        className="sidebar__header-brand"
+                        onClick={handleBrandClick}
+                        aria-label={brandLabel}
+                        title={brandLabel}
+                    >
+                        {header}
+                    </button>
+                ) : (
+                    <div className="sidebar__header-brand">{header}</div>
+                )}
+                {/* Le repli n'a pas de sens dans un tiroir plein écran, ni sur le rail
+                    mobile où le logo tient déjà ce rôle : le bouton n'est pas
+                    rendu du tout (pas seulement masqué par le CSS). */}
+                {collapsible && !isRail && (
+                    <button
+                        type="button"
                         className="sidebar__collapse"
                         onClick={toggleCollapse}
-                        aria-label={('Replier le menu')}
-                        title={('Replier')}
+                        aria-expanded={!displayCollapsed}
+                        aria-controls={id}
+                        aria-label={displayCollapsed ? 'Déplier le menu' : 'Replier le menu'}
+                        title={displayCollapsed ? 'Déplier le menu' : 'Replier le menu'}
                     >
-                        <CollapseIcon />
+                        {displayCollapsed ? <ExpandIcon /> : <CollapseIcon />}
                     </button>
                 )}
             </div>
 
-            <nav className="sidebar__nav" aria-label={('Navigation latérale')}>
+            <nav className="sidebar__nav" aria-label="Navigation latérale">
                 {renderContent()}
             </nav>
 

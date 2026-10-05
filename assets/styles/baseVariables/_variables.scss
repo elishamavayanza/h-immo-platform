@@ -262,3 +262,22 @@ $breakpoint-tablet:     768px;
 $breakpoint-desktop:    1024px;
 $breakpoint-large:      1440px;
 $breakpoint-xlarge:     1920px;
+
+
+// ============================================================
+// SIDEBAR (dimensions)
+// ============================================================
+// Dimensions du menu latéral partagées par `_Sidebar.scss` (composant)
+// et `MainLayout.scss` (intégration), pour qu'aucune des deux couches
+// ne fige sa propre valeur.
+//
+// `$sidebar-width` est surchargeable à l'exécution par le composant
+// <Sidebar /> via la variable CSS `--sidebar-width` (propriété `width`),
+// ce qui évite de dupliquer la largeur dans le SCSS.
+
+$sidebar-width:                 264px;
+$sidebar-width-collapsed:       72px;   // rail d'icônes : seules les icônes restent
+$sidebar-item-min-height:       44px;   // cible tactile minimale
+$sidebar-subitem-min-height:    36px;
+$sidebar-header-min-height:     64px;
+

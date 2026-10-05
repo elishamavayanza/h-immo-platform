@@ -1,4 +1,3 @@
-```scss
 // ============================================================
 // COMPOSANT — ERROR STATE
 // Fichier : components/UI/ErrorState/_ErrorState.scss
@@ -198,7 +197,11 @@
 // ============================================================
 
 .error-state__code {
-    @include inline-block;
+    // `display: inline-block` en dur : le mixin `inline-block` n'existe pas
+    // dans `baseVariables/_mixins.scss` (cet appel rendait le partial
+    // impossible à compiler, ce qui est resté invisible tant que le
+    // fichier n'était importé nulle part).
+    display: inline-block;
 
     padding: $spacing-1 $spacing-3;
 
