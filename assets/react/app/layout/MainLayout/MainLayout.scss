@@ -139,12 +139,26 @@
     }
 }
 
-// Sidebar replié : le rail ne garde que le logo, centré. Le nom
-// « IMMO » est masqué pour ne pas déborder sur 72px.
+// Nom de l'organisation active : plus petit, opacité réduite, truncate.
+.main-layout__brand-org {
+    font-size: $font-size-xs;  // 12px
+    font-weight: $font-weight-medium;
+    color: $color-text-secondary;  // opacité ~60%
+    @include truncate;
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
+    max-width: 100%;
+    white-space: nowrap;
+    overflow: hidden;
+}
+
+// Sidebar replié : le rail ne garde que le logo, centré.
+// « IMMO » et le nom d'org sont masqués pour ne pas déborder sur 72px.
 .sidebar--collapsed .main-layout__brand {
     justify-content: center;
 
-    &-name {
+    &-name,
+    &-org {
         display: none;
     }
 
