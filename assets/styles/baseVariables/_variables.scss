@@ -277,7 +277,16 @@ $breakpoint-xlarge:     1920px;
 
 $sidebar-width:                 264px;
 $sidebar-width-collapsed:       72px;   // rail d'icônes : seules les icônes restent
-$sidebar-item-min-height:       44px;   // cible tactile minimale
-$sidebar-subitem-min-height:    36px;
+$sidebar-item-min-height:       44px;   // cible tactile minimale (WCAG 2.5.8)
+$sidebar-subitem-min-height:    44px;   // idem : les sous-items sont aussi cliquables au doigt
 $sidebar-header-min-height:     64px;
+
+// Flyout du rail : largeur du panneau de sous-menu, et distance au bouton
+// parent. L'écart doit rester faible : c'est le vide que le pointeur doit
+// traverser pour passer du parent au panneau, et le hook n'ouvre un pont que
+// par temporisation.
+$sidebar-flyout-width:          248px;
+$sidebar-flyout-min-width:      180px;
+$sidebar-flyout-offset:         8px;
+$sidebar-flyout-title-height:   36px;
 

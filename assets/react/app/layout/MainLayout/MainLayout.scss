@@ -67,13 +67,20 @@
 // BACKDROP MOBILE
 // ============================================================
 
+// Voile du tiroir mobile. C'est un `<button>` : la fermeture au clic dehors
+// devient natively accessible (focus, Entrée, Espace) au lieu d'un `<div>`
+// cliquable que le clavier ne pouvait pas atteindre. Le reset ci-dessous
+// neutralise le rendu navigateur pour n'en garder que la surface.
 .main-layout__backdrop {
     position: fixed;
     inset: 0;
     z-index: $z-modal-backdrop;
+    padding: 0;
     background-color: rgba(0, 0, 0, 0.55);
+    border: 0;
     backdrop-filter: blur(2px);
     animation: main-layout-backdrop-in $transition-fast both;
+    cursor: pointer;
 
     @include responsive(tablet) {
         display: none;

@@ -70,7 +70,20 @@
 .sidebar--collapsed {
     width: $sidebar-width-collapsed;
 
-    .sidebar__label,
+    // `display: none` rendrait la sortie instantanée et, surtout, ferait
+    // disparaître le texte AVANT que la largeur soit arrivée à 72px (le
+    // contenu disappearait pendant que le panneau se rétrécit encore).
+    // L'opacité est donc pilotée par variable, et l'élément sort du flux par
+    // `width: 0` : le rail garde exactement la place de ses icônes.
+    .sidebar__label {
+        display: block;
+        width: 0;
+        opacity: var(--sidebar-label-opacity, 0);
+        // `pointer-events: none` : un texte en `width: 0` reste sélectionnable
+        // et cliquable au pointeur dans certains navigateurs.
+        pointer-events: none;
+    }
+
     .sidebar__arrow,
     .sidebar__group-label {
         display: none;
@@ -99,6 +112,13 @@
     // on la décale pour qu'elle ne morde pas sur la bordure.
     .sidebar__item--active::before {
         left: -$spacing-2;
+    }
+
+    // En rail, l'icône est centrée dans les 72px : le chevron de sous-menu
+    // (posé en absolu sur son bord droit, plus bas) décalerait le groupe
+    // vers la gauche. Ce décalage recentre l'ensemble icône + chevron.
+    .sidebar__item[aria-expanded] .sidebar__icon {
+        margin-left: $spacing-2;
     }
 }
 
@@ -318,11 +338,44 @@
     }
 }
 
+// ── Rail : indice de sous-menu ──────────────────────────────────
+// Replié, la flèche `▸` est masquée, donc un parent à sous-menu devient
+// indiscernable d'une feuille : rien ne dit qu'il y a autre chose à ouvrir.
+// Un petit chevron discret, posé sur le bord droit de l'icône, rétablit
+// l'information sans roger la zone cliquable ni décaler le contenu.
+.sidebar--collapsed {
+    .sidebar__item {
+        position: relative;
+    }
+
+    .sidebar__item[aria-expanded] .sidebar__icon::after {
+        content: '';
+        position: absolute;
+        right: -$spacing-2;
+        top: 50%;
+        width: 0;
+        height: 0;
+        border-top: 3px solid transparent;
+        border-bottom: 3px solid transparent;
+        border-left: 4px solid currentColor;
+        transform: translateY(-50%);
+        opacity: 0.55;
+    }
+}
+
 .sidebar__label {
     flex: 1;
     min-width: 0;
     @include truncate;
     line-height: $line-height-snug;
+    // Entrée/sortie du contenu entre rail et tiroir, pilotées par les
+    // variables d'état posées dans la media query mobile. Elles valent 1/0
+    // par défaut (desktop) : sans elles, le texte serait transparent.
+    opacity: var(--sidebar-label-opacity, 1);
+    transform: translateX(var(--sidebar-label-shift, 0));
+    transition:
+        opacity $transition-fast,
+        transform $transition-fast;
 }
 
 .sidebar__arrow {
@@ -438,10 +491,53 @@
         box-shadow: none;
     }
 
+    // ── Tiroir : ce qui anime réellement ──────────────────────
+    // Le tiroir ne part JAMAIS hors écran : tant qu'il est fermé, c'est le
+    // rail de 72px qui est visible. L'ouverture fait donc passer le panneau
+    // de 72px à sa largeur pleine, ce que la transition `width` du
+    // conteneur (.sidebar) anime déjà.
+    //
+    // Un `translateX(-100%)` « tiroir hors écran » a été envisagé, puis
+    // retiré : il ne s'applique jamais, le rail étant visible dans ce même
+    // état. Le garder aurait été une transition morte.
+    //
+    // `sidebar--rail` n'a volontairement AUCUNE règle ici : le rail est déjà
+    // entièrement décrit par `sidebar--collapsed`, posé dans le même temps
+    // par le hook. La classe ne sert qu'à distinguer « mobile, tiroir
+    // fermé » dans le DOM, et aux tests.
+    //
+    // Ce qui est réellement animé :
+    //   - la largeur du panneau (transition `width` du conteneur) ;
+    //   - l'apparition du contenu, via `--sidebar-label-opacity` /
+    //     `--sidebar-label-shift` posés par les classes d'état.
+    // Le rail et le tiroir ouvert partagent le même élément, donc un
+    // glissement latéral ferait « sauter » le rail : on anime donc une
+    // entrée de contenu, pas une translation du panneau.
+
+    // Contenu visible (tiroir ouvert ou desktop déployé).
+    .sidebar:not(.sidebar--collapsed) {
+        --sidebar-label-opacity: 1;
+        --sidebar-label-shift: 0;
+    }
+
+    // Contenu masqué (rail) : opacité 0 + léger décalage. `visibility`
+    // différé à la fin de la transition pour que le texte ne reste pas
+    // sélectionnable une fois le rail en place.
+    .sidebar--collapsed {
+        --sidebar-label-opacity: 0;
+        --sidebar-label-shift: -$spacing-1;
+    }
+
     // Le rail n'a pas besoin d'êtreiel de repli : le logo joue déjà ce
     // rôle, et le tiroir ouvert occupe déjà toute la largeur.
     .sidebar__collapse {
         display: none;
+    }
+
+    // Le tiroir : largeur pleine pendant que le rail (72px) se fait la
+    // place. `will-change` évite un recalcul de layout sur chaque frame.
+    .sidebar--mobile-open {
+        will-change: width;
     }
 }
 
@@ -458,5 +554,14 @@
     .sidebar__arrow,
     .sidebar__header-brand {
         transition: none;
+    }
+
+    // Le tiroir garde son état final (ouvert/fermé) mais sans glissement, et
+    // `will-change` est retiré : sans animation, la promotion GPU est une
+    // réservation de mémoire inutile.
+    @media (max-width: #{$breakpoint-tablet - 1px}) {
+        .sidebar {
+            will-change: auto;
+        }
     }
 }
