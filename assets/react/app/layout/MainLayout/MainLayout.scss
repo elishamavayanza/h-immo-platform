@@ -37,13 +37,13 @@
     position: fixed;
     top: $spacing-4;
     left: $spacing-4;
-    width: 48px;
-    height: 48px;
+    width: 40px;
+    height: 40px;
     padding: 0;
-    background-color: $color-primary;
+    background-color: rgba($color-primary, 0.85); // opacité réduite, moins « brillant »
     border: 0;
     border-radius: $radius-full;
-    box-shadow: $shadow-lg;
+    box-shadow: $shadow-md; // ombre plus douce
     cursor: pointer;
     transition:
         background-color $transition-fast,
@@ -56,9 +56,9 @@
     }
 
     &:hover {
-        background-color: $color-primary-hover;
+        background-color: rgba($color-primary, 1); // opaque au survol
         transform: scale(1.05);
-        box-shadow: $shadow-lg, 0 0 0 4px $color-primary-light;
+        box-shadow: $shadow-lg;
     }
 
     &:focus-visible {
@@ -72,9 +72,9 @@
 }
 
 .main-layout__mobile-toggle-box {
-    @include flex(column, center, center, 4px);
-    width: 24px;
-    height: 18px;
+    @include flex(column, center, center, 3px);
+    width: 20px;
+    height: 15px;
 }
 
 .main-layout__mobile-toggle-line {
@@ -90,13 +90,13 @@
 
 // Animation du hamburger → croix quand ouvert (via aria-expanded)
 .main-layout__mobile-toggle[aria-expanded='true'] .main-layout__mobile-toggle-line:nth-child(1) {
-    transform: translateY(7px) rotate(45deg);
+    transform: translateY(5px) rotate(45deg);
 }
 .main-layout__mobile-toggle[aria-expanded='true'] .main-layout__mobile-toggle-line:nth-child(2) {
     opacity: 0;
 }
 .main-layout__mobile-toggle[aria-expanded='true'] .main-layout__mobile-toggle-line:nth-child(3) {
-    transform: translateY(-7px) rotate(-45deg);
+    transform: translateY(-5px) rotate(-45deg);
 }
 
 
