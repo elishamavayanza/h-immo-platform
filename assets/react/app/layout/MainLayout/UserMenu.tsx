@@ -117,21 +117,23 @@ export function UserMenu({
                     // déjà les siens sur son propre conteneur et gère
                     // Entrée/Espace. Les dupliquer créait deux `role="button"`
                     // imbriqués (invalid) et deux arrêts de tabulation.
-                    <div className="user-menu__trigger">
-                        <Avatar
-                            name={fullName}
-                            src={profilePhoto ?? undefined}
-                            size="small"
-                        />
-                        <div className="user-menu__info">
-                            <span className="user-menu__name">{fullName}</span>
-                            <span className="user-menu__role">
-                                {roleLabel ?? email}
+                    <div className="user-menu__wrapper">
+                        <div className="user-menu__trigger">
+                            <Avatar
+                                name={fullName}
+                                src={profilePhoto ?? undefined}
+                                size="small"
+                            />
+                            <div className="user-menu__info">
+                                <span className="user-menu__name">{fullName}</span>
+                                <span className="user-menu__role">
+                                    {roleLabel ?? email}
+                                </span>
+                            </div>
+                            <span className="user-menu__chevron" aria-hidden="true">
+                                <ChevronUpIcon />
                             </span>
                         </div>
-                        <span className="user-menu__chevron" aria-hidden="true">
-                            <ChevronUpIcon />
-                        </span>
                     </div>
                 }
             />
