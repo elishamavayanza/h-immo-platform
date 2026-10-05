@@ -46,7 +46,7 @@ export function LoginForm() {
     const passwordError = form.touched.password ? form.errors.password : undefined;
 
     return (
-        <main className="auth-page">
+        <main className="auth-form">
             <header className="auth-page__header">
 <img
                         className="auth-page__logo"

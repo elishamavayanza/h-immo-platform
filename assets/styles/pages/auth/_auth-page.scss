@@ -1,16 +1,22 @@
 // ============================================================
 // SOCLE COMMUN — ÉCRANS D'AUTHENTIFICATION
 // Fichier : pages/auth/_auth-page.scss
-// Classes `auth-page__*` partagées par la connexion, le mot de passe
-// oublié et la réinitialisation. Ce socle est chargé via `@use` par
+// Classes `auth-form` + `auth-page__*` partagées par la connexion, le mot de
+// passe oublié et la réinitialisation. Ce socle est chargé via `@use` par
 // chaque partial de page (chaque page est compilée indépendamment) : ne
 // pas y placer de règle propre à un seul écran.
+//
+// Répartition des classes : `.auth-page` désigne le conteneur de PAGE
+// (fond décoratif, centrage — voir AuthLayout/_auth-background), tandis que
+// `.auth-form` est le wrapper du FORMULAIRE, à l'intérieur de la carte. Les
+// deux doivent rester distincts : un fond appliqué sur `.auth-page` ne doit
+// jamais se propager au formulaire, ni gonfler sa hauteur.
 // ============================================================
 
 @use '../../baseVariables/variables' as *;
 @use '../../baseVariables/mixins' as *;
 
-.auth-page {
+.auth-form {
     display: flex;
     flex-direction: column;
     gap: $spacing-6;
