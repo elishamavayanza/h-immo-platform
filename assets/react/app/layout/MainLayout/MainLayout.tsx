@@ -1,6 +1,7 @@
 // ============================================================
 // upload/react/app/layout/MainLayout/MainLayout.tsx
-// Coquille du back-office authentifié.
+// Coquille du back-office : sidebar plein écran + contenu.
+// Plus de header — tout passe par le sidebar et son UserMenu.
 // ============================================================
 
 import { useEffect, useState } from 'react';
@@ -8,15 +9,15 @@ import { Navigate, Outlet, useLocation, useNavigate } from 'react-router-dom';
 
 import { useAuth } from '../../providers/AuthProvider';
 import { useOrganization } from '../../providers/OrganizationProvider';
-import { AppHeader } from './AppHeader';
-import { RequireRole } from './RequireRole';
+import { UserMenu, ROLE_LABELS } from './UserMenu';
 import type { AppMenuItem } from './sidebar/sidebar.types';
 import { resolveSidebar } from './sidebar/sidebar.config';
+import { resolveActiveMenu } from './sidebar/sidebar.active';
 import { SIDEBAR_ICON_MAP } from './sidebar/sidebar.icons';
 
 import './MainLayout.scss';
-import {Sidebar, SidebarProps} from "../../../components/Navigation/Sidebar";
-import {Loading} from "../../../components/UI/Loading";
+import { Sidebar, SidebarProps } from '../../../components/Navigation/Sidebar';
+import { Loading } from '../../../components/UI/Loading';
 
 const BRAND = (
     <div className="main-layout__brand">
@@ -25,18 +26,33 @@ const BRAND = (
     </div>
 );
 
-function toSidebarItems(menu: AppMenuItem[]): SidebarProps['items'] {
+/**
+ * Traduit le menu de configuration en items du composant <Sidebar />.
+ *
+ * `activeIds` vient de `resolveActiveMenu()` : il contient la feuille
+ * active ET ses sections parentes. On le reporte sur deux champs :
+ *   - `active` : état actif visible (point §6 du cahier des charges) ;
+ *   - `defaultOpen` : section dépliée d'emblée, pour que le sous-menu
+ *     corresponde à la page affichée dès le premier rendu (point §8).
+ */
+function toSidebarItems(menu: AppMenuItem[], activeIds: ReadonlySet<string>): SidebarProps['items'] {
     return menu.map(({ id, label, icon, path, children }) => ({
         id,
         label,
         icon: icon !== undefined ? SIDEBAR_ICON_MAP[icon]?.() : undefined,
+        active: activeIds.has(id),
+        defaultOpen: children !== undefined && activeIds.has(id),
         ...(path !== undefined ? { route: path } : {}),
-        ...(children !== undefined ? { children: toSidebarItems(children) } : {}),
+        ...(children !== undefined
+            ? {
+                children: toSidebarItems(children, activeIds),
+            }
+            : {}),
     }));
 }
 
 export function MainLayout() {
-    const { user, isAuthenticated, isLoading: isAuthLoading } = useAuth();
+    const { user, isAuthenticated, isLoading: isAuthLoading, logout } = useAuth();
     const { platformRole, organizationRole, isLoading: isOrgLoading } = useOrganization();
     const [isMobileOpen, setIsMobileOpen] = useState(false);
     const location = useLocation();
@@ -47,7 +63,7 @@ export function MainLayout() {
         setIsMobileOpen(false);
     }, [location.pathname]);
 
-    // Ferme le drawer à la touche Échap
+    // Ferme le drawer à Échap
     useEffect(() => {
         if (!isMobileOpen) return;
         const onKey = (e: KeyboardEvent) => {
@@ -57,13 +73,11 @@ export function MainLayout() {
         return () => document.removeEventListener('keydown', onKey);
     }, [isMobileOpen]);
 
-    // Bloque le scroll du body quand le drawer est ouvert (mobile)
-    useEffect(() => {
-        document.body.style.overflow = isMobileOpen ? 'hidden' : '';
-        return () => {
-            document.body.style.overflow = '';
-        };
-    }, [isMobileOpen]);
+    // ⚠️ Le blocage du scroll sous le drawer mobile est géré par `useSidebar`
+    // (dans <Sidebar />) : c'est le composant qui connaît le drawer. Le
+    // dupliquer ici faisait courir deux propriétaires sur
+    // `document.body.style.overflow`, dont le `finally` de l'un écrasait
+    // l'état posé par l'autre (page parfois figée, parfois scrollable).
 
     if (isAuthLoading || isOrgLoading) {
         return (
@@ -78,26 +92,35 @@ export function MainLayout() {
     }
 
     const menu = resolveSidebar(platformRole, organizationRole);
-    const items = toSidebarItems(menu);
+    const activeIds = resolveActiveMenu(menu, location.pathname);
+    const items = toSidebarItems(menu, activeIds);
+
+    const isPlatform = platformRole === 'super_admin';
+    const effectiveRoleLabel = isPlatform
+        ? ROLE_LABELS['super_admin']
+        : organizationRole
+            ? ROLE_LABELS[organizationRole] ?? organizationRole
+            : undefined;
 
     return (
         <div className="main-layout">
-            <AppHeader
-                onOpenMenu={() => setIsMobileOpen(true)}
-                isMobileMenuOpen={isMobileOpen}
-            />
+            {/* Aucun bouton burger : le sidebar reste visible en rail de 72px
+                sous 768px, et c'est son logo qui ouvre le tiroir. Ce qui
+                était ici faisait doublon avec le logo et laissait le rail
+                mobile sans point d'entrée dès qu'on le retirait. */}
+
+            {/* Backdrop mobile */}
+            {isMobileOpen && (
+                <div
+                    className="main-layout__backdrop"
+                    aria-hidden="true"
+                    onClick={() => setIsMobileOpen(false)}
+                />
+            )}
 
             <div className="main-layout__body">
-                {/* Backdrop mobile : clic à l'extérieur ferme le drawer */}
-                {isMobileOpen && (
-                    <div
-                        className="main-layout__backdrop"
-                        aria-hidden="true"
-                        onClick={() => setIsMobileOpen(false)}
-                    />
-                )}
-
                 <Sidebar
+                    id="main-sidebar"
                     items={items}
                     variant="dark"
                     collapsible
@@ -112,17 +135,32 @@ export function MainLayout() {
                         if (target) navigate(target);
                     }}
                     footer={
-                        <div className="main-layout__footer-user">
-                            <span className="main-layout__footer-name">{user.fullName}</span>
-                            <span className="main-layout__footer-email">{user.email}</span>
-                        </div>
+                        <UserMenu
+                            fullName={user.fullName}
+                            email={user.email}
+                            profilePhoto={user.profilePhoto}
+                            roleLabel={effectiveRoleLabel}
+                            onOpenSettings={() => navigate('/settings')}
+                            onOpenProfile={() => navigate('/profile')}
+                            onLogout={() => {
+                                void logout();
+                            }}
+                        />
                     }
                 />
 
                 <main className="main-layout__content">
-                    <RequireRole>
-                        <Outlet />
-                    </RequireRole>
+                    {/* Pas de garde de rôle ici : c'est `AppRouteGuard`, posé sur
+                        les routes `/app` dans `AppRoutes.tsx`, qui décide. Un
+                        `RequireRole` enveloppait autrefois ce `<Outlet />`, mais
+                        avec ses props par défaut il n'autorisait que
+                        `organizationRole` — donc `null` pour un SUPER_ADMIN, qui
+                        s'est vu refuser tout le back-office. Il ne gérait pas
+                        non plus le cas « aucun rôle » (redirigé par
+                        `/app/access-denied`) ni le 403 d'une page réservée à un
+                        autre rôle. Le chargement des rôles est déjà traité
+                        *avant* ce point par le `Loading` ci-dessus. */}
+                    <Outlet />
                 </main>
             </div>
         </div>

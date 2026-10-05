@@ -1,4 +1,5 @@
 import React from 'react';
+import { createPortal } from 'react-dom';
 import { PopoverMenuItem, usePopoverMenu, UsePopoverMenuProps } from '../../../hook-components/UI/PopoverMenu';
 
 export interface PopoverMenuProps extends UsePopoverMenuProps {
@@ -27,27 +28,16 @@ export function PopoverMenu({
         coords,
     } = usePopoverMenu({ items, placement, offset, closeOnClickItem, closeOnOutsideClick, closeOnEscape, className });
 
-    // Définir la transformation selon le placement
-    const transform = () => {
-        switch (placement) {
-            case 'bottom':
-                return 'translate(-50%, 0)';
-            case 'top':
-                return 'translate(-50%, -100%)';
-            case 'left':
-                return 'translate(-100%, -50%)';
-            case 'right':
-                return 'translate(0, -50%)';
-            default:
-                return 'translate(-50%, 0)';
-        }
-    };
-
+    // `top`/`left` sont déjà des pixels finaux, bornés dans le viewport
+    // par le hook : plus aucun `transform` de positionnement (c'est
+    // l'animation CSS qui utilise `transform`, sans conflit).
+    // `visibility: hidden` tant que la mesure n'est pas faite, pour ne
+    // pas peindre une frame le menu en (0, 0).
     const style: React.CSSProperties = {
         position: 'fixed',
-        top: coords.top,
-        left: coords.left,
-        transform: transform(),
+        top: coords?.top ?? 0,
+        left: coords?.left ?? 0,
+        visibility: coords === null ? 'hidden' : 'visible',
         zIndex: 3000,
     };
 
@@ -70,34 +60,40 @@ export function PopoverMenu({
                 {trigger}
             </div>
 
-            {isOpen && (
-                <div
-                    ref={menuRef}
-                    className={classes.menu}
-                    style={style}
-                    role="menu"
-                    aria-orientation="vertical"
-                >
-                    {items.map((item, index) => {
-                        if (item.separator) {
-                            return <div key={`sep-${index}`} className="popover-menu__separator" />;
-                        }
-                        return (
-                            <button
-                                key={item.id}
-                                className={`popover-menu__item ${item.danger ? 'popover-menu__item--danger' : ''} ${item.disabled ? 'popover-menu__item--disabled' : ''}`}
-                                onClick={() => handleItemClick(item)}
-                                disabled={item.disabled}
-                                role="menuitem"
-                                tabIndex={-1}
-                            >
-                                {item.icon && <span className="popover-menu__item-icon">{item.icon}</span>}
-                                <span className="popover-menu__item-label">{typeof item.label === 'string' ? (item.label) : item.label}</span>
-                            </button>
-                        );
-                    })}
-                </div>
-            )}
+            {/* Portal sur `document.body` : le menu est `position: fixed`
+                mais reste un descendant du sidebar, qui a `overflow:
+                hidden` et un contexte d'empilement propre. Rendu dans le
+                DOM racine, il ne peut plus être rogné par un ancêtre. */}
+            {isOpen &&
+                createPortal(
+                    <div
+                        ref={menuRef}
+                        className={classes.menu}
+                        style={style}
+                        role="menu"
+                        aria-orientation="vertical"
+                    >
+                        {items.map((item, index) => {
+                            if (item.separator) {
+                                return <div key={`sep-${index}`} className="popover-menu__separator" />;
+                            }
+                            return (
+                                <button
+                                    key={item.id}
+                                    className={`popover-menu__item ${item.danger ? 'popover-menu__item--danger' : ''} ${item.disabled ? 'popover-menu__item--disabled' : ''}`}
+                                    onClick={() => handleItemClick(item)}
+                                    disabled={item.disabled}
+                                    role="menuitem"
+                                    tabIndex={-1}
+                                >
+                                    {item.icon && <span className="popover-menu__item-icon">{item.icon}</span>}
+                                    <span className="popover-menu__item-label">{typeof item.label === 'string' ? (item.label) : item.label}</span>
+                                </button>
+                            );
+                        })}
+                    </div>,
+                    document.body
+                )}
         </div>
     );
 }

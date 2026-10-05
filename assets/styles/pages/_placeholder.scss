@@ -1,0 +1,45 @@
+// ============================================================
+// assets/styles/pages/_placeholder.scss
+// Page provisoire d'une feuille du back-office (`PlaceholderPage`).
+// ============================================================
+
+@use '../baseVariables/variables' as *;
+@use '../baseVariables/mixins' as *;
+
+
+.placeholder-page {
+    @include flex(column, flex-start, flex-start, $spacing-2);
+    max-width: 640px;
+    margin: 0 auto;
+    padding: $spacing-8 $spacing-6;
+    text-align: center;
+    align-items: center;
+
+    &__path {
+        padding: $spacing-1 $spacing-3;
+        border: 1px solid $color-border;
+        border-radius: $radius-full;
+        background-color: $color-bg-card;
+        font-family: $font-family-base;
+        font-size: $font-size-xs;
+        color: $color-text-muted;
+    }
+
+    &__title {
+        margin: 0;
+        font-family: $font-family-heading;
+        font-size: $font-size-2xl;
+        font-weight: $font-weight-bold;
+        color: $color-text-primary;
+        line-height: $line-height-tight;
+    }
+
+    &__text {
+        max-width: 46ch;
+        margin: 0;
+        font-family: $font-family-base;
+        font-size: $font-size-sm;
+        color: $color-text-secondary;
+        line-height: $line-height-relaxed;
+    }
+}

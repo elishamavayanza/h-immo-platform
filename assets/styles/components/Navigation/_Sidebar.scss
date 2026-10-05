@@ -22,8 +22,11 @@
 
 .sidebar {
     @include flex(column, stretch, flex-start, 0);
-    width: 280px;
-    height: 100vh;
+    // La largeur vient de `$sidebar-width` et reste surchargeable par la
+    // variable CSS `--sidebar-width` (prop `width` du composant), pour
+    // qu'aucune couche ne fige sa propre valeur.
+    width: var(--sidebar-width, #{$sidebar-width});
+    height: 100dvh;
     background-color: $color-bg-sidebar;
     border-right: 1px solid $color-border;
     font-family: $font-family-base;
@@ -59,9 +62,13 @@
 // ============================================================
 // ÉTAT COLLAPSED (desktop)
 // ============================================================
+// Rail d'icônes : le libellé disparaît, la zone cliquable reste large
+// (72px) et centrée, l'icône n'est jamais rognée. `title`/`aria-label`
+// côté composant redonnent le nom de l'item au survol et au lecteur
+// d'écran, qui n'auraient sinon qu'une icône anonyme.
 
 .sidebar--collapsed {
-    width: 72px;
+    width: $sidebar-width-collapsed;
 
     .sidebar__label,
     .sidebar__arrow,
@@ -69,13 +76,29 @@
         display: none;
     }
 
-    .sidebar__item {
+    .sidebar__item,
+    .sidebar__subitem {
         justify-content: center;
-        padding: $spacing-3;
+        padding-inline: 0;
+    }
+
+    .sidebar__item {
+        min-height: $sidebar-item-min-height;
     }
 
     .sidebar__header {
         justify-content: center;
+        // Le bouton de déploiement reste visible : c'est le seul chemin
+        // de sortie du rail pour un utilisateur clavier, et le clic sur
+        // le logo ne doit pas être le seul affordance.
+        gap: 0;
+        padding-inline: $spacing-2;
+    }
+
+    // La barre d'indicateur d'un item actif reste lisible en mode rail :
+    // on la décale pour qu'elle ne morde pas sur la bordure.
+    .sidebar__item--active::before {
+        left: -$spacing-2;
     }
 }
 
@@ -84,26 +107,20 @@
 // ÉTAT MOBILE OPEN
 // ============================================================
 // Le composant parent active cette classe via `mobileOpen`.
-// ============================================================
+// ⚠️ Le drawer DOIT passer au-dessus du backdrop du MainLayout
+// (`$z-modal-backdrop`) : les deux sont dans le même contexte
+// d'empilement, donc sans ce `z-index` le voile recouvre le panneau
+// ouvert, qui devient incliquable.
 
 .sidebar--mobile-open {
-    // Le panneau n'est off-canvas que sous le seuil tablette : il faut
-    // ramener la classe « open » dans cette même plage (et non pas à
-    // `min-width: 480px`, sinon le drawer reste invisible en dessous).
-    @media (max-width: #{$breakpoint-tablet - 1px}) {
-        transform: translateX(0);
-    }
-}
+    z-index: $z-modal;
+    box-shadow: $shadow-lg;
 
-@media (max-width: #{$breakpoint-tablet - 1px}) {
-    .sidebar {
-        position: fixed;
-        top: 0;
-        left: 0;
-        height: 100vh;
-        width: 280px;
-        transform: translateX(-105%);
-        box-shadow: $shadow-lg;
+    // Le tiroir ouvert reprend la largeur pleine : sur mobile la classe
+    // `sidebar--collapsed` n'est plus posée (c'est le hook qui la retire à
+    // l'ouverture), donc les libellés reviennent d'eux-mêmes.
+    @media (max-width: #{$breakpoint-tablet - 1px}) {
+        width: var(--sidebar-width, #{$sidebar-width});
     }
 }
 
@@ -116,18 +133,26 @@
     @include flex-between;
     flex-shrink: 0;
     gap: $spacing-2;
+    min-height: $sidebar-header-min-height;
     padding: $spacing-4;
     border-bottom: 1px solid $color-border;
 }
 
+// Le logo est un <button> (donc le focus clavier et l'activation
+// Entrée/Espace sont natifs) : on neutralise le rendu navigateur.
 .sidebar__header-brand {
     @include flex(row, center, flex-start, $spacing-2);
     flex: 1;
     min-width: 0;
+    padding: 0;
+    background: transparent;
+    border: 0;
+    border-radius: $radius-sm;
     font-family: $font-family-heading;
     font-size: $font-size-lg;
     font-weight: $font-weight-semibold;
     color: $color-text-primary;
+    text-align: left;
     cursor: pointer;
     transition: color $transition-fast;
 
@@ -135,11 +160,9 @@
         color: $color-primary;
     }
 
-    &:focus-visible {
-        outline: none;
-        box-shadow: 0 0 0 2px $color-primary;
-        border-radius: $radius-sm;
-    }
+    // `focus-ring` plutôt qu'un contour fixe : l'anneau projeté reste
+    // visible sur fond sombre et sur la carte brand.
+    @include focus-ring;
 }
 
 .sidebar__collapse {
@@ -214,6 +237,10 @@
 // ============================================================
 // ITEM
 // ============================================================
+// `<button type="button">` : le clavier (Tab, Entrée, Espace) et les
+// lecteurs d'écran sont natifs, donc pas de `role`/`tabIndex` à
+// maintenir. Le reset ci-dessous rend le bouton identique à l'ancien
+// `<div role="button">` : même largeur, même alignement, même police.
 
 .sidebar__group {
     margin-bottom: 2px;
@@ -222,11 +249,17 @@
 .sidebar__item {
     @include flex(row, center, flex-start, $spacing-3);
     position: relative;
+    width: 100%;
+    min-height: $sidebar-item-min-height;
     padding: $spacing-3;
+    background: transparent;
+    border: 0;
+    border-radius: $radius-md;
+    font-family: inherit;
     font-size: $font-size-sm;
     font-weight: $font-weight-medium;
     color: $color-text-secondary;
-    border-radius: $radius-md;
+    text-align: left;
     cursor: pointer;
     user-select: none;
     transition:
@@ -238,10 +271,7 @@
         color: $color-text-primary;
     }
 
-    &:focus-visible {
-        outline: none;
-        box-shadow: inset 0 0 0 2px $color-primary;
-    }
+    @include focus-ring;
 }
 
 .sidebar__item--active {
@@ -298,9 +328,18 @@
 .sidebar__arrow {
     @include flex-center;
     flex-shrink: 0;
+    width: 16px;
     color: $color-text-muted;
     font-size: $font-size-xs;
-    transition: transform $transition-fast;
+    line-height: 1;
+    transition: color $transition-fast;
+}
+
+// La flèche accompagne l'item parent : elle prend la couleur de l'état
+// courant (actif / survol) au lieu de rester grise en permanence.
+.sidebar__item:hover .sidebar__arrow,
+.sidebar__item--active .sidebar__arrow {
+    color: currentColor;
 }
 
 
@@ -328,10 +367,16 @@
 
 .sidebar__subitem {
     @include flex(row, center, flex-start, $spacing-2);
+    width: 100%;
+    min-height: $sidebar-subitem-min-height;
     padding: $spacing-2 $spacing-3;
+    background: transparent;
+    border: 0;
+    border-radius: $radius-sm;
+    font-family: inherit;
     font-size: $font-size-sm;
     color: $color-text-secondary;
-    border-radius: $radius-sm;
+    text-align: left;
     cursor: pointer;
     transition:
         background-color $transition-fast,
@@ -342,10 +387,7 @@
         color: $color-text-primary;
     }
 
-    &:focus-visible {
-        outline: none;
-        box-shadow: inset 0 0 0 2px $color-primary;
-    }
+    @include focus-ring;
 }
 
 .sidebar__subitem--active {
@@ -374,6 +416,37 @@
 
 
 // ============================================================
+// RESPONSIVE — SOUS 768px : RAIL PERMANENT + TIROIR
+// ============================================================
+// Ce bloc est placé en FIN de fichier, après les règles de base, pour une
+// raison précise : une media query n'ajoute aucune spécificité, donc
+// `display: none` posé ici avant le `display: flex` de `.sidebar__collapse`
+// serait purement et simplement ignoré.
+//
+// Sous 768px le menu n'est PLUS hors écran : il reste un rail de 72px à
+// gauche (donc la largeur et les visuels du mode replié, donc la classe
+// `sidebar--collapsed` posée par le hook), et le logo l'ouvre en tiroir.
+// Un tiroir entièrement sorti rendait le sidebar inaccessible dès qu'on
+// retirait le bouton burger : il n'existait plus aucun moyen de l'ouvrir.
+
+@media (max-width: #{$breakpoint-tablet - 1px}) {
+    .sidebar {
+        position: fixed;
+        top: 0;
+        left: 0;
+        height: 100dvh;
+        box-shadow: none;
+    }
+
+    // Le rail n'a pas besoin d'êtreiel de repli : le logo joue déjà ce
+    // rôle, et le tiroir ouvert occupe déjà toute la largeur.
+    .sidebar__collapse {
+        display: none;
+    }
+}
+
+
+// ============================================================
 // ACCESSIBILITÉ
 // ============================================================
 
@@ -381,7 +454,9 @@
     .sidebar,
     .sidebar__item,
     .sidebar__subitem,
-    .sidebar__collapse {
+    .sidebar__collapse,
+    .sidebar__arrow,
+    .sidebar__header-brand {
         transition: none;
     }
 }

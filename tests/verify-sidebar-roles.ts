@@ -1,14 +1,30 @@
 /**
  * Vérifie que le menu latéral (`sidebar.config.ts`) reflète la matrice de
  * rôles du backend `SecurityService::checkAdminImmobilierAction()` /
- * `checkAdminVilleAction()`.
+ * `checkAdminVilleAction()`, ET que la route active est résolue
+ * correctement (`sidebar.active.ts`).
  *
  * Régression connue : `admin_immobilier` recevait le même menu 4 entrées
  * que `admin_ville`, sans Personnel, alors que le backend lui accorde
  * VIEW/CREATE/UPDATE/DELETE sur Worker. Le test confronte explicitement le
  * menu attendu à la matrice backend plutôt qu'à une relecture manuelle.
  *
- * Module pur (ni React ni JSX), exécutable par Node 24 (type stripping) :
+ * Deux régressions couvertes par la seconde partie :
+ *   - la correspondance par égalité de chaîne laissait une route imbriquée
+ *     sans item actif, et un parent sans `path` ne remontait jamais l'état
+ *     actif de ses enfants (section « éteinte » alors qu'on est dedans) ;
+ *   - `/app/location` ne doit pas activer `/app/location-paiements`
+ *     (faux positif du préfixe simple).
+ *
+ * Troisième partie — routage. Régression plus grave encore : aucune feuille
+ * du menu n'était enregistrée dans `AppRoutes.tsx`, donc `/app` redirigeait
+ * vers une destination inexistante, qui retombait sur `path="*"` vers `/app` :
+ * boucle de redirection, back-office entièrement mort. Ces contrôles
+ * exigent que la table des routes couvre le menu et que chaque destination
+ * d'atterrissage soit routée (invariant anti-boucle).
+ *
+ * Modules purs (ni React ni JSX), exécutables par Node 24 (type
+ * stripping) :
  *
  *   node tests/verify-sidebar-roles.ts
  */
@@ -18,6 +34,19 @@ import {
     isPathInMenu,
     resolveSidebar,
 } from '../assets/react/app/layout/MainLayout/sidebar/sidebar.config.ts';
+import {
+    isRouteMatch,
+    resolveActiveMenu,
+} from '../assets/react/app/layout/MainLayout/sidebar/sidebar.active.ts';
+import {
+    ACCESS_DENIED_PATH,
+    APP_ROOT,
+    buildAppRoutes,
+    buildLandingPaths,
+    findAppRoute,
+    toRelativeAppPath,
+    toRelativeAppRoutePath,
+} from '../assets/react/app/routes/appRoutes.config.ts';
 import type { OrganizationRole, PlatformRole } from '../assets/services/api/api.types.ts';
 
 let checks = 0;
@@ -46,11 +75,18 @@ const PLATFORM = resolveSidebar('super_admin' as PlatformRole, 'admin_ville' as 
 
 console.log('\n=== Structure du menu par rôle ===\n');
 
-check(`PATRON : 6 entrées (reçu ${PATRON.length})`, PATRON.length === 6, String(PATRON.length));
-check(`ADMIN_IMMOBILIER : 5 entrées, Personnel inclus (reçu ${ADMIN_IMMOBILIER.length})`, ADMIN_IMMOBILIER.length === 5, String(ADMIN_IMMOBILIER.length));
-check(`ADMIN_VILLE : 4 entrées (reçu ${ADMIN_VILLE.length})`, ADMIN_VILLE.length === 4, String(ADMIN_VILLE.length));
-check('SUPER_ADMIN : menu plateforme 4 entrées, aucun rôle métier ne l\'alourdit', PLATFORM.length === 4, String(PLATFORM.length));
+// Volontaires documentés dans `sidebar.config.ts` : « Tableau de bord »
+// est toujours la première entrée (écran de synthèse demandé par le cahier
+// des charges), et « Vitrine » est une feuille directe comme Dépenses.
+check(`PATRON : 7 entrées (reçu ${PATRON.length})`, PATRON.length === 7, String(PATRON.length));
+check(`ADMIN_IMMOBILIER : 6 entrées, Personnel inclus (reçu ${ADMIN_IMMOBILIER.length})`, ADMIN_IMMOBILIER.length === 6, String(ADMIN_IMMOBILIER.length));
+check(`ADMIN_VILLE : 5 entrées (reçu ${ADMIN_VILLE.length})`, ADMIN_VILLE.length === 5, String(ADMIN_VILLE.length));
+check(`SUPER_ADMIN : menu plateforme 5 entrées, aucun rôle métier ne l'alourdit (reçu ${PLATFORM.length})`, PLATFORM.length === 5, String(PLATFORM.length));
 check('Sans rôle : menu vide', resolveSidebar(null, null).length === 0);
+
+check('PATRON : Tableau de bord en première position', PATRON[0]?.id === 'dashboard', PATRON[0]?.id);
+check('ADMIN_IMMOBILIER : Tableau de bord en première position', ADMIN_IMMOBILIER[0]?.id === 'dashboard', ADMIN_IMMOBILIER[0]?.id);
+check('ADMIN_VILLE : Tableau de bord en première position', ADMIN_VILLE[0]?.id === 'dashboard', ADMIN_VILLE[0]?.id);
 
 console.log('\n=== Personnel (Worker) — matrice checkAdminXxxAction ===\n');
 
@@ -80,9 +116,158 @@ check('SUPER_ADMIN n\'accède pas à /app/personnel/ouvriers', !isPathInMenu(PLA
 
 console.log('\n=== Atterrissage par défaut (redirection /app) ===\n');
 
-check('ADMIN_VILLE atterrit sur /app/patrimoine/villes', defaultPathFor(null, 'admin_ville' as OrganizationRole) === '/app/patrimoine/villes');
-check('SUPER_ADMIN atterrit sur /app/admin/organisations', defaultPathFor('super_admin' as PlatformRole, null) === '/app/admin/organisations');
+check('ADMIN_VILLE atterrit sur /app/dashboard', defaultPathFor(null, 'admin_ville' as OrganizationRole) === '/app/dashboard', defaultPathFor(null, 'admin_ville' as OrganizationRole));
+check('SUPER_ADMIN atterrit sur /app/admin/dashboard', defaultPathFor('super_admin' as PlatformRole, null) === '/app/admin/dashboard', defaultPathFor('super_admin' as PlatformRole, null));
 check('Sans rôle : redirection vers la page accès non prévu', defaultPathFor(null, null) === '/app/access-denied');
+
+// ============================================================
+// ROUTE ACTIVE — correspondance par segment + remontée de section
+// ============================================================
+
+console.log('\n=== Route active : correspondance (sidebar.active.ts) ===\n');
+
+check('Égalité simple : /app/dashboard ↔ /app/dashboard', isRouteMatch('/app/dashboard', '/app/dashboard'));
+check('Route fille : /app/dashboard ↔ /app/dashboard/42', isRouteMatch('/app/dashboard', '/app/dashboard/42'));
+check('Route fille profonde : /app/dashboard ↔ /app/dashboard/42/detail', isRouteMatch('/app/dashboard', '/app/dashboard/42/detail'));
+check('Barre finale tolérée : /app/dashboard/ ↔ /app/dashboard', isRouteMatch('/app/dashboard/', '/app/dashboard'));
+check('Préfixe simple refusé : /app/location ne matche PAS /app/location-paiements', !isRouteMatch('/app/location', '/app/location-paiements'));
+check('Un parent sans route ne matche rien', !isRouteMatch(undefined, '/app/dashboard'));
+check('Route non vide requise', !isRouteMatch('', '/app/dashboard'));
+check('Chaîne vide sans route active', !isRouteMatch('/app/dashboard', '/app'));
+
+const ids = (pathname: string, menu: typeof PATRON = PATRON): string[] =>
+    [...resolveActiveMenu(menu, pathname)].sort();
+
+// Menu réduit à la section Patrimoine, pour tester l'état actif d'un parent
+// indépendamment des autres entrées du rôle.
+const PATRIMONE_MENU = PATRON.filter(item => item.id === 'patrimoine');
+
+check(
+    'Feuille seule : /app/dashboard active dashboard',
+    JSON.stringify(ids('/app/dashboard')) === JSON.stringify(['dashboard']),
+    JSON.stringify(ids('/app/dashboard'))
+);
+check(
+    'Sous-item : /app/patrimoine/villes active la feuille ET sa section',
+    JSON.stringify(ids('/app/patrimoine/villes')) === JSON.stringify(['patrimoine', 'patrimoine-villes']),
+    JSON.stringify(ids('/app/patrimoine/villes'))
+);
+check(
+    'Parent sans path : /app/patrimoine seul n\'active rien (ce n\'est pas une page)',
+    JSON.stringify(ids('/app/patrimoine')) === JSON.stringify([]),
+    JSON.stringify(ids('/app/patrimoine'))
+);
+check(
+    'Parent sans path : il s\'active bien via un de ses enfants',
+    resolveActiveMenu(PATRIMONE_MENU, '/app/patrimoine/villes').has('patrimoine')
+);
+check(
+    'Détail imbriqué : /app/location/loyers/12 reste dans Location > Loyers',
+    JSON.stringify(ids('/app/location/loyers/12')) === JSON.stringify(['location', 'location-loyers']),
+    JSON.stringify(ids('/app/location/loyers/12'))
+);
+check(
+    'Plateforme : /app/admin/audit active la bonne entrée',
+    JSON.stringify(ids('/app/admin/audit', PLATFORM)) === JSON.stringify(['plateforme-audit']),
+    JSON.stringify(ids('/app/admin/audit', PLATFORM))
+);
+check(
+    'Route hors menu : aucun item actif',
+    JSON.stringify(ids('/app/inexistant')) === JSON.stringify([]),
+    JSON.stringify(ids('/app/inexistant'))
+);
+check(
+    'Section hors rôle : /app/personnel/ouvriers n\'active rien pour ADMIN_VILLE',
+    JSON.stringify(ids('/app/personnel/ouvriers', ADMIN_VILLE)) === JSON.stringify([]),
+    JSON.stringify(ids('/app/personnel/ouvriers', ADMIN_VILLE))
+);
+check(
+    'Deux sections ne s\'allument jamais ensemble sur un préfixe ambigu',
+    ids('/app/location/loyers').filter(id => id === 'patrimoine').length === 0
+);
+
+console.log('\n' + '-'.repeat(60) + '\n');
+
+// ============================================================
+// ROUTES DU BACK-OFFICE — aucun lien mort, aucune boucle
+// ============================================================
+// Régression : aucune feuille du menu n'était enregistrée dans
+// `AppRoutes.tsx`. `/app` redirigeait donc vers une destination sans route,
+// qui retombait sur `path="*"` → `/app` → … : boucle de redirection, et un
+// menu entièrement mort. La table des routes est désormais dérivée du menu
+// (`buildAppRoutes`), et ces contrôles prouvent que les deux restent
+// synchronisés.
+
+console.log('=== Routes : couverture du menu (appRoutes.config.ts) ===\n');
+
+const ROUTES = buildAppRoutes();
+const routePaths = ROUTES.map(route => route.path);
+const everyLeaf: string[] = [];
+const collectPaths = (menu: typeof PATRON): void => {
+    for (const item of menu) {
+        if (item.path !== undefined) everyLeaf.push(item.path);
+        if (item.children !== undefined) collectPaths(item.children);
+    }
+};
+for (const menu of [PATRON, ADMIN_IMMOBILIER, ADMIN_VILLE, PLATFORM]) collectPaths(menu);
+
+const missingRoutes = everyLeaf.filter(path => !routePaths.includes(path));
+
+check(
+    `Chaque feuille du menu a une route (${everyLeaf.length} feuilles, ${ROUTES.length} routes)`,
+    missingRoutes.length === 0,
+    missingRoutes.join(', ')
+);
+check('Aucun doublon de route', new Set(routePaths).size === routePaths.length, `${routePaths.length} routes`);
+check(
+    'Toutes les routes sont sous /app',
+    routePaths.every(path => path.startsWith(`${APP_ROOT}/`)),
+    routePaths.filter(path => !path.startsWith(`${APP_ROOT}/`)).join(', ')
+);
+check(
+    'findAppRoute retrouve une feuille connue',
+    findAppRoute('/app/patrimoine/villes')?.id === 'patrimoine-villes',
+    String(findAppRoute('/app/patrimoine/villes')?.id)
+);
+check('findAppRoute ignore un chemin inconnu', findAppRoute('/app/inexistant') === undefined);
+check(
+    'Chemin relatif : /app/patrimoine/villes → patrimoine/villes',
+    toRelativeAppPath('/app/patrimoine/villes') === 'patrimoine/villes',
+    toRelativeAppPath('/app/patrimoine/villes')
+);
+check(
+    'Chemin de route avec splat : /app/patrimoine/villes → patrimoine/villes/*',
+    toRelativeAppRoutePath('/app/patrimoine/villes') === 'patrimoine/villes/*',
+    toRelativeAppRoutePath('/app/patrimoine/villes')
+);
+check(
+    'La page d\'accès refusé est une destination connue',
+    ACCESS_DENIED_PATH === '/app/access-denied' && toRelativeAppPath(ACCESS_DENIED_PATH) === 'access-denied',
+    ACCESS_DENIED_PATH
+);
+
+// L'invariant anti-boucle : chaque destination d'atterrissage doit être
+// routée, sinon `/app` redirige vers le `*` qui redirige vers `/app`.
+const landings = buildLandingPaths();
+const unroutableLandings = landings.filter(
+    path => path !== ACCESS_DENIED_PATH && !routePaths.includes(path)
+);
+
+check(
+    `Chaque destination d'atterrissage est routée (${landings.length} combinaisons de rôles)`,
+    unroutableLandings.length === 0,
+    unroutableLandings.join(', ')
+);
+check(
+    'SUPER_ADMIN atterrit sur une route de la plateforme',
+    routePaths.includes('/app/admin/dashboard'),
+    String(landings[0])
+);
+check(
+    'Un rôle d\'organisation atterrit sur une route du back-office',
+    landings.slice(1, 4).every(path => routePaths.includes(path)),
+    landings.slice(1, 4).join(', ')
+);
 
 console.log('\n' + '-'.repeat(60) + '\n');
 

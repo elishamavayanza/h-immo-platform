@@ -38,9 +38,10 @@
 // profit d'un atterrissage direct sur une liste opérationnelle.
 //
 // ⚠️ Confinement : les seuls `if (role === …)` du front qui décident du
-// menu et de la garde de route vivent ici (et dans RequireRole, qui
-// appelle `isPathInMenu`). Partout ailleurs, on consomme le tableau
-// renvoyé par `resolveSidebar()` sans re-tester le rôle.
+// menu vivent ici. La garde de route (`AppRouteGuard`) ne teste jamais le
+// rôle non plus : elle demande au menu (`isPathInMenu`). Partout ailleurs,
+// on consomme le tableau renvoyé par `resolveSidebar()` sans re-tester le
+// rôle.
 // ============================================================
 
 import type { AppMenuItem, SidebarMenu } from './sidebar.types';
@@ -203,9 +204,9 @@ export function resolveSidebar(platformRole: PlatformRole | null, organizationRo
 /**
  * Vrai si `pathname` correspond à un item (feuille ou sous-item) du menu.
  *
- * La garde de route (RequireRole) s'appuie exactement sur la même vérité
- * que le menu : une route non présente dans le menu du rôle courant est
- * hors de portée. Confort d'affichage uniquement — l'API reste l'autorité
+ * La garde de route (`AppRouteGuard`) s'appuie exactement sur la même
+ * vérité que le menu : une route non présente dans le menu du rôle courant
+ * est hors de portée. Confort d'affichage uniquement — l'API reste l'autorité
  * de sécurité (une URL forgée sera de toute façon refusée en 403 par le
  * backend).
  */
