@@ -607,23 +607,7 @@ yarn type-check
 
 ---
 
-## 16. React / TypeScript
-
-- Composants **fonctionnels** uniquement, hooks, composants réutilisables.
-- `strict: true` : **pas de `any`** sans justification écrite dans un commentaire
-  adjacent. Préfère `unknown` + narrowing.
-- Séparer UI et logique : la logique testable sans navigateur vit dans un module
-  pur (exemple : `assets/react/app`, vérifié par un script Node).
-- Toute réponse d'API consommée par le front a un type TypeScript explicite et
-  cohérent avec le schéma OpenAPI ; ne pas redéfinir les règles de métier en TS.
-- États de chargement et d'erreur gérés explicitement sur chaque appel réseau.
-- Le client ne doit jamais envoyer d'`organizationId` en espérant que le backend
-  s'y fie : l'API recalcule le périmètre.
-- `yarn build` sort dans `public/build/` (ignoré par Git). `yarn type-check` est
-  le contrôle obligatoire avant livraison.
-- Pas de dépendance React ajoutée sans justification : le front est aujourd'hui
-  minimal (React + ReactDOM seuls en `dependencies`).
-
+```markdown
 ### 16.1 Frontend — Architecture, composants et styles
 
 Le frontend doit respecter en priorité la structure et les composants déjà présents
@@ -632,11 +616,439 @@ introduire une nouvelle organisation simplement parce qu'elle lui paraît plus p
 
 #### Règle fondamentale
 
-> Avant de créer un composant, une page, un fichier de style ou une abstraction,
-> l'agent doit rechercher ce qui existe déjà et déterminer si l'élément peut être
-> réutilisé, étendu ou composé.
+> Avant de créer un composant, une page, un hook, un service, un type, un fichier
+> de style ou une abstraction, l'agent doit rechercher ce qui existe déjà et
+> déterminer si l'élément peut être réutilisé, étendu ou composé.
 
 Le code existant est la source de vérité de l'architecture frontend.
+
+---
+
+### Architecture par rôle
+
+Le frontend est organisé par rôle métier.
+
+Les rôles actuels sont :
+
+- `super_admin/`
+- `patron/`
+- `admin_immobilier/`
+- `admin_ville/`
+
+Chaque rôle possède son propre espace dans `features/`.
+
+```text
+assets/react/features/
+├── super_admin/
+├── patron/
+├── admin_immobilier/
+├── admin_ville/
+├── auth/
+└── public/
+```
+
+`auth/` n'est pas un rôle. Il représente la fonctionnalité d'authentification.
+
+`public/` est réservé aux pages réellement publiques ou aux fonctionnalités
+communes à plusieurs rôles.
+
+Une fonctionnalité spécifique à un rôle doit rester dans le dossier de ce rôle.
+
+Exemple :
+
+```text
+features/patron/
+```
+
+doit contenir les fonctionnalités propres au `PATRON`.
+
+```text
+features/admin_immobilier/
+```
+
+doit contenir les fonctionnalités propres à `ADMIN_IMMOBILIER`.
+
+```text
+features/admin_ville/
+```
+
+doit contenir les fonctionnalités propres à `ADMIN_VILLE`.
+
+Il est interdit de mélanger les fonctionnalités spécifiques de plusieurs rôles
+dans un même espace.
+
+---
+
+### Structure obligatoire d'un espace de rôle
+
+Pour chaque rôle, la structure suivante doit être respectée :
+
+```text
+features/<role>/
+├── components/
+├── hooks/
+├── pages/
+├── services/
+└── types/
+```
+
+Exemple :
+
+```text
+features/admin_immobilier/
+├── components/
+├── hooks/
+├── pages/
+├── services/
+└── types/
+```
+
+Cette séparation est obligatoire afin d'éviter le mélange des responsabilités.
+
+#### `components/`
+
+Contient les composants UI du rôle.
+
+Les composants doivent être réutilisables et ne doivent pas contenir inutilement
+la logique spécifique d'une page.
+
+#### `hooks/`
+
+Contient les hooks React du rôle.
+
+Les hooks regroupent notamment :
+
+- les états React ;
+- les effets ;
+- les comportements réutilisables ;
+- la logique des formulaires ;
+- la récupération et la gestion des données côté React.
+
+Un hook ne doit pas servir à cacher une logique métier qui appartient à un service.
+
+#### `pages/`
+
+Contient uniquement les pages du rôle.
+
+Une page compose les composants et orchestre l'affichage.
+
+Une page ne doit pas :
+
+- contenir une logique métier importante ;
+- effectuer directement des appels API complexes ;
+- contenir de gros blocs de styles ;
+- devenir un composant monolithique.
+
+#### `services/`
+
+Contient les services responsables de la communication avec l'API et les
+services externes.
+
+Les composants et les pages ne doivent pas effectuer directement des appels
+API lorsqu'un service approprié existe.
+
+#### `types/`
+
+Contient les types TypeScript propres au rôle et à ses fonctionnalités.
+
+Les types doivent rester cohérents avec les DTO et réponses exposés par
+l'API backend.
+
+Ne pas utiliser `any` pour contourner un problème de typage.
+
+---
+
+### Authentification
+
+`features/auth/` est une fonctionnalité transversale et doit respecter la même
+séparation :
+
+```text
+features/auth/
+├── components/
+├── hooks/
+├── pages/
+├── services/
+└── types/
+```
+
+Les éléments liés à l'authentification doivent rester dans cet espace lorsqu'ils
+ne sont pas spécifiques à un rôle.
+
+Exemples :
+
+- `LoginPage`
+- `ForgotPasswordPage`
+- `ResetPasswordPage`
+- `LoginForm`
+- `ForgotPasswordForm`
+- `ResetPasswordForm`
+- services d'authentification ;
+- hooks d'authentification ;
+- types d'authentification.
+
+---
+
+### Pages publiques
+
+`features/public/` est réservé aux fonctionnalités réellement publiques ou
+communes à plusieurs rôles.
+
+Il ne doit pas devenir un dossier fourre-tout.
+
+Une page utilisée uniquement par un rôle doit rester dans le dossier de ce rôle.
+
+Exemple :
+
+```text
+features/patron/pages/DashboardPage.tsx
+```
+
+et non :
+
+```text
+features/public/pages/PatronDashboardPage.tsx
+```
+
+Une page utilisée uniquement par `ADMIN_IMMOBILIER` doit rester dans :
+
+```text
+features/admin_immobilier/pages/
+```
+
+Une page utilisée uniquement par `ADMIN_VILLE` doit rester dans :
+
+```text
+features/admin_ville/pages/
+```
+
+Une fonctionnalité réellement utilisée par plusieurs rôles peut être placée
+dans `public/` ou dans un espace partagé approprié.
+
+Le fait que deux ou trois rôles utilisent une même page ne signifie pas
+automatiquement qu'elle doit être déplacée dans `public/`. L'agent doit vérifier
+si la responsabilité et le comportement sont réellement communs.
+
+---
+
+### Séparation stricte des responsabilités
+
+Il est interdit de mélanger les responsabilités entre :
+
+```text
+components/
+hooks/
+pages/
+services/
+types/
+```
+
+Exemples interdits :
+
+- appel API directement dans une page alors qu'un service existe ;
+- appel API directement dans un composant alors qu'un service existe ;
+- logique métier complexe dans un composant UI ;
+- logique métier complexe dans une page ;
+- types TypeScript importants définis directement dans plusieurs composants ;
+- logique React placée dans un service ;
+- duplication d'un service uniquement pour un autre rôle alors que le comportement
+  est réellement commun ;
+- création d'une architecture parallèle à celle du projet existant.
+
+Chaque fichier doit avoir une responsabilité claire.
+
+---
+
+### Architecture des styles
+
+Les styles SCSS doivent être séparés du code React.
+
+Les fichiers `.tsx` ne doivent pas contenir de gros blocs CSS/SCSS.
+
+L'organisation des styles doit suivre l'organisation fonctionnelle du frontend.
+
+Structure :
+
+```text
+styles/
+├── page/
+│   ├── super_admin/
+│   ├── patron/
+│   ├── admin_immobilier/
+│   └── admin_ville/
+│
+├── public/
+│   ├── login/
+│   ├── forgot-password/
+│   └── reset-password/
+│
+├── components/
+├── layout/
+├── abstracts/
+└── main.scss
+```
+
+---
+
+### Styles des pages par rôle
+
+Lorsqu'un style concerne exclusivement les pages d'un rôle, il doit être placé
+dans :
+
+```text
+styles/page/<role>/
+```
+
+Exemple :
+
+```text
+styles/page/patron/
+├── dashboard.scss
+├── organizations.scss
+└── reports.scss
+```
+
+Exemple :
+
+```text
+styles/page/admin_immobilier/
+├── dashboard.scss
+├── properties.scss
+└── tenants.scss
+```
+
+Exemple :
+
+```text
+styles/page/admin_ville/
+├── dashboard.scss
+└── cities.scss
+```
+
+Exemple :
+
+```text
+styles/page/super_admin/
+├── dashboard.scss
+├── organizations.scss
+└── users.scss
+```
+
+Le style d'une page d'un rôle ne doit pas être placé dans le dossier d'un autre
+rôle.
+
+---
+
+### Styles des pages publiques
+
+Lorsqu'un style concerne une page publique précise, il doit être placé dans :
+
+```text
+styles/public/<nom-de-la-page>/
+```
+
+Exemple :
+
+```text
+styles/public/login/
+└── login.scss
+```
+
+```text
+styles/public/forgot-password/
+└── forgot-password.scss
+```
+
+```text
+styles/public/reset-password/
+└── reset-password.scss
+```
+
+---
+
+### Correspondance page → style
+
+Une page doit utiliser le fichier SCSS correspondant à son propre périmètre.
+
+Exemple :
+
+```text
+features/patron/pages/DashboardPage.tsx
+        ↓
+styles/page/patron/dashboard.scss
+```
+
+Exemple :
+
+```text
+features/admin_immobilier/pages/PropertiesPage.tsx
+        ↓
+styles/page/admin_immobilier/properties.scss
+```
+
+Exemple :
+
+```text
+features/admin_ville/pages/CitiesPage.tsx
+        ↓
+styles/page/admin_ville/cities.scss
+```
+
+Exemple :
+
+```text
+features/public/pages/LoginPage.tsx
+        ↓
+styles/public/login/login.scss
+```
+
+L'agent ne doit pas mélanger les styles de plusieurs rôles dans un même fichier
+SCSS lorsque ces styles sont spécifiques à chaque rôle.
+
+---
+
+### Styles partagés
+
+Les styles réellement communs peuvent être placés dans :
+
+```text
+styles/components/
+styles/layout/
+styles/abstracts/
+```
+
+Utiliser ces emplacements uniquement lorsque le style est réellement partagé.
+
+Exemples :
+
+```text
+styles/components/
+├── button.scss
+├── modal.scss
+└── table.scss
+```
+
+```text
+styles/layout/
+├── sidebar.scss
+├── header.scss
+└── main-layout.scss
+```
+
+```text
+styles/abstracts/
+├── _variables.scss
+├── _mixins.scss
+└── _functions.scss
+```
+
+Ne pas copier un même style dans plusieurs rôles lorsqu'il peut être partagé
+proprement.
+
+À l'inverse, ne pas transformer artificiellement un style spécifique à un rôle
+en composant ou style global uniquement pour éviter un petit doublon.
+
+---
 
 ### Analyse obligatoire avant toute modification
 
@@ -644,28 +1056,242 @@ Avant toute création ou modification importante côté React, l'agent doit :
 
 1. Lire la page concernée.
 2. Identifier les composants utilisés par cette page.
-3. Rechercher les composants similaires ou équivalents déjà présents.
-4. Rechercher les fichiers SCSS/CSS associés.
-5. Identifier les variables, mixins, tokens et styles communs existants.
-6. Comprendre comment les autres pages réalisent le même besoin.
-7. Modifier uniquement la structure nécessaire.
+3. Identifier le rôle auquel appartient la page.
+4. Rechercher les composants similaires ou équivalents déjà présents.
+5. Rechercher les hooks existants pouvant être réutilisés.
+6. Rechercher les services existants pouvant être réutilisés.
+7. Rechercher les types existants.
+8. Rechercher les fichiers SCSS/CSS associés.
+9. Identifier les variables, mixins, tokens et styles communs existants.
+10. Comprendre comment les autres pages réalisent le même besoin.
+11. Vérifier si la fonctionnalité est spécifique à un rôle ou commune à plusieurs rôles.
+12. Modifier uniquement la structure nécessaire.
 
-Ne jamais supposer qu'un composant n'existe pas simplement parce que son nom
-n'est pas connu.
+Ne jamais supposer qu'un composant, hook, service, type ou style n'existe pas
+simplement parce que son nom n'est pas connu.
 
 Utiliser la recherche du projet avant toute création :
 
 ```text
-Composant recherché
+Élément recherché
         ↓
 Recherche dans assets/
         ↓
-Composant existant ?
-   ├── Oui → réutiliser
-   ├── Presque identique → factoriser ou étendre
-   └── Non → créer uniquement si nécessaire
+Élément existant ?
+   ├── Oui
+   │    └── Réutiliser
+   │
+   ├── Presque identique
+   │    └── Factoriser / étendre
+   │
+   └── Non
+        └── Créer uniquement si nécessaire
+```
 
 ---
+
+### Réutilisation entre les rôles
+
+Il est interdit de copier-coller une page, un composant, un hook, un service,
+un type ou un fichier SCSS simplement parce qu'un autre rôle possède déjà une
+fonctionnalité similaire.
+
+Si plusieurs rôles utilisent réellement le même comportement, privilégier
+un élément partagé.
+
+Exemple :
+
+```text
+Composant partagé
+        +
+Hook partagé si nécessaire
+        +
+Service partagé si nécessaire
+        +
+Type partagé si nécessaire
+        +
+Style partagé si nécessaire
+```
+
+plutôt que plusieurs implémentations divergentes.
+
+Cependant, ne pas créer prématurément une abstraction uniquement pour éviter
+quelques lignes de duplication.
+
+L'abstraction doit être justifiée par un véritable besoin de partage.
+
+---
+
+### Règle de décision pour l'emplacement d'un fichier
+
+Avant de créer un fichier frontend, l'agent doit déterminer :
+
+```text
+À qui appartient la fonctionnalité ?
+        │
+        ├── Un seul rôle
+        │      └── features/<role>/
+        │
+        ├── Authentification
+        │      └── features/auth/
+        │
+        ├── Public / commun
+        │      └── features/public/
+        │
+        └── Plusieurs rôles
+               └── Espace partagé approprié
+```
+
+Puis déterminer sa responsabilité :
+
+```text
+Écran / route
+    → pages/
+
+UI réutilisable
+    → components/
+
+Comportement React
+    → hooks/
+
+Communication API
+    → services/
+
+Types TypeScript
+    → types/
+
+Style d'une page de rôle
+    → styles/page/<role>/
+
+Style d'une page publique
+    → styles/public/<nom-de-la-page>/
+
+Style réellement partagé
+    → styles/components/
+       ou styles/layout/
+
+Variables / mixins / fonctions
+    → styles/abstracts/
+```
+
+Cette décision doit être prise avant toute création de fichier.
+
+---
+
+### Sécurité et rôles
+
+La séparation frontend par rôle sert à organiser le code et l'expérience
+utilisateur.
+
+Elle ne constitue jamais une frontière de sécurité.
+
+Le backend reste l'autorité pour :
+
+- l'authentification ;
+- les rôles ;
+- les permissions ;
+- l'isolation entre organisations ;
+- l'accès aux ressources.
+
+Le frontend peut masquer une page, un menu ou une action lorsqu'elle n'est pas
+pertinente pour un rôle, mais l'API doit toujours vérifier l'autorisation.
+
+Ne jamais considérer comme une protection de sécurité :
+
+```text
+route frontend
+sidebar
+bouton masqué
+condition TypeScript
+condition React
+```
+
+La sécurité doit toujours être appliquée côté backend.
+
+---
+
+### Architecture frontend cible
+
+L'architecture cible doit suivre cette organisation :
+
+```text
+assets/react/
+├── features/
+│   ├── super_admin/
+│   │   ├── components/
+│   │   ├── hooks/
+│   │   ├── pages/
+│   │   ├── services/
+│   │   └── types/
+│   │
+│   ├── patron/
+│   │   ├── components/
+│   │   ├── hooks/
+│   │   ├── pages/
+│   │   ├── services/
+│   │   └── types/
+│   │
+│   ├── admin_immobilier/
+│   │   ├── components/
+│   │   ├── hooks/
+│   │   ├── pages/
+│   │   ├── services/
+│   │   └── types/
+│   │
+│   ├── admin_ville/
+│   │   ├── components/
+│   │   ├── hooks/
+│   │   ├── pages/
+│   │   ├── services/
+│   │   └── types/
+│   │
+│   ├── auth/
+│   │   ├── components/
+│   │   ├── hooks/
+│   │   ├── pages/
+│   │   ├── services/
+│   │   └── types/
+│   │
+│   └── public/
+│       ├── components/
+│       ├── hooks/
+│       ├── pages/
+│       ├── services/
+│       └── types/
+│
+└── styles/
+    ├── page/
+    │   ├── super_admin/
+    │   ├── patron/
+    │   ├── admin_immobilier/
+    │   └── admin_ville/
+    │
+    ├── public/
+    │   ├── login/
+    │   ├── forgot-password/
+    │   └── reset-password/
+    │
+    ├── components/
+    ├── layout/
+    ├── abstracts/
+    └── main.scss
+```
+
+Cette architecture doit être appliquée progressivement au code existant.
+
+L'agent ne doit pas effectuer de déplacement, renommage ou refactoring massif
+sans demande explicite.
+
+Lorsqu'un fichier existant ne respecte pas encore cette organisation, l'agent
+doit d'abord identifier l'impact et proposer le déplacement ou le refactoring
+avant de l'effectuer.
+
+Ne jamais changer l'architecture existante simplement parce qu'une autre
+architecture semble plus élégante.
+
+L'agent doit s'adapter à l'architecture du projet et la faire évoluer uniquement
+lorsqu'un besoin concret le justifie.
+```
 
 ## 17. Git
 
