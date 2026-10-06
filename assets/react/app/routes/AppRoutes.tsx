@@ -1,25 +1,6 @@
 // ============================================================
-// upload/react/app/routes/AppRoutes.tsx
+// assets/react/app/routes/AppRoutes.tsx
 // Table de routage du SPA.
-// ============================================================
-//
-// `react-router-dom` (v7) est installé et `main.tsx` monte un
-// `<BrowserRouter>`. Deux familles de routes :
-//
-//   - Hors session (AuthLayout) : `/login`, `/forgot-password`, `/reset-password`.
-//   - Back-office (`/app`, MainLayout) : une route par entrée du menu
-//     (menu plat), garde `AppRouteGuard`, et une page provisoire le temps
-//     que les écrans métier arrivent. Le splat `entree/*` sert aussi les
-//     URLs de drill-down plus profondes que l'entrée elle-même.
-//
-// Les chemins des feuilles ne sont PAS écrits à la main : ils sont dérivés
-// de `sidebar.config.ts` par `buildAppRoutes()`. C'était la source du bug
-// qui rendait le back-office inutilisable — aucune feuille n'était
-// enregistrée, donc `/app` redirigeait vers une destination qui retombait
-// sur `path="*"` qui redirigeait vers `/app`, en boucle. Un chemin ajouté au
-// menu devient routable, et `tests/verify-sidebar-roles.ts` échoue si un
-// lien du menu n'a pas de route ou si une destination d'atterrissage n'est
-// pas routable.
 // ============================================================
 
 import { Navigate, Route, Routes, useNavigate } from 'react-router-dom';
@@ -30,7 +11,6 @@ import { ResetPasswordPage } from '../../features/auth/pages/ResetPasswordPage';
 
 import { AuthLayout } from '../layout/AuthLayout/AuthLayout';
 import { MainLayout } from '../layout/MainLayout/MainLayout';
-import { PlaceholderPage } from '../pages/PlaceholderPage';
 import { ErrorState } from '../../components/UI/ErrorState';
 import { useOrganization } from '../providers/OrganizationProvider';
 import { defaultPathFor } from '../layout/MainLayout/sidebar/sidebar.config';
@@ -43,9 +23,11 @@ import {
 } from './appRoutes.config';
 import { AppRouteGuard } from './AppRouteGuard';
 
+// Import des pages métier
 
 /** Table figée au chargement : le menu est statique dans le bundle. */
 const APP_ROUTES = buildAppRoutes();
+
 
 
 /** `/app` → première feuille du menu du rôle courant (suivie par le sidebar). */
@@ -98,13 +80,14 @@ export function AppRoutes() {
                 <Route element={<AppRouteGuard />}>
                     <Route index element={<AppLanding />} />
 
-                    {APP_ROUTES.map((route) => (
-                        <Route
-                            key={route.path}
-                            path={toRelativeAppRoutePath(route.path)}
-                            element={<PlaceholderPage label={route.label} path={route.path} />}
-                        />
-                    ))}
+                    {APP_ROUTES.map((route) => {
+                        return (
+                            <Route
+                                key={route.path}
+                                path={toRelativeAppRoutePath(route.path)}
+                            />
+                        );
+                    })}
 
                     <Route
                         path={toRelativeAppPath(ACCESS_DENIED_PATH)}

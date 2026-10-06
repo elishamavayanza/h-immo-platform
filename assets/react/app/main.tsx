@@ -41,7 +41,6 @@ import '../../styles/components/Form/_Password.scss';
 import '../../styles/pages/auth/_login.scss';
 import '../../styles/pages/auth/_forgot-password.scss';
 import '../../styles/pages/auth/_reset-password.scss';
-import '../../styles/pages/_placeholder.scss';
 
 function App() {
     return (
