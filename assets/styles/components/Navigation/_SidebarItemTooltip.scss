@@ -1,0 +1,91 @@
+// ============================================================
+// COMPOSANT — BULLE D'ITEM DU SIDEBAR (rail replié)
+// Fichier : components/Navigation/Sidebar/_SidebarItemTooltip.scss
+// ------------------------------------------------------------
+// Rôle :
+//   Styles de la bulle <SidebarItemTooltip /> qui affiche le nom
+//   d'un menu au survol quand le sidebar est réduit au rail.
+//   Remplace l'infobulle native (`title`), non stylable.
+//   Position fixed définie côté React via `useFloatingPosition` :
+//   ici on ne gère que l'apparence.
+//
+// Dépendances :
+//   - baseVariables/_variables.scss
+//   - baseVariables/_mixins.scss
+// ============================================================
+
+@use '../../baseVariables/variables' as *;
+@use '../../baseVariables/mixins' as *;
+
+
+// ============================================================
+// BULLE
+// ============================================================
+
+.sidebar-item-tooltip {
+    @include elevation(md);
+    // Au-dessus du rail (`$z-fixed`) et du voile du tiroir mobile
+    // (`$z-modal-backdrop`), sous le menu contextuel : la bulle ne fait
+    // que flotter au-dessus de la page, sans interaction.
+    z-index: $z-tooltip;
+    box-sizing: border-box;
+    max-width: 260px;
+    padding: $spacing-1 $spacing-2;
+    overflow: hidden;
+    background-color: $color-bg-elevated;
+    border: 1px solid $color-border-light;
+    border-radius: $radius-sm;
+    color: $color-text-primary;
+    font-family: $font-family-base;
+    font-size: $font-size-xs;
+    font-weight: $font-weight-medium;
+    line-height: $line-height-snug;
+    // Une seule ligne, comme toute tooltip : un libellé long est rogné
+    // en `…` plutôt que d'occuper tout le flanc de l'écran.
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    // La bulle ne fait que signaler : elle ne doit pas voler le pointeur
+    // (le survol reste sur le bouton du menu).
+    pointer-events: none;
+    animation: sidebar-item-tooltip-in $transition-fast both;
+
+    // Flèche vers la gauche : elle pointe le bouton du rail d'où la bulle
+    // sort, comme le volet du flyout.
+    &::after {
+        content: '';
+        position: absolute;
+        top: 50%;
+        right: 100%;
+        width: 8px;
+        height: 8px;
+        margin-top: -4px;
+        background-color: $color-bg-elevated;
+        border-left: 1px solid $color-border-light;
+        border-bottom: 1px solid $color-border-light;
+        transform: rotate(45deg);
+    }
+}
+
+
+// ============================================================
+// ANIMATION
+// ============================================================
+// Apparaît depuis le rail : `opacity` partagée pour que la bulle ne
+// soit jamais à moitié visible.
+// ============================================================
+
+@keyframes sidebar-item-tooltip-in {
+    from { opacity: 0; transform: translateX(-4px); }
+    to   { opacity: 1; transform: translateX(0); }
+}
+
+
+// ============================================================
+// PRÉFÉRENCES SYSTÈME
+// ============================================================
+
+@media (prefers-reduced-motion: reduce) {
+    .sidebar-item-tooltip {
+        animation: none;
+    }
+}

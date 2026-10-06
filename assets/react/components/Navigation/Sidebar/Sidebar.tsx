@@ -1,6 +1,7 @@
-import React, { useMemo } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useSidebar, UseSidebarProps, SidebarItem, SidebarSubItem, SidebarGroup } from '../../../hook-components/Navigation/Sidebar';
 import { SidebarFlyout } from './SidebarFlyout.tsx';
+import { SidebarItemTooltip } from './SidebarItemTooltip.tsx';
 import { isBranchActive } from '../../../hook-components/Navigation/Sidebar/sidebar.state.ts';
 
 const CollapseIcon = () => (
@@ -103,6 +104,40 @@ export function Sidebar({
     const displayCollapsed = isVisuallyCollapsed;
     const classes = hookClasses;
 
+    // ─────────────────────────────────────────
+    // Bulle du nom de menu au survol du rail
+    // ─────────────────────────────────────────
+    // Repliés, les libellés sont masqués : une infobulle stylée (remplaçant
+    // l'attribut natif `title`) redonne le nom au survol. Un seul tooltip
+    // peut exister à la fois ; il est monté après un court délai pour ne
+    // pas surgir au simple passage du curseur.
+    const [tooltip, setTooltip] = useState<{ anchor: HTMLElement; label: string } | null>(null);
+    const tooltipTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+    const cancelTooltip = () => {
+        if (tooltipTimer.current !== null) {
+            clearTimeout(tooltipTimer.current);
+            tooltipTimer.current = null;
+        }
+        setTooltip(null);
+    };
+
+    const scheduleTooltip = (anchor: HTMLElement, label: string) => {
+        // `cancelTooltip` fait office de reset : un survol feuille → parent
+        // ne laisse pas traîner l'ancienne bulle jusqu'à la nouvelle entrée.
+        cancelTooltip();
+        if (!displayCollapsed || label === '') return;
+
+        tooltipTimer.current = setTimeout(() => setTooltip({ anchor, label }), 250);
+    };
+
+    // Nettoyage du timer au démontage, et disparition de la bulle dès que
+    // le sidebar se déplie (le libellé redevient visible dans le flux).
+    useEffect(() => cancelTooltip, []);
+    useEffect(() => {
+        if (!displayCollapsed) cancelTooltip();
+    }, [displayCollapsed]);
+
     /**
      * Correspondance par segment de chemin : `/app/patrimoine/villes` doit
      * rester actif sur une route fille (`/app/patrimoine/villes/42`) sans
@@ -138,6 +173,9 @@ export function Sidebar({
         isBranchActive(item, activeIds ?? new Set());
 
     const handleItemClick = (item: SidebarItem | SidebarSubItem) => {
+        // Le clic est une décision : la bulle doit disparaître avant que la
+        // navigation n'emmène l'utilisateur loin de son ancre.
+        cancelTooltip();
         onItemClick?.(item);
 
         const hasChildren = 'children' in item && item.children !== undefined && item.children.length > 0;
@@ -231,10 +269,14 @@ export function Sidebar({
         const subitemsId = flyoutOpen
             ? `sidebar-flyout-${item.id}`
             : `sidebar-subitems-${item.id}`;
-        // Replié, le libellé est masqué (display: none) : `title` et
-        // `aria-label` le rendent à nouveau disponible au survol et aux
-        // lecteurs d'écran, qui n'auraient sinon qu'une icône sans nom.
+        // Replié, le libellé est masqué (display: none) : `aria-label` le rend
+        // à nouveau disponible aux lecteurs d'écran, qui n'auraient sinon
+        // qu'une icône sans nom.
         const accessibleName = collapsed ? textLabel : undefined;
+        // Bulle visuelle au survol : seulement quand le nom ne s'affiche nulle
+        // part ailleurs. Une feuille ou un parent sans flyout → bulle ; un
+        // parent avec flyout → c'est le panneau lui-même qui montre le nom.
+        const tooltipLabel = collapsed && (!hasChildren || !isFlyoutEnabled) ? textLabel : undefined;
         // Un parent sans feuille propre n'est pas une destination : allumer son
         // état actif quand un de ses enfants est sélectionné donnerait deux
         // entrées actives pour une seule page. `isBranchActive` couvre les deux
@@ -250,12 +292,27 @@ export function Sidebar({
                     ref={(element: HTMLButtonElement | null) => registerFlyoutAnchor(item.id, element)}
                     className={`sidebar__item ${branchActive(item) ? 'sidebar__item--active' : ''} ${item.disabled ? 'sidebar__item--disabled' : ''}`}
                     onClick={() => handleBranchClick(item)}
-                    onMouseEnter={() => {
-                        if (!hasChildren || !isFlyoutEnabled || item.disabled || isFlyoutOpen(item.id)) return;
+                    onMouseEnter={(event) => {
+                        // Parent avec flyout : le panneau affiche déjà le nom,
+                        // pas de bulle par-dessus → ouvre le flyout seulement.
+                        if (hasChildren) {
+                            if (!isFlyoutEnabled || item.disabled || isFlyoutOpen(item.id)) return;
 
-                        openFlyout(item.id);
+                            openFlyout(item.id);
+                            return;
+                        }
+
+                        // Feuille (ou parent sans flyout) : la bulle redonne
+                        // le nom masqué au rail, comme l'attribut `title`
+                        // d'avant — le passage par `currentTarget` évite de
+                        // stocker l'ancre dans un état par item.
+                        if (tooltipLabel !== undefined) {
+                            scheduleTooltip(event.currentTarget, tooltipLabel);
+                        }
                     }}
                     onMouseLeave={() => {
+                        cancelTooltip();
+
                         if (!hasChildren || !isFlyoutEnabled || isFlyoutOpen(item.id)) return;
 
                         scheduleFlyoutClose();
@@ -269,7 +326,6 @@ export function Sidebar({
                     // détaché, information absente d'un simple repli en ligne.
                     aria-haspopup={hasChildren && isFlyoutEnabled ? 'menu' : undefined}
                     aria-label={accessibleName}
-                    title={accessibleName}
                 >
                     {item.icon && <span className="sidebar__icon">{item.icon}</span>}
                     {!collapsed && <span className="sidebar__label">{item.label}</span>}
@@ -398,6 +454,12 @@ export function Sidebar({
                     onPointerLeave={scheduleFlyoutClose}
                 />
             )}
+
+            {/* Bulle du nom au survol du rail : comme le flyout, elle est
+                portalée sur `document.body` car le `<aside>` est en
+                `overflow: hidden`. Elle n'existe qu'au survol (montée après
+                délai), donc rien à démonter à la fermeture. */}
+            {tooltip !== null && <SidebarItemTooltip anchorEl={tooltip.anchor} label={tooltip.label} />}
         </aside>
     );
 }
