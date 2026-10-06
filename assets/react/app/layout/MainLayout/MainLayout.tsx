@@ -148,8 +148,9 @@ export function MainLayout() {
 
 return (
         <div className="main-layout">
-            {/* Bouton hamburger flottant — visible UNIQUEMENT sur mobile (< 768px).
-                Fixed en bas à gauche, au-dessus du contenu, z-index sous le drawer. */}
+            {/* Bouton hamburger flottant — visible dès que le layout passe
+                en tiroir (largeur < 768px OU orientation portrait). Fixed,
+                z-index sous le drawer. */}
             <button
                 type="button"
                 className="main-layout__mobile-toggle"

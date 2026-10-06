@@ -18,11 +18,11 @@
 // l'Organization ACTIVE (jamais un rôle global de compte).
 //
 // Règle d'affichage (acceptance) :
-//   - PATRON           : 7 entrées (Tableau de bord + 6 opérationnelles)
-//   - ADMIN_IMMOBILIER : 6 entrées (sans Administration, AVEC Personnel :
+//   - PATRON           : 8 entrées (Tableau de bord + 7 opérationnelles)
+//   - ADMIN_IMMOBILIER : 7 entrées (sans Administration, AVEC Personnel :
 //                        le backend lui accorde VIEW/CREATE/UPDATE/DELETE
 //                        sur Worker et WorkerAssignment)
-//   - ADMIN_VILLE      : 5 entrées (sans Administration ni Personnel :
+//   - ADMIN_VILLE      : 6 entrées (sans Administration ni Personnel :
 //                        VIEW_WORKER seul ne justifie pas une entrée)
 //   - SUPER_ADMIN      : 5 entrées, toutes au niveau plateforme
 //
@@ -36,6 +36,29 @@
 // le cahier des charges d'origine (« le Patron suit son patrimoine à
 // distance depuis son tableau de bord »). Il ne doit jamais être omis au
 // profit d'un atterrissage direct sur une liste opérationnelle.
+//
+// RÈGLE DE CONCEPTION — un MENU PLAT, PAS UN PLAN DE TABLE :
+// ----------------------------------------------------------
+// Une relation 1─N du modèle de données n'est PAS une raison de créer
+// deux niveaux de menu : un sous-item n'a de valeur de navigation que si
+// cet écran répond à une question posée INDÉPENDAMMENT de son parent
+// (« situation mensuelle des loyers », « liste des impayés » : oui ;
+// « les parcelles de quelle ville ? », « les baux de quel locataire ? » :
+// non, c'est du drill-down DANS la page du parent). Le menu ci-dessous
+// est donc entièrement PLAT : aucune entrée ne porte de `children`.
+//
+// Cascades de listes qui deviennent du drill-down (l'URL profonde reste
+// partageable — le splat de route `patrimoine/*` la sert, et
+// `isPathInMenu()` la déclare couverte par son entrée de premier niveau) :
+//   - Patrimoine   découpe sa propre hiérarchie : Ville → Parcelle →
+//                   Bâtiment → Unité, en fil d'Ariane interne.
+//   - Locataires   héberge les Baux d'un locataire précis.
+//   - Loyers       héberge les Paiements d'une échéance précise mais reste
+//                   une entrée indépendante : le suivi mensuel des loyers
+//                   et la liste des impayés se consultent SANS passer par
+//                   un locataire précis.
+//   - Personnel    héberge les Affectations d'un ouvrier précis.
+//   - Administration héberge l'Équipe et les Villes assignées d'un membre.
 //
 // ⚠️ Confinement : les seuls `if (role === …)` du front qui décident du
 // menu vivent ici. La garde de route (`AppRouteGuard`) ne teste jamais le
@@ -60,28 +83,48 @@ const DASHBOARD: AppMenuItem = {
     path: '/app/dashboard',
 };
 
+/**
+ * Patrimoine : UNE entrée, pas quatre. « Villes », « Parcelles »,
+ * « Bâtiments » et « Unités » ne répondent à aucune question posée seule
+ * (« les parcelles de QUELLE ville ? ») : ce sont quatre vues d'une même
+ * chaîne hiérarchique, que la page Patrimoine parcourt en drill-down
+ * (Ville → Parcelle → Bâtiment → Unité), pas quatre rapports indépendants.
+ * Les URLs profondes (`/app/patrimoine/villes/:id/parcelles/:id`) restent
+ * servies par le splat de route et couvertes par `isPathInMenu()`.
+ */
 const PATRIMOINE: AppMenuItem = {
     id: 'patrimoine',
     label: 'Patrimoine',
     icon: 'building',
-    children: [
-        { id: 'patrimoine-villes', label: 'Villes', icon: 'map-pin', path: '/app/patrimoine/villes' },
-        { id: 'patrimoine-parcelles', label: 'Parcelles', icon: 'land-plot', path: '/app/patrimoine/parcelles' },
-        { id: 'patrimoine-batiments', label: 'Bâtiments', icon: 'office-building', path: '/app/patrimoine/batiments' },
-        { id: 'patrimoine-unites', label: 'Unités', icon: 'door', path: '/app/patrimoine/unites' },
-    ],
+    path: '/app/patrimoine',
 };
 
-const LOCATION: AppMenuItem = {
-    id: 'location',
-    label: 'Location',
-    icon: 'key',
-    children: [
-        { id: 'location-locataires', label: 'Locataires', icon: 'user-single', path: '/app/location/locataires' },
-        { id: 'location-baux', label: 'Baux', icon: 'file-signature', path: '/app/location/baux' },
-        { id: 'location-loyers', label: 'Loyers', icon: 'calendar-due', path: '/app/location/loyers' },
-        { id: 'location-paiements', label: 'Paiements', icon: 'credit-card', path: '/app/location/paiements' },
-    ],
+/**
+ * Locataires : entrée indépendante. Les Baux n'ont de sens qu'AVEC un
+ * contexte (les baux de ce locataire) : ils ne figurent pas au menu, ils
+ * sont atteints en drill-down depuis la page d'un locataire (et leur URL
+ * profonde `/app/location/locataires/:id/baux` reste couverte).
+ */
+const LOCATAIRES: AppMenuItem = {
+    id: 'location-locataires',
+    label: 'Locataires',
+    icon: 'user-single',
+    path: '/app/location/locataires',
+};
+
+/**
+ * Loyers : entrée indépendante, et c'est LE contre-exemple qui prouve la
+ * règle. Le suivi financier des échéances se consulte SANS passer par un
+ * locataire précis (« quelles échéances sont en retard ce mois-ci, toutes
+ * propriétés confondues ? ») — exactement le « situation mensuelle des
+ * loyers » et la « liste des impayés » du cahier des charges d'origine.
+ * Les Paiements restent en drill-down depuis une échéance.
+ */
+const LOYERS: AppMenuItem = {
+    id: 'location-loyers',
+    label: 'Loyers',
+    icon: 'calendar-due',
+    path: '/app/location/loyers',
 };
 
 /**
@@ -90,11 +133,15 @@ const LOCATION: AppMenuItem = {
  * donnée — pas de raison de la dupliquer à deux endroits du menu), ce qui
  * ne laissait plus qu'un seul enfant ici : un sous-menu à un seul item est
  * un clic inutile, donc on le supprime plutôt que de le garder « au cas où ».
+ *
+ * Icône : `wallet`, volontairement distincte de celle de Loyers — les deux
+ * sont des destinations financières de premier niveau, et deux icônes
+ * proches (« pièces ») referaient la confusion qu'on cherche à lever.
  */
 const DEPENSES: AppMenuItem = {
     id: 'depenses',
     label: 'Dépenses',
-    icon: 'coins',
+    icon: 'wallet',
     path: '/app/depenses',
 };
 
@@ -106,31 +153,34 @@ const VITRINE: AppMenuItem = {
     path: '/app/vitrine',
 };
 
-const ADMINISTRATION: AppMenuItem = {
-    id: 'administration',
-    label: 'Administration',
-    icon: 'id-badge',
-    children: [
-        { id: 'administration-equipe', label: 'Équipe', icon: 'user-cog', path: '/app/administration/equipe' },
-        { id: 'administration-villes', label: 'Villes assignées', icon: 'map-pins', path: '/app/administration/villes' },
-    ],
-};
-
+/**
+ * Personnel : une entrée. Les Affectations ne se consultent pas seules
+ * (« les affectations de QUEL ouvrier ? ») : elles sont atteintes en
+ * drill-down depuis la page d'un ouvrier, jamais au menu.
+ */
 const PERSONNEL: AppMenuItem = {
     id: 'personnel',
     label: 'Personnel',
     icon: 'hard-hat',
-    children: [
-        { id: 'personnel-ouvriers', label: 'Ouvriers', icon: 'tools', path: '/app/personnel/ouvriers' },
-        { id: 'personnel-affectations', label: 'Affectations', icon: 'clipboard-check', path: '/app/personnel/affectations' },
-    ],
+    path: '/app/personnel',
+};
+
+/**
+ * Administration : une entrée. « Équipe » et « Villes assignées » se
+ * gèrent depuis la fiche d'un membre de l'équipe (drill-down), pas au menu.
+ */
+const ADMINISTRATION: AppMenuItem = {
+    id: 'administration',
+    label: 'Administration',
+    icon: 'id-badge',
+    path: '/app/administration',
 };
 
 /**
  * Menu des rôles métier d'organisation, par rôle.
  *
  * - `patron` : tout le menu.
- * - `admin_immobilier` : opérations + Personnel, qui est la 6e entrée
+ * - `admin_immobilier` : opérations + Personnel, qui est la 7e entrée
  *   (le backend lui accorde CREATE/UPDATE/DELETE sur Worker, cf.
  *   `SecurityService::checkAdminImmobilierAction`). Seule l'Administration
  *   reste réservée au PATRON.
@@ -139,9 +189,9 @@ const PERSONNEL: AppMenuItem = {
  *   Administration.
  */
 export const ORGANIZATION_SIDEBAR: Record<OrganizationRole, SidebarMenu> = {
-    patron: [DASHBOARD, PATRIMOINE, LOCATION, DEPENSES, VITRINE, PERSONNEL, ADMINISTRATION],
-    admin_immobilier: [DASHBOARD, PATRIMOINE, LOCATION, DEPENSES, VITRINE, PERSONNEL],
-    admin_ville: [DASHBOARD, PATRIMOINE, LOCATION, DEPENSES, VITRINE],
+    patron: [DASHBOARD, PATRIMOINE, LOCATAIRES, LOYERS, DEPENSES, VITRINE, PERSONNEL, ADMINISTRATION],
+    admin_immobilier: [DASHBOARD, PATRIMOINE, LOCATAIRES, LOYERS, DEPENSES, VITRINE, PERSONNEL],
+    admin_ville: [DASHBOARD, PATRIMOINE, LOCATAIRES, LOYERS, DEPENSES, VITRINE],
 };
 
 /** Menu SUPER_ADMIN : aucune entrée métier d'organisation. */
@@ -202,35 +252,34 @@ export function resolveSidebar(platformRole: PlatformRole | null, organizationRo
 }
 
 /**
- * Vrai si `pathname` correspond à un item (feuille ou sous-item) du menu.
+ * Vrai si `pathname` est couvert par une entrée du menu.
+ *
+ * Le menu est plat : une entrée couvre sa propre page ET tous les
+ * drill-down sous son chemin (`/app/patrimoine/villes/12/parcelles/4` est
+ * couvert par `/app/patrimoine`) — les URLs profondes restent partageables
+ * par lien même quand le sidebar n'affiche que l'entrée de premier niveau.
  *
  * La garde de route (`AppRouteGuard`) s'appuie exactement sur la même
- * vérité que le menu : une route non présente dans le menu du rôle courant
- * est hors de portée. Confort d'affichage uniquement — l'API reste l'autorité
- * de sécurité (une URL forgée sera de toute façon refusée en 403 par le
- * backend).
+ * vérité que le menu : une route non couverte par le menu du rôle courant
+ * est hors de portée. Confort d'affichage uniquement — l'API reste
+ * l'autorité de sécurité (une URL forgée sera de toute façon refusée en
+ * 403 par le backend).
  */
 export function isPathInMenu(menu: SidebarMenu, pathname: string): boolean {
-    return menu.some(item => item.path === pathname
-        || (item.children !== undefined && isPathInMenu(item.children, pathname)));
+    return menu.some(item => item.path !== undefined
+        && (pathname === item.path || pathname.startsWith(`${item.path}/`)));
 }
 
 /**
  * Chemin d'atterrissage par défaut pour un rôle donné : toujours le
  * Tableau de bord quand il existe (première entrée de chaque menu), sinon
- * la première feuille rencontrée.
+ * la première entrée portant un `path`.
  */
 export function defaultPathFor(platformRole: PlatformRole | null, organizationRole: OrganizationRole | null): string {
     const menu = resolveSidebar(platformRole, organizationRole);
 
     for (const item of menu) {
         if (item.path) return item.path;
-
-        if (item.children?.length) {
-            for (const child of item.children) {
-                if (child.path) return child.path;
-            }
-        }
     }
 
     return '/app/access-denied';

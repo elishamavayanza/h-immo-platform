@@ -37,7 +37,7 @@ import type { OrganizationRole, PlatformRole } from '../../../services/api/api.t
 
 /** Une feuille routable du back-office. */
 export interface AppRoute {
-    /** Chemin ABSOLU, tel qu'écrit dans le menu (`/app/patrimoine/villes`). */
+    /** Chemin ABSOLU, tel qu'écrit dans le menu (`/app/patrimoine`). */
     path: string;
     /** Identifiant de l'item de menu d'origine. */
     id: string;
@@ -54,10 +54,10 @@ export const ACCESS_DENIED_PATH = '/app/access-denied';
 /**
  * Toutes les combinaisons de rôles possibles.
  *
- * La table doit contenir l'UNION des feuilles de tous les rôles : le
+ * La table doit contenir l'UNION des routes de tous les rôles : le
  * routeur-matche l'URL avant que la garde ne statue sur le rôle. Si seule
- * la feuille du rôle courant était enregistrée, un `ADMIN_VILLE` qui saisit
- * `/app/personnel/ouvriers` tomberait sur le `*` — c'est-à-dire sur une
+ * la route du rôle courant était enregistrée, un `ADMIN_VILLE` qui saisit
+ * `/app/personnel` tomberait sur le `*` — c'est-à-dire sur une
  * redirection, pas sur un 403 explicite.
  */
 const ROLE_COMBINATIONS: ReadonlyArray<[PlatformRole | null, OrganizationRole | null]> = [
@@ -68,7 +68,7 @@ const ROLE_COMBINATIONS: ReadonlyArray<[PlatformRole | null, OrganizationRole | 
     [null, null],
 ];
 
-/** Parcourt un menu et renvoie ses feuilles (items porteurs d'un `path`). */
+/** Parcourt un menu et renvoie ses entrées (items porteurs d'un `path`). */
 function collectLeaves(menu: SidebarMenu, collected: AppRoute[]): void {
     for (const item of menu) {
         if (item.path !== undefined) {
@@ -109,20 +109,22 @@ export function findAppRoute(pathname: string): AppRoute | undefined {
 
 /**
  * Chemin RELATIF attendu par un `<Route>` enfant de `/app`.
- * `/app/patrimoine/villes` → `patrimoine/villes`.
+ * `/app/patrimoine` → `patrimoine`.
  */
 export function toRelativeAppPath(path: string): string {
     return path.startsWith(`${APP_ROOT}/`) ? path.slice(APP_ROOT.length + 1) : path;
 }
 
 /**
- * Idem, mais avec un `splat` : `/app/patrimoine/villes` → `patrimoine/villes/*`.
+ * Idem, mais avec un `splat` : `/app/patrimoine` → `patrimoine/*`.
  *
- * Une feuille du menu peut être pointée par une URL plus profonde que
- * lui-même (`/app/patrimoine/villes/42`), ce que la mise en évidence du
- * sidebar considère déjà comme « dans la page ». Avec le splat, ces liens
- * profonds affichent la feuille au lieu de retomber sur l'atterrissage du
- * rôle. En React Router v6+, `x/*` matche `x` comme `x/…`.
+ * Une entrée du menu est atteinte par des URL plus profondes que
+ * lui-même (`/app/patrimoine/villes/12/parcelles/4`), ce que la mise en
+ * évidence du sidebar considère déjà comme « dans la page ». Avec le
+ * splat, ces liens profonds affichent l'entrée au lieu de retomber sur
+ * l'atterrissage du rôle (c'est ainsi que le drill-down reste partageable
+ * par lien, même hors menu). En React Router v6+, `x/*` matche `x` comme
+ * `x/…`.
  */
 export function toRelativeAppRoutePath(path: string): string {
     return `${toRelativeAppPath(path)}/*`;

@@ -26,18 +26,24 @@ const IconBuilding = () => (
         <path d="M9 8h2M9 12h2M9 16h2" />
     </svg>
 );
-const IconKey = () => (
+const IconUserSingle = () => (
     <svg {...STROKE}>
-        <circle cx="8" cy="15" r="4" />
-        <path d="M10.8 12.2 21 2" />
-        <path d="M17 6l3 3" />
+        <circle cx="12" cy="8" r="3.5" />
+        <path d="M5 20a7 7 0 0 1 14 0" />
     </svg>
 );
-const IconCoins = () => (
+const IconCalendarDue = () => (
     <svg {...STROKE}>
-        <circle cx="9" cy="9" r="6" />
-        <path d="M14.5 5.5a6 6 0 1 1-9 9" />
-        <path d="M9 6v6M6.5 8h5" />
+        <rect x="3" y="5" width="18" height="16" rx="2" />
+        <path d="M3 10h18M8 3v4M16 3v4" />
+        <path d="m9 15 2 2 4-4" />
+    </svg>
+);
+const IconWallet = () => (
+    <svg {...STROKE}>
+        <path d="M3 7h14a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h12" />
+        <path d="M17 13.5h3a1 1 0 0 1 1 1v2a1 1 0 0 1-1 1h-3" />
+        <circle cx="17.5" cy="15" r="0.8" fill="currentColor" stroke="none" />
     </svg>
 );
 const IconStorefront = () => (
@@ -95,12 +101,13 @@ const IconExchange = () => (
 
 const ICONS: { name: string; label: string; usedFor: string; Icon: () => ReactNode }[] = [
     { name: 'gauge', label: 'Tableau de bord', usedFor: 'tous les rôles, 1re entrée', Icon: IconGauge },
-    { name: 'building', label: 'Patrimoine', usedFor: 'villes/parcelles/bâtiments/unités', Icon: IconBuilding },
-    { name: 'key', label: 'Location', usedFor: 'locataires/baux/loyers/paiements', Icon: IconKey },
-    { name: 'coins', label: 'Dépenses', usedFor: 'feuille directe', Icon: IconCoins },
+    { name: 'building', label: 'Patrimoine', usedFor: 'drill-down Ville→Parcelle→Bâtiment→Unité', Icon: IconBuilding },
+    { name: 'user-single', label: 'Locataires', usedFor: 'Baux en drill-down', Icon: IconUserSingle },
+    { name: 'calendar-due', label: 'Loyers', usedFor: 'suivi mensuel & impayés — Paiements en drill-down', Icon: IconCalendarDue },
+    { name: 'wallet', label: 'Dépenses', usedFor: 'sorties de caisse — distincte de Loyers', Icon: IconWallet },
     { name: 'storefront', label: 'Vitrine', usedFor: 'annonces publiques', Icon: IconStorefront },
-    { name: 'id-badge', label: 'Administration', usedFor: 'équipe & rôles — PATRON', Icon: IconIdBadge },
-    { name: 'hard-hat', label: 'Personnel', usedFor: 'ouvriers/affectations', Icon: IconHardHat },
+    { name: 'id-badge', label: 'Administration', usedFor: 'Équipe & Villes assignées — PATRON', Icon: IconIdBadge },
+    { name: 'hard-hat', label: 'Personnel', usedFor: 'Affectations en drill-down', Icon: IconHardHat },
     { name: 'users', label: 'Utilisateurs', usedFor: 'plateau SUPER_ADMIN', Icon: IconUsers },
     { name: 'briefcase', label: 'Organisations', usedFor: 'entreprises clientes — SUPER_ADMIN', Icon: IconBriefcase },
     { name: 'audit', label: "Journal d'audit", usedFor: 'plateforme & organisation', Icon: IconAudit },

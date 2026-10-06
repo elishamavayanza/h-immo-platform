@@ -18,11 +18,11 @@
 //      suivant est un `-`, pas un `/`).
 //
 //   2. `resolveActiveMenu(menu, pathname)` — ensemble des ids
-//      actifs : la feuille ET toutes ses sections parentes. Sans
-//      cette remontée, un utilisateur arrivant sur
-//      `/app/patrimoine/villes` ne verrait AUCUN item en état actif
-//      (le parent n'a pas de `path`), donc il ne saurait pas dans
-//      quelle section il se trouve.
+//      actifs : l'entrée couvrant `pathname` (une URL de drill-down
+//      `/app/patrimoine/villes` reste dans l'entrée `/app/patrimoine`).
+//      Sans cette correspondance par préfixe de segment, un utilisateur
+//      arrivant sur une page ouverte depuis le menu ne verrait AUCUN item
+//      en état actif.
 //
 // Le retour est un `Set<string>` d'ids : l'appelant s'en sert pour
 // marquer les items (`active`) et pour ouvrir d'emblée les sections
@@ -53,9 +53,10 @@ export function isRouteMatch(route: string | undefined, pathname: string): boole
 }
 
 /**
- * Ids actifs du menu pour `pathname` : la feuille visée plus toutes
- * ses sections parentes (une seule profondeur de sous-menu dans la
- * configuration, mais la fonction reste récursive).
+ * Ids actifs du menu pour `pathname` : l'entrée dont le `path` couvre
+ * `pathname` (route fille comprise). La fonction reste récursive pour
+ * rester générique si un `children` de menu réapparaissait, mais le menu
+ * actuel est plat.
  *
  * Une route hors menu renvoie un ensemble vide : c'est le cas normal
  * d'un 404 ou d'une page sans entrée de menu, pas une erreur.
