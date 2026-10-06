@@ -225,10 +225,15 @@ export function Sidebar({
         handleItemClick(item);
     };
 
-    // Sur mobile, le parent bascule la section dans le tiroir (toggle).
+    // Sur mobile, le PARENT bascule sa section dans le tiroir (toggle). Une
+    // feuille de premier niveau (sans enfants) ne doit PAS être interceptée :
+    // il faut vérifier le niveau du menu, sinon elle ne naviguerait jamais et
+    // ne refermerait pas le tiroir (elle « basculait » une section inexistante).
     // Sur desktop, handleItemClick gère flyout / toggle section.
     const handleBranchClick = (item: SidebarItem) => {
-        if (isMobileOpen) {
+        const hasChildren = item.children !== undefined && item.children.length > 0;
+
+        if (isMobileOpen && hasChildren) {
             toggleSection(item.id);
             return;
         }
