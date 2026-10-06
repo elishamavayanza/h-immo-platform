@@ -296,9 +296,25 @@
     width: 100%;
 }
 
+// Piège de largeur : `.popover-menu__trigger` est en `inline-flex`
+// (shrink-to-fit) et sa largeur intrinsèque inclut le nom complet
+// (`white-space: nowrap`), donc le footer s'élargissait selon le nom
+// affiché (mesuré : 166px pour « Jean Dupont », 400px pour un nom long,
+// débordant des 264px du sidebar). On impose une largeur DEFINIE à
+// toute la chaîne : seule la largeur du sidebar compte, le nom est
+// ensuite tronqué (ellipsis) — la carte reste stable quel que soit
+// le nom ou le rôle.
+.user-menu .popover-menu__trigger {
+    display: flex;
+    width: 100%;
+    min-width: 0;
+}
+
 .user-menu__trigger {
     @include flex(row, center, flex-start, $spacing-3);
     @include focus-ring;
+    width: 100%;
+    min-width: 0;
     padding: $spacing-2;
     background-color: transparent;
     border: 1px solid transparent;
@@ -368,6 +384,7 @@
 .user-menu__wrapper {
     @include flex(row, center, center, $spacing-3);
     width: 100%;
+    min-width: 0;
     padding: $spacing-2 $spacing-3;
     background-color: $color-bg-card;
     border: 1px solid $color-border-light;
