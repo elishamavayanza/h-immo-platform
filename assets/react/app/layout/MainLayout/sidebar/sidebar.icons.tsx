@@ -58,12 +58,15 @@ export const IconKey = (): ReactNode => (
     </svg>
 );
 
-/** Devise — Dépenses. */
-export const IconCoins = (): ReactNode => (
+/** Portefeuille — Dépenses. Distincte de Loyers : les deux sont des
+ *  destinations financières de premier niveau, et se distinguer au premier
+ *  coup d'œil évite de confondre « ce qui rentre » (échéances) et « ce qui
+ *  sort » (dépenses). */
+export const IconWallet = (): ReactNode => (
     <svg {...STROKE}>
-        <circle cx="9" cy="9" r="6" />
-        <path d="M14.5 5.5a6 6 0 1 1-9 9" />
-        <path d="M9 6v6M6.5 8h5" />
+        <path d="M3 7h14a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h12" />
+        <path d="M17 13.5h3a1 1 0 0 1 1 1v2a1 1 0 0 1-1 1h-3" />
+        <circle cx="17.5" cy="15" r="0.8" fill="currentColor" stroke="none" />
     </svg>
 );
 
@@ -134,14 +137,15 @@ export const IconExchange = (): ReactNode => (
 );
 
 // ─────────────────────────────────────────
-// ICÔNES DES FEUILLES (sous-menus)
+// ICÔNES DES PAGES (drill-down)
 // ─────────────────────────────────────────
-// Sous 768px le menu se réduit à un rail de 72px : le libellé est masqué et
-// seule l'icône subsiste. Sans icône, une feuille y devient un composant sans
-// aucun visuel — elle n'est plus identifiable ni cliquable au doigt. Les
-// parents (Patrimoine, Location…) ne suffisent donc pas : chaque feuille porte
-// sa propre icône, pour que le rail soit une vraie navigation, pas une liste
-// de trois entrées qui obligent à ouvrir le tiroir pour aller plus loin.
+// Le menu est entièrement plat (voir `sidebar.config.ts` : une entrée par
+// destination, jamais de hiérarchie calquée sur le schéma de données). Ces
+// icônes restent déclarées pour être réutilisées PAR les pages elles-mêmes
+// (onglets/fils d'Ariane du drill-down Ville → Parcelle → Bâtiment → Unité,
+// Baux, Affectations, Équipe, Villes assignées) et par la vitrine publique.
+// Elles gardent leur nom stable, même hors du menu, pour ne pas re-casser
+// ce que le HTML du rail ou une page future référence déjà.
 
 /** Repère de carte — Villes. */
 export const IconMapPin = (): ReactNode => (
@@ -263,7 +267,6 @@ export const SIDEBAR_ICON_MAP: Record<string, IconComponent> = {
     gauge: IconGauge,
     building: IconBuilding,
     key: IconKey,
-    coins: IconCoins,
     storefront: IconStorefront,
     'id-badge': IconIdBadge,
     'hard-hat': IconHardHat,
@@ -271,8 +274,9 @@ export const SIDEBAR_ICON_MAP: Record<string, IconComponent> = {
     briefcase: IconBriefcase,
     audit: IconAudit,
     exchange: IconExchange,
-    // Feuilles : sans elles, le rail mobile (< 768px) n'affiche que les
-    // parents, et le sous-menu devient inaccessible sans ouvrir le tiroir.
+    wallet: IconWallet,
+    // Pages (drill-down) : réutilisées par les pages ouvertes par les
+    // entrées de premier niveau (voir la section « ICÔNES DES PAGES »).
     'map-pin': IconMapPin,
     'land-plot': IconLandPlot,
     'office-building': IconOfficeBuilding,

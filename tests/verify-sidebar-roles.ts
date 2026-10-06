@@ -9,10 +9,21 @@
  * VIEW/CREATE/UPDATE/DELETE sur Worker. Le test confronte explicitement le
  * menu attendu à la matrice backend plutôt qu'à une relecture manuelle.
  *
+ * MENU PLAT (règle de conception, cf. `sidebar.config.ts`) : une relation
+ * 1─N du modèle de données n'est PAS un sous-menu — un écran n'a de place
+ * au menu que s'il répond à une question posée indépendamment de son
+ * parent. Aucune entrée de ce menu ne porte donc de `children`, les
+ * anciens identifiants de sous-items (`patrimoine-villes`, `location-baux`,
+ * `personnel-affectations`, `administration-villes`, …) ont disparu, et
+ * `Loyers` est resté une entrée indépendante pendant que `Baux` et
+ * `Paiements` ont été repliés en drill-down. Un URL de drill-down profond
+ * reste COUVERT par son entrée de premier niveau (`isPathInMenu`) et servi
+ * par le splat de route : le lien reste partageable, seul le menu s'aplatit.
+ *
  * Deux régressions couvertes par la seconde partie :
  *   - la correspondance par égalité de chaîne laissait une route imbriquée
- *     sans item actif, et un parent sans `path` ne remontait jamais l'état
- *     actif de ses enfants (section « éteinte » alors qu'on est dedans) ;
+ *     sans item actif ; désormais une entrée couvre ses routes filles
+ *     (`/app/dashboard` reste actif sur `/app/dashboard/42`) ;
  *   - `/app/location` ne doit pas activer `/app/location-paiements`
  *     (faux positif du préfixe simple).
  *
@@ -23,10 +34,15 @@
  * exigent que la table des routes couvre le menu et que chaque destination
  * d'atterrissage soit routée (invariant anti-boucle).
  *
- * Quatrième partie — icônes. Sous 768px le menu devient un rail de 72px où le
- * libellé est masqué : une entrée sans icône y est un composant sans aucun
- * visuel. Seules les entrées de premier niveau étaient iconifiées, le rail
- * n'offrait donc que trois destinations.
+ * Quatrième partie — menu plat et drill-down. Une URL profonde
+ * (`/app/patrimoine/villes/12/parcelles/4`) doit rester couverte par
+ * l'entrée de premier niveau correspondante pendant que `Baux` /
+ * `Paiements` ne s'ouvrent plus seuls (drill-down uniquement).
+ *
+ * Cinquième partie — icônes. Chaque entrée du menu est identifiée en
+ * rail (< 768px, libellé masqué) ; en particulier Dépenses et Loyers, les
+ * deux destinations financières de premier niveau, ne doivent PAS partager
+ * la même icône.
  *
  * Modules purs (ni React ni JSX), exécutables par Node 24 (type
  * stripping) :
@@ -79,31 +95,84 @@ function check(label: string, ok: boolean, detail = ''): void {
 const hasTopLevelItem = (menu: ReturnType<typeof resolveSidebar>, id: string): boolean =>
     menu.some(item => item.id === id);
 
+const idsOf = (menu: ReturnType<typeof resolveSidebar>): string[] => menu.map(item => item.id);
+
 const PATRON = resolveSidebar(null, 'patron' as OrganizationRole);
 const ADMIN_IMMOBILIER = resolveSidebar(null, 'admin_immobilier' as OrganizationRole);
 const ADMIN_VILLE = resolveSidebar(null, 'admin_ville' as OrganizationRole);
 const PLATFORM = resolveSidebar('super_admin' as PlatformRole, 'admin_ville' as OrganizationRole);
 
-console.log('\n=== Structure du menu par rôle ===\n');
+console.log('\n=== Structure du menu par rôle (menu plat) ===\n');
 
-// Volontaires documentés dans `sidebar.config.ts` : « Tableau de bord »
-// est toujours la première entrée (écran de synthèse demandé par le cahier
-// des charges), et « Vitrine » est une feuille directe comme Dépenses.
-check(`PATRON : 7 entrées (reçu ${PATRON.length})`, PATRON.length === 7, String(PATRON.length));
-check(`ADMIN_IMMOBILIER : 6 entrées, Personnel inclus (reçu ${ADMIN_IMMOBILIER.length})`, ADMIN_IMMOBILIER.length === 6, String(ADMIN_IMMOBILIER.length));
-check(`ADMIN_VILLE : 5 entrées (reçu ${ADMIN_VILLE.length})`, ADMIN_VILLE.length === 5, String(ADMIN_VILLE.length));
-check(`SUPER_ADMIN : menu plateforme 5 entrées, aucun rôle métier ne l'alourdit (reçu ${PLATFORM.length})`, PLATFORM.length === 5, String(PLATFORM.length));
+// Menu attendu, ordre compris. « Tableau de bord » est toujours la première
+// entrée (écran de synthèse demandé par le cahier des charges), et
+// « Vitrine » est une feuille directe comme Dépenses.
+const EXPECTED_PATRON = ['dashboard', 'patrimoine', 'location-locataires', 'location-loyers', 'depenses', 'vitrine', 'personnel', 'administration'];
+const EXPECTED_ADMIN_IMMOBILIER = ['dashboard', 'patrimoine', 'location-locataires', 'location-loyers', 'depenses', 'vitrine', 'personnel'];
+const EXPECTED_ADMIN_VILLE = ['dashboard', 'patrimoine', 'location-locataires', 'location-loyers', 'depenses', 'vitrine'];
+
+check(
+    `PATRON : menu exact de ${EXPECTED_PATRON.length} entrées (reçu ${PATRON.length})`,
+    JSON.stringify(idsOf(PATRON)) === JSON.stringify(EXPECTED_PATRON),
+    idsOf(PATRON).join(', ')
+);
+check(
+    `ADMIN_IMMOBILIER : menu exact de ${EXPECTED_ADMIN_IMMOBILIER.length} entrées, Personnel inclus`,
+    JSON.stringify(idsOf(ADMIN_IMMOBILIER)) === JSON.stringify(EXPECTED_ADMIN_IMMOBILIER),
+    idsOf(ADMIN_IMMOBILIER).join(', ')
+);
+check(
+    `ADMIN_VILLE : menu exact de ${EXPECTED_ADMIN_VILLE.length} entrées`,
+    JSON.stringify(idsOf(ADMIN_VILLE)) === JSON.stringify(EXPECTED_ADMIN_VILLE),
+    idsOf(ADMIN_VILLE).join(', ')
+);
+check(
+    `SUPER_ADMIN : menu plateforme ${PLATFORM.length} entrées, aucun rôle métier ne l'alourdit (reçu ${PLATFORM.length})`,
+    PLATFORM.length === 5 && idsOf(PLATFORM)[0] === 'plateforme-dashboard',
+    idsOf(PLATFORM).join(', ')
+);
 check('Sans rôle : menu vide', resolveSidebar(null, null).length === 0);
 
-check('PATRON : Tableau de bord en première position', PATRON[0]?.id === 'dashboard', PATRON[0]?.id);
-check('ADMIN_IMMOBILIER : Tableau de bord en première position', ADMIN_IMMOBILIER[0]?.id === 'dashboard', ADMIN_IMMOBILIER[0]?.id);
-check('ADMIN_VILLE : Tableau de bord en première position', ADMIN_VILLE[0]?.id === 'dashboard', ADMIN_VILLE[0]?.id);
+// ── Menu plat : une relation 1─N du modèle ne crée PAS de sous-menu ──
+const ALL_MENUS = [PATRON, ADMIN_IMMOBILIER, ADMIN_VILLE, PLATFORM];
+const withChildren = ALL_MENUS.filter(menu => menu.some(item => item.children !== undefined));
+
+check(
+    'Menu plat : AUCUNE entrée ne porte de children (4 menus, aucun sous-menu)',
+    withChildren.length === 0,
+    withChildren.map(menu => menu[0]?.id).join(', ')
+);
+
+// Identifiants des anciennes entrées de sous-menu : « Villes », « Parcelles »,
+// « Bâtiments », « Unités » (Patrimoine), « Baux », « Paiements » (Location), la
+// catégorie « Location » et « Ouvriers », « Affectations » (Personnel), « Équipe »,
+// « Villes assignées » (Administration) — toutes devenues du drill-down.
+const LEGACY_SUB_ITEM_IDS = [
+    'patrimoine-villes', 'patrimoine-parcelles', 'patrimoine-batiments', 'patrimoine-unites',
+    'location', 'location-baux', 'location-paiements',
+    'personnel-ouvriers', 'personnel-affectations',
+    'administration-equipe', 'administration-villes',
+];
+const everyId = ALL_MENUS.flatMap(menu => idsOf(menu));
+const strayLegacy = LEGACY_SUB_ITEM_IDS.filter(id => everyId.includes(id));
+
+check(
+    `Plus aucun identifiant de sous-item historique (${LEGACY_SUB_ITEM_IDS.length} id)`,
+    strayLegacy.length === 0,
+    strayLegacy.join(', ')
+);
+check(
+    'Patrimoine reste UNE entrée, Villes/Parcelles/Bâtiments/Unités n\'apparaissent plus',
+    hasTopLevelItem(PATRON, 'patrimoine')
+        && !everyId.includes('patrimoine-villes')
+        && !everyId.includes('patrimoine-unites')
+);
 
 console.log('\n=== Personnel (Worker) — matrice checkAdminXxxAction ===\n');
 
 check('ADMIN_IMMOBILIER voit l\'entrée Personnel', hasTopLevelItem(ADMIN_IMMOBILIER, 'personnel'));
-check('ADMIN_IMMOBILIER accède à /app/personnel/ouvriers', isPathInMenu(ADMIN_IMMOBILIER, '/app/personnel/ouvriers'));
-check('ADMIN_IMMOBILIER accède à /app/personnel/affectations', isPathInMenu(ADMIN_IMMOBILIER, '/app/personnel/affectations'));
+check('ADMIN_IMMOBILIER accède à /app/personnel/ouvriers (drill-down couvert)', isPathInMenu(ADMIN_IMMOBILIER, '/app/personnel/ouvriers'));
+check('ADMIN_IMMOBILIER accède à /app/personnel/affectations (drill-down couvert)', isPathInMenu(ADMIN_IMMOBILIER, '/app/personnel/affectations'));
 
 check('ADMIN_VILLE ne voit PAS l\'entrée Personnel (VIEW_WORKER seul)', !hasTopLevelItem(ADMIN_VILLE, 'personnel'));
 check('ADMIN_VILLE est refusé sur /app/personnel/ouvriers', !isPathInMenu(ADMIN_VILLE, '/app/personnel/ouvriers'));
@@ -111,10 +180,12 @@ check('ADMIN_VILLE est refusé sur /app/personnel/affectations', !isPathInMenu(A
 
 check('PATRON voit l\'entrée Personnel', hasTopLevelItem(PATRON, 'personnel'));
 check('PATRON accède à /app/personnel/ouvriers', isPathInMenu(PATRON, '/app/personnel/ouvriers'));
+check('PATRON accède à /app/personnel', isPathInMenu(PATRON, '/app/personnel'));
 
 console.log('\n=== Administration — réservée au PATRON ===\n');
 
-check('PATRON accède à /app/administration/equipe', isPathInMenu(PATRON, '/app/administration/equipe'));
+check('PATRON accède à /app/administration/equipe (drill-down couvert)', isPathInMenu(PATRON, '/app/administration/equipe'));
+check('PATRON accède à /app/administration/villes (drill-down couvert)', isPathInMenu(PATRON, '/app/administration/villes'));
 check('ADMIN_IMMOBILIER est refusé sur /app/administration/equipe', !isPathInMenu(ADMIN_IMMOBILIER, '/app/administration/equipe'));
 check('ADMIN_IMMOBILIER est refusé sur /app/administration/villes', !isPathInMenu(ADMIN_IMMOBILIER, '/app/administration/villes'));
 check('ADMIN_VILLE est refusé sur /app/administration/equipe', !isPathInMenu(ADMIN_VILLE, '/app/administration/equipe'));
@@ -132,7 +203,7 @@ check('SUPER_ADMIN atterrit sur /app/admin/dashboard', defaultPathFor('super_adm
 check('Sans rôle : redirection vers la page accès non prévu', defaultPathFor(null, null) === '/app/access-denied');
 
 // ============================================================
-// ROUTE ACTIVE — correspondance par segment + remontée de section
+// ROUTE ACTIVE — correspondance par segment
 // ============================================================
 
 console.log('\n=== Route active : correspondance (sidebar.active.ts) ===\n');
@@ -149,32 +220,29 @@ check('Chaîne vide sans route active', !isRouteMatch('/app/dashboard', '/app'))
 const ids = (pathname: string, menu: typeof PATRON = PATRON): string[] =>
     [...resolveActiveMenu(menu, pathname)].sort();
 
-// Menu réduit à la section Patrimoine, pour tester l'état actif d'un parent
-// indépendamment des autres entrées du rôle.
-const PATRIMONE_MENU = PATRON.filter(item => item.id === 'patrimoine');
-
 check(
-    'Feuille seule : /app/dashboard active dashboard',
+    'Entrée seule : /app/dashboard active dashboard',
     JSON.stringify(ids('/app/dashboard')) === JSON.stringify(['dashboard']),
     JSON.stringify(ids('/app/dashboard'))
 );
 check(
-    'Sous-item : /app/patrimoine/villes active la feuille ET sa section',
-    JSON.stringify(ids('/app/patrimoine/villes')) === JSON.stringify(['patrimoine', 'patrimoine-villes']),
-    JSON.stringify(ids('/app/patrimoine/villes'))
-);
-check(
-    'Parent sans path : /app/patrimoine seul n\'active rien (ce n\'est pas une page)',
-    JSON.stringify(ids('/app/patrimoine')) === JSON.stringify([]),
+    'Patrimoine est une page : /app/patrimoine active patrimoine',
+    JSON.stringify(ids('/app/patrimoine')) === JSON.stringify(['patrimoine']),
     JSON.stringify(ids('/app/patrimoine'))
 );
 check(
-    'Parent sans path : il s\'active bien via un de ses enfants',
-    resolveActiveMenu(PATRIMONE_MENU, '/app/patrimoine/villes').has('patrimoine')
+    'Drill-down : /app/patrimoine/villes reste dans Patrimoine',
+    JSON.stringify(ids('/app/patrimoine/villes')) === JSON.stringify(['patrimoine']),
+    JSON.stringify(ids('/app/patrimoine/villes'))
 );
 check(
-    'Détail imbriqué : /app/location/loyers/12 reste dans Location > Loyers',
-    JSON.stringify(ids('/app/location/loyers/12')) === JSON.stringify(['location', 'location-loyers']),
+    'Drill-down profond : /app/patrimoine/villes/12/parcelles/4 reste dans Patrimoine',
+    JSON.stringify(ids('/app/patrimoine/villes/12/parcelles/4')) === JSON.stringify(['patrimoine']),
+    JSON.stringify(ids('/app/patrimoine/villes/12/parcelles/4'))
+);
+check(
+    'Détail imbriqué : /app/location/loyers/12 reste dans Loyers',
+    JSON.stringify(ids('/app/location/loyers/12')) === JSON.stringify(['location-loyers']),
     JSON.stringify(ids('/app/location/loyers/12'))
 );
 check(
@@ -193,7 +261,7 @@ check(
     JSON.stringify(ids('/app/personnel/ouvriers', ADMIN_VILLE))
 );
 check(
-    'Deux sections ne s\'allument jamais ensemble sur un préfixe ambigu',
+    'Deux entrées ne s\'allument jamais ensemble sur un préfixe ambigu',
     ids('/app/location/loyers').filter(id => id === 'patrimoine').length === 0
 );
 
@@ -220,12 +288,12 @@ const collectPaths = (menu: typeof PATRON): void => {
         if (item.children !== undefined) collectPaths(item.children);
     }
 };
-for (const menu of [PATRON, ADMIN_IMMOBILIER, ADMIN_VILLE, PLATFORM]) collectPaths(menu);
+for (const menu of ALL_MENUS) collectPaths(menu);
 
 const missingRoutes = everyLeaf.filter(path => !routePaths.includes(path));
 
 check(
-    `Chaque feuille du menu a une route (${everyLeaf.length} feuilles, ${ROUTES.length} routes)`,
+    `Chaque entrée du menu a une route (${everyLeaf.length} entrées, ${ROUTES.length} routes)`,
     missingRoutes.length === 0,
     missingRoutes.join(', ')
 );
@@ -236,20 +304,25 @@ check(
     routePaths.filter(path => !path.startsWith(`${APP_ROOT}/`)).join(', ')
 );
 check(
-    'findAppRoute retrouve une feuille connue',
-    findAppRoute('/app/patrimoine/villes')?.id === 'patrimoine-villes',
-    String(findAppRoute('/app/patrimoine/villes')?.id)
+    'findAppRoute retrouve une entrée connue',
+    findAppRoute('/app/patrimoine')?.id === 'patrimoine',
+    String(findAppRoute('/app/patrimoine')?.id)
 );
 check('findAppRoute ignore un chemin inconnu', findAppRoute('/app/inexistant') === undefined);
 check(
-    'Chemin relatif : /app/patrimoine/villes → patrimoine/villes',
-    toRelativeAppPath('/app/patrimoine/villes') === 'patrimoine/villes',
-    toRelativeAppPath('/app/patrimoine/villes')
+    'findAppRoute ne connaît PAS une URL de drill-down comme route exacte (couverture assurée par la garde/splat)',
+    findAppRoute('/app/patrimoine/villes/12/parcelles/4') === undefined,
+    String(findAppRoute('/app/patrimoine/villes/12/parcelles/4')?.id)
 );
 check(
-    'Chemin de route avec splat : /app/patrimoine/villes → patrimoine/villes/*',
-    toRelativeAppRoutePath('/app/patrimoine/villes') === 'patrimoine/villes/*',
-    toRelativeAppRoutePath('/app/patrimoine/villes')
+    'Chemin relatif : /app/patrimoine → patrimoine',
+    toRelativeAppPath('/app/patrimoine') === 'patrimoine',
+    toRelativeAppPath('/app/patrimoine')
+);
+check(
+    'Chemin de route avec splat : /app/patrimoine → patrimoine/* (drill-down servis)',
+    toRelativeAppRoutePath('/app/patrimoine') === 'patrimoine/*',
+    toRelativeAppRoutePath('/app/patrimoine')
 );
 check(
     'La page d\'accès refusé est une destination connue',
@@ -282,6 +355,51 @@ check(
 
 console.log('\n' + '-'.repeat(60) + '\n');
 
+// ============================================================
+// MENU PLAT — drill-down couvert, entrées repliées
+// ============================================================
+// La règle du menu plat : une relation 1─N ne crée pas de sous-menu. Ce qui
+// est replié reste néanmoins joignable : l'URL profonde du drill-down est
+// couverte par l'entrée de premier niveau (lien partageable), pendant
+// qu'une URL pour laquelle l'enfant n'a PAS de sens hors de son parent
+// (Baux, Paiements) n'est plus au menu.
+
+console.log('=== Menu plat : drill-down couvert par l\'entrée de premier niveau ===\n');
+
+check(
+    'Patrimoine : /app/patrimoine/villes/12/parcelles/4 reste couvert',
+    isPathInMenu(PATRON, '/app/patrimoine/villes/12/parcelles/4')
+);
+check(
+    'Locataires : /app/location/locataires/7/baux reste couvert',
+    isPathInMenu(PATRON, '/app/location/locataires/7/baux')
+);
+check(
+    'Loyers : /app/location/loyers/3/paiements reste couvert',
+    isPathInMenu(PATRON, '/app/location/loyers/3/paiements')
+);
+check(
+    'Personnel : /app/personnel/ouvriers/9/affectations reste couvert',
+    isPathInMenu(PATRON, '/app/personnel/ouvriers/9/affectations')
+);
+check(
+    'Administration : /app/administration/equipe/2/villes reste couvert',
+    isPathInMenu(PATRON, '/app/administration/equipe/2/villes')
+);
+check(
+    'ADMIN_VILLE : le drill-down Patrimoine est aussi couvert (même entrée)',
+    isPathInMenu(ADMIN_VILLE, '/app/patrimoine/villes/12/parcelles/4')
+);
+
+check('Loyers est une entrée indépendante pour PATRON', hasTopLevelItem(PATRON, 'location-loyers'));
+check('Loyers est une entrée indépendante pour ADMIN_IMMOBILIER', hasTopLevelItem(ADMIN_IMMOBILIER, 'location-loyers'));
+check('Loyers est une entrée indépendante pour ADMIN_VILLE', hasTopLevelItem(ADMIN_VILLE, 'location-loyers'));
+
+check('Baux ne s\'ouvre plus seul : /app/location/baux hors menu', !isPathInMenu(PATRON, '/app/location/baux'));
+check('Paiements ne s\'ouvre plus seul : /app/location/paiements hors menu', !isPathInMenu(PATRON, '/app/location/paiements'));
+check('Location n\'existe plus comme catégorie : /app/location hors menu', !isPathInMenu(PATRON, '/app/location'));
+
+console.log('\n' + '-'.repeat(60) + '\n');
 
 // ============================================================
 // FLYOUT — règles pures d'affichage (sans DOM)
@@ -312,7 +430,8 @@ check('Desktop non repliable : flyout indisponible', isFlyoutAvailable(desktopNo
 check('Mobile rail : flyout indisponible (tiroir disponible)', isFlyoutAvailable(mobileRail) === false);
 check('Mobile tiroir : flyout indisponible', isFlyoutAvailable(mobileDrawer) === false);
 
-// `isBranchActive` : arbre de test minimal (2 niveaux)
+// `isBranchActive` : arbre de test minimal (2 niveaux) — la propriété reste
+// dans le type même si le menu actuel est plat.
 const testItem: typeof PATRON[0] = {
     id: 'parent',
     label: 'Parent',
@@ -329,13 +448,17 @@ check('Aucun actif : isBranchActive(false)', isBranchActive(testItem, new Set(['
 check('Feuille sans enfants : isBranchActive(false)', isBranchActive({ id: 'leaf', label: 'Feuille' } as typeof PATRON[0], new Set(['inconnu'])) === false);
 
 console.log('\n' + '-'.repeat(60) + '\n');
+
+// ============================================================
+// ICÔNES — chaque entrée est identifiable en rail
+// ============================================================
 // Sous 768px le menu se réduit à un rail de 72px : le libellé disparaît et
-// seule l'icône subsiste. Une feuille sans icône y devient un composant sans
-// aucun visuel, impossible à identifier au doigt ni à distinguer d'une autre.
-// Régression : seules les entrées de premier niveau étaient iconifiées, le
-// rail n'affichait donc que « Patrimoine / Location / Dépenses » et les
-// feuilles，// rail n'affichait donc que « Patrimoine / Location / Dépenses », et les
-// feuilles exigeaient d'ouvrir le tiroir pour être atteintes.
+// seule l'icône subsiste. Une entrée sans icône y devient un composant sans
+// aucun visuel. Le menu étant plat, TOUTE entrée est de premier niveau :
+// chacune doit porter une icône. Dépenses et Loyers, les deux destinations
+// financières de premier niveau, ne doivent PAS la partager (collision
+// visuelle qui referait la confusion entre « ce qui rentre » et « ce qui
+// sort »).
 
 console.log('=== Icônes : chaque entrée du menu est identifiable en rail ===\n');
 
@@ -348,37 +471,34 @@ const declaredIcons = new Set(
         .map(match => match[1])
 );
 
-const allItems: { id: string; icon?: string; hasChildren: boolean }[] = [];
-const collectItems = (menu: typeof PATRON): void => {
-    for (const item of menu) {
-        allItems.push({ id: item.id, icon: item.icon, hasChildren: item.children !== undefined });
-        if (item.children !== undefined) collectItems(item.children);
-    }
-};
-for (const menu of [PATRON, ADMIN_IMMOBILIER, ADMIN_VILLE, PLATFORM]) collectItems(menu);
+const flatItems: { id: string; icon?: string }[] = [];
+for (const menu of ALL_MENUS) {
+    for (const item of menu) flatItems.push({ id: item.id, icon: item.icon });
+}
 
-const withoutIcon = allItems.filter(item => item.icon === undefined).map(item => item.id);
-const unknownIcon = allItems
+const withoutIcon = flatItems.filter(item => item.icon === undefined).map(item => item.id);
+const unknownIcon = flatItems
     .filter(item => item.icon !== undefined && !declaredIcons.has(item.icon))
     .map(item => `${item.id} → ${item.icon}`);
-const leavesWithoutIcon = allItems
-    .filter(item => !item.hasChildren && item.icon === undefined)
-    .map(item => item.id);
 
 check(
-    `Chaque entrée du menu porte une icône (${allItems.length} entrées)`,
+    `Chaque entrée du menu porte une icône (${flatItems.length} entrées)`,
     withoutIcon.length === 0,
     withoutIcon.join(', ')
-);
-check(
-    'Les sous-menus (feuilles) sont iconifiés, pas seulement les parents',
-    leavesWithoutIcon.length === 0,
-    leavesWithoutIcon.join(', ')
 );
 check(
     `Chaque nom d'icône du menu existe dans SIDEBAR_ICON_MAP (${declaredIcons.size} icônes)`,
     unknownIcon.length === 0,
     unknownIcon.join(', ')
+);
+
+const iconOf = (id: string, menu: typeof PATRON = PATRON): string | undefined =>
+    menu.find(item => item.id === id)?.icon;
+
+check(
+    'Dépenses et Loyers portent des icônes distinctes (deux destinations financières)',
+    iconOf('depenses') !== undefined && iconOf('depenses') !== iconOf('location-loyers'),
+    `depenses=${String(iconOf('depenses'))}, loyers=${String(iconOf('location-loyers'))}`
 );
 
 console.log('\n' + '-'.repeat(60) + '\n');

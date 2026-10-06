@@ -17,10 +17,17 @@ export type SidebarRole = OrganizationRole | PlatformRole;
 /**
  * Item de menu.
  *
- * - `path` : URL cible (feuille). Un parent n'a pas de `path` : il est
- *   ouvrant.
- * - `children` : sous-menu (2 niveaux au maximum : première entrée =
- *   niveau 1, `children` = niveau 2, plus de `children` ensuite).
+ * La configuration est PLATE (cf. `sidebar.config.ts`) : chaque item porte
+ * un `path` et un seul, et `children` n'est pas utilisé dans le menu — les
+ * vues « filles » d'une relation 1─N sont du drill-down DANS la page portée
+ * par `path`, pas des niveaux de menu. La propriété `children` est
+ * conservée dans le type pour les arbres de test purs et la compatibilité
+ * d'un futur menu dès lors qu'une destination prouverait qu'elle se consulte
+ * indépendamment de son parent.
+ *
+ * - `path` : URL cible de l'entrée, qui couvre aussi ses drill-down
+ *   (`/app/patrimoine` couvre `/app/patrimoine/villes/12/parcelles/4`).
+ * - `children` : sous-menu (non utilisé aujourd'hui, limite 2 niveaux).
  */
 export interface AppMenuItem {
     id: string;

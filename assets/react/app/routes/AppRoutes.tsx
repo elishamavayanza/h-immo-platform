@@ -7,9 +7,10 @@
 // `<BrowserRouter>`. Deux familles de routes :
 //
 //   - Hors session (AuthLayout) : `/login`, `/forgot-password`, `/reset-password`.
-//   - Back-office (`/app`, MainLayout) : une route par feuille du menu,
-//     garde `AppRouteGuard`, et une page provisoire le temps que les
-//     écrans métier arrivent.
+//   - Back-office (`/app`, MainLayout) : une route par entrée du menu
+//     (menu plat), garde `AppRouteGuard`, et une page provisoire le temps
+//     que les écrans métier arrivent. Le splat `entree/*` sert aussi les
+//     URLs de drill-down plus profondes que l'entrée elle-même.
 //
 // Les chemins des feuilles ne sont PAS écrits à la main : ils sont dérivés
 // de `sidebar.config.ts` par `buildAppRoutes()`. C'était la source du bug
