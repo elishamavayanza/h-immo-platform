@@ -32,8 +32,11 @@
 // ============================================================
 
 .main-layout__mobile-toggle {
-    display: none;
+    // `display: none` APRÈS le mixin : `flex-center` pose `display: flex`,
+    // et c'est la dernière déclaration qui gagne. Sans cet ordre, le bouton
+    // restait visible sur tous les écrans (desktop compris).
     @include flex-center;
+    display: none;
     position: fixed;
     top: $spacing-4;
     left: $spacing-4;
@@ -51,7 +54,9 @@
         box-shadow $transition-fast;
     z-index: $z-fixed; // au-dessus du contenu, sous le drawer/backdrop
 
-    @include responsive(mobile) {
+    // Visible dès que le layout passe en tiroir : largeur < 768px OU
+    // portrait (même liste de conditions que le drawer du sidebar).
+    @media (max-width: #{$breakpoint-tablet - 1px}), (orientation: portrait) {
         display: flex;
     }
 
@@ -130,7 +135,8 @@
 
     // Sur mobile, le sidebar est un tiroir qui glisse par-dessus le contenu
     // (pas de rail permanent). Le contenu prend toute la largeur.
-    @media (max-width: #{$breakpoint-tablet - 1px}) {
+    // Mode tiroir : < 768px OU portrait (aligné sur `MEDIA_QUERIES.drawer`).
+    @media (max-width: #{$breakpoint-tablet - 1px}), (orientation: portrait) {
         padding-left: 0;
     }
 }
@@ -194,10 +200,10 @@
 .main-layout .sidebar {
     height: 100%;
 
-    // En tiroir (mobile), le panneau est `position: fixed` : il doit
-    // couvrir toute la hauteur VISIBLE, donc `100dvh` et non `100vh`
+    // En tiroir (mobile ou portrait), le panneau est `position: fixed` : il
+    // doit couvrir toute la hauteur VISIBLE, donc `100dvh` et non `100vh`
     // (barre d'adresse mobile).
-    @media (max-width: #{$breakpoint-tablet - 1px}) {
+    @media (max-width: #{$breakpoint-tablet - 1px}), (orientation: portrait) {
         height: 100dvh;
     }
 }
