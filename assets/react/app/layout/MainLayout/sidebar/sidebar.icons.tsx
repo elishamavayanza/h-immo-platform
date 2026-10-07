@@ -136,6 +136,15 @@ export const IconExchange = (): ReactNode => (
     </svg>
 );
 
+/** Graphique de synthèse — Rapports. */
+export const IconReport = (): ReactNode => (
+    <svg {...STROKE}>
+        <path d="M4 19V5M4 19h16" />
+        <path d="m7 15 4-4 3 2 5-6" />
+        <path d="M16 7h3v3" />
+    </svg>
+);
+
 // ─────────────────────────────────────────
 // ICÔNES DES PAGES (drill-down)
 // ─────────────────────────────────────────
@@ -274,6 +283,7 @@ export const SIDEBAR_ICON_MAP: Record<string, IconComponent> = {
     briefcase: IconBriefcase,
     audit: IconAudit,
     exchange: IconExchange,
+    report: IconReport,
     wallet: IconWallet,
     // Pages (drill-down) : réutilisées par les pages ouvertes par les
     // entrées de premier niveau (voir la section « ICÔNES DES PAGES »).

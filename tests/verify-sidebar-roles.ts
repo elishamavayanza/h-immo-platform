@@ -107,9 +107,9 @@ console.log('\n=== Structure du menu par rôle (menu plat) ===\n');
 // Menu attendu, ordre compris. « Tableau de bord » est toujours la première
 // entrée (écran de synthèse demandé par le cahier des charges), et
 // « Vitrine » est une feuille directe comme Dépenses.
-const EXPECTED_PATRON = ['dashboard', 'patrimoine', 'location-locataires', 'location-loyers', 'depenses', 'vitrine', 'personnel', 'administration'];
-const EXPECTED_ADMIN_IMMOBILIER = ['dashboard', 'patrimoine', 'location-locataires', 'location-loyers', 'depenses', 'vitrine', 'personnel'];
-const EXPECTED_ADMIN_VILLE = ['dashboard', 'patrimoine', 'location-locataires', 'location-loyers', 'depenses', 'vitrine'];
+const EXPECTED_PATRON = ['dashboard', 'rapports', 'patrimoine', 'location-locataires', 'location-loyers', 'depenses', 'vitrine', 'personnel', 'administration'];
+const EXPECTED_ADMIN_IMMOBILIER = ['dashboard', 'rapports', 'patrimoine', 'location-locataires', 'location-loyers', 'depenses', 'vitrine', 'personnel'];
+const EXPECTED_ADMIN_VILLE = ['dashboard', 'rapports', 'patrimoine', 'location-locataires', 'location-loyers', 'depenses', 'vitrine'];
 
 check(
     `PATRON : menu exact de ${EXPECTED_PATRON.length} entrées (reçu ${PATRON.length})`,
@@ -128,7 +128,7 @@ check(
 );
 check(
     `SUPER_ADMIN : menu plateforme ${PLATFORM.length} entrées, aucun rôle métier ne l'alourdit (reçu ${PLATFORM.length})`,
-    PLATFORM.length === 5 && idsOf(PLATFORM)[0] === 'plateforme-dashboard',
+    PLATFORM.length === 6 && idsOf(PLATFORM)[0] === 'plateforme-dashboard',
     idsOf(PLATFORM).join(', ')
 );
 check('Sans rôle : menu vide', resolveSidebar(null, null).length === 0);
@@ -179,6 +179,8 @@ check('ADMIN_VILLE est refusé sur /app/personnel/ouvriers', !isPathInMenu(ADMIN
 check('ADMIN_VILLE est refusé sur /app/personnel/affectations', !isPathInMenu(ADMIN_VILLE, '/app/personnel/affectations'));
 
 check('PATRON voit l\'entrée Personnel', hasTopLevelItem(PATRON, 'personnel'));
+check('Tous les rôles organisationnels voient Rapports', [PATRON, ADMIN_IMMOBILIER, ADMIN_VILLE].every(menu => hasTopLevelItem(menu, 'rapports')));
+check('SUPER_ADMIN voit son entrée Rapports plateforme', hasTopLevelItem(PLATFORM, 'plateforme-rapports'));
 check('PATRON accède à /app/personnel/ouvriers', isPathInMenu(PATRON, '/app/personnel/ouvriers'));
 check('PATRON accède à /app/personnel', isPathInMenu(PATRON, '/app/personnel'));
 
@@ -194,6 +196,8 @@ console.log('\n=== SUPER_ADMIN : aucune entrée métier d\'organisation ===\n');
 
 check('SUPER_ADMIN ne voit ni Patrimoine ni Personnel', !hasTopLevelItem(PLATFORM, 'patrimoine') && !hasTopLevelItem(PLATFORM, 'personnel'));
 check('SUPER_ADMIN accède à /app/admin/organisations', isPathInMenu(PLATFORM, '/app/admin/organisations'));
+check('SUPER_ADMIN accède à /app/admin/rapports', isPathInMenu(PLATFORM, '/app/admin/rapports'));
+check('Les rôles organisationnels accèdent à /app/rapports', [PATRON, ADMIN_IMMOBILIER, ADMIN_VILLE].every(menu => isPathInMenu(menu, '/app/rapports')));
 check('SUPER_ADMIN n\'accède pas à /app/personnel/ouvriers', !isPathInMenu(PLATFORM, '/app/personnel/ouvriers'));
 
 console.log('\n=== Atterrissage par défaut (redirection /app) ===\n');

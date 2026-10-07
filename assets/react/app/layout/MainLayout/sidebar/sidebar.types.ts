@@ -42,6 +42,8 @@ export interface AppMenuItem {
      */
     icon?: string;
     path?: string;
+    /** Clé de regroupement visuel du menu latéral. */
+    section?: 'overview' | 'property' | 'finance' | 'operations' | 'administration' | 'platform';
     children?: AppMenuItem[];
 }
 

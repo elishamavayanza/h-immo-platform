@@ -51,7 +51,7 @@ function Brand({ organizationName }: { organizationName?: string }) {
  *   - `defaultOpen` : section dépliée d'emblée, pour que le sous-menu
  *     corresponde à la page affichée dès le premier rendu (point §8).
  */
-function toSidebarItems(menu: AppMenuItem[], activeIds: ReadonlySet<string>): SidebarProps['items'] {
+function toSidebarItems(menu: AppMenuItem[], activeIds: ReadonlySet<string>): NonNullable<SidebarProps['items']> {
     return menu.map(({ id, label, icon, path, children }) => ({
         id,
         label,
@@ -64,6 +64,30 @@ function toSidebarItems(menu: AppMenuItem[], activeIds: ReadonlySet<string>): Si
                 children: toSidebarItems(children, activeIds),
             }
             : {}),
+    }));
+}
+
+const SIDEBAR_SECTION_LABELS: Record<NonNullable<AppMenuItem['section']>, string> = {
+    overview: 'Vue générale',
+    property: 'Gestion immobilière',
+    finance: 'Finances',
+    operations: 'Opérations',
+    administration: 'Administration',
+    platform: 'Plateforme',
+};
+
+function toSidebarGroups(menu: AppMenuItem[], activeIds: ReadonlySet<string>): NonNullable<SidebarProps['groups']> {
+    const sections = new Map<NonNullable<AppMenuItem['section']>, AppMenuItem[]>();
+
+    menu.forEach((item) => {
+        const section = item.section ?? 'operations';
+        sections.set(section, [...(sections.get(section) ?? []), item]);
+    });
+
+    return [...sections.entries()].map(([section, sectionItems]) => ({
+        id: section,
+        label: SIDEBAR_SECTION_LABELS[section],
+        items: toSidebarItems(sectionItems, activeIds),
     }));
 }
 
@@ -151,7 +175,7 @@ export function MainLayout() {
 
     const menu = resolveSidebar(platformRole, organizationRole);
     const activeIds = resolveActiveMenu(menu, location.pathname);
-    const items = toSidebarItems(menu, activeIds);
+    const groups = toSidebarGroups(menu, activeIds);
 
     const isPlatform = platformRole === 'super_admin';
     const effectiveRoleLabel = isPlatform
@@ -193,7 +217,7 @@ return (
             <div className="main-layout__body">
                 <Sidebar
                     id="main-sidebar"
-                    items={items}
+                    groups={groups}
                     variant="dark"
                     collapsible
                     defaultCollapsed={false}
