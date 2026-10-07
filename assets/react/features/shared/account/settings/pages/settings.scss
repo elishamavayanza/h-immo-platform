@@ -1,0 +1,13 @@
+@use '../../_account' as *;
+
+.settings-page__sections { display:grid; gap:14px; max-width:900px; }
+.settings-card .card__body { padding-top:4px; }
+.setting-row { display:flex; align-items:center; justify-content:space-between; gap:18px; padding:14px 0; }
+.setting-row + .setting-row { border-top:1px solid var(--color-border, #29313b); }
+.setting-row strong { display:block; font-size:.95rem; }
+.setting-row p { margin:5px 0 0; color:var(--color-text-secondary, #94a3b8); font-size:.85rem; line-height:1.5; }
+.setting-switch { width:42px; height:24px; flex:none; padding:3px; border:0; border-radius:99px; background:#475569; cursor:pointer; transition:background .18s ease; }
+.setting-switch span { display:block; width:18px; height:18px; border-radius:50%; background:#fff; transition:transform .18s ease; }
+.setting-switch[aria-checked="true"] { background:var(--color-primary, #0891b2); }
+.setting-switch[aria-checked="true"] span { transform:translateX(18px); }
+@media(max-width:600px) { .setting-row { align-items:flex-start; } .setting-row p { max-width:34ch; } }

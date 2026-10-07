@@ -15,6 +15,8 @@ import { AuditLogPage } from '../../features/super_admin/audit/pages/AuditLogPag
 import { ExchangeRatesPage } from '../../features/super_admin/exchange_rates/pages/ExchangeRatesPage';
 import { ReportsPage as SuperAdminReportsPage } from '../../features/super_admin/reports/pages/ReportsPage';
 import { OrganizationMenuPage } from './OrganizationMenuPage';
+import { ProfilePage } from '../../features/shared/account/profile/pages/ProfilePage';
+import { SettingsPage } from '../../features/shared/account/settings/pages/SettingsPage';
 
 import { AuthLayout } from '../layout/AuthLayout/AuthLayout';
 import { MainLayout } from '../layout/MainLayout/MainLayout';
@@ -117,6 +119,12 @@ export function AppRoutes() {
                         element={<AccessDenied />}
                     />
                 </Route>
+            </Route>
+
+            {/* Pages ouvertes depuis le menu utilisateur du pied de sidebar. */}
+            <Route element={<MainLayout />}>
+                <Route path="/profile" element={<ProfilePage />} />
+                <Route path="/settings" element={<SettingsPage />} />
             </Route>
 
             <Route path="*" element={<Navigate to={APP_ROOT} replace />} />
