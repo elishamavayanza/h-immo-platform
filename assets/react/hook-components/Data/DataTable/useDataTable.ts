@@ -21,7 +21,7 @@ export interface UseDataTableProps<T> {
 export function useDataTable<T>({
                                     columns,
                                     data,
-                                    pageSize = 10,
+                                    pageSize = 12,
                                     initialSortKey,
                                     initialSortDirection = 'asc',
                                     className = '',

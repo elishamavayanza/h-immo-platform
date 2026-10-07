@@ -81,7 +81,7 @@ export function UsersPage() {
         <UsersStats users={users} />
         <Card className="sa-management-table-card" padding="medium">
             <div className="sa-management-toolbar"><div><h2>Comptes utilisateurs</h2><p>Les actions sont simulées ; la maquette reprend UserRequest et les associations d’organisation.</p></div><div className="sa-management-filters sa-management-filters--users"><SearchInput value={search} onSearch={setSearch} placeholder="Rechercher un utilisateur..." fullWidth /><Select aria-label="Filtrer par rôle" value={roleFilter} onChange={(event) => setRoleFilter(event.target.value)} options={[{ value: 'all', label: 'Tous les rôles' }, ...Object.entries(ROLE_LABEL).map(([value, label]) => ({ value, label }))]} /><Select aria-label="Filtrer par état du compte" value={statusFilter} onChange={(event) => setStatusFilter(event.target.value as 'all' | UserStatus)} options={[{ value: 'all', label: 'Tous les états' }, { value: 'active', label: 'Actif' }, { value: 'inactive', label: 'Désactivé' }]} /></div></div>
-            <DataTable columns={columns} data={filteredUsers} pageSize={6} initialSortKey="name" />
+            <DataTable columns={columns} data={filteredUsers} pageSize={12} initialSortKey="name" />
         </Card>
         <Modal isOpen={isFormOpen} onClose={() => setFormOpen(false)} title={editingUser ? 'Modifier le compte' : 'Créer un utilisateur'} size="medium" footer={<><Button variant="outline" onClick={() => setFormOpen(false)}>Annuler</Button><Button type="submit" form="user-form">{editingUser ? 'Enregistrer' : 'Créer le compte'}</Button></>}>
             <form id="user-form" className="sa-management-form" onSubmit={handleSubmit}>

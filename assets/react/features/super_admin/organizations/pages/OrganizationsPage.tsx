@@ -70,7 +70,7 @@ export function OrganizationsPage() {
         <OrganizationsStats organizations={organizations} />
         <Card className="sa-management-table-card" padding="medium">
             <div className="sa-management-toolbar"><div><h2>Liste des organisations</h2><p>Les actions sont simulées dans la maquette et reprennent les opérations disponibles dans l’API.</p></div><div className="sa-management-filters"><SearchInput value={search} onSearch={setSearch} placeholder="Rechercher une organisation..." fullWidth /><Select aria-label="Filtrer par statut" value={statusFilter} onChange={(event) => setStatusFilter(event.target.value as OrganizationStatusFilter)} options={[{ value: 'all', label: 'Tous les statuts' }, { value: 'active', label: 'Active' }, { value: 'suspended', label: 'Suspendue' }, { value: 'inactive', label: 'Inactive' }]} /></div></div>
-            <DataTable columns={columns} data={filteredOrganizations} pageSize={6} initialSortKey="name" />
+            <DataTable columns={columns} data={filteredOrganizations} pageSize={12} initialSortKey="name" />
         </Card>
         <Modal isOpen={isFormOpen} onClose={() => setFormOpen(false)} title={editingOrganization ? 'Modifier l’organisation' : 'Créer une organisation'} size="medium" footer={<><Button variant="outline" onClick={() => setFormOpen(false)}>Annuler</Button><Button type="submit" form="organization-form">{editingOrganization ? 'Enregistrer' : 'Créer l’organisation'}</Button></>}>
             <form id="organization-form" className="sa-management-form" onSubmit={handleSubmit}>

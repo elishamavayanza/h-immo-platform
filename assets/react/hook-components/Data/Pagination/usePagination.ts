@@ -13,7 +13,7 @@ export interface UsePaginationProps {
 
 export function usePagination({
                                    totalItems,
-                                   pageSize = 10,
+                                   pageSize = 12,
                                    initialPage = 1,
                                    currentPage: externalCurrentPage,
                                    siblingCount = 1,
