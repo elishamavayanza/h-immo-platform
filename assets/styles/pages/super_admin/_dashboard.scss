@@ -545,3 +545,27 @@
         transition-duration: 0.001ms !important;
     }
 }
+
+@media (max-width: 600px) {
+    .sa-dashboard {
+        gap: $spacing-3;
+        padding: $spacing-3 0 $spacing-5;
+    }
+
+    .sa-header {
+        gap: $spacing-3;
+
+        &__intro { min-width: 0; }
+        &__title { font-size: 22px; }
+        &__actions { width: 100%; justify-content: flex-start; }
+    }
+
+    .sa-kpi-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: $spacing-2; }
+    .sa-kpi .card__body { padding: $spacing-3; }
+    .sa-kpi__value { margin: $spacing-2 0; font-size: 20px; }
+    .sa-grid { gap: $spacing-2; }
+}
+
+@media (max-width: 360px) {
+    .sa-kpi-grid { grid-template-columns: 1fr; }
+}

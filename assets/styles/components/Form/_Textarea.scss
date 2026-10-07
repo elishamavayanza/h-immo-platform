@@ -116,6 +116,14 @@
     min-height: 120px;
 }
 
+@media (max-width: 640px) {
+    .textarea-field--medium,
+    .textarea-field--large {
+        padding: $spacing-2 $spacing-3;
+        font-size: 16px;
+    }
+}
+
 
 // ============================================================
 // VARIANTES

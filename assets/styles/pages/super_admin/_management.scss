@@ -144,4 +144,20 @@
     .sa-management-table-card .card__body {
         padding: $spacing-3;
     }
+
+    .sa-management-stat .card__body {
+        padding: $spacing-3;
+    }
+
+    .sa-management-stat span {
+        font-size: $font-size-xs;
+    }
+
+    .sa-management-stat strong {
+        font-size: $font-size-xl;
+    }
+
+    .sa-management-toolbar h2 {
+        font-size: $font-size-sm;
+    }
 }

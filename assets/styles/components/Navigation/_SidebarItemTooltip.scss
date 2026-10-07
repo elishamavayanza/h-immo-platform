@@ -29,17 +29,20 @@
     // que flotter au-dessus de la page, sans interaction.
     z-index: $z-tooltip;
     box-sizing: border-box;
-    max-width: 260px;
-    padding: $spacing-1 $spacing-2;
+    max-width: min(280px, calc(100vw - 96px));
+    padding: $spacing-2 $spacing-3;
     overflow: hidden;
-    background-color: $color-bg-elevated;
-    border: 1px solid $color-border-light;
-    border-radius: $radius-sm;
+    background-color: color-mix(in srgb, #{$color-bg-card} 86%, transparent);
+    -webkit-backdrop-filter: blur(10px);
+    backdrop-filter: blur(10px);
+    border: 1px solid color-mix(in srgb, #{$color-border-strong} 72%, transparent);
+    border-radius: $radius-lg;
     color: $color-text-primary;
     font-family: $font-family-base;
-    font-size: $font-size-xs;
-    font-weight: $font-weight-medium;
-    line-height: $line-height-snug;
+    font-size: $font-size-sm;
+    font-weight: $font-weight-semibold;
+    line-height: $line-height-normal;
+    box-shadow: $shadow-lg;
     // Une seule ligne, comme toute tooltip : un libellé long est rogné
     // en `…` plutôt que d'occuper tout le flanc de l'écran.
     white-space: nowrap;
@@ -59,9 +62,10 @@
         width: 8px;
         height: 8px;
         margin-top: -4px;
-        background-color: $color-bg-elevated;
-        border-left: 1px solid $color-border-light;
-        border-bottom: 1px solid $color-border-light;
+        background-color: color-mix(in srgb, #{$color-bg-card} 86%, transparent);
+        border-left: 1px solid color-mix(in srgb, #{$color-border-strong} 72%, transparent);
+        border-bottom: 1px solid color-mix(in srgb, #{$color-border-strong} 72%, transparent);
+        backdrop-filter: blur(10px);
         transform: rotate(45deg);
     }
 }

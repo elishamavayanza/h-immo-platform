@@ -125,13 +125,14 @@ $color-info-light:      rgba(37, 189, 232, 0.14);
 // ============================================================
 // TYPOGRAPHIE — FAMILLES
 // ============================================================
-// Deux familles : une pour le corps, une pour les titres.
-// L'image utilise une sans-serif moderne et géométrique.
+// Pile système sans téléchargement externe : chaque plateforme utilise sa
+// police d’interface native, conçue pour rester nette aux petites tailles.
+// Corps et titres partagent la même famille pour garder une hiérarchie calme.
 // ============================================================
 
-$font-family-base:      'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
-$font-family-heading:   'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
-$font-family-mono:      'JetBrains Mono', 'Fira Code', monospace;
+$font-family-base:      system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+$font-family-heading:   system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+$font-family-mono:      ui-monospace, 'SFMono-Regular', Menlo, Consolas, monospace;
 
 
 // ============================================================

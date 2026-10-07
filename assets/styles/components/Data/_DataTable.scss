@@ -33,6 +33,7 @@
     @include scrollbar;
     width: 100%;
     overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
     border-radius: $radius-lg;
 }
 
@@ -109,24 +110,20 @@
 // HEADER TRIABLE
 // ============================================================
 
-.datatable__th--sortable {
+.datatable__sort-button {
+    display: block;
+    width: 100%;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: inherit;
+    font: inherit;
+    text-align: left;
     cursor: pointer;
-    transition: color $transition-fast, background-color $transition-fast;
+    transition: color $transition-fast;
 
-    &:hover {
-        color: $color-text-primary;
-        background-color: $color-bg-elevated;
-    }
-
-    &:active {
-        background-color: $color-bg-card;
-    }
-
-    // Focus clavier
-    &:focus-visible {
-        outline: none;
-        box-shadow: inset 0 0 0 2px $color-primary;
-    }
+    &:hover { color: $color-text-primary; }
+    &:focus-visible { outline: 2px solid $color-primary; outline-offset: 3px; border-radius: $radius-sm; }
 }
 
 .datatable__th-content {
@@ -141,9 +138,8 @@
     transition: color $transition-fast;
 }
 
-.datatable__th--sortable:hover .datatable__sort-icon,
-.datatable__th--sortable[aria-sort='ascending'] .datatable__sort-icon,
-.datatable__th--sortable[aria-sort='descending'] .datatable__sort-icon {
+.datatable__table th[aria-sort='ascending'] .datatable__sort-icon,
+.datatable__table th[aria-sort='descending'] .datatable__sort-icon {
     color: $color-primary;
 }
 
@@ -213,6 +209,18 @@
             padding: $spacing-2 $spacing-3;
         }
     }
+}
+
+@media (max-width: 600px) {
+    .datatable__table { min-width: 700px; }
+
+    .datatable__table th,
+    .datatable__table td {
+        padding: $spacing-2 $spacing-3;
+        font-size: $font-size-xs;
+    }
+
+    .datatable__pagination { padding: $spacing-2 $spacing-3; }
 }
 
 

@@ -176,6 +176,15 @@
     }
 }
 
+@media (max-width: 640px) {
+    .datepicker-field--medium,
+    .datepicker-field--large {
+        min-height: 42px;
+        padding-block: $spacing-2;
+        font-size: 16px;
+    }
+}
+
 
 // ============================================================
 // DÉCALAGE POUR L’ICÔNE

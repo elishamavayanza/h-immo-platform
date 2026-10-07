@@ -1,6 +1,6 @@
 @use '../../baseVariables/variables' as *;
 
-.patron-page {
+.organization-page {
     display: flex;
     flex-direction: column;
     gap: $spacing-4;
@@ -9,33 +9,42 @@
     color: $color-text-primary;
 }
 
-.patron-page__header { display: flex; justify-content: space-between; align-items: center; gap: $spacing-4; }
-.patron-page__eyebrow { color: $color-text-muted; font-size: $font-size-xs; letter-spacing: .08em; }
-.patron-page__header h1 { margin: $spacing-1 0; font-size: clamp(22px, 2.4vw, 30px); color: $color-text-primary; }
-.patron-page__header p { margin: 0; color: $color-text-secondary; font-size: $font-size-sm; }
+.organization-page__header { display: flex; justify-content: space-between; align-items: center; gap: $spacing-4; }
+.organization-page__eyebrow { color: $color-text-muted; font-size: $font-size-xs; letter-spacing: .08em; }
+.organization-page__header h1 { margin: $spacing-1 0; font-size: clamp(22px, 2.4vw, 30px); color: $color-text-primary; }
+.organization-page__header p { margin: 0; color: $color-text-secondary; font-size: $font-size-sm; }
 
-.patron-mini-stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: $spacing-3; }
-.patron-mini-stats .card__body { display: flex; flex-direction: column; gap: $spacing-1; }
-.patron-mini-stats span, .patron-kpi span { color: $color-text-secondary; font-size: $font-size-sm; }
-.patron-mini-stats strong { color: $color-text-primary; font-size: $font-size-2xl; }
-.patron-table-card .card__body { padding: $spacing-4; }
-.patron-table-toolbar { display: flex; align-items: flex-end; justify-content: space-between; gap: $spacing-4; margin-bottom: $spacing-4; }
-.patron-table-toolbar h2, .patron-panel h2 { margin: 0 0 $spacing-1; font-size: $font-size-lg; color: $color-text-primary; }
-.patron-table-toolbar p, .patron-panel p { margin: 0; color: $color-text-muted; font-size: $font-size-xs; }
-.patron-filters { display: grid; grid-template-columns: minmax(210px, 280px) repeat(2, minmax(140px, 170px)); gap: $spacing-2; align-items: center; }
-.patron-filters--tenant { grid-template-columns: minmax(230px, 320px) minmax(145px, 180px); }
-.patron-property-name { display: flex; flex-direction: column; gap: 2px; }
-.patron-property-name strong { color: $color-text-primary; }
-.patron-property-name small { color: $color-text-muted; }
+.organization-mini-stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: $spacing-3; }
+.organization-mini-stats .card__body { display: flex; flex-direction: column; gap: $spacing-1; }
+.organization-mini-stats span, .organization-kpi span { color: $color-text-secondary; font-size: $font-size-sm; }
+.organization-mini-stats strong { color: $color-text-primary; font-size: $font-size-2xl; }
+.organization-table-card .card__body { padding: $spacing-4; }
+.organization-table-toolbar { display: flex; align-items: flex-end; justify-content: space-between; gap: $spacing-4; margin-bottom: $spacing-4; }
+.organization-table-toolbar h2, .organization-panel h2 { margin: 0 0 $spacing-1; font-size: $font-size-lg; color: $color-text-primary; }
+.organization-table-toolbar p, .organization-panel p { margin: 0; color: $color-text-muted; font-size: $font-size-xs; }
+.organization-filters { display: grid; grid-template-columns: minmax(210px, 280px) repeat(2, minmax(140px, 170px)); gap: $spacing-2; align-items: center; }
+.organization-filters--tenant { grid-template-columns: minmax(230px, 320px) minmax(145px, 180px); }
+.organization-property-name { display: flex; flex-direction: column; gap: 2px; }
+.organization-property-name strong { color: $color-text-primary; }
+.organization-property-name small { color: $color-text-muted; }
 
 @media (max-width: 1050px) {
-    .patron-table-toolbar { align-items: stretch; flex-direction: column; }
-    .patron-filters, .patron-filters--tenant { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-    .patron-filters > :first-child { grid-column: 1 / -1; }
+    .organization-table-toolbar { align-items: stretch; flex-direction: column; }
+    .organization-filters, .organization-filters--tenant { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .organization-filters > :first-child { grid-column: 1 / -1; }
 }
 @media (max-width: 600px) {
-    .patron-mini-stats { grid-template-columns: 1fr; }
-    .patron-filters, .patron-filters--tenant { grid-template-columns: minmax(0, 1fr); }
-    .patron-filters > :first-child { grid-column: auto; }
-    .patron-table-card .card__body { padding: $spacing-3; }
+    .organization-page { gap: $spacing-3; padding: $spacing-3 0 $spacing-5; }
+    .organization-page__header { align-items: flex-start; }
+    .organization-page__header h1 { font-size: 22px; }
+    .organization-page__header p { font-size: $font-size-xs; line-height: 1.45; }
+    .organization-mini-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: $spacing-2; }
+    .organization-mini-stats .card__body { padding: $spacing-3; }
+    .organization-mini-stats span { font-size: $font-size-xs; }
+    .organization-mini-stats strong { font-size: $font-size-lg; }
+    .organization-filters, .organization-filters--tenant { grid-template-columns: minmax(0, 1fr); }
+    .organization-filters > :first-child { grid-column: auto; }
+    .organization-table-card .card__body { padding: $spacing-3; }
+    .organization-table-toolbar { gap: $spacing-3; margin-bottom: $spacing-3; }
+    .organization-table-toolbar h2 { font-size: $font-size-sm; }
 }

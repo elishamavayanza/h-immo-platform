@@ -29,7 +29,37 @@ export function SearchableSelect({
     const [isOpen, setIsOpen] = useState(false);
     const [search, setSearch] = useState('');
     const [displayValue, setDisplayValue] = useState('');
+    const [opensAbove, setOpensAbove] = useState(false);
+    const [dropdownMaxHeight, setDropdownMaxHeight] = useState<number>();
     const wrapperRef = useRef<HTMLDivElement>(null);
+
+    useEffect(() => {
+        if (!isOpen) return;
+
+        const updatePlacement = () => {
+            const bounds = wrapperRef.current?.getBoundingClientRect();
+            if (!bounds) return;
+
+            const spaceBelow = window.innerHeight - bounds.bottom;
+            const spaceAbove = bounds.top;
+            const preferredHeight = Math.min(
+                window.innerWidth <= 640 ? 220 : 260,
+                window.innerHeight * 0.4,
+            );
+            const openAbove = spaceBelow < preferredHeight && spaceAbove > spaceBelow;
+
+            setOpensAbove(openAbove);
+            setDropdownMaxHeight(Math.max(1, Math.min(preferredHeight, (openAbove ? spaceAbove : spaceBelow) - 12)));
+        };
+
+        updatePlacement();
+        window.addEventListener('resize', updatePlacement);
+        window.addEventListener('scroll', updatePlacement, true);
+        return () => {
+            window.removeEventListener('resize', updatePlacement);
+            window.removeEventListener('scroll', updatePlacement, true);
+        };
+    }, [isOpen]);
 
     // Synchroniser la valeur affichée avec la prop `value`
     useEffect(() => {
@@ -90,7 +120,10 @@ export function SearchableSelect({
                 required={required}
             />
             {isOpen && (
-                <div className="searchable-select__dropdown">
+                <div
+                    className={`searchable-select__dropdown ${opensAbove ? 'searchable-select__dropdown--above' : ''}`}
+                    style={dropdownMaxHeight ? { maxHeight: `${dropdownMaxHeight}px` } : undefined}
+                >
                     {filteredOptions.length > 0 ? (
                         filteredOptions.map((opt) => (
                             <div

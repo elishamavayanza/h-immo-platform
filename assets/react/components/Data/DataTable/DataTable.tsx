@@ -85,31 +85,36 @@ export function DataTable<T>({
 
     return (
         <div className={classes}>
-            <div className="datatable__wrapper">
+            <div className="datatable__wrapper" role="region" tabIndex={0} aria-label="Tableau défilable horizontalement">
                 <table className="datatable__table">
                     <thead>
                     <tr>
                         {columns.map((col) => (
                             <th
                                 key={String(col.key)}
-                                className={col.sortable ? 'datatable__th--sortable' : ''}
-                                onClick={col.sortable ? () => handleSort(String(col.key)) : undefined}
                                 aria-sort={
                                     col.sortable && sortKey === String(col.key)
                                         ? sortDirection === 'asc' ? 'ascending' : 'descending'
                                         : undefined
                                 }
                             >
-                  <span className="datatable__th-content">
-                    {col.title}
-                      {col.sortable && (
-                          <span className="datatable__sort-icon">
-                        {sortKey === String(col.key)
-                            ? sortDirection === 'asc' ? ' ▲' : ' ▼'
-                            : ' ⇅'}
-                      </span>
-                      )}
-                  </span>
+                                {col.sortable ? (
+                                    <button
+                                        type="button"
+                                        className="datatable__sort-button"
+                                        onClick={() => handleSort(String(col.key))}
+                                        aria-label={`Trier par ${String(col.title)}`}
+                                    >
+                                        <span className="datatable__th-content">
+                                            {col.title}
+                                            <span className="datatable__sort-icon" aria-hidden="true">
+                                                {sortKey === String(col.key)
+                                                    ? sortDirection === 'asc' ? ' ▲' : ' ▼'
+                                                    : ' ⇅'}
+                                            </span>
+                                        </span>
+                                    </button>
+                                ) : col.title}
                             </th>
                         ))}
                     </tr>
