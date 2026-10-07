@@ -3,14 +3,14 @@ import type { OrganizationSummary, OrganizationStatus } from '../types';
 
 const STATUS_LABEL: Record<OrganizationStatus, string> = {
     active: 'Actif',
-    trial: 'Essai',
-    suspended: 'Suspendu',
+    suspended: 'Suspendue',
+    inactive: 'Inactive',
 };
 
 const STATUS_VARIANT: Record<OrganizationStatus, 'success' | 'info' | 'error'> = {
     active: 'success',
-    trial: 'info',
     suspended: 'error',
+    inactive: 'info',
 };
 
 export interface OrganizationsTableProps {

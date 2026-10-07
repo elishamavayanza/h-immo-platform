@@ -4,10 +4,10 @@ export interface OrganizationRow {
     id: string;
     name: string;
     code: string;
+    email: string;
+    phone: string;
+    address: string;
     city: string;
-    plan: string;
-    members: number;
-    properties: number;
     status: OrganizationStatus;
     createdAt: string;
 }

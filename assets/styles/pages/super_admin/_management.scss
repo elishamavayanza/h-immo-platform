@@ -41,6 +41,25 @@
     font-size: $font-size-xs;
 }
 
+.sa-row-actions__trigger {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 34px;
+    height: 34px;
+    border: 1px solid transparent;
+    border-radius: $radius-md;
+    color: $color-text-secondary;
+    cursor: pointer;
+}
+
+.sa-row-actions__trigger:hover,
+.popover-menu__trigger[aria-expanded='true'] .sa-row-actions__trigger {
+    border-color: $color-border;
+    background: $color-bg-card-hover;
+    color: $color-text-primary;
+}
+
 .sa-management-table-card .card__body {
     padding: $spacing-4;
 }

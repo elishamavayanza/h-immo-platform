@@ -102,7 +102,7 @@ const MOCK: SuperAdminDashboardData = {
             plan: 'Pro',
             users: 9,
             properties: 31,
-            status: 'trial',
+            status: 'inactive',
             createdAt: '2024-10-14',
         },
         {

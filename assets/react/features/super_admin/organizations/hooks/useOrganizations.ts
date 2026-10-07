@@ -13,9 +13,15 @@ export function useOrganizations() {
         return matchesSearch && (statusFilter === 'all' || organization.status === statusFilter);
     }), [organizations, search, statusFilter]);
 
-    const addOrganization = (organization: Omit<OrganizationRow, 'id' | 'members' | 'properties' | 'createdAt'>) => {
-        setOrganizations((current) => [{ ...organization, id: `local-${Date.now()}`, members: 1, properties: 0, createdAt: 'Aujourd’hui' }, ...current]);
+    const addOrganization = (organization: Omit<OrganizationRow, 'id' | 'createdAt'>) => {
+        setOrganizations((current) => [{ ...organization, id: crypto.randomUUID(), createdAt: new Date().toISOString() }, ...current]);
     };
 
-    return { organizations, filteredOrganizations, search, setSearch, statusFilter, setStatusFilter, addOrganization };
+    const updateOrganization = (id: string, changes: Partial<Omit<OrganizationRow, 'id' | 'createdAt'>>) => {
+        setOrganizations((current) => current.map((organization) => organization.id === id ? { ...organization, ...changes } : organization));
+    };
+
+    const deleteOrganization = (id: string) => setOrganizations((current) => current.filter((organization) => organization.id !== id));
+
+    return { organizations, filteredOrganizations, search, setSearch, statusFilter, setStatusFilter, addOrganization, updateOrganization, deleteOrganization };
 }

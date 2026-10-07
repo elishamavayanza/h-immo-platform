@@ -1,18 +1,20 @@
 import type { AdminVilleDashboardData } from '../types/adminVilleDashboard.types';
-export function buildAdminVilleDashboard(city: string): AdminVilleDashboardData {
+export function buildAdminVilleDashboard(cities: readonly string[]): AdminVilleDashboardData {
+    const scope = cities.length > 0 ? cities.join(' · ') : 'Aucune ville attribuée';
+    const hasScope = cities.length > 0;
     return {
-        city,
+        city: scope,
         metrics: [
-            { id: 'units', label: 'Unités dans ma ville', value: '42', detail: 'sur 18 bâtiments', tone: 'primary' },
-            { id: 'tenants', label: 'Locataires actifs', value: '36', detail: 'dans votre périmètre', tone: 'info' },
-            { id: 'occupancy', label: 'Taux d’occupation', value: '85,7 %', detail: '6 unités disponibles', tone: 'success' },
-            { id: 'late', label: 'Loyers à suivre', value: '5', detail: '2 échéances en retard', tone: 'warning' },
+            { id: 'units', label: 'Unités dans mon périmètre', value: hasScope ? '42' : '0', detail: hasScope ? 'Donnée de démonstration' : 'Aucune ville attribuée', tone: 'primary' },
+            { id: 'tenants', label: 'Locataires actifs', value: hasScope ? '36' : '0', detail: hasScope ? 'Donnée de démonstration' : 'Aucun périmètre disponible', tone: 'info' },
+            { id: 'occupancy', label: 'Taux d’occupation', value: hasScope ? '85,7 %' : '—', detail: hasScope ? 'Donnée de démonstration' : 'Aucun périmètre disponible', tone: 'success' },
+            { id: 'late', label: 'Loyers à suivre', value: hasScope ? '5' : '0', detail: hasScope ? 'Donnée de démonstration' : 'Aucune ville attribuée', tone: 'warning' },
         ],
-        occupancy: '85,7 %',
-        tasks: [
-            { id: 't1', title: 'Échéance à vérifier', detail: 'Patrick Nsimba · HZN-08 · 450 $', date: 'Aujourd’hui', status: 'warning' },
-            { id: 't2', title: 'Visite de contrôle planifiée', detail: 'Résidence Les Palmiers · KIN-204', date: 'Demain', status: 'info' },
-            { id: 't3', title: 'Paiement confirmé', detail: 'Marie Ilunga · KIN-204', date: 'Hier', status: 'success' },
-        ],
+        occupancy: hasScope ? '85,7 %' : '—',
+        tasks: hasScope ? [
+            { id: 't1', title: 'Échéance à vérifier', detail: `Locataire · ${cities[0]}`, date: 'Aujourd’hui', status: 'warning' },
+            { id: 't2', title: 'Visite de contrôle planifiée', detail: `Bien · ${cities[0]}`, date: 'Demain', status: 'info' },
+            { id: 't3', title: 'Paiement confirmé', detail: `Échéance · ${cities[0]}`, date: 'Hier', status: 'success' },
+        ] : [],
     };
 }
