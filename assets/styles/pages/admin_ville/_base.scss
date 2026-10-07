@@ -14,11 +14,11 @@
 .organization-page__header h1 { margin: $spacing-1 0; font-size: clamp(22px, 2.4vw, 30px); color: $color-text-primary; }
 .organization-page__header p { margin: 0; color: $color-text-secondary; font-size: $font-size-sm; }
 
-.organization-mini-stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: $spacing-3; }
-.organization-mini-stats .card__body { display: flex; flex-direction: column; gap: $spacing-1; }
-.organization-mini-stats span, .organization-kpi span { color: $color-text-secondary; font-size: $font-size-sm; }
-.organization-mini-stats strong { color: $color-text-primary; font-size: $font-size-2xl; }
+.organization-kpi span { color: $color-text-secondary; font-size: $font-size-sm; }
 .organization-table-card .card__body { padding: $spacing-4; }
+.organization-management-form { display: grid; gap: $spacing-3; }
+.organization-management-form__hint { margin: 0; color: $color-text-muted; font-size: $font-size-xs; line-height: 1.5; }
+
 .organization-table-toolbar__actions { display: flex; justify-content: flex-end; margin: 0 0 $spacing-3; }
 .organization-row-actions { display: inline-flex; align-items: center; justify-content: center; width: 36px; height: 36px; border: 1px solid $color-border; border-radius: $radius-md; color: $color-text-secondary; background: $color-bg-card; cursor: pointer; }
 .organization-row-actions:hover, .popover-menu__trigger[aria-expanded='true'] .organization-row-actions { background: $color-bg-card-hover; color: $color-text-primary; }
@@ -41,10 +41,6 @@
     .organization-page__header { align-items: flex-start; }
     .organization-page__header h1 { font-size: 22px; }
     .organization-page__header p { font-size: $font-size-xs; line-height: 1.45; }
-    .organization-mini-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: $spacing-2; }
-    .organization-mini-stats .card__body { padding: $spacing-3; }
-    .organization-mini-stats span { font-size: $font-size-xs; }
-    .organization-mini-stats strong { font-size: $font-size-lg; }
     .organization-filters, .organization-filters--tenant { grid-template-columns: minmax(0, 1fr); }
     .organization-filters > :first-child { grid-column: auto; }
     .organization-table-card .card__body { padding: $spacing-3; }

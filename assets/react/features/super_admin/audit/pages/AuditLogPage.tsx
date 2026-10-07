@@ -44,7 +44,7 @@ export function AuditLogPage() {
                 <DataTable columns={columns} data={entries} pageSize={8} initialSortKey="createdAt" initialSortDirection="desc" />
             </Card>
         </main>
-        <RightSidebar title="Détail de l’événement" size="small" variant="dark" collapsible>
+        <RightSidebar title="Détail de l’événement" size="medium" variant="dark" collapsible>
             <AuditEntryDetails entry={selectedEntry} />
         </RightSidebar>
     </div>;

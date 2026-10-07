@@ -64,6 +64,7 @@
     left: -3px;
     width: 6px;
     cursor: col-resize;
+    touch-action: none;
     background: transparent;
     z-index: 10;
     transition: background-color $transition-fast;
@@ -195,6 +196,7 @@ body.right-sidebar-resizing {
     background-color: $color-bg-card;
     color: $color-text-muted;
     cursor: col-resize;
+    touch-action: none;
     user-select: none;
     transition: background-color $transition-fast, color $transition-fast;
 
@@ -244,28 +246,34 @@ body.right-sidebar-resizing {
 // ============================================================
 
 .right-sidebar__mobile-trigger {
-    @include flex(row, center, center, $spacing-2);
+    @include flex-center;
     position: fixed;
     top: 50%;
     right: 0;
     transform: translateY(-50%);
-    padding: $spacing-3 $spacing-2 $spacing-3 $spacing-3;
-    background-color: $color-primary;
+    width: 42px;
+    height: 48px;
+    padding: 0;
+    background-color: rgba($color-primary, .78);
     color: $color-text-inverse;
-    border: none;
+    border: 1px solid rgba(255, 255, 255, .18);
+    border-right: 0;
     border-radius: $radius-md 0 0 $radius-md;
     font-family: $font-family-base;
     font-size: $font-size-xs;
     font-weight: $font-weight-semibold;
-    box-shadow: $shadow-lg;
+    box-shadow: $shadow-md;
+    opacity: .86;
     cursor: pointer;
     z-index: $z-fixed;
     transition:
         background-color $transition-fast,
+        opacity $transition-fast,
         transform $transition-fast;
 
     &:hover {
-        background-color: $color-primary-hover;
+        background-color: rgba($color-primary-hover, .94);
+        opacity: 1;
         transform: translateY(-50%) translateX(-2px);
     }
 
@@ -275,21 +283,15 @@ body.right-sidebar-resizing {
 
     &:focus-visible {
         outline: none;
+        opacity: 1;
         box-shadow: 0 0 0 3px $shadow-focus;
     }
 
     svg {
         display: block;
+        width: 18px;
+        height: 18px;
     }
-}
-
-.right-sidebar__mobile-trigger-label {
-    writing-mode: vertical-rl;
-    transform: rotate(180deg);
-    max-height: 160px;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
 }
 
 
@@ -297,15 +299,23 @@ body.right-sidebar-resizing {
 // RESPONSIVE
 // ============================================================
 
-@media (max-width: #{$breakpoint-tablet - 1px}) {
+// Le composant passe en mode compact sous le seuil desktop (1024px).
+// Le tiroir CSS suit le même seuil pour rester visible sur les tablettes portrait.
+@media (max-width: #{$breakpoint-desktop - 1px}) {
     .right-sidebar {
         position: fixed;
         top: 0;
         right: 0;
         height: 100vh;
+        height: 100dvh;
         max-width: 90vw;
         box-shadow: $shadow-lg;
         z-index: $z-modal;
+    }
+
+    .right-sidebar__collapse {
+        width: 44px;
+        height: 44px;
     }
 }
 

@@ -66,6 +66,7 @@
     &.btn--loading {
         cursor: progress;
         pointer-events: none;
+        opacity: 1;
 
         .btn__spinner {
             position: absolute;

@@ -141,7 +141,7 @@ export function DataTable<T>({
                     ) : (
                         <tr>
                             <td colSpan={columns.length} className="datatable__empty">
-                                Aucune donnée disponible.
+                                Aucun élément à afficher.
                             </td>
                         </tr>
                     )}
