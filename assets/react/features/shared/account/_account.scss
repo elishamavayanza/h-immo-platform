@@ -1,0 +1,23 @@
+@use '../../../../styles/baseVariables/variables' as *;
+
+.account-page {
+    display: flex;
+    flex-direction: column;
+    gap: $spacing-4;
+    min-height: 100%;
+    padding: $spacing-5 clamp(8px, 1vw, 14px) $spacing-8;
+    color: $color-text-primary;
+}
+.account-page__header { display:flex; align-items:center; justify-content:space-between; gap:$spacing-4; }
+.account-page__header h1 { margin:$spacing-1 0; font-size:clamp(22px, 2.4vw, 30px); color:$color-text-primary; }
+.account-page__header p,.profile-hero__identity p { margin:0; color:$color-text-secondary; font-size:$font-size-sm; }
+.account-page__eyebrow { color:$color-text-muted; font-size:$font-size-xs; letter-spacing:.08em; text-transform:uppercase; }
+.account-page__grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:$spacing-3; }
+
+@media(max-width:600px) {
+    .account-page { gap:$spacing-3; padding:$spacing-3 0 $spacing-5; }
+    .account-page__header { align-items:flex-start; }
+    .account-page__header h1 { font-size:22px; }
+    .account-page__header p { font-size:$font-size-xs; line-height:1.45; }
+    .account-page__grid { grid-template-columns:1fr; gap:$spacing-2; }
+}

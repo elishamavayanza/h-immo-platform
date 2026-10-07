@@ -184,6 +184,7 @@ const RAPPORTS: AppMenuItem = {
     path: '/app/rapports',
 };
 
+
 /**
  * Menu des rôles métier d'organisation, par rôle.
  *

@@ -145,6 +145,7 @@ export const IconReport = (): ReactNode => (
     </svg>
 );
 
+
 // ─────────────────────────────────────────
 // ICÔNES DES PAGES (drill-down)
 // ─────────────────────────────────────────
