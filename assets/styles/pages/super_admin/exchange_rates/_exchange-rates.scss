@@ -1,4 +1,46 @@
 @use '../management';
 @use '../../../baseVariables/variables' as *;
 
-.sa-exchange-summary__date { font-size: $font-size-sm !important; }
+.sa-exchange-summary .card__body {
+    display: grid;
+    grid-template-columns: minmax(180px, .8fr) minmax(0, 1.2fr);
+    align-items: center;
+    gap: $spacing-5;
+}
+
+.sa-exchange-summary__rate {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: $spacing-1;
+}
+
+.sa-exchange-summary__rate > span,
+.sa-exchange-summary__details dt {
+    color: $color-text-muted;
+    font-size: $font-size-xs;
+}
+
+.sa-exchange-summary__rate strong {
+    color: $color-text-primary;
+    font-size: clamp(24px, 3vw, 34px);
+    line-height: 1.15;
+}
+
+.sa-exchange-summary__rate small { color: $color-text-secondary; }
+
+.sa-exchange-summary__details {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: $spacing-3;
+    margin: 0;
+}
+
+.sa-exchange-summary__details div { min-width: 0; }
+.sa-exchange-summary__details dt { margin-bottom: $spacing-1; }
+.sa-exchange-summary__details dd { overflow-wrap: anywhere; margin: 0; color: $color-text-primary; font-size: $font-size-sm; }
+
+@media (max-width: 700px) {
+    .sa-exchange-summary .card__body { grid-template-columns: minmax(0, 1fr); gap: $spacing-3; }
+    .sa-exchange-summary__details { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: $spacing-2; }
+}

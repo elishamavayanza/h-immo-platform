@@ -1,6 +1,8 @@
 import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { useRightSidebar, UseRightSidebarProps } from '../../../hook-components/Navigation/RightSidebar';
 import { useIsCompact } from '../../../hooks/useIsCompact.ts';
+import { MEDIA_QUERIES } from '../../../services/device';
+import { useMediaQuery } from '../../../hooks/useMediaQuery';
 
 const CollapseIcon = () => (
     <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2">
@@ -52,17 +54,24 @@ export function RightSidebar({
                                  collapsedWidth = 35,
                              }: RightSidebarProps) {
     const isCompact = useIsCompact();
+    const isPortrait = useMediaQuery(MEDIA_QUERIES.portrait);
     const initialCollapsed = defaultCollapsed ?? isCompact;
 
     // Ajustements mode compact (mobile / tablette / portrait)
-    const effectiveMinWidth = isCompact ? 120 : minWidth;
-    const effectiveMaxWidth = isCompact ? 280 : maxWidth;
+    const viewportWidth = typeof window === 'undefined' ? 1024 : window.innerWidth;
+    const compactOpenWidth = isPortrait
+        ? Math.min(420, Math.floor(viewportWidth * 0.82))
+        : Math.min(340, Math.floor(viewportWidth * 0.72));
+    const effectiveMinWidth = isCompact ? Math.min(280, Math.floor(viewportWidth * 0.65)) : minWidth;
+    const effectiveMaxWidth = isCompact
+        ? isPortrait ? Math.min(460, Math.floor(viewportWidth * 0.9)) : Math.min(380, Math.floor(viewportWidth * 0.82))
+        : maxWidth;
     const effectiveCloseThreshold = isCompact ? 40 : closeThreshold;
     const effectiveCollapsedWidth = isCompact ? 25 : collapsedWidth;
 
     // Largeur initiale adaptée
     const initialWidth = isCompact
-        ? 260
+        ? Math.min(effectiveMaxWidth, Math.max(effectiveMinWidth, compactOpenWidth))
         : size === 'small' ? 200 : size === 'large' ? 340 : 280;
 
     const { classes } = useRightSidebar({ variant, size, collapsible, defaultCollapsed: initialCollapsed, className });
@@ -87,7 +96,7 @@ export function RightSidebar({
         }
     }, []);
 
-    const handleMouseMove = useCallback((e: MouseEvent) => {
+    const handlePointerMove = useCallback((e: PointerEvent) => {
         if (!isDraggingRef.current) return;
 
         if (rafRef.current !== null) cancelAnimationFrame(rafRef.current);
@@ -116,11 +125,12 @@ export function RightSidebar({
         });
     }, [effectiveMinWidth, effectiveMaxWidth, effectiveCloseThreshold, effectiveCollapsedWidth, updateWidthDOM]);
 
-    const handleMouseUp = useCallback(() => {
+    const handlePointerUp = useCallback(() => {
         isDraggingRef.current = false;
         document.body.classList.remove('right-sidebar-resizing');
-        document.removeEventListener('mousemove', handleMouseMove);
-        document.removeEventListener('mouseup', handleMouseUp);
+        document.removeEventListener('pointermove', handlePointerMove);
+        document.removeEventListener('pointerup', handlePointerUp);
+        document.removeEventListener('pointercancel', handlePointerUp);
 
         if (rafRef.current !== null) {
             cancelAnimationFrame(rafRef.current);
@@ -137,25 +147,33 @@ export function RightSidebar({
                 onResize?.(effectiveCollapsedWidth);
             }
         }
-    }, [handleMouseMove, effectiveCollapsedWidth, onResize]);
+    }, [handlePointerMove, effectiveCollapsedWidth, onResize]);
 
-    const startDragging = useCallback((e: React.MouseEvent) => {
-        e.preventDefault();
+    const startDragging = useCallback((e: React.PointerEvent) => {
+        if (e.pointerType === 'mouse') e.preventDefault();
         e.stopPropagation();
         isDraggingRef.current = true;
         document.body.classList.add('right-sidebar-resizing');
-        document.addEventListener('mousemove', handleMouseMove);
-        document.addEventListener('mouseup', handleMouseUp);
-    }, [handleMouseMove, handleMouseUp]);
+        document.addEventListener('pointermove', handlePointerMove);
+        document.addEventListener('pointerup', handlePointerUp);
+        document.addEventListener('pointercancel', handlePointerUp);
+    }, [handlePointerMove, handlePointerUp]);
 
     useEffect(() => {
         return () => {
             document.body.classList.remove('right-sidebar-resizing');
-            document.removeEventListener('mousemove', handleMouseMove);
-            document.removeEventListener('mouseup', handleMouseUp);
+            document.removeEventListener('pointermove', handlePointerMove);
+            document.removeEventListener('pointerup', handlePointerUp);
+            document.removeEventListener('pointercancel', handlePointerUp);
             if (rafRef.current !== null) cancelAnimationFrame(rafRef.current);
         };
-    }, [handleMouseMove, handleMouseUp]);
+    }, [handlePointerMove, handlePointerUp]);
+
+    useEffect(() => {
+        if (isCompact && !isFullyCollapsed) {
+            setWidth(initialWidth);
+        }
+    }, [isCompact, isPortrait, initialWidth, isFullyCollapsed]);
 
     const handleToggle = () => {
         const nextState = !isFullyCollapsed;
@@ -194,13 +212,12 @@ export function RightSidebar({
                     type="button"
                     className="right-sidebar__mobile-trigger"
                     onClick={handleToggle}
-                    aria-label="Ouvrir le panneau"
-                    title="Ouvrir le panneau"
+                    aria-label={`Ouvrir ${title || 'le panneau'}`}
+                    title={`Ouvrir ${title || 'le panneau'}`}
                 >
                     <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2">
                         <polyline points="9 18 15 12 9 6" />
                     </svg>
-                    {title && <span className="right-sidebar__mobile-trigger-label">{title}</span>}
                 </button>
             )}
 
@@ -212,7 +229,7 @@ export function RightSidebar({
                 {isFullyCollapsed ? (
                     <div
                         className="right-sidebar__collapsed-strip"
-                        onMouseDown={startDragging}
+                        onPointerDown={startDragging}
                         onClick={() => {
                             if (!isDraggingRef.current) handleToggle();
                         }}
@@ -224,7 +241,7 @@ export function RightSidebar({
                     <>
                         <div
                             className="right-sidebar__resizer"
-                            onMouseDown={startDragging}
+                            onPointerDown={startDragging}
                             title="Glisser pour redimensionner"
                         />
 

@@ -4,7 +4,7 @@ import type { DataTableColumn } from '../../../hook-components/Data/DataTable';
 import { FormField } from '../../../components/Forms/FormField';
 import { Input } from '../../../components/Forms/Input';
 import { Button } from '../../../components/UI/Button';
-import { Card } from '../../../components/UI/Card';
+import { EmptyState } from '../../../components/Data/EmptyState';
 import { ConfirmDialog } from '../../../components/UI/ConfirmDialog';
 import { Modal } from '../../../components/UI/Modal';
 import { PopoverMenu } from '../../../components/UI/PopoverMenu';
@@ -57,15 +57,16 @@ export function PatronManagedTable<T extends { id: string }>({ rows, columns, fi
             ...extraActions.filter((action) => action.visible?.(row) ?? true).map((action) => ({ id: action.id, label: action.label(row), onClick: () => setRecords((current) => current.map((item) => item.id === row.id ? { ...item, ...action.apply(row) } : item)) })),
             ...(allowDelete ? [{ id: 'delete-separator', label: '', separator: true }, { id: 'delete', label: 'Supprimer', icon: <span aria-hidden="true">⌫</span>, danger: true, onClick: () => setPendingDelete(row) }] : []),
         ];
-        return <PopoverMenu placement="bottom" offset={6} items={items} trigger={<span className="organization-row-actions" aria-label={`Actions pour ${row.id}`}><span aria-hidden="true">•••</span></span>} />;
+        const rowLabel = String(row[columns[0]?.key as keyof T] ?? row.id);
+        return <PopoverMenu placement="bottom" offset={6} items={items} trigger={<span className="organization-row-actions" aria-label={`Actions pour ${rowLabel}`}><span aria-hidden="true">•••</span></span>} />;
     } }];
 
     return <>
-        {allowCreate && <div className="organization-table-toolbar__actions"><Button onClick={openCreate}>＋ {createLabel}</Button></div>}
-        <DataTable columns={actionColumns} data={records} pageSize={8} initialSortKey={initialSortKey} />
+        {allowCreate && records.length > 0 && <div className="organization-table-toolbar__actions"><Button onClick={openCreate}>＋ {createLabel}</Button></div>}
+        {records.length > 0 ? <DataTable columns={actionColumns} data={records} pageSize={8} initialSortKey={initialSortKey} /> : <EmptyState title="Aucun résultat" description="Aucun élément ne correspond à cette recherche ou à ces filtres. Ajustez les critères, ou ajoutez un élément si vous gérez cette liste." action={allowCreate ? <Button onClick={openCreate}>＋ {createLabel}</Button> : undefined} />}
         <Modal isOpen={allowCreate || allowEdit ? editing !== null || Object.keys(form).length > 0 : false} onClose={() => { setEditing(null); setForm({}); }} title={editing ? `Modifier : ${title}` : createLabel} size="medium" footer={<><Button variant="outline" onClick={() => { setEditing(null); setForm({}); }}>Annuler</Button><Button type="submit" form="patron-record-form">Enregistrer</Button></>}>
-            <form id="patron-record-form" className="sa-management-form" onSubmit={submit}>
-                <p className="sa-management-form__hint">Modification locale de la maquette, sans appel à l’API.</p>
+            <form id="patron-record-form" className="organization-management-form" onSubmit={submit}>
+                <p className="organization-management-form__hint">Modification locale de la maquette, sans appel à l’API.</p>
                 {fields.map(({ key, label, required, type = 'text' }) => <FormField key={String(key)} label={label} htmlFor={`patron-${String(key)}`} required={required}><Input id={`patron-${String(key)}`} type={type} value={form[String(key)] ?? ''} onChange={(event) => setForm((current) => ({ ...current, [String(key)]: event.target.value }))} required={required} fullWidth /></FormField>)}
             </form>
         </Modal>

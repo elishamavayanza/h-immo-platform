@@ -78,7 +78,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }), []);
 
     const login = useCallback(async (email: string, password: string) => {
-        setIsLoading(true);
         try {
             const { data } = await authService.login(email, password);
 
@@ -91,8 +90,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             tokenStorage.clearAll();
             setUser(null);
             throw error;
-        } finally {
-            setIsLoading(false);
         }
     }, []);
 
