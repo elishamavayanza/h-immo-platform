@@ -1,0 +1,41 @@
+@use '../../baseVariables/variables' as *;
+
+.patron-page {
+    display: flex;
+    flex-direction: column;
+    gap: $spacing-4;
+    min-height: 100%;
+    padding: $spacing-5 clamp(8px, 1vw, 14px) $spacing-8;
+    color: $color-text-primary;
+}
+
+.patron-page__header { display: flex; justify-content: space-between; align-items: center; gap: $spacing-4; }
+.patron-page__eyebrow { color: $color-text-muted; font-size: $font-size-xs; letter-spacing: .08em; }
+.patron-page__header h1 { margin: $spacing-1 0; font-size: clamp(22px, 2.4vw, 30px); color: $color-text-primary; }
+.patron-page__header p { margin: 0; color: $color-text-secondary; font-size: $font-size-sm; }
+
+.patron-mini-stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: $spacing-3; }
+.patron-mini-stats .card__body { display: flex; flex-direction: column; gap: $spacing-1; }
+.patron-mini-stats span, .patron-kpi span { color: $color-text-secondary; font-size: $font-size-sm; }
+.patron-mini-stats strong { color: $color-text-primary; font-size: $font-size-2xl; }
+.patron-table-card .card__body { padding: $spacing-4; }
+.patron-table-toolbar { display: flex; align-items: flex-end; justify-content: space-between; gap: $spacing-4; margin-bottom: $spacing-4; }
+.patron-table-toolbar h2, .patron-panel h2 { margin: 0 0 $spacing-1; font-size: $font-size-lg; color: $color-text-primary; }
+.patron-table-toolbar p, .patron-panel p { margin: 0; color: $color-text-muted; font-size: $font-size-xs; }
+.patron-filters { display: grid; grid-template-columns: minmax(210px, 280px) repeat(2, minmax(140px, 170px)); gap: $spacing-2; align-items: center; }
+.patron-filters--tenant { grid-template-columns: minmax(230px, 320px) minmax(145px, 180px); }
+.patron-property-name { display: flex; flex-direction: column; gap: 2px; }
+.patron-property-name strong { color: $color-text-primary; }
+.patron-property-name small { color: $color-text-muted; }
+
+@media (max-width: 1050px) {
+    .patron-table-toolbar { align-items: stretch; flex-direction: column; }
+    .patron-filters, .patron-filters--tenant { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .patron-filters > :first-child { grid-column: 1 / -1; }
+}
+@media (max-width: 600px) {
+    .patron-mini-stats { grid-template-columns: 1fr; }
+    .patron-filters, .patron-filters--tenant { grid-template-columns: minmax(0, 1fr); }
+    .patron-filters > :first-child { grid-column: auto; }
+    .patron-table-card .card__body { padding: $spacing-3; }
+}
