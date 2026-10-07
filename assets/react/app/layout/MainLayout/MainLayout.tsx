@@ -19,6 +19,8 @@ import './MainLayout.scss';
 import { Sidebar, SidebarProps } from '../../../components/Navigation/Sidebar';
 import { Loading } from '../../../components/UI/Loading';
 import { Spinner } from '../../../components/UI/Spinner';
+import { useIsPortrait } from '../../../hooks/useIsPortrait';
+import { useIsMobile } from '../../../hooks/useIsMobile';
 
 /**
  * Marque du sidebar : logo + "IMMO" + nom de l'organisation active sur sa propre ligne.
@@ -95,6 +97,8 @@ export function MainLayout() {
     const { user, isAuthenticated, isLoading: isAuthLoading, logout } = useAuth();
     const { currentOrganization, platformRole, organizationRole, isLoading: isOrgLoading } = useOrganization();
     const [isMobileOpen, setIsMobileOpen] = useState(false);
+    const isMobile = useIsMobile();
+    const isPortrait = useIsPortrait();
     const [isPageTransitionLoading, setPageTransitionLoading] = useState(false);
     const location = useLocation();
     const navigate = useNavigate();
@@ -186,8 +190,8 @@ export function MainLayout() {
 
 return (
         <div className="main-layout">
-            {/* Bouton hamburger flottant — visible dès que le layout passe
-                en tiroir (largeur < 768px OU orientation portrait). Fixed,
+            {/* Bouton hamburger flottant — réservé au mode mobile
+                (largeur < 768px). Fixed,
                 z-index sous le drawer. */}
             <button
                 type="button"
@@ -220,7 +224,7 @@ return (
                     groups={groups}
                     variant="dark"
                     collapsible
-                    defaultCollapsed={false}
+                    defaultCollapsed={isPortrait && !isMobile}
                     width="264px"
                     header={<Brand organizationName={currentOrganization?.name} />}
                     activeRoute={location.pathname}

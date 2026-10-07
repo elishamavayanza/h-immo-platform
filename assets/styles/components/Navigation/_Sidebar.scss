@@ -139,8 +139,8 @@
     // Le tiroir ouvert reprend la largeur pleine : sur mobile la classe
     // `sidebar--collapsed` n'est plus posée (c'est le hook qui la retire à
     // l'ouverture), donc les libellés reviennent d'eux-mêmes.
-    // Conditions alignées sur « mode tiroir » : < 768px OU portrait.
-    @media (max-width: #{$breakpoint-tablet - 1px}), (orientation: portrait) {
+    // Le tiroir ouvert est réservé aux écrans mobiles.
+    @media (max-width: #{$breakpoint-tablet - 1px}) {
         width: var(--sidebar-width, #{$sidebar-width});
     }
 }
@@ -503,13 +503,10 @@
 // La transition utilise `transform` (GPU) plutôt que `width` pour éviter
 // les recalculs de layout. `will-change: transform` optimise l'animation.
 //
-// Le tiroir est déclenché par le « mode tiroir » (largeur < 768px OU
-// orientation portrait) : un écran portrait de 768–1023px (tablette,
-// pliable) doit rester fermé par défaut, sinon son panneau statique ne
-// peut jamais se refermer. Cette liste de conditions est l'équivalent
-// CSS de `MEDIA_QUERIES.drawer` côté TypeScript (`useIsMobile`).
+// Le tiroir est réservé aux écrans de moins de 768px. Une tablette en
+// orientation portrait garde le sidebar visible sous forme de rail replié.
 //
-@media (max-width: #{$breakpoint-tablet - 1px}), (orientation: portrait) {
+@media (max-width: #{$breakpoint-tablet - 1px}) {
     .sidebar {
         position: fixed;
         top: 0;

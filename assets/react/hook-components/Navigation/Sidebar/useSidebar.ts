@@ -50,6 +50,9 @@ export function useSidebar({
                                onMobileOpen,
                            }: UseSidebarProps) {
     const [isCollapsed, setIsCollapsed] = useState(defaultCollapsed);
+    useEffect(() => {
+        setIsCollapsed(defaultCollapsed);
+    }, [defaultCollapsed]);
     // Sections repliées/dépliées à la main. Volontairement séparé de
     // `defaultOpen` (porté par les items) : l'état ouvert d'une section
     // est l'override manuel s'il existe, sinon la valeur par défaut
@@ -73,7 +76,7 @@ export function useSidebar({
 
     const isMobileOpen = mobileOpen !== undefined ? mobileOpen : internalMobileOpen;
 
-    // En mode bureau (`>= 768px`) la sidebar redevient statique dans le flux ;
+    // Au-dessus du seuil mobile, la sidebar reste dans le flux ;
     // si le drawer mobile était resté ouvert, on le referme pour ne pas le
     // rouvrir intempestivement quand on repasse sous le seuil.
     const isMobile = useIsMobile();
@@ -89,7 +92,7 @@ export function useSidebar({
     // Sur mobile, le sidebar est COMPLÈTEMENT CACHÉ par défaut (pas de rail).
     // Il n'y a plus d'état « replié » sur mobile : soit le tiroir est ouvert
     // (largeur pleine, libellés visibles), soit il est fermé (sidebar hors écran).
-    // Le `sidebar--collapsed` ne s'applique donc QUE sur desktop/tablette.
+    // Le `sidebar--collapsed` ne s'applique donc QUE sur tablette/desktop.
     //
     // Les règles pures vivent dans `sidebar.state.ts`, testables sans DOM.
     const displayState = { isMobile, isRail, isCollapsed, collapsible };
