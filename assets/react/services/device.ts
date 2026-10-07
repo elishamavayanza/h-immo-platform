@@ -50,16 +50,8 @@ export const MEDIA_QUERIES = {
     touch: '(pointer: coarse)',
     finePointer: '(pointer: fine)',
     reducedMotion: '(prefers-reduced-motion: reduce)',
-    /**
-     * Mode « tiroir » du back-office : le sidebar devient un panneau
-     * off-canvas fermé par défaut, ouvert par le bouton hamburger.
-     * Largeur mobile (< tablette) OU orientation portrait — un écran
-     * portrait de 768–1023px (tablette ou pliable) doit se comporter
-     * comme un mobile, sinon son panneau statique ne peut jamais se
-     * fermer. Le CSS applique la même liste de conditions sur ses
-     * `@media` de tiroir (voir `_Sidebar.scss`, `MainLayout.scss`).
-     */
-    drawer: `(max-width: ${BREAKPOINTS.tablet - 1}px), (orientation: portrait)`,
+    /** Le tiroir hors-canvas est réservé aux écrans mobiles. */
+    drawer: `(max-width: ${BREAKPOINTS.tablet - 1}px)`,
 } as const;
 
 export const isClient = typeof window !== 'undefined';

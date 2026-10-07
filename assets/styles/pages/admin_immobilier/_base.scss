@@ -31,7 +31,7 @@
 .organization-property-name strong { color: $color-text-primary; }
 .organization-property-name small { color: $color-text-muted; }
 
-@media (max-width: 1050px) {
+@media (max-width: 760px) {
     .organization-table-toolbar { align-items: stretch; flex-direction: column; }
     .organization-filters, .organization-filters--tenant { grid-template-columns: repeat(2, minmax(0, 1fr)); }
     .organization-filters > :first-child { grid-column: 1 / -1; }

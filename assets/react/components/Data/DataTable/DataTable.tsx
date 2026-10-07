@@ -20,7 +20,7 @@ export interface DataTableProps<T> extends UseDataTableProps<T> {
 export function DataTable<T>({
                                  columns,
                                  data,
-                                 pageSize,
+                                 pageSize = 12,
                                  initialSortKey,
                                  initialSortDirection,
                                  className,
@@ -58,7 +58,7 @@ export function DataTable<T>({
     const sortDirection = isServer ? serverSortDirection : localSortDirection;
 
     const displayData = isServer ? data : paginatedData;
-    const serverTotalPages = Math.max(1, Math.ceil((totalItems ?? data.length) / (pageSize || 10)));
+    const serverTotalPages = Math.max(1, Math.ceil((totalItems ?? data.length) / pageSize));
     const activeTotalPages = isServer ? serverTotalPages : localTotalPages;
     const activeCurrentPage = isServer ? currentPage : localCurrentPage;
 
@@ -132,7 +132,7 @@ export function DataTable<T>({
                                 {columns.map((col) => (
                                     <td key={String(col.key)}>
                                         {col.render
-                                            ? col.render(row, rowIndex + (activeCurrentPage - 1) * (pageSize || 10))
+                                            ? col.render(row, rowIndex + (activeCurrentPage - 1) * pageSize)
                                             : (row[col.key as keyof T] as React.ReactNode)}
                                     </td>
                                 ))}

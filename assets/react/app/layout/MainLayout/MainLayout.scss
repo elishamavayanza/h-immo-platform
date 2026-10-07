@@ -54,9 +54,8 @@
         box-shadow $transition-fast;
     z-index: $z-fixed; // au-dessus du contenu, sous le drawer/backdrop
 
-    // Visible dès que le layout passe en tiroir : largeur < 768px OU
-    // portrait (même liste de conditions que le drawer du sidebar).
-    @media (max-width: #{$breakpoint-tablet - 1px}), (orientation: portrait) {
+    // Le bouton n'apparaît que lorsque le sidebar est un tiroir mobile.
+    @media (max-width: #{$breakpoint-tablet - 1px}) {
         display: flex;
     }
 
@@ -135,8 +134,8 @@
 
     // Sur mobile, le sidebar est un tiroir qui glisse par-dessus le contenu
     // (pas de rail permanent). Le contenu prend toute la largeur.
-    // Mode tiroir : < 768px OU portrait (aligné sur `MEDIA_QUERIES.drawer`).
-    @media (max-width: #{$breakpoint-tablet - 1px}), (orientation: portrait) {
+    // Mode tiroir réservé aux écrans mobiles.
+    @media (max-width: #{$breakpoint-tablet - 1px}) {
         padding-left: 0;
     }
 }
@@ -253,10 +252,9 @@
 .main-layout .sidebar {
     height: 100%;
 
-    // En tiroir (mobile ou portrait), le panneau est `position: fixed` : il
-    // doit couvrir toute la hauteur VISIBLE, donc `100dvh` et non `100vh`
-    // (barre d'adresse mobile).
-    @media (max-width: #{$breakpoint-tablet - 1px}), (orientation: portrait) {
+    // En tiroir mobile, le panneau est `position: fixed` : il doit couvrir
+    // toute la hauteur visible, donc `100dvh` et non `100vh`.
+    @media (max-width: #{$breakpoint-tablet - 1px}) {
         height: 100dvh;
     }
 }
