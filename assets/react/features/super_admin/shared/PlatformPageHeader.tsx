@@ -5,7 +5,7 @@ import { DashboardIcon } from '../dashbord/components/DashboardIcon';
 export interface PlatformPageHeaderProps {
     title: string;
     description: string;
-    icon: 'briefcase' | 'users';
+    icon: 'briefcase' | 'users' | 'shield' | 'revenue';
     action?: ReactNode;
 }
 
