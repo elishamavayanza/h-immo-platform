@@ -85,7 +85,7 @@
 // La classe est posée sur <body> pendant le drag.
 // ============================================================
 
-:global(body.right-sidebar-resizing) {
+body.right-sidebar-resizing {
     user-select: none;
     cursor: col-resize;
 
@@ -93,12 +93,6 @@
     * {
         transition: none !important;
     }
-}
-
-// Fallback Sass si :global() n’est pas supporté
-body.right-sidebar-resizing {
-    user-select: none;
-    cursor: col-resize;
 }
 
 

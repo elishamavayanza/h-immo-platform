@@ -184,12 +184,12 @@
     border-color: $color-danger;
 
     &:hover:not(:disabled):not(.icon-btn--disabled) {
-        background-color: #D64B68;
-        border-color: #D64B68;
+        background-color: $color-danger-hover;
+        border-color: $color-danger-hover;
     }
 
     &:active:not(:disabled):not(.icon-btn--disabled) {
-        background-color: #C33E5A;
+        background-color: $color-danger-active;
     }
 }
 

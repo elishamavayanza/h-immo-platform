@@ -1,0 +1,547 @@
+// ============================================================
+// SOFT-IMMO — Page : Tableau de bord SUPER_ADMIN
+// Fichier : styles/pages/super_admin/dashboard.scss
+//
+// Règle : ce fichier ne définit que des styles de PAGE. Les
+// primitives réutilisables vivent dans /styles/_mixins.scss.
+// Les surfaces et accents reprennent les variables du design system.
+// ============================================================
+
+@use '../../baseVariables/variables' as *;
+@use '../../baseVariables/mixins' as *;
+
+// ------------------------------------------------------------
+// Palette locale (thème sombre).
+// ------------------------------------------------------------
+.sa-dashboard {
+    --sa-surface: #{$color-bg-card};
+    --sa-surface-2: #{$color-bg-elevated};
+    --sa-border: #{$color-border};
+    --sa-border-soft: #{$color-border-light};
+    --sa-text: #{$color-text-primary};
+    --sa-text-soft: #{$color-text-secondary};
+    --sa-text-muted: #{$color-text-muted};
+    --sa-primary: #{$color-primary};
+    --sa-primary-soft: #{$color-primary-light};
+    --sa-accent: #{$color-mint};
+    --sa-success: #{$color-success};
+    --sa-success-soft: #{$color-success-light};
+    --sa-warning: #{$color-warning};
+    --sa-warning-soft: #{$color-warning-light};
+    --sa-danger: #{$color-danger};
+    --sa-danger-soft: #{$color-danger-light};
+    --sa-info: #{$color-info};
+    --sa-info-soft: #{$color-info-light};
+    display: flex;
+    flex-direction: column;
+    gap: $spacing-4;
+    color: var(--sa-text);
+    padding: $spacing-5 clamp(8px, 1vw, 14px) $spacing-8;
+    min-height: 100%;
+}
+
+// ------------------------------------------------------------
+// 1. En-tête
+// ------------------------------------------------------------
+.sa-header {
+    @include flex-between;
+    gap: 20px;
+    flex-wrap: wrap;
+
+    &__intro { min-width: 260px; }
+
+    &__eyebrow {
+        @include flex(row, center, flex-start, 8px);
+        font-size: 12px;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: var(--sa-text-muted);
+        margin-bottom: 6px;
+    }
+
+    &__title {
+        font-size: clamp(22px, 2.4vw, 30px);
+        font-weight: 700;
+        letter-spacing: -0.01em;
+        margin: 0 0 6px;
+        color: var(--sa-text);
+    }
+
+    &__subtitle {
+        margin: 0;
+        color: var(--sa-text-soft);
+        font-size: 14px;
+        line-height: 1.5;
+        max-width: 60ch;
+    }
+
+    &__actions {
+        @include flex(row, center, flex-end, 12px);
+        flex-wrap: wrap;
+    }
+}
+
+// Sélecteur segmenté (périodes)
+.sa-segmented {
+    @include flex(row, center, flex-start, 2px);
+    padding: 4px;
+    background: var(--sa-surface-2);
+    border: 1px solid var(--sa-border);
+    border-radius: 999px;
+
+    &__btn {
+        appearance: none;
+        border: 0;
+        background: transparent;
+        color: var(--sa-text-soft);
+        font-size: 13px;
+        font-weight: 500;
+        padding: 7px 14px;
+        border-radius: 999px;
+        cursor: pointer;
+        transition: color 140ms ease, background 140ms ease;
+
+        &:hover { color: var(--sa-text); }
+
+        &.is-active {
+            background: var(--sa-primary-soft);
+            color: var(--sa-primary);
+        }
+
+        @include focus-ring;
+    }
+}
+
+// ------------------------------------------------------------
+// 2. Grille de KPI
+// ------------------------------------------------------------
+.sa-kpi-grid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: $spacing-4;
+
+    @media (max-width: 1100px) { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    @media (max-width: 560px)  { grid-template-columns: 1fr; }
+}
+
+.sa-kpi {
+    position: relative;
+    overflow: hidden;
+    min-width: 0;
+    transition: transform 200ms ease, border-color 200ms ease, box-shadow 200ms ease;
+
+    .card__body { padding: 18px 18px 16px; }
+
+    &:hover {
+        transform: translateY(-3px);
+        border-color: var(--sa-border-soft);
+        box-shadow: $shadow-md;
+    }
+
+    &__head { @include flex(row, center, flex-start, 10px); }
+
+    &__icon {
+        @include flex-center;
+        width: 34px;
+        height: 34px;
+        border-radius: 10px;
+        background: var(--sa-primary-soft);
+        color: var(--sa-primary);
+    }
+
+    &__label {
+        font-size: 12.5px;
+        color: var(--sa-text-soft);
+        letter-spacing: 0.01em;
+    }
+
+    &__value {
+        margin: 14px 0 12px;
+        font-size: clamp(22px, 2.4vw, 28px);
+        font-weight: 700;
+        letter-spacing: -0.02em;
+        color: var(--sa-text);
+        @include truncate;
+    }
+
+    &__foot {
+        @include flex-between;
+        gap: 8px;
+        font-size: 12.5px;
+    }
+
+    &__trend {
+        @include flex(row, center, flex-start, 4px);
+        padding: 3px 8px;
+        border-radius: 999px;
+        font-weight: 600;
+
+        &.is-good { background: var(--sa-success-soft); color: var(--sa-success); }
+        &.is-bad  { background: var(--sa-danger-soft);  color: var(--sa-danger);  }
+    }
+
+    &__helper { color: var(--sa-text-muted); @include truncate; }
+
+    &--primary .sa-kpi__icon { background: var(--sa-primary-soft); color: var(--sa-primary); }
+    &--info .sa-kpi__icon { background: var(--sa-info-soft); color: var(--sa-info); }
+    &--success .sa-kpi__icon { background: var(--sa-success-soft); color: var(--sa-success); }
+    &--warning .sa-kpi__icon { background: var(--sa-warning-soft); color: var(--sa-warning); }
+    &--danger .sa-kpi__icon { background: var(--sa-danger-soft); color: var(--sa-danger); }
+}
+
+// ------------------------------------------------------------
+// 3. Grille principale
+// ------------------------------------------------------------
+.sa-grid {
+    display: grid;
+    gap: $spacing-4;
+
+    &--2-1 { grid-template-columns: minmax(0, 2.1fr) minmax(0, 1fr); }
+    &--1   { grid-template-columns: 1fr; }
+
+    @media (max-width: 1024px) { &--2-1 { grid-template-columns: 1fr; } }
+}
+
+.sa-dashboard-card {
+    min-width: 0;
+    height: 100%;
+
+    .card__header { padding: 0 0 14px; }
+    .card__body { padding: 14px 0 0; }
+
+    .sa-card__head {
+        @include flex-between;
+        align-items: flex-start;
+        gap: 12px;
+    }
+
+    .sa-card__title {
+        margin: 0 0 4px;
+        font-size: 15.5px;
+        font-weight: 600;
+        color: var(--sa-text);
+        letter-spacing: -0.005em;
+    }
+
+    .sa-card__sub {
+        margin: 0;
+        font-size: 12.5px;
+        color: var(--sa-text-muted);
+    }
+}
+
+.sa-dashboard .card {
+    color: var(--sa-text);
+    background: var(--sa-surface);
+    border-color: var(--sa-border);
+    border-radius: $radius-lg;
+}
+
+.sa-dashboard .card__header {
+    color: var(--sa-text);
+    border-color: var(--sa-border);
+}
+
+.sa-dashboard .card__body { color: var(--sa-text-soft); }
+
+// ------------------------------------------------------------
+// 4. Graphique
+// ------------------------------------------------------------
+.sa-chart {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+
+    &__svg { width: 100%; height: auto; display: block; }
+
+    &__grid { stroke: var(--sa-border-soft); stroke-dasharray: 3 6; stroke-width: 1; }
+    &__tick { fill: var(--sa-text-muted); font-size: 11px; font-family: inherit; }
+
+    &__line {
+        fill: none;
+        stroke-width: 2.5;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+    }
+
+    &__sub {
+        fill: none;
+        stroke: var(--sa-accent);
+        stroke-width: 1.6;
+        stroke-dasharray: 4 6;
+        opacity: 0.75;
+    }
+
+    &__dot { fill: var(--sa-primary); stroke: var(--sa-surface); stroke-width: 2; }
+    &__dot-halo { fill: var(--sa-primary); opacity: 0; transition: opacity 160ms ease; }
+
+    &__dot-group:hover .sa-chart__dot-halo { opacity: 0.14; }
+
+    &__legend {
+        @include flex(row, center, flex-start, 18px);
+        flex-wrap: wrap;
+        margin-top: 12px;
+        font-size: 12.5px;
+        color: var(--sa-text-soft);
+    }
+}
+
+.sa-legend {
+    @include flex(row, center, flex-start, 8px);
+
+    &__swatch {
+        width: 12px; height: 12px;
+        border-radius: 3px;
+        display: inline-block;
+
+        &--primary { background: var(--sa-primary); }
+        &--accent  { background: var(--sa-accent); }
+    }
+}
+
+// ------------------------------------------------------------
+// 5. Santé système
+// ------------------------------------------------------------
+.sa-health {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+
+    &__row {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+        align-items: center;
+        gap: 8px 12px;
+        padding: 12px 14px;
+        border-radius: $radius-sm;
+        border: 1px solid var(--sa-border-soft);
+        background: var(--sa-surface);
+    }
+
+    &__label { font-size: 13px; color: var(--sa-text-soft); }
+
+    &__value {
+        font-size: 13.5px;
+        font-weight: 600;
+        color: var(--sa-text);
+
+        small { margin-left: 2px; font-size: 11px; color: var(--sa-text-muted); }
+    }
+
+}
+
+// ------------------------------------------------------------
+// 6. Tableau des organisations
+// ------------------------------------------------------------
+.sa-table-wrap {
+    margin: 0 -8px;
+    @include scrollbar(8px);
+    overflow: auto;
+}
+
+.sa-table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0 4px;
+    font-size: 13.5px;
+
+    thead th {
+        text-align: left;
+        font-weight: 500;
+        font-size: 11.5px;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        color: var(--sa-text-muted);
+        padding: 8px 14px;
+    }
+
+    tbody tr {
+        background: var(--sa-surface);
+        transition: background 140ms ease;
+
+        &:hover { background: var(--sa-surface-2); }
+    }
+
+    tbody td {
+        padding: 12px 14px;
+        color: var(--sa-text);
+        vertical-align: middle;
+
+        &:first-child { border-top-left-radius: 10px; border-bottom-left-radius: 10px; }
+        &:last-child  { border-top-right-radius: 10px; border-bottom-right-radius: 10px; }
+    }
+
+    .is-num { text-align: right; font-variant-numeric: tabular-nums; }
+
+    &__org { @include flex(row, center, flex-start, 12px); }
+
+    &__logo {
+        @include flex-center;
+        width: 32px; height: 32px;
+        border-radius: 9px;
+        background: var(--sa-primary-soft);
+        color: var(--sa-primary);
+        font-weight: 700;
+        font-size: 13px;
+        flex-shrink: 0;
+    }
+
+    &__name {
+        font-weight: 600;
+        color: var(--sa-text);
+        @include truncate;
+        max-width: 220px;
+    }
+
+    &__meta { font-size: 11.5px; color: var(--sa-text-muted); @include truncate; max-width: 220px; }
+}
+
+.sa-plan {
+    display: inline-block;
+    padding: 3px 10px;
+    border-radius: 999px;
+    background: var(--sa-surface-2);
+    border: 1px solid var(--sa-border);
+    font-size: 11.5px;
+    font-weight: 500;
+    color: var(--sa-text-soft);
+}
+
+// ------------------------------------------------------------
+// 7. Flux d'activité
+// ------------------------------------------------------------
+.sa-feed {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    position: relative;
+
+    // Ligne verticale de timeline
+    &::before {
+        content: '';
+        position: absolute;
+        left: 15px;
+        top: 8px;
+        bottom: 8px;
+        width: 1px;
+        background: var(--sa-border-soft);
+    }
+
+    &__item {
+        @include flex(row, flex-start, flex-start, 12px);
+        padding: 10px 0;
+        position: relative;
+    }
+
+    &__dot {
+        @include flex-center;
+        width: 30px; height: 30px;
+        border-radius: 50%;
+        background: var(--sa-surface-2);
+        border: 1px solid var(--sa-border);
+        color: var(--sa-text-soft);
+        flex-shrink: 0;
+        position: relative;
+        z-index: 1;
+    }
+
+    &__item--create .sa-feed__dot { color: var(--sa-success); border-color: var(--sa-success); }
+    &__item--update .sa-feed__dot { color: var(--sa-primary); border-color: var(--sa-primary); }
+    &__item--delete .sa-feed__dot { color: var(--sa-text-muted); }
+    &__item--login  .sa-feed__dot { color: var(--sa-info); border-color: var(--sa-info); }
+    &__item--alert  .sa-feed__dot { color: var(--sa-warning); border-color: var(--sa-warning); }
+
+    &__body { flex: 1; min-width: 0; padding-top: 3px; }
+
+    &__line {
+        margin: 0 0 3px;
+        font-size: 13px;
+        line-height: 1.45;
+        color: var(--sa-text-soft);
+
+        strong { color: var(--sa-text); font-weight: 600; }
+        em { font-style: normal; color: var(--sa-primary); }
+    }
+
+    &__time { font-size: 11.5px; color: var(--sa-text-muted); }
+}
+
+// ------------------------------------------------------------
+// 8. Top villes
+// ------------------------------------------------------------
+.sa-cities {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+
+    &__row {
+        display: grid;
+        grid-template-columns: 120px 1fr 44px;
+        align-items: center;
+        gap: 14px;
+    }
+
+    &__name { font-size: 13px; color: var(--sa-text-soft); @include truncate; }
+
+    &__bar {
+        display: block;
+        height: 8px;
+        background: var(--sa-border);
+        border-radius: 999px;
+        overflow: hidden;
+
+        > span {
+            display: block;
+            height: 100%;
+            background: linear-gradient(90deg, var(--sa-primary), var(--sa-accent));
+            border-radius: inherit;
+            transition: width 500ms ease;
+        }
+    }
+
+    &__count {
+        text-align: right;
+        font-size: 13px;
+        font-weight: 600;
+        color: var(--sa-text);
+        font-variant-numeric: tabular-nums;
+    }
+
+    @media (max-width: 520px) {
+        &__row { grid-template-columns: 90px 1fr 36px; gap: 10px; }
+    }
+}
+
+// ------------------------------------------------------------
+// 9. Squelettes de chargement
+// ------------------------------------------------------------
+.sa-skel {
+    &--header { height: 96px; }
+    &--kpi    { height: 132px; }
+    &--chart  { height: 340px; }
+    &--panel  { height: 340px; }
+}
+
+.sa-skel-card {
+    padding: $spacing-4;
+}
+
+// ------------------------------------------------------------
+// 10. Accessibilité : réduire les animations si demandé.
+// ------------------------------------------------------------
+@media (prefers-reduced-motion: reduce) {
+    .sa-dashboard * {
+        animation-duration: 0.001ms !important;
+        transition-duration: 0.001ms !important;
+    }
+}

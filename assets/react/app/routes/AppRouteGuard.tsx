@@ -29,7 +29,7 @@
 // ============================================================
 
 import type { ReactNode } from 'react';
-import { Navigate, useLocation, useNavigate } from 'react-router-dom';
+import { Navigate, Outlet, useLocation, useNavigate } from 'react-router-dom';
 
 import { ErrorState } from '../../components/UI/ErrorState';
 import { useOrganization } from '../providers/OrganizationProvider';
@@ -53,15 +53,16 @@ export function AppRouteGuard({ children }: AppRouteGuardProps) {
     const location = useLocation();
     const navigate = useNavigate();
     const landingPath = defaultPathFor(platformRole, organizationRole);
+    const routeContent = children ?? <Outlet />;
 
     // 1. Points d'entrée du back-office, hors menu.
     if (location.pathname === APP_ROOT || location.pathname === ACCESS_DENIED_PATH) {
-        return <>{children}</>;
+        return <>{routeContent}</>;
     }
 
     // 2. Feuille du rôle courant.
     if (isPathInMenu(resolveSidebar(platformRole, organizationRole), location.pathname)) {
-        return <>{children}</>;
+        return <>{routeContent}</>;
     }
 
     // 3. Feille existante mais hors périmètre du rôle → 403.

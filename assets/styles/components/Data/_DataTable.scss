@@ -23,7 +23,7 @@
 // ============================================================
 
 .datatable {
-    @include card($spacing-0); // pas de padding : le wrapper s'en charge
+    @include card(0); // pas de padding : le wrapper s'en charge
     padding: 0;
     width: 100%;
     overflow: hidden;

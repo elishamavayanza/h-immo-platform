@@ -149,12 +149,12 @@
 .main-layout__content {
     flex: 1;
     min-width: 0;
-    padding: $spacing-6;
+    padding: $spacing-4;
     overflow-y: auto;
-    background-color: $color-bg-app;
+    background-color: $color-bg-primary;
 
     @include responsive(mobile) {
-        padding: $spacing-4;
+        padding: $spacing-3;
     }
 }
 
