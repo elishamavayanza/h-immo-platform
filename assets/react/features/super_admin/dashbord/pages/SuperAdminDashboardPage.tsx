@@ -13,11 +13,11 @@ import '../../../../../styles/pages/super_admin/_dashboard.scss';
 import { EmptyState } from '../../../../components/Data/EmptyState';
 import { Button } from '../../../../components/UI/Button';
 import { Card } from '../../../../components/UI/Card';
+import { Spinner } from '../../../../components/UI/Spinner';
 
 import {
     ActivityFeed,
     DashboardHeader,
-    DashboardSkeleton,
     KpiGrid,
     OrganizationsTable,
     RevenueChart,
@@ -54,7 +54,7 @@ function DashboardPanel({ title, description, children }: DashboardPanelProps) {
 export function SuperAdminDashboardPage() {
     const { data, isLoading, error, reload } = useSuperAdminDashboard();
 
-    if (isLoading && !data) return <DashboardSkeleton />;
+    if (isLoading && !data) return <div className="main-layout__page-loading" aria-busy="true"><Spinner size="large" className="spinner--page" /><span>Chargement du tableau de bord…</span></div>;
 
     if (error || !data) {
         return (

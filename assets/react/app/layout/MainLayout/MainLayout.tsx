@@ -4,7 +4,7 @@
 // Plus de header — tout passe par le sidebar et son UserMenu.
 // ============================================================
 
-import { useEffect, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { Navigate, Outlet, useLocation, useNavigate } from 'react-router-dom';
 
 import { useAuth } from '../../providers/AuthProvider';
@@ -18,6 +18,7 @@ import { SIDEBAR_ICON_MAP } from './sidebar/sidebar.icons';
 import './MainLayout.scss';
 import { Sidebar, SidebarProps } from '../../../components/Navigation/Sidebar';
 import { Loading } from '../../../components/UI/Loading';
+import { Spinner } from '../../../components/UI/Spinner';
 
 /**
  * Marque du sidebar : logo + "IMMO" + nom de l'organisation active sur sa propre ligne.
@@ -70,8 +71,21 @@ export function MainLayout() {
     const { user, isAuthenticated, isLoading: isAuthLoading, logout } = useAuth();
     const { currentOrganization, platformRole, organizationRole, isLoading: isOrgLoading } = useOrganization();
     const [isMobileOpen, setIsMobileOpen] = useState(false);
+    const [isPageTransitionLoading, setPageTransitionLoading] = useState(false);
     const location = useLocation();
     const navigate = useNavigate();
+    const previousPath = useRef(location.pathname);
+
+    // Le routeur utilisé ici est BrowserRouter. On affiche le même indicateur
+    // sur toutes les pages pendant le changement de chemin, y compris pour
+    // les maquettes alimentées par des données locales.
+    useLayoutEffect(() => {
+        if (previousPath.current === location.pathname) return;
+        previousPath.current = location.pathname;
+        setPageTransitionLoading(true);
+        const timer = window.setTimeout(() => setPageTransitionLoading(false), 220);
+        return () => window.clearTimeout(timer);
+    }, [location.pathname]);
 
     // ── Verrou de scroll pendant l'ouverture du tiroir ──────────
     // Le tiroir ne couvre qu'une bande de l'écran : sans ce verrou, la page
@@ -192,7 +206,10 @@ return (
                     onMobileOpen={() => setIsMobileOpen(true)}
                     onItemClick={(item) => {
                         const target = 'route' in item ? item.route : undefined;
-                        if (target) navigate(target);
+                        if (target && target !== location.pathname) {
+                            setPageTransitionLoading(true);
+                            navigate(target);
+                        }
                     }}
                     footer={
                         <UserMenu
@@ -220,7 +237,12 @@ return (
                         `/app/access-denied`) ni le 403 d'une page réservée à un
                         autre rôle. Le chargement des rôles est déjà traité
                         *avant* ce point par le `Loading` ci-dessus. */}
-                    <Outlet />
+                    {isPageTransitionLoading ? (
+                        <div className="main-layout__page-loading" aria-busy="true">
+                            <Spinner size="large" className="spinner--page" />
+                            <span>Chargement de la page…</span>
+                        </div>
+                    ) : <Outlet />}
                 </main>
             </div>
         </div>

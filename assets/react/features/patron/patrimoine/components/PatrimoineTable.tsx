@@ -4,7 +4,7 @@ import { Badge } from '../../../../components/UI/Badge';
 import type { PatrimoineRow } from '../types/patrimoine.types';
 
 const columns: DataTableColumn<PatrimoineRow>[] = [
-    { key: 'name', title: 'Bien immobilier', sortable: true, render: (item) => <div className="patron-property-name"><strong>{item.name}</strong><small>{item.address}</small></div> },
+    { key: 'name', title: 'Bien immobilier', sortable: true, render: (item) => <div className="organization-property-name"><strong>{item.name}</strong><small>{item.address}</small></div> },
     { key: 'city', title: 'Ville', sortable: true }, { key: 'kind', title: 'Type', sortable: true },
     { key: 'units', title: 'Unités', sortable: true }, { key: 'occupancy', title: 'Occupation', sortable: true },
     { key: 'status', title: 'Statut', sortable: true, render: (item) => <Badge variant={item.status === 'Actif' ? 'success' : 'warning'}>{item.status}</Badge> },

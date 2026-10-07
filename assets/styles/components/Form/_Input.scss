@@ -175,6 +175,21 @@
     border-radius: $radius-lg;
 }
 
+@media (max-width: 640px) {
+    .input-field--medium {
+        padding: $spacing-2 $spacing-3;
+        min-height: 42px;
+        // 16px évite le zoom automatique du navigateur iOS au focus.
+        font-size: 16px;
+    }
+
+    .input-field--large {
+        padding: $spacing-2 $spacing-3;
+        min-height: 44px;
+        font-size: 16px;
+    }
+}
+
 
 // ============================================================
 // DÉCALAGE POUR L’ICÔNE
