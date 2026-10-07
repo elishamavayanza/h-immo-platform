@@ -8,6 +8,7 @@ import { Navigate, Route, Routes, useNavigate } from 'react-router-dom';
 import { ForgotPasswordPage } from '../../features/auth/pages/ForgotPasswordPage';
 import { LoginPage } from '../../features/auth/pages/LoginPage';
 import { ResetPasswordPage } from '../../features/auth/pages/ResetPasswordPage';
+import { SuperAdminDashboardPage } from '../../features/super_admin/dashbord/pages/SuperAdminDashboardPage';
 
 import { AuthLayout } from '../layout/AuthLayout/AuthLayout';
 import { MainLayout } from '../layout/MainLayout/MainLayout';
@@ -85,6 +86,11 @@ export function AppRoutes() {
                             <Route
                                 key={route.path}
                                 path={toRelativeAppRoutePath(route.path)}
+                                element={
+                                    route.path === '/app/admin/dashboard'
+                                        ? <SuperAdminDashboardPage />
+                                        : undefined
+                                }
                             />
                         );
                     })}
