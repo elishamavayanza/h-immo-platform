@@ -1,0 +1,1 @@
+export interface AdminVilleDashboardData { city: string; metrics: Array<{ id: string; label: string; value: string; detail: string; tone: 'primary' | 'success' | 'warning' | 'info' }>; tasks: Array<{ id: string; title: string; detail: string; date: string; status: 'success' | 'warning' | 'info' }>; occupancy: string; }
