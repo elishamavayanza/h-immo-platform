@@ -1,0 +1,4 @@
+@use '../management';
+@use '../../../baseVariables/variables' as *;
+
+.sa-exchange-summary__date { font-size: $font-size-sm !important; }

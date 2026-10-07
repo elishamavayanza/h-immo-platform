@@ -11,6 +11,8 @@ import { ResetPasswordPage } from '../../features/auth/pages/ResetPasswordPage';
 import { SuperAdminDashboardPage } from '../../features/super_admin/dashbord/pages/SuperAdminDashboardPage';
 import { OrganizationsPage } from '../../features/super_admin/organizations/pages/OrganizationsPage';
 import { UsersPage } from '../../features/super_admin/users/pages/UsersPage';
+import { AuditLogPage } from '../../features/super_admin/audit/pages/AuditLogPage';
+import { ExchangeRatesPage } from '../../features/super_admin/exchange_rates/pages/ExchangeRatesPage';
 
 import { AuthLayout } from '../layout/AuthLayout/AuthLayout';
 import { MainLayout } from '../layout/MainLayout/MainLayout';
@@ -94,7 +96,11 @@ export function AppRoutes() {
                                         : route.path === '/app/admin/organisations'
                                             ? <OrganizationsPage />
                                             : route.path === '/app/admin/utilisateurs'
-                                                ? <UsersPage />
+                                            ? <UsersPage />
+                                            : route.path === '/app/admin/audit'
+                                                ? <AuditLogPage />
+                                                : route.path === '/app/admin/taux-change'
+                                                    ? <ExchangeRatesPage />
                                         : undefined
                                 }
                             />
