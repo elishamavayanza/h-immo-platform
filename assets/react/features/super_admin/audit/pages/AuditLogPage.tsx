@@ -41,7 +41,7 @@ export function AuditLogPage() {
                         <Select aria-label="Filtrer par action" value={action} onChange={(event) => setAction(event.target.value)} options={[{ value: 'all', label: 'Toutes les actions' }, ...Object.entries(ACTION_LABELS).map(([value, label]) => ({ value, label }))]} />
                     </div>
                 </div>
-                <DataTable columns={columns} data={entries} pageSize={8} initialSortKey="createdAt" initialSortDirection="desc" />
+                <DataTable columns={columns} data={entries} pageSize={12} initialSortKey="createdAt" initialSortDirection="desc" />
             </Card>
         </main>
         <RightSidebar title="Détail de l’événement" size="medium" variant="dark" collapsible>

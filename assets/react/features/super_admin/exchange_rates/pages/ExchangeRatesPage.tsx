@@ -37,7 +37,7 @@ export function ExchangeRatesPage() {
         <ExchangeRateSummary current={current} />
         <Card className="sa-management-table-card" padding="medium">
             <div className="sa-management-toolbar"><div><h2>Historique des taux</h2><p>Maquette locale : les modifications ne sont pas enregistrées dans l’API.</p></div></div>
-            <DataTable columns={columns} data={rates} pageSize={8} initialSortKey="effectiveAt" />
+            <DataTable columns={columns} data={rates} pageSize={12} initialSortKey="effectiveAt" />
         </Card>
         <Modal isOpen={isOpen} onClose={() => setOpen(false)} title="Mettre à jour le taux USD/CDF" size="small" footer={<><Button variant="outline" onClick={() => setOpen(false)}>Annuler</Button><Button type="submit" form="exchange-rate-form">Enregistrer</Button></>}>
             <form id="exchange-rate-form" className="sa-management-form" onSubmit={handleUpdate}>

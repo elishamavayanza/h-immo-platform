@@ -63,7 +63,7 @@ export function PatronManagedTable<T extends { id: string }>({ rows, columns, fi
 
     return <>
         {allowCreate && records.length > 0 && <div className="organization-table-toolbar__actions"><Button onClick={openCreate}>＋ {createLabel}</Button></div>}
-        {records.length > 0 ? <DataTable columns={actionColumns} data={records} pageSize={8} initialSortKey={initialSortKey} /> : <EmptyState title="Aucun résultat" description="Aucun élément ne correspond à cette recherche ou à ces filtres. Ajustez les critères, ou ajoutez un élément si vous gérez cette liste." action={allowCreate ? <Button onClick={openCreate}>＋ {createLabel}</Button> : undefined} />}
+        {records.length > 0 ? <DataTable columns={actionColumns} data={records} pageSize={12} initialSortKey={initialSortKey} /> : <EmptyState title="Aucun résultat" description="Aucun élément ne correspond à cette recherche ou à ces filtres. Ajustez les critères, ou ajoutez un élément si vous gérez cette liste." action={allowCreate ? <Button onClick={openCreate}>＋ {createLabel}</Button> : undefined} />}
         <Modal isOpen={allowCreate || allowEdit ? editing !== null || Object.keys(form).length > 0 : false} onClose={() => { setEditing(null); setForm({}); }} title={editing ? `Modifier : ${title}` : createLabel} size="medium" footer={<><Button variant="outline" onClick={() => { setEditing(null); setForm({}); }}>Annuler</Button><Button type="submit" form="patron-record-form">Enregistrer</Button></>}>
             <form id="patron-record-form" className="organization-management-form" onSubmit={submit}>
                 <p className="organization-management-form__hint">Modification locale de la maquette, sans appel à l’API.</p>
