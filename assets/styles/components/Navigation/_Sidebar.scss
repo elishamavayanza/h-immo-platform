@@ -238,10 +238,14 @@
 // ============================================================
 
 .sidebar__group-section {
-    margin-bottom: $spacing-3;
+    margin-bottom: $spacing-4;
+    padding-bottom: $spacing-1;
+    border-bottom: 1px solid rgba($color-border, 0.72);
 
     &:last-child {
         margin-bottom: 0;
+        padding-bottom: 0;
+        border-bottom: 0;
     }
 }
 
@@ -345,6 +349,11 @@
 // Un petit chevron discret, posé sur le bord droit de l'icône, rétablit
 // l'information sans roger la zone cliquable ni décaler le contenu.
 .sidebar--collapsed {
+    .sidebar__group-section {
+        margin-bottom: $spacing-3;
+        padding-bottom: $spacing-2;
+    }
+
     .sidebar__item {
         position: relative;
     }

@@ -13,6 +13,7 @@ import { OrganizationsPage } from '../../features/super_admin/organizations/page
 import { UsersPage } from '../../features/super_admin/users/pages/UsersPage';
 import { AuditLogPage } from '../../features/super_admin/audit/pages/AuditLogPage';
 import { ExchangeRatesPage } from '../../features/super_admin/exchange_rates/pages/ExchangeRatesPage';
+import { ReportsPage as SuperAdminReportsPage } from '../../features/super_admin/reports/pages/ReportsPage';
 import { OrganizationMenuPage } from './OrganizationMenuPage';
 
 import { AuthLayout } from '../layout/AuthLayout/AuthLayout';
@@ -102,6 +103,8 @@ export function AppRoutes() {
                                                         ? <AuditLogPage />
                                                         : route.path === '/app/admin/taux-change'
                                                             ? <ExchangeRatesPage />
+                                                            : route.path === '/app/admin/rapports'
+                                                                ? <SuperAdminReportsPage />
                                                             : undefined
                                         : <OrganizationMenuPage path={route.path} />
                                 }

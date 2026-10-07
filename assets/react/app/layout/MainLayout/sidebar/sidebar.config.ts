@@ -18,24 +18,20 @@
 // l'Organization ACTIVE (jamais un rôle global de compte).
 //
 // Règle d'affichage (acceptance) :
-//   - PATRON           : 8 entrées (Tableau de bord + 7 opérationnelles)
-//   - ADMIN_IMMOBILIER : 7 entrées (sans Administration, AVEC Personnel :
+//   - PATRON           : 9 entrées (tableau de bord, opérations, rapports)
+//   - ADMIN_IMMOBILIER : 8 entrées (sans Administration, AVEC Personnel :
 //                        le backend lui accorde VIEW/CREATE/UPDATE/DELETE
 //                        sur Worker et WorkerAssignment)
-//   - ADMIN_VILLE      : 6 entrées (sans Administration ni Personnel :
+//   - ADMIN_VILLE      : 7 entrées (sans Administration ni Personnel :
 //                        VIEW_WORKER seul ne justifie pas une entrée)
-//   - SUPER_ADMIN      : 5 entrées, toutes au niveau plateforme
+//   - SUPER_ADMIN      : 6 entrées, toutes au niveau plateforme
 //
 // Ce menu reflète la matrice `SecurityService::checkXxxAction()` : toute
 // divergence entre une capacité réellement accordée par l'API et un item
 // ici est un bug de UX (capacité inatteignable), pas un trou de sécurité.
 //
-// « Tableau de bord » est toujours la première entrée, pour chaque rôle :
-// c'est l'écran de synthèse (KPI, occupation, loyers attendus/encaissés,
-// impayés — cf. ReportController déjà en place) explicitement demandé par
-// le cahier des charges d'origine (« le Patron suit son patrimoine à
-// distance depuis son tableau de bord »). Il ne doit jamais être omis au
-// profit d'un atterrissage direct sur une liste opérationnelle.
+// « Tableau de bord » reste la première entrée pour chaque rôle. Le menu
+// « Rapports » mène à une synthèse détaillée, distincte de cette vue rapide.
 //
 // RÈGLE DE CONCEPTION — un MENU PLAT, PAS UN PLAN DE TABLE :
 // ----------------------------------------------------------
@@ -80,6 +76,7 @@ const DASHBOARD: AppMenuItem = {
     id: 'dashboard',
     label: 'Tableau de bord',
     icon: 'gauge',
+    section: 'overview',
     path: '/app/dashboard',
 };
 
@@ -96,6 +93,7 @@ const PATRIMOINE: AppMenuItem = {
     id: 'patrimoine',
     label: 'Patrimoine',
     icon: 'building',
+    section: 'property',
     path: '/app/patrimoine',
 };
 
@@ -109,6 +107,7 @@ const LOCATAIRES: AppMenuItem = {
     id: 'location-locataires',
     label: 'Locataires',
     icon: 'user-single',
+    section: 'property',
     path: '/app/location/locataires',
 };
 
@@ -124,15 +123,12 @@ const LOYERS: AppMenuItem = {
     id: 'location-loyers',
     label: 'Loyers',
     icon: 'calendar-due',
+    section: 'finance',
     path: '/app/location/loyers',
 };
 
 /**
- * Dépenses : feuille directe, plus de sous-menu « Finances > Dépenses /
- * Rapports ». « Rapports » a migré vers le Tableau de bord (c'est la même
- * donnée — pas de raison de la dupliquer à deux endroits du menu), ce qui
- * ne laissait plus qu'un seul enfant ici : un sous-menu à un seul item est
- * un clic inutile, donc on le supprime plutôt que de le garder « au cas où ».
+ * Dépenses : destination indépendante, avec une icône distincte de Loyers.
  *
  * Icône : `wallet`, volontairement distincte de celle de Loyers — les deux
  * sont des destinations financières de premier niveau, et deux icônes
@@ -142,6 +138,7 @@ const DEPENSES: AppMenuItem = {
     id: 'depenses',
     label: 'Dépenses',
     icon: 'wallet',
+    section: 'finance',
     path: '/app/depenses',
 };
 
@@ -150,6 +147,7 @@ const VITRINE: AppMenuItem = {
     id: 'vitrine',
     label: 'Vitrine',
     icon: 'storefront',
+    section: 'operations',
     path: '/app/vitrine',
 };
 
@@ -162,6 +160,7 @@ const PERSONNEL: AppMenuItem = {
     id: 'personnel',
     label: 'Personnel',
     icon: 'hard-hat',
+    section: 'operations',
     path: '/app/personnel',
 };
 
@@ -173,7 +172,16 @@ const ADMINISTRATION: AppMenuItem = {
     id: 'administration',
     label: 'Administration',
     icon: 'id-badge',
+    section: 'administration',
     path: '/app/administration',
+};
+
+const RAPPORTS: AppMenuItem = {
+    id: 'rapports',
+    label: 'Rapports',
+    icon: 'report',
+    section: 'overview',
+    path: '/app/rapports',
 };
 
 /**
@@ -189,9 +197,9 @@ const ADMINISTRATION: AppMenuItem = {
  *   Administration.
  */
 export const ORGANIZATION_SIDEBAR: Record<OrganizationRole, SidebarMenu> = {
-    patron: [DASHBOARD, PATRIMOINE, LOCATAIRES, LOYERS, DEPENSES, VITRINE, PERSONNEL, ADMINISTRATION],
-    admin_immobilier: [DASHBOARD, PATRIMOINE, LOCATAIRES, LOYERS, DEPENSES, VITRINE, PERSONNEL],
-    admin_ville: [DASHBOARD, PATRIMOINE, LOCATAIRES, LOYERS, DEPENSES, VITRINE],
+    patron: [DASHBOARD, RAPPORTS, PATRIMOINE, LOCATAIRES, LOYERS, DEPENSES, VITRINE, PERSONNEL, ADMINISTRATION],
+    admin_immobilier: [DASHBOARD, RAPPORTS, PATRIMOINE, LOCATAIRES, LOYERS, DEPENSES, VITRINE, PERSONNEL],
+    admin_ville: [DASHBOARD, RAPPORTS, PATRIMOINE, LOCATAIRES, LOYERS, DEPENSES, VITRINE],
 };
 
 /** Menu SUPER_ADMIN : aucune entrée métier d'organisation. */
@@ -200,31 +208,43 @@ export const PLATFORM_SIDEBAR: SidebarMenu = [
         id: 'plateforme-dashboard',
         label: 'Tableau de bord',
         icon: 'gauge',
+        section: 'overview',
         path: '/app/admin/dashboard',
     },
     {
         id: 'plateforme-organisations',
         label: 'Organisations',
         icon: 'briefcase',
+        section: 'platform',
         path: '/app/admin/organisations',
     },
     {
         id: 'plateforme-utilisateurs',
         label: 'Utilisateurs',
         icon: 'users',
+        section: 'platform',
         path: '/app/admin/utilisateurs',
     },
     {
         id: 'plateforme-audit',
         label: 'Journal d\'audit',
         icon: 'audit',
+        section: 'platform',
         path: '/app/admin/audit',
     },
     {
         id: 'plateforme-taux-change',
         label: 'Taux de change',
         icon: 'exchange',
+        section: 'platform',
         path: '/app/admin/taux-change',
+    },
+    {
+        id: 'plateforme-rapports',
+        label: 'Rapports',
+        icon: 'report',
+        section: 'overview',
+        path: '/app/admin/rapports',
     },
 ];
 
