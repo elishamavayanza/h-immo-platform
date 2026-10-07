@@ -19,6 +19,9 @@
 .organization-mini-stats span, .organization-kpi span { color: $color-text-secondary; font-size: $font-size-sm; }
 .organization-mini-stats strong { color: $color-text-primary; font-size: $font-size-2xl; }
 .organization-table-card .card__body { padding: $spacing-4; }
+.organization-table-toolbar__actions { display: flex; justify-content: flex-end; margin: 0 0 $spacing-3; }
+.organization-row-actions { display: inline-flex; align-items: center; justify-content: center; width: 36px; height: 36px; border: 1px solid $color-border; border-radius: $radius-md; color: $color-text-secondary; background: $color-bg-card; cursor: pointer; }
+.organization-row-actions:hover, .popover-menu__trigger[aria-expanded='true'] .organization-row-actions { background: $color-bg-card-hover; color: $color-text-primary; }
 .organization-table-toolbar { display: flex; align-items: flex-end; justify-content: space-between; gap: $spacing-4; margin-bottom: $spacing-4; }
 .organization-table-toolbar h2, .organization-panel h2 { margin: 0 0 $spacing-1; font-size: $font-size-lg; color: $color-text-primary; }
 .organization-table-toolbar p, .organization-panel p { margin: 0; color: $color-text-muted; font-size: $font-size-xs; }

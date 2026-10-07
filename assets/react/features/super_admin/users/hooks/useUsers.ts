@@ -14,9 +14,12 @@ export function useUsers() {
         return matchesSearch && (roleFilter === 'all' || user.role === roleFilter) && (statusFilter === 'all' || user.status === statusFilter);
     }), [users, search, roleFilter, statusFilter]);
 
-    const addUser = (user: Omit<UserRow, 'id' | 'lastActivity'>) => {
-        setUsers((current) => [{ ...user, id: `local-${Date.now()}`, lastActivity: 'Invitation envoyée' }, ...current]);
+    const addUser = (user: Omit<UserRow, 'id' | 'lastLoginAt'>) => {
+        setUsers((current) => [{ ...user, id: crypto.randomUUID(), lastLoginAt: null }, ...current]);
     };
 
-    return { users, filteredUsers, search, setSearch, roleFilter, setRoleFilter, statusFilter, setStatusFilter, addUser };
+    const updateUser = (id: string, changes: Partial<Omit<UserRow, 'id' | 'lastLoginAt'>>) => setUsers((current) => current.map((user) => user.id === id ? { ...user, ...changes } : user));
+    const deleteUser = (id: string) => setUsers((current) => current.filter((user) => user.id !== id));
+
+    return { users, filteredUsers, search, setSearch, roleFilter, setRoleFilter, statusFilter, setStatusFilter, addUser, updateUser, deleteUser };
 }

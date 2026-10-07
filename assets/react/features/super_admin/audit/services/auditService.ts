@@ -1,12 +1,12 @@
 import type { AuditEntry } from '../types/audit.types';
 
-/** Événements fictifs pour la maquette ; aucune donnée d'audit API n'est lue ici. */
+/** Fixtures de présentation structurées comme AuditLogResponse. */
 export const INITIAL_AUDIT_ENTRIES: AuditEntry[] = [
-    { id: 'evt-01', date: '07 oct. 2026 · 09:42', actor: 'Sarah Mbala', action: 'Organisation créée', target: 'Kinshasa Immo Group', category: 'organization', outcome: 'success', ipAddress: '41.243.18.92' },
-    { id: 'evt-02', date: '07 oct. 2026 · 09:18', actor: 'David Kalu', action: 'Invitation envoyée', target: 'patrick.nsimba@goma-pat.cd', category: 'user', outcome: 'success', ipAddress: '41.243.18.92' },
-    { id: 'evt-03', date: '07 oct. 2026 · 08:56', actor: 'Système', action: 'Connexion refusée', target: 'compte inconnu', category: 'security', outcome: 'warning', ipAddress: '102.67.44.11' },
-    { id: 'evt-04', date: '06 oct. 2026 · 17:31', actor: 'Sarah Mbala', action: 'Taux de change modifié', target: 'USD / CDF', category: 'billing', outcome: 'success', ipAddress: '41.243.18.92' },
-    { id: 'evt-05', date: '06 oct. 2026 · 16:08', actor: 'Système', action: 'Compte suspendu', target: 'Jean Mbuyi', category: 'user', outcome: 'danger', ipAddress: '—' },
-    { id: 'evt-06', date: '06 oct. 2026 · 14:22', actor: 'Sarah Mbala', action: 'Organisation suspendue', target: 'Bukavu Estates', category: 'organization', outcome: 'warning', ipAddress: '41.243.18.92' },
-    { id: 'evt-07', date: '06 oct. 2026 · 11:05', actor: 'David Kalu', action: 'Rôle attribué', target: 'Marie Ilunga · Admin immobilier', category: 'user', outcome: 'success', ipAddress: '154.72.190.6' },
+    { id: 'f47ac10b-58cc-4372-a567-0e02b2c3d401', organizationId: '9b1deb4d-3b7d-4bad-9bdd-2b0d7b3dcb61', userId: 'd5e6f7a8-b9c0-1d2e-3f4a-5b6c7d8e9f01', action: 'CREATE', entityType: 'App\\Entity\\Identity\\Organization', entityId: 42, oldValues: null, newValues: { name: 'Kinshasa Immo Group', status: 'ACTIVE' }, createdAt: '2026-10-07T09:42:00+02:00' },
+    { id: 'f47ac10b-58cc-4372-a567-0e02b2c3d402', organizationId: '9b1deb4d-3b7d-4bad-9bdd-2b0d7b3dcb61', userId: 'd5e6f7a8-b9c0-1d2e-3f4a-5b6c7d8e9f02', action: 'CREATE', entityType: 'App\\Entity\\Identity\\OrganizationUser', entityId: 103, oldValues: null, newValues: { role: 'admin_ville', email: 'patrick.nsimba@example.cd' }, createdAt: '2026-10-07T09:18:00+02:00' },
+    { id: 'f47ac10b-58cc-4372-a567-0e02b2c3d403', organizationId: null, userId: null, action: 'LOGIN_FAILED', entityType: 'App\\Entity\\Identity\\User', entityId: 0, oldValues: null, newValues: { reason: 'Identifiants invalides' }, createdAt: '2026-10-07T08:56:00+02:00' },
+    { id: 'f47ac10b-58cc-4372-a567-0e02b2c3d404', organizationId: null, userId: 'd5e6f7a8-b9c0-1d2e-3f4a-5b6c7d8e9f01', action: 'UPDATE', entityType: 'App\\Entity\\System\\ExchangeRate', entityId: 8, oldValues: { rate: '2825.00' }, newValues: { rate: '2850.00' }, createdAt: '2026-10-06T17:31:00+02:00' },
+    { id: 'f47ac10b-58cc-4372-a567-0e02b2c3d405', organizationId: '9b1deb4d-3b7d-4bad-9bdd-2b0d7b3dcb62', userId: 'd5e6f7a8-b9c0-1d2e-3f4a-5b6c7d8e9f01', action: 'SUSPEND', entityType: 'App\\Entity\\Identity\\User', entityId: 71, oldValues: { isActive: true }, newValues: { isActive: false }, createdAt: '2026-10-06T16:08:00+02:00' },
+    { id: 'f47ac10b-58cc-4372-a567-0e02b2c3d406', organizationId: '9b1deb4d-3b7d-4bad-9bdd-2b0d7b3dcb62', userId: 'd5e6f7a8-b9c0-1d2e-3f4a-5b6c7d8e9f01', action: 'UPDATE', entityType: 'App\\Entity\\Identity\\Organization', entityId: 51, oldValues: { status: 'ACTIVE' }, newValues: { status: 'SUSPENDED' }, createdAt: '2026-10-06T14:22:00+02:00' },
+    { id: 'f47ac10b-58cc-4372-a567-0e02b2c3d407', organizationId: '9b1deb4d-3b7d-4bad-9bdd-2b0d7b3dcb63', userId: 'd5e6f7a8-b9c0-1d2e-3f4a-5b6c7d8e9f02', action: 'UPDATE', entityType: 'App\\Entity\\Identity\\OrganizationUser', entityId: 110, oldValues: { role: 'admin_ville' }, newValues: { role: 'admin_immobilier' }, createdAt: '2026-10-06T11:05:00+02:00' },
 ];

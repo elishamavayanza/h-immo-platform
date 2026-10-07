@@ -26,14 +26,14 @@ export function ExchangeRatesPage() {
     ];
     const handleUpdate = (event: FormEvent<HTMLFormElement>) => {
         event.preventDefault();
-        if (!rate || Number(rate) <= 0) return;
+        if (!/^\d+(?:[.,]\d{1,8})?$/.test(rate) || /^0+(?:[.,]0+)?$/.test(rate)) return;
         updateRate(rate);
         setRate('');
         setOpen(false);
     };
     const current = rates[0];
     return <div className="sa-dashboard sa-management-page sa-exchange-page">
-        <PlatformPageHeader title="Taux de change" description="Consultez le taux USD/CDF et l’historique de ses mises à jour." icon="revenue" action={<Button icon={<span aria-hidden="true">＋</span>} onClick={() => setOpen(true)}>Mettre à jour le taux</Button>} />
+        <PlatformPageHeader title="Taux de change" description="Consultez le taux USD/CDF et son historique immuable." icon="revenue" action={<Button icon={<span aria-hidden="true">＋</span>} onClick={() => setOpen(true)}>Ajouter un nouveau taux</Button>} />
         <ExchangeRateSummary current={current} />
         <Card className="sa-management-table-card" padding="medium">
             <div className="sa-management-toolbar"><div><h2>Historique des taux</h2><p>Maquette locale : les modifications ne sont pas enregistrées dans l’API.</p></div></div>
@@ -41,8 +41,8 @@ export function ExchangeRatesPage() {
         </Card>
         <Modal isOpen={isOpen} onClose={() => setOpen(false)} title="Mettre à jour le taux USD/CDF" size="small" footer={<><Button variant="outline" onClick={() => setOpen(false)}>Annuler</Button><Button type="submit" form="exchange-rate-form">Enregistrer</Button></>}>
             <form id="exchange-rate-form" className="sa-management-form" onSubmit={handleUpdate}>
-                <p className="sa-management-form__hint">Cette valeur sera ajoutée à l’historique local de la maquette.</p>
-                <FormField label="1 USD équivaut à (CDF)" htmlFor="exchange-rate" required><Input id="exchange-rate" type="number" min="0.01" step="0.01" value={rate} onChange={(event) => setRate(event.target.value)} placeholder="Ex. 2850,00" required fullWidth /></FormField>
+                <p className="sa-management-form__hint">Un nouveau taux crée une nouvelle période d’effet ; les anciennes valeurs restent dans l’historique.</p>
+                <FormField label="1 USD équivaut à (CDF)" htmlFor="exchange-rate" required><Input id="exchange-rate" type="number" min="0.00000001" step="0.00000001" value={rate} onChange={(event) => setRate(event.target.value)} placeholder="Ex. 2850,00000000" required fullWidth /></FormField>
             </form>
         </Modal>
     </div>;

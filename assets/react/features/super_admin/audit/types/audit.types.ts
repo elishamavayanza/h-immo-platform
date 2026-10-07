@@ -1,13 +1,13 @@
-export type AuditCategory = 'organization' | 'user' | 'security' | 'billing';
-export type AuditOutcome = 'success' | 'warning' | 'danger';
-
+/** Champs alignés sur AuditLogResponse du backend. */
 export interface AuditEntry {
     id: string;
-    date: string;
-    actor: string;
+    organizationId: string | null;
+    userId: string | null;
     action: string;
-    target: string;
-    category: AuditCategory;
-    outcome: AuditOutcome;
-    ipAddress: string;
+    entityType: string;
+    /** Champ actuellement exposé par l'API ; à remplacer par un UUID côté backend. */
+    entityId: number;
+    oldValues: Record<string, unknown> | null;
+    newValues: Record<string, unknown> | null;
+    createdAt: string;
 }

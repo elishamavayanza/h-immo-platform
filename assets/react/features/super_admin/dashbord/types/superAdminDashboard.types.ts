@@ -8,7 +8,7 @@ export type TrendDirection = 'up' | 'down' | 'flat';
 export type KpiTone = 'primary' | 'success' | 'warning' | 'danger' | 'info';
 export type HealthStatus = 'healthy' | 'warning' | 'critical';
 export type OrganizationPlan = 'Starter' | 'Pro' | 'Enterprise';
-export type OrganizationStatus = 'active' | 'trial' | 'suspended';
+export type OrganizationStatus = 'active' | 'suspended' | 'inactive';
 export type ActivityKind = 'create' | 'update' | 'delete' | 'login' | 'alert';
 
 export interface KpiMetric {

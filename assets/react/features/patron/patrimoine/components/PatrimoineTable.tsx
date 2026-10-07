@@ -2,6 +2,7 @@ import { DataTable } from '../../../../components/Data/DataTable';
 import type { DataTableColumn } from '../../../../hook-components/Data/DataTable';
 import { Badge } from '../../../../components/UI/Badge';
 import type { PatrimoineRow } from '../types/patrimoine.types';
+import { PatronManagedTable } from '../../shared/PatronManagedTable';
 
 const columns: DataTableColumn<PatrimoineRow>[] = [
     { key: 'name', title: 'Bien immobilier', sortable: true, render: (item) => <div className="organization-property-name"><strong>{item.name}</strong><small>{item.address}</small></div> },
@@ -10,4 +11,4 @@ const columns: DataTableColumn<PatrimoineRow>[] = [
     { key: 'status', title: 'Statut', sortable: true, render: (item) => <Badge variant={item.status === 'Actif' ? 'success' : 'warning'}>{item.status}</Badge> },
 ];
 
-export function PatrimoineTable({ rows }: { rows: PatrimoineRow[] }) { return <DataTable columns={columns} data={rows} pageSize={8} initialSortKey="name" />; }
+export function PatrimoineTable({ rows }: { rows: PatrimoineRow[] }) { return <PatronManagedTable rows={rows} columns={columns} title="un bien" createLabel="Ajouter un bien" initialSortKey="name" fields={[{ key: 'name', label: 'Nom du bien', required: true }, { key: 'city', label: 'Ville', required: true }, { key: 'address', label: 'Adresse' }, { key: 'kind', label: 'Type' }, { key: 'units', label: 'Nombre d’unités', type: 'number' }, { key: 'occupancy', label: 'Occupation' }, { key: 'status', label: 'Statut' }]} createRecord={(values) => ({ id: crypto.randomUUID(), name: values.name ?? '', city: values.city ?? '', address: values.address ?? '', kind: (values.kind as PatrimoineRow['kind']) ?? 'Bâtiment', units: Number(values.units) || 0, occupancy: values.occupancy ?? '—', status: (values.status as PatrimoineRow['status']) ?? 'Actif' })} />; }

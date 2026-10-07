@@ -42,7 +42,7 @@ export function RightSidebar({
                                  variant,
                                  size,
                                  collapsible = true,
-                                 defaultCollapsed = false,
+                                 defaultCollapsed,
                                  className,
                                  onToggle,
                                  minWidth = 200,
@@ -52,6 +52,7 @@ export function RightSidebar({
                                  collapsedWidth = 35,
                              }: RightSidebarProps) {
     const isCompact = useIsCompact();
+    const initialCollapsed = defaultCollapsed ?? isCompact;
 
     // Ajustements mode compact (mobile / tablette / portrait)
     const effectiveMinWidth = isCompact ? 120 : minWidth;
@@ -64,11 +65,11 @@ export function RightSidebar({
         ? 260
         : size === 'small' ? 200 : size === 'large' ? 340 : 280;
 
-    const { classes } = useRightSidebar({ variant, size, collapsible, defaultCollapsed, className });
+    const { classes } = useRightSidebar({ variant, size, collapsible, defaultCollapsed: initialCollapsed, className });
 
     const [width, setWidth] = useState<number>(initialWidth);
     const [isFullyCollapsed, setIsFullyCollapsed] = useState(
-        defaultCollapsed === undefined ? isCompact : defaultCollapsed
+        initialCollapsed
     );
     const asideRef = useRef<HTMLElement>(null);
 
