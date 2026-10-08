@@ -91,6 +91,12 @@ class User extends SoftDeletableEntity implements UserInterface, PasswordAuthent
     #[ORM\Column(type: Types::DATETIME_IMMUTABLE, nullable: true)]
     private ?\DateTimeImmutable $lastLoginAt = null;
 
+    /**
+     * Préférences utilisateur (JSON) : thème, langue, notifications, etc.
+     */
+    #[ORM\Column(type: Types::JSON, nullable: true)]
+    private ?array $settings = null;
+
     public function getEmail(): string
     {
         return $this->email;
@@ -183,6 +189,21 @@ class User extends SoftDeletableEntity implements UserInterface, PasswordAuthent
     public function setLastLoginAt(?\DateTimeImmutable $lastLoginAt): static
     {
         $this->lastLoginAt = $lastLoginAt;
+
+        return $this;
+    }
+
+    /**
+     * Préférences utilisateur (thème, langue, notifications, etc.).
+     */
+    public function getSettings(): ?array
+    {
+        return $this->settings;
+    }
+
+    public function setSettings(?array $settings): static
+    {
+        $this->settings = $settings;
 
         return $this;
     }
