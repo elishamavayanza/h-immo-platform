@@ -1,13 +1,83 @@
-import type { UserRow } from '../types/user.types';
+import { apiClient } from '../../../../../services/api/client';
+import type { Feedback } from '../../../../../services/api/api.types';
+import type {
+    UserApiResponse,
+    UserListData,
+    UserRow,
+    UserSuspendPayload,
+    UserSuspendResult,
+} from '../types/user.types';
 
-/** Données de démonstration isolées du rendu, en attente du branchement API. */
-export const INITIAL_USERS: UserRow[] = [
-    { id: 'c3019a82-3ad4-4861-a53c-1123a1a3b101', name: 'Sarah Mbala', email: 'sarah.mbala@kinimmo.cd', phone: '+243 810 111 001', organization: 'Plateforme', organizationUuid: null, organizationUserUuid: null, role: 'super_admin', status: 'active', lastLoginAt: '2026-10-07T09:42:00+02:00' },
-    { id: 'c3019a82-3ad4-4861-a53c-1123a1a3b102', name: 'David Kalu', email: 'david.kalu@kinimmo.cd', phone: '+243 810 111 002', organization: 'Kinshasa Immo Group', organizationUuid: '9b1deb4d-3b7d-4bad-9bdd-2b0d7b3dcb61', organizationUserUuid: 'a3019a82-3ad4-4861-a53c-1123a1a3b102', role: 'patron', status: 'active', lastLoginAt: '2026-10-07T09:30:00+02:00' },
-    { id: 'c3019a82-3ad4-4861-a53c-1123a1a3b103', name: 'Marie Ilunga', email: 'marie.ilunga@lubu-res.cd', phone: '+243 810 111 003', organization: 'Lubumbashi Résidences', organizationUuid: '9b1deb4d-3b7d-4bad-9bdd-2b0d7b3dcb62', organizationUserUuid: 'a3019a82-3ad4-4861-a53c-1123a1a3b103', role: 'admin_immobilier', status: 'active', lastLoginAt: '2026-10-07T09:07:00+02:00' },
-    { id: 'c3019a82-3ad4-4861-a53c-1123a1a3b104', name: 'Patrick Nsimba', email: 'patrick.nsimba@goma-pat.cd', phone: '+243 810 111 004', organization: 'Goma Patrimoine', organizationUuid: '9b1deb4d-3b7d-4bad-9bdd-2b0d7b3dcb63', organizationUserUuid: 'a3019a82-3ad4-4861-a53c-1123a1a3b104', role: 'admin_ville', status: 'inactive', lastLoginAt: null },
-    { id: 'c3019a82-3ad4-4861-a53c-1123a1a3b105', name: 'Aline Kabeya', email: 'aline.kabeya@matadi-log.cd', phone: '+243 810 111 005', organization: 'Matadi Logements', organizationUuid: '9b1deb4d-3b7d-4bad-9bdd-2b0d7b3dcb64', organizationUserUuid: 'a3019a82-3ad4-4861-a53c-1123a1a3b105', role: 'patron', status: 'active', lastLoginAt: '2026-10-06T14:00:00+02:00' },
-    { id: 'c3019a82-3ad4-4861-a53c-1123a1a3b106', name: 'Jean Mbuyi', email: 'jean.mbuyi@bukavu-est.cd', phone: '+243 810 111 006', organization: 'Bukavu Estates', organizationUuid: '9b1deb4d-3b7d-4bad-9bdd-2b0d7b3dcb65', organizationUserUuid: 'a3019a82-3ad4-4861-a53c-1123a1a3b106', role: 'admin_immobilier', status: 'inactive', lastLoginAt: '2024-09-12T10:00:00+02:00' },
-    { id: 'c3019a82-3ad4-4861-a53c-1123a1a3b107', name: 'Grâce Banza', email: 'grace.banza@kolwezi-rent.cd', phone: '+243 810 111 007', organization: 'Kolwezi Mines Rentals', organizationUuid: '9b1deb4d-3b7d-4bad-9bdd-2b0d7b3dcb66', organizationUserUuid: 'a3019a82-3ad4-4861-a53c-1123a1a3b107', role: 'admin_ville', status: 'active', lastLoginAt: '2026-10-06T08:00:00+02:00' },
-    { id: 'c3019a82-3ad4-4861-a53c-1123a1a3b108', name: 'Luc Monga', email: 'luc.monga@congo-habitat.cd', phone: '+243 810 111 008', organization: 'Congo Habitat', organizationUuid: '9b1deb4d-3b7d-4bad-9bdd-2b0d7b3dcb67', organizationUserUuid: 'a3019a82-3ad4-4861-a53c-1123a1a3b108', role: 'admin_immobilier', status: 'active', lastLoginAt: '2026-10-05T08:00:00+02:00' },
-];
+/**
+ * usersService
+ *
+ * Contrat HTTP des endpoints utilisateurs (`src/Controller/Api/Identity/UserController.php`).
+ * Toute réponse transite par l'enveloppe `Feedback` : `data` porte soit un
+ * `UserResponse` (suspend), soit un objet paginé `{ items, total, page, limit }` (list).
+ *
+ * Les routes API commencent par `/api/v1/identity/users` ; le `apiClient`
+ * a `baseURL = '/api'`, donc `url` commence à `/v1/...`.
+ */
+export const usersService = {
+    /** `GET /api/v1/identity/users` — liste paginée (SUPER_ADMIN : tous les comptes). */
+    async list(params?: { page?: number; limit?: number; search?: string }): Promise<UserRow[]> {
+        const query: Record<string, string | number> = {
+            page: params?.page ?? 1,
+            limit: params?.limit ?? 100,
+            ...(params?.search ? { search: params.search } : {}),
+        };
+        const { data } = await apiClient.get<Feedback<UserListData>>('/v1/identity/users', { params: query });
+        return data.data.items.map(toRow);
+    },
+
+    /**
+     * `POST /api/v1/identity/users/{uuid}/suspend` — désactive le compte et
+     * notifie l'utilisateur par email. Le backend archive le motif dans
+     * l'audit ; un échec du mailer remonte en `warnings` (non bloquant).
+     */
+    async suspend(uuid: string, payload: UserSuspendPayload = {}): Promise<UserSuspendResult> {
+        const { data } = await apiClient.post<Feedback<UserApiResponse>>(`/v1/identity/users/${uuid}/suspend`, payload);
+        return {
+            user: toRow(data.data),
+            flushDescription: data.flushDescription,
+            warnings: data.warnings,
+        };
+    },
+};
+
+/**
+ * Projette le DTO backend `UserResponse` vers la ligne du tableau.
+ * Séparation réponse API / affichage : la page n'a jamais à connaître le DTO.
+ *
+ * `organization` et `role` sont dérivés ici pour que la table, les filtres et
+ * le tri lisent un champ simple : rôle de plateforme sinon premier
+ * rattachement métier, « Plateforme » pour un compte sans affiliation.
+ */
+function toRow(response: UserApiResponse): UserRow {
+    const firstMembership = response.memberships?.[0];
+
+    return {
+        id: response.id,
+        name: response.fullName,
+        email: response.email,
+        phone: response.phone,
+        profilePhoto: response.profilePhoto,
+        platformRole: response.platformRole,
+        memberships: response.memberships ?? [],
+        organization: firstMembership ? firstMembership.organizationName : (response.platformRole ? 'Plateforme' : '—'),
+        role: response.platformRole ?? firstMembership?.role ?? null,
+        status: response.isActive ? 'active' : 'inactive',
+        lastLoginAt: response.lastLoginAt,
+    };
+}
+
+/**
+ * Résout une URL d'image utilisable dans `<img src>` à partir de la valeur
+ * `profilePhoto` du DTO : l'API peut renvoyer soit une URL publique, soit un
+ * chemin relatif (`profiles/…`), soit un chemin absolu (`/uploads/profiles/…`).
+ */
+export function photoHref(photo: string | null): string | null {
+    if (!photo) return null;
+    if (/^(https?:)?\/\//.test(photo) || photo.startsWith('/') || photo.startsWith('data:')) return photo;
+    return `/uploads/${photo}`;
+}

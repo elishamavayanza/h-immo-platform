@@ -6,12 +6,17 @@ namespace App\Service\Identity;
 
 use App\Dto\Feedback;
 use App\Dto\Request\Identity\UserRequest;
+use App\Dto\Request\Identity\UserSuspendRequest;
 use App\Dto\Request\PaginationQuery;
+use App\Entity\Identity\OrganizationUser;
 use App\Entity\Identity\User;
 use App\Mapper\Identity\UserMapper;
+use App\Repository\Identity\OrganizationUserRepository;
 use App\Repository\Identity\UserRepository;
 use App\Security\SecurityAction;
 use App\Security\SecurityServiceInterface;
+use App\Service\System\AuditLogService;
+use App\Service\System\DateTimeService;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\Validator\Validator\ValidatorInterface;
 
@@ -34,7 +39,11 @@ final readonly class UserService
         private UserRepository $repository,
         private UserMapper $mapper,
         private ValidatorInterface $validator,
-        private SecurityServiceInterface $security
+        private SecurityServiceInterface $security,
+        private OrganizationUserRepository $orgUserRepository,
+        private AuditLogService $auditLogService,
+        private UserNotificationService $notificationService,
+        private DateTimeService $dateTimeService
     ) {
     }
 
@@ -59,8 +68,15 @@ final readonly class UserService
                 $query->search
             );
 
+        // Rattachements des comptes de la page en une seule requête : la table
+        // affiche organisation + rôle par ligne, et le filtre par organisation
+        // ne doit pas reposer sur un chargement paresseux N+1.
+        $memberships = $this->membershipsByUser($paginatedResult['items']);
+
         $data = [
-            'items' => array_map([$this->mapper, 'toResponse'], $paginatedResult['items']),
+            'items' => array_map(function (User $user) use ($memberships) {
+                return $this->mapper->toResponse($user, $memberships[(string) $user->getUuid()] ?? []);
+            }, $paginatedResult['items']),
             'total' => $paginatedResult['total'],
             'page' => $query->page,
             'limit' => $query->limit,
@@ -93,7 +109,7 @@ final readonly class UserService
         $this->security->checkUserAccess($user, SecurityAction::VIEW_USER);
 
         return $feedback
-            ->setData($this->mapper->toResponse($user))
+            ->setData($this->mapper->toResponse($user, $this->membershipsFor($user)))
             ->setFlushDescription('Détails de l\'utilisateur récupérés.')
             ->setStatus(200)
             ->autoInitFlush();
@@ -206,7 +222,7 @@ final readonly class UserService
         $this->em->flush();
 
         return $feedback
-            ->setData($this->mapper->toResponse($user))
+            ->setData($this->mapper->toResponse($user, $this->membershipsFor($user)))
             ->setFlushDescription('Utilisateur mis à jour avec succès.')
             ->setStatus(200)
             ->autoInitFlush();
@@ -239,5 +255,133 @@ final readonly class UserService
             ->setFlushDescription('L\'utilisateur a été supprimé avec succès.')
             ->setStatus(200)
             ->autoInitFlush();
+    }
+
+    /**
+     * Suspend un compte utilisateur, puis notifie l'intéressé par email.
+     *
+     * Opération d'administration (SUPER_ADMIN sur toute la plateforme, PATRON
+     * pour un compte de son organisation). Contraintes :
+     *   1. seul un compte actif peut être suspendu ;
+     *   2. on ne peut pas suspendre son propre compte (un SUPER_ADMIN qui se
+     *      suspendrait se couperait lui-même l'accès) ;
+     *   3. la désactivation est tracée dans l'audit, avec le motif le cas échéant.
+     *
+     * L'envoi de l'email est non bloquant : la suspension est déjà désactivée
+     * en base quand le mailer échoue, et l'échec remonte sous forme de
+     * `warning`, pas de 500 (verdict « persistance » et verdict
+     * « notification » séparés).
+     */
+    public function suspend(string $uuid, UserSuspendRequest $request): Feedback
+    {
+        $feedback = new Feedback();
+
+        $user = $this->repository->findOneBy(['uuid' => $uuid]);
+        if (!$user) {
+            return $feedback
+                ->addError('uuid', 'Utilisateur introuvable.')
+                ->setErrorFlushDescription('Impossible de suspendre le compte.')
+                ->autoInitFlush()
+                ->setStatus(404);
+        }
+
+        $this->security->checkUserAccess($user, SecurityAction::SUSPEND_USER);
+
+        // La matrice autorise le cas « soi-même » pour `UPDATE_USER` uniquement,
+        // jamais pour `SUSPEND_USER` : une auto-suspension de plateforme est un
+        // verrouillage volontaire (et nuisible) demandé explicitement ici.
+        if ($user->getId() === $this->security->getCurrentUser()->getId()) {
+            return $feedback
+                ->addError('user', 'Impossible de suspendre votre propre compte.')
+                ->setErrorFlushDescription('Suspension impossible : vous ne pouvez pas suspendre votre propre compte.')
+                ->setStatus(422)
+                ->autoInitFlush();
+        }
+
+        $violations = $this->validator->validate($request);
+        if (count($violations) > 0) {
+            return $feedback
+                ->bind($violations)
+                ->setErrorFlushDescription('Échec de la validation des données.')
+                ->setStatus(422)
+                ->autoInitFlush();
+        }
+
+        if (!$user->isActive()) {
+            return $feedback
+                ->addError('isActive', 'Ce compte est déjà désactivé.')
+                ->setErrorFlushDescription('Suspension impossible : le compte est déjà désactivé.')
+                ->setStatus(422)
+                ->autoInitFlush();
+        }
+
+        $reason = trim((string) $request->reason);
+
+        $previous = ['isActive' => true];
+        $user->setIsActive(false);
+        $user->setUpdatedAt($this->dateTimeService->now());
+        $this->em->flush();
+
+        $this->auditLogService->log(
+            action: 'SUSPEND_USER',
+            entityType: User::class,
+            entityId: $user->getId(),
+            user: $this->security->getCurrentUser(),
+            oldValues: $previous,
+            newValues: $reason === ''
+                ? ['isActive' => false]
+                : ['isActive' => false, 'reason' => $reason],
+        );
+
+        // Notifie l'utilisateur APRÈS le commit : l'email ne doit jamais
+        // conditionner la persistance de la suspension.
+        $failed = $this->notificationService->notifyAccountSuspended($user, $reason === '' ? null : $reason);
+
+        if ($failed !== []) {
+            $feedback->addWarning('emails', count($failed) . ' email(s) de notification n\'ont pas pu être envoyé(s).');
+        }
+
+        return $feedback
+            ->setData($this->mapper->toResponse($user, $this->membershipsFor($user)))
+            ->setFlushDescription(
+                $failed === []
+                    ? 'Le compte a été suspendu. L\'utilisateur a été notifié par email.'
+                    : 'Le compte a été suspendu, mais l\'email de notification n\'a pas pu être envoyé.'
+            )
+            ->setStatus(200)
+            ->autoInitFlush();
+    }
+
+    /**
+     * Rattachements d'un ensemble de comptes, groupés par UUID public du User.
+     *
+     * @param list<User> $users
+     *
+     * @return array<string, list<array{organizationId: string, organizationName: string, role: string}>>
+     */
+    private function membershipsByUser(array $users): array
+    {
+        $grouped = [];
+
+        foreach ($this->orgUserRepository->findByUsers($users) as $membership) {
+            $grouped[(string) $membership->getUser()->getUuid()][] = [
+                'organizationId' => (string) $membership->getOrganization()->getUuid(),
+                'organizationName' => $membership->getOrganization()->getName(),
+                'role' => $membership->getRole()->value,
+            ];
+        }
+
+        return $grouped;
+    }
+
+    /**
+     * Rattachements d'un compte précis (« le compte est un cas particulier
+     * de la liste » : mêmes données de sortie sur show et sur list).
+     *
+     * @return list<array{organizationId: string, organizationName: string, role: string}>
+     */
+    private function membershipsFor(User $user): array
+    {
+        return $this->membershipsByUser([$user])[(string) $user->getUuid()] ?? [];
     }
 }

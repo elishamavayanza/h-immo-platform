@@ -4,10 +4,13 @@ declare(strict_types=1);
 
 namespace App\Controller\Api\Identity;
 
+use App\Dto\Feedback;
 use App\Dto\Request\Identity\UserRequest;
+use App\Dto\Request\Identity\UserSuspendRequest;
 use App\Dto\Request\PaginationQuery;
 use App\Service\Identity\UserService;
 use App\Trait\FeedbackTrait;
+use Nelmio\ApiDocBundle\Attribute\Model;
 use OpenApi\Attributes as OA;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
@@ -106,6 +109,53 @@ final class UserController extends AbstractController
     public function delete(string $uuid): JsonResponse
     {
         $feedback = $this->userService->delete($uuid);
+
+        return $this->json($feedback, $feedback->getStatus());
+    }
+
+    /**
+     * Suspend un compte utilisateur et notifie l'intéressé par email.
+     *
+     * Désactive le compte (`isActive` → false), archive l'événement dans
+     * l'audit (`SUSPEND_USER`) avec le motif fourni le cas échéant, puis
+     * envoie un email à l'utilisateur (échec non bloquant → `warning`).
+     * Un compte déjà désactivé (422) et l'auto-suspension (422) sont refusées.
+     */
+    #[Route('/{uuid}/suspend', name: 'suspend', methods: ['POST'])]
+    #[OA\Post(
+        summary: 'Suspendre un compte utilisateur',
+        description: 'Désactive `isActive`, archive l\'événement `SUSPEND_USER` dans l\'audit (motif le cas échéant) et notifie l\'utilisateur par email. Un compte déjà désactivé ou son propre compte sont refusés.',
+        security: [['bearer' => []]],
+    )]
+    #[OA\Parameter(
+        name: 'uuid',
+        in: 'path',
+        required: true,
+        schema: new OA\Schema(type: 'string', format: 'uuid'),
+        example: 'c3019a82-3ad4-4861-a53c-1123a1a3b110'
+    )]
+    #[OA\RequestBody(
+        required: false,
+        content: new OA\JsonContent(ref: new Model(type: UserSuspendRequest::class))
+    )]
+    #[OA\Response(
+        response: 200,
+        description: 'Compte suspendu, utilisateur notifié',
+        content: new OA\JsonContent(ref: new Model(type: Feedback::class))
+    )]
+    #[OA\Response(
+        response: 404,
+        description: 'Utilisateur introuvable'
+    )]
+    #[OA\Response(
+        response: 422,
+        description: 'Compte déjà désactivé, auto-suspension ou motif invalide'
+    )]
+    public function suspend(
+        string $uuid,
+        #[MapRequestPayload] UserSuspendRequest $request
+    ): JsonResponse {
+        $feedback = $this->userService->suspend($uuid, $request);
 
         return $this->json($feedback, $feedback->getStatus());
     }

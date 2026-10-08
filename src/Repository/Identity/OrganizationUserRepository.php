@@ -105,6 +105,36 @@ class OrganizationUserRepository extends ServiceEntityRepository
     }
 
     /**
+     * Rattachements (avec rôle) pour un ensemble d'utilisateurs, organisation
+     * jointe.
+     *
+     * Sert à enrichir une page de comptes utilisateurs en une seule requête
+     * plutôt qu'en N appels à `findByUser()` : la liste d'utilisateurs est
+     * bornée par page, le nombre de requêtes reste constant quelle que soit
+     * la taille du jeu de données.
+     *
+     * @param list<User> $users
+     *
+     * @return list<OrganizationUser>
+     */
+    public function findByUsers(array $users): array
+    {
+        if ($users === []) {
+            return [];
+        }
+
+        return $this->createQueryBuilder('ou')
+            ->innerJoin('ou.organization', 'o')
+            ->addSelect('o')
+            ->andWhere('ou.user IN (:users)')
+            ->andWhere('o.deletedAt IS NULL')
+            ->setParameter('users', $users)
+            ->orderBy('ou.createdAt', 'DESC')
+            ->getQuery()
+            ->getResult();
+    }
+
+    /**
      * Rattachements d'un utilisateur restreints à un rôle donné.
      *
      * @return OrganizationUser[]
