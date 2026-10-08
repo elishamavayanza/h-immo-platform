@@ -21,6 +21,7 @@ import { Loading } from '../../../components/UI/Loading';
 import { Spinner } from '../../../components/UI/Spinner';
 import { useIsPortrait } from '../../../hooks/useIsPortrait';
 import { useIsMobile } from '../../../hooks/useIsMobile';
+import { mediaHref } from '../../../features/shared/media/services/mediaService';
 
 /**
  * Marque du sidebar : logo + "IMMO" + nom de l'organisation active sur sa propre ligne.
@@ -243,7 +244,7 @@ return (
                         <UserMenu
                             fullName={user.fullName}
                             email={user.email}
-                            profilePhoto={user.profilePhoto}
+                            profilePhoto={mediaHref(user.profilePhoto)}
                             roleLabel={effectiveRoleLabel}
                             onOpenSettings={() => navigate('/settings')}
                             onOpenProfile={() => navigate('/profile')}

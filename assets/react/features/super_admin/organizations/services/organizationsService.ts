@@ -1,5 +1,6 @@
 import { apiClient } from '../../../../../services/api/client';
 import type { Feedback } from '../../../../../services/api/api.types';
+import { mediaHref } from '../../../shared/media/services/mediaService';
 import type {
     OrganizationApiResponse,
     OrganizationCreatePayload,
@@ -129,7 +130,5 @@ function toRow(response: OrganizationApiResponse): OrganizationRow {
  * média renvoie une URL publique (`/uploads/organizations/…`).
  */
 export function logoHref(logo: string | null): string | null {
-    if (!logo) return null;
-    if (/^(https?:)?\/\//.test(logo) || logo.startsWith('/')) return logo;
-    return `/uploads/${logo}`;
+    return mediaHref(logo);
 }

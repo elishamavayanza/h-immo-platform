@@ -1,5 +1,6 @@
 import { apiClient } from '../../../../../services/api/client';
 import type { Feedback } from '../../../../../services/api/api.types';
+import { mediaHref } from '../../../shared/media/services/mediaService';
 import type {
     UserApiResponse,
     UserListData,
@@ -77,7 +78,5 @@ function toRow(response: UserApiResponse): UserRow {
  * chemin relatif (`profiles/…`), soit un chemin absolu (`/uploads/profiles/…`).
  */
 export function photoHref(photo: string | null): string | null {
-    if (!photo) return null;
-    if (/^(https?:)?\/\//.test(photo) || photo.startsWith('/') || photo.startsWith('data:')) return photo;
-    return `/uploads/${photo}`;
+    return mediaHref(photo);
 }
