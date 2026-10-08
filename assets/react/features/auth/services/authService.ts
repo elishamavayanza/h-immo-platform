@@ -32,4 +32,19 @@ export const authService = {
     logout() {
         return apiClient.post<LogoutResponse>('/auth/logout');
     },
+
+    /**
+     * `PUT /api/v1/identity/users/{uuid}` — met à jour le profil de l'utilisateur courant.
+     * Accepte : firstName, lastName, phone, profilePhoto (URL), email (si autorisé).
+     */
+    async updateProfile(uuid: string, payload: Partial<{
+        firstName: string;
+        lastName: string;
+        phone: string;
+        profilePhoto: string;
+        email: string;
+    }>): Promise<SessionUserResponse> {
+        const { data } = await apiClient.put<SessionUserResponse>(`/v1/identity/users/${uuid}`, payload);
+        return data;
+    },
 };
