@@ -7,6 +7,7 @@ import { ErrorState } from '../../../../../components/UI/ErrorState';
 import { Spinner } from '../../../../../components/UI/Spinner';
 import { FormField } from '../../../../../components/Forms/FormField';
 import { Input } from '../../../../../components/Forms/Input';
+import { UserPhotoPicker } from '../components/UserPhotoPicker';
 import { useProfile } from '../hooks/useProfile';
 import './profile.scss';
 
@@ -18,8 +19,7 @@ export function ProfilePage() {
         lastName: '',
         phone: '',
     });
-    const [photoFile, setPhotoFile] = useState<File | null>(null);
-    const [isUploading, setIsUploading] = useState(false);
+    const [photoChange, setPhotoChange] = useState<{ kind: 'new'; dataUrl: string; file: File } | { kind: 'removed' } | null>(null);
     const [saveError, setSaveError] = useState<string | null>(null);
 
     const fullName = profile?.fullName ?? '';
@@ -42,6 +42,7 @@ export function ProfilePage() {
 
     const handleStartEdit = () => {
         setFormData({ firstName, lastName, phone: profile.phone ?? '' });
+        setPhotoChange(null);
         setSaveError(null);
         setIsEditing(true);
     };
@@ -50,56 +51,38 @@ export function ProfilePage() {
         setIsEditing(false);
         setSaveError(null);
         setFormData({ firstName, lastName, phone: profile.phone ?? '' });
+        setPhotoChange(null);
     };
 
     const handleSave = async () => {
         setSaveError(null);
         try {
             const fullName = `${formData.firstName.trim()} ${formData.lastName.trim()}`.trim();
-            await updateProfile({ firstName: formData.firstName, lastName: formData.lastName, phone: formData.phone });
+            const payload: { firstName: string; lastName: string; phone: string; profilePhoto?: string } = {
+                firstName: formData.firstName,
+                lastName: formData.lastName,
+                phone: formData.phone,
+            };
+
+            // Si une nouvelle photo a été sélectionnée, l'uploader d'abord
+            if (photoChange?.kind === 'new') {
+                const photoUrl = await uploadPhoto(photoChange.file);
+                payload.profilePhoto = photoUrl;
+            } else if (photoChange?.kind === 'removed') {
+                await deletePhoto();
+                payload.profilePhoto = '';
+            }
+
+            await updateProfile(payload);
             setIsEditing(false);
+            setPhotoChange(null);
         } catch (err) {
             setSaveError(err instanceof Error ? err.message : 'Échec de la sauvegarde');
         }
     };
 
-    const handlePhotoChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-        const file = event.target.files?.[0];
-        if (file) {
-            if (!file.type.startsWith('image/')) {
-                setSaveError('Le fichier doit être une image');
-                return;
-            }
-            if (file.size > 10 * 1024 * 1024) {
-                setSaveError('L\'image ne doit pas dépasser 10 Mo');
-                return;
-            }
-            setPhotoFile(file);
-            setSaveError(null);
-        }
-    };
-
-    const handleUploadPhoto = async () => {
-        if (!photoFile) return;
-        setIsUploading(true);
-        setSaveError(null);
-        try {
-            await uploadPhoto(photoFile);
-            setPhotoFile(null);
-        } catch (err) {
-            setSaveError(err instanceof Error ? err.message : 'Échec de l\'upload');
-        } finally {
-            setIsUploading(false);
-        }
-    };
-
-    const handleDeletePhoto = async () => {
-        if (!window.confirm('Supprimer votre photo de profil ?')) return;
-        try {
-            await deletePhoto();
-        } catch (err) {
-            setSaveError(err instanceof Error ? err.message : 'Échec de la suppression');
-        }
+    const handlePhotoChange = (change: { kind: 'new'; dataUrl: string; file: File } | { kind: 'removed' } | null) => {
+        setPhotoChange(change);
     };
 
     const role = profile.platformRole ?? profile.organizations[0]?.role ?? 'Utilisateur';
@@ -117,8 +100,8 @@ export function ProfilePage() {
                     {isEditing ? (
                         <>
                             <Button variant="outline" onClick={handleCancelEdit}>Annuler</Button>
-                            <Button onClick={handleSave} disabled={isUploading}>
-                                {isUploading ? 'Sauvegarde...' : 'Enregistrer'}
+                            <Button onClick={handleSave} disabled={photoChange?.kind === 'new'}>
+                                {photoChange?.kind === 'new' ? 'Upload...' : 'Enregistrer'}
                             </Button>
                         </>
                     ) : (
@@ -131,35 +114,12 @@ export function ProfilePage() {
 
             <Card className="profile-hero">
                 <div className="profile-hero__avatar">
-                    <Avatar
-                        name={profile.fullName}
-                        src={profile.profilePhoto ?? undefined}
-                        size="large"
+                    <UserPhotoPicker
+                        value={profile.profilePhoto ?? undefined}
+                        change={photoChange}
+                        onChange={handlePhotoChange}
+                        disabled={!isEditing}
                     />
-                    {isEditing && (
-                        <div className="profile-avatar__actions">
-                            <label className="btn btn--ghost btn--small" htmlFor="photo-upload">
-                                📷 Changer
-                                <input
-                                    id="photo-upload"
-                                    type="file"
-                                    accept="image/*"
-                                    onChange={handlePhotoChange}
-                                    style={{ display: 'none' }}
-                                />
-                            </label>
-                            {photoFile && (
-                                <Button size="small" variant="primary" onClick={handleUploadPhoto} disabled={isUploading}>
-                                    {isUploading ? 'Upload...' : 'Valider'}
-                                </Button>
-                            )}
-                            {profile.profilePhoto && (
-                                <Button size="small" variant="outline" onClick={handleDeletePhoto}>
-                                    Supprimer
-                                </Button>
-                            )}
-                        </div>
-                    )}
                 </div>
                 <div className="profile-hero__identity">
                     {isEditing ? (
@@ -170,7 +130,6 @@ export function ProfilePage() {
                                         id="firstName"
                                         value={formData.firstName}
                                         onChange={(e) => setFormData({ ...formData, firstName: e.target.value })}
-                                        disabled={isUploading}
                                     />
                                 </FormField>
                                 <FormField label="Nom" htmlFor="lastName" required>
@@ -178,7 +137,6 @@ export function ProfilePage() {
                                         id="lastName"
                                         value={formData.lastName}
                                         onChange={(e) => setFormData({ ...formData, lastName: e.target.value })}
-                                        disabled={isUploading}
                                     />
                                 </FormField>
                             </div>
@@ -189,7 +147,6 @@ export function ProfilePage() {
                                     value={formData.phone}
                                     onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
                                     placeholder="+243 99 00 00 000"
-                                    disabled={isUploading}
                                 />
                             </FormField>
                         </div>

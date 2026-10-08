@@ -16,25 +16,31 @@
 .profile-form__row { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
 .profile-form__row > *:last-child { grid-column:1 / -1; }
 
-/* Avatar actions */
-.profile-hero__avatar { position:relative; }
-.profile-avatar__actions {
-    position:absolute;
-    inset:0;
-    background:rgba(0,0,0,.55);
-    display:flex;
-    align-items:center;
-    justify-content:center;
-    flex-direction:column;
-    gap:8px;
-    opacity:0;
-    transition:opacity .2s;
-    border-radius:inherit;
-    padding:8px;
+/* Photo picker - matches org logo picker */
+.sa-photo-picker { width:100%; max-width:280px; }
+.sa-photo-picker__preview {
+    width:120px; height:120px; border-radius:50%;
+    border:2px solid var(--color-border, #29313b);
+    background:var(--color-bg-input, #101214);
+    display:flex; align-items:center; justify-content:center;
+    overflow:hidden; flex-shrink:0; margin:0 auto 12px;
 }
-.profile-hero__avatar:hover .profile-avatar__actions { opacity:1; }
-.profile-avatar__actions .btn { width:100%; max-width:200px; }
-.profile-avatar__actions input[type="file"] { display:none; }
+.sa-photo-picker__preview img { width:100%; height:100%; object-fit:cover; }
+.sa-photo-picker__preview span { color:var(--color-text-muted, #6b7077); font-size:.8rem; }
+.sa-photo-picker__preview--filled span { display:none; }
+.sa-photo-picker__actions { display:flex; flex-direction:column; gap:8px; width:100%; max-width:280px; margin:0 auto; }
+.sa-photo-picker__actions .btn { width:100%; }
+.sa-photo-picker__actions input[type="file"] { display:none; }
+
+/* ImageEditor override for photo picker */
+.sa-photo-picker .image-editor { width:100%; max-width:280px; margin:0 auto; }
+.sa-photo-picker .image-editor__canvas-container canvas { border-radius:0; }
+.sa-photo-picker .image-editor__actions button { width:100%; max-width:120px; }
+
+/* Edit form */
+.profile-form { width:100%; }
+.profile-form__row { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+.profile-form__row > *:last-child { grid-column:1 / -1; }
 
 /* Error */
 .profile-error {
