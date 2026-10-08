@@ -386,19 +386,71 @@ final readonly class ReportService
         // Recent organizations (5 dernières créées)
         $recentOrgs = array_slice($orgSummaries, 0, 5);
 
-        // Activity feed from audit logs (10 dernières entrées plateforme)
+        // Activity feed : événements métier significatifs pour SUPER_ADMIN
+        // On filtre les actions d'audit pertinentes (pas les simples LOGIN/LOGOUT)
         $auditLogs = $this->auditLogRepository->findByFilter(
-            null, null, null, null, null, 1, 10, null
+            null,
+            null, // action = null -> on filtre côté PHP pour plus de contrôle
+            null,
+            null,
+            null,
+            1,
+            50, // on récupère plus large pour filtrer
+            null
         );
+
+        $importantActions = [
+            'CREATE_ORGANIZATION' => ['label' => 'Nouvelle organisation', 'kind' => 'create'],
+            'SUSPEND_ORGANIZATION' => ['label' => 'Organisation suspendue', 'kind' => 'alert'],
+            'ACTIVATE_ORGANIZATION' => ['label' => 'Organisation réactivée', 'kind' => 'create'],
+            'CREATE_ADMIN' => ['label' => 'Administrateur créé', 'kind' => 'create'],
+            'SUSPEND_USER' => ['label' => 'Utilisateur suspendu', 'kind' => 'alert'],
+            'CREATE_LEASE' => ['label' => 'Bail créé', 'kind' => 'create'],
+            'TERMINATE_LEASE' => ['label' => 'Bail terminé', 'kind' => 'delete'],
+            'CANCEL_LEASE' => ['label' => 'Bail annulé', 'kind' => 'delete'],
+            'CREATE_PAYMENT' => ['label' => 'Paiement reçu', 'kind' => 'create'],
+            'CANCEL_PAYMENT' => ['label' => 'Paiement annulé', 'kind' => 'delete'],
+            'CREATE_EXPENSE' => ['label' => 'Dépense enregistrée', 'kind' => 'create'],
+            'CREATE_WORKER' => ['label' => 'Personnel ajouté', 'kind' => 'create'],
+            'UPDATE_RENT' => ['label' => 'Échéance mise à jour', 'kind' => 'update'],
+        ];
+
         $activity = [];
         foreach ($auditLogs['items'] as $log) {
+            $action = $log->getAction();
+            if (!isset($importantActions[$action])) {
+                continue; // ignore LOGIN, LOGOUT, LOGIN_FAILED, etc.
+            }
+
+            $meta = $importantActions[$action];
+            $actor = $log->getUser()?->getFullName() ?? 'Système';
+            $target = $this->formatAuditTarget($log);
+            $newValues = $log->getNewValues();
+            $detail = $newValues && is_array($newValues) ? $this->extractDetail($newValues) : '';
+
             $activity[] = new ActivityEntry(
                 id: (string) $log->getUuid(),
-                actor: $log->getUser()?->getFullName() ?? 'Système',
-                action: strtolower(str_replace('_', ' ', $log->getAction())),
-                target: $log->getEntityType() . ($log->getEntityId() ? ' #' . $log->getEntityId() : ''),
+                actor: $actor,
+                action: $meta['label'],
+                target: $target . ($detail ? ' — ' . $detail : ''),
                 timestamp: $this->formatRelativeTime($log->getCreatedAt()),
-                kind: $this->mapActionToKind($log->getAction()),
+                kind: $meta['kind'],
+            );
+
+            if (count($activity) >= 10) {
+                break; // limite à 10 entrées
+            }
+        }
+
+        // Si pas d'activité significative, message par défaut
+        if (empty($activity)) {
+            $activity[] = new ActivityEntry(
+                id: 'none',
+                actor: '—',
+                action: 'Aucun événement métier récent',
+                target: '—',
+                timestamp: '—',
+                kind: 'update',
             );
         }
 
@@ -484,6 +536,70 @@ final readonly class ReportService
             'logout' => 'login',
             default => 'update',
         };
+    }
+
+    /**
+     * Formate la cible d'un log d'audit pour l'affichage.
+     */
+    private function formatAuditTarget(\App\Entity\System\AuditLog $log): string
+    {
+        $entityType = $log->getEntityType();
+        $entityId = $log->getEntityId();
+
+        $shortType = match (true) {
+            str_contains($entityType, 'Organization') && !str_contains($entityType, 'User') => 'Organisation',
+            str_contains($entityType, 'User') && !str_contains($entityType, 'City') => 'Utilisateur',
+            str_contains($entityType, 'Lease') => 'Bail',
+            str_contains($entityType, 'Payment') => 'Paiement',
+            str_contains($entityType, 'Expense') => 'Dépense',
+            str_contains($entityType, 'Worker') && !str_contains($entityType, 'Assignment') => 'Personnel',
+            str_contains($entityType, 'WorkerAssignment') => 'Affectation',
+            str_contains($entityType, 'City') => 'Ville',
+            str_contains($entityType, 'Parcel') => 'Parcelle',
+            str_contains($entityType, 'Building') => 'Bâtiment',
+            str_contains($entityType, 'Unit') && !str_contains($entityType, 'Photo') => 'Unité',
+            str_contains($entityType, 'UnitPhoto') => 'Photo unité',
+            str_contains($entityType, 'Tenant') => 'Locataire',
+            str_contains($entityType, 'Rent') => 'Échéance',
+            str_contains($entityType, 'ExchangeRate') => 'Taux de change',
+            default => (string) $entityType,
+        };
+
+        $newValues = $log->getNewValues();
+        if ($newValues && is_array($newValues)) {
+            $name = $newValues['name'] ?? $newValues['fullName'] ?? $newValues['companyName'] ?? $newValues['reference'] ?? null;
+            if ($name) {
+                return $shortType . ' « ' . $name . ' »';
+            }
+        }
+
+        return $shortType . ($entityId ? ' #' . $entityId : '');
+    }
+
+    /**
+     * Extrait un détail lisible depuis newValues.
+     */
+    private function extractDetail(array $values): string
+    {
+        $details = [];
+
+        if (isset($values['status'])) {
+            $details[] = 'statut : ' . $values['status'];
+        }
+        if (isset($values['role'])) {
+            $details[] = 'rôle : ' . $values['role'];
+        }
+        if (isset($values['monthlyRent'])) {
+            $details[] = 'loyer : ' . $values['monthlyRent'];
+        }
+        if (isset($values['amount'])) {
+            $details[] = 'montant : ' . $values['amount'];
+        }
+        if (isset($values['reason'])) {
+            $details[] = 'motif : ' . $values['reason'];
+        }
+
+        return implode(', ', $details);
     }
 
     // ==================== MÉTHODES PRIVÉES D'AGRÉGATION ====================
