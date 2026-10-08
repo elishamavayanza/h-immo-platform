@@ -1,4 +1,5 @@
 import { apiClient } from '../../../../../services/api/client';
+import { tokenStorage } from '../../../../../services/storage/storage.service';
 import type {
     SuperAdminReportResponse,
     OrganizationSummaryItem,
@@ -20,6 +21,11 @@ export async function fetchSuperAdminReport(filters: SuperAdminReportFilters = {
 }
 
 export async function downloadSuperAdminReportPdf(filters: SuperAdminReportFilters = {}): Promise<void> {
+    const accessToken = tokenStorage.getAccessToken();
+    if (!accessToken) {
+        throw new Error('Non authentifié : jeton d\'accès manquant');
+    }
+
     const query: Record<string, string> = {
         format: 'pdf',
         ...(filters.periodFrom ? { periodFrom: filters.periodFrom } : {}),
@@ -33,6 +39,7 @@ export async function downloadSuperAdminReportPdf(filters: SuperAdminReportFilte
         headers: {
             'Accept': 'application/pdf',
             'X-Requested-With': 'XMLHttpRequest',
+            'Authorization': `Bearer ${accessToken}`,
         },
     });
 

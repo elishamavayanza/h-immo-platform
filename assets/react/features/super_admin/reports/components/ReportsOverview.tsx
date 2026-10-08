@@ -3,6 +3,7 @@ import { Select } from '../../../../components/Forms/Select';
 import { Spinner } from '../../../../components/UI/Spinner';
 import { ReportsPageView } from '../../../shared/reports/components/ReportsPageView';
 import type { ReportsData, ReportsPeriod } from '../../../shared/reports/types/report.types';
+import { useAuth } from '../../../../app/providers/AuthProvider';
 
 const DOWNLOAD_ICON = (
     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
@@ -27,6 +28,12 @@ export function ReportsOverview({
     setPeriod: (period: ReportsPeriod) => void;
     downloadPdf: () => void;
 }) {
+    const { accessToken } = useAuth();
+
+    const handleDownloadPdf = async () => {
+        await downloadPdf();
+    };
+
     if (isLoading) return <div className="reports-loading"><Spinner size="large" /><span>Préparation du rapport…</span></div>;
     if (error || !data) {
         return (
@@ -39,28 +46,6 @@ export function ReportsOverview({
 
     return (
         <main className="reports-page">
-            <header className="reports-page__header">
-                <div>
-                    <span className="reports-page__eyebrow">{data.scope}</span>
-                    <h1>{data.title}</h1>
-                    <p>{data.description}</p>
-                </div>
-                <div className="reports-page__controls">
-                    <Select
-                        aria-label="Période du rapport"
-                        value={period}
-                        onChange={(event) => setPeriod(event.target.value as ReportsPeriod)}
-                        options={[
-                            { value: 'month', label: '30 derniers jours' },
-                            { value: 'quarter', label: '3 derniers mois' },
-                            { value: 'year', label: 'Année en cours' },
-                        ]}
-                    />
-                    <Button variant="outline" onClick={downloadPdf} icon={DOWNLOAD_ICON} iconPosition="left">
-                        Télécharger PDF
-                    </Button>
-                </div>
-            </header>
             <ReportsPageView data={data} isLoading={false} />
         </main>
     );
