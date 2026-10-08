@@ -303,60 +303,137 @@ final readonly class ReportService
             );
         }
 
-        // KPIs
+        // KPIs — métriques plateforme significatives pour SUPER_ADMIN
         $totalOrgs = count($organizations);
-        $activeOrgs = count(array_filter($organizations, fn($o) => $o->getStatus()->value === 'ACTIVE'));
+        $orgsByStatus = [];
+        foreach ($organizations as $org) {
+            $status = $org->getStatus()->value;
+            $orgsByStatus[$status] = ($orgsByStatus[$status] ?? 0) + 1;
+        }
+        $activeOrgs = $orgsByStatus['active'] ?? 0;
+        $suspendedOrgs = $orgsByStatus['suspended'] ?? 0;
+        $inactiveOrgs = $orgsByStatus['inactive'] ?? 0;
+
         $totalUsers = count($this->userRepository->findPaginatedAll(1, 10000)['items'] ?? []);
 
-        $orgsDelta = $totalOrgs > 0 ? 5.0 : 0; // placeholder
-        $usersDelta = $totalUsers > 0 ? 3.0 : 0;
-        $revenueDelta = bccomp($totalRevenue, '0', 2) > 0 ? 8.0 : 0;
-        $churnRate = $totalOrgs > 0 ? round((($totalOrgs - $activeOrgs) / $totalOrgs) * 100, 1) : 0;
+        // Agrégats globaux
+        $totalUnits = 0;
+        $totalCities = 0;
+        $totalActiveLeases = 0;
+        $totalOccupiedUnits = 0;
 
+        foreach ($organizations as $org) {
+            $cities = $this->cityRepository->findActiveByOrganization($org);
+            $cityIds = array_map(fn(City $c) => $c->getId(), $cities);
+            $totalCities += count($cities);
+
+            $totalUnits += $this->countUnitsByCityIds($cityIds);
+            $totalActiveLeases += $this->countActiveLeasesByCityIds($cityIds);
+
+            // Unités occupées pour taux occupation global
+            foreach ($cities as $city) {
+                $parcels = $this->parcelRepository->findByCity($city);
+                foreach ($parcels as $parcel) {
+                    $buildings = $this->buildingRepository->findByParcel($parcel);
+                    foreach ($buildings as $building) {
+                        $units = $this->unitRepository->findByBuilding($building);
+                        foreach ($units as $unit) {
+                            if ($this->unitHasActiveLease($unit)) {
+                                $totalOccupiedUnits++;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        $globalOccupancyRate = $totalUnits > 0 ? round(($totalOccupiedUnits / $totalUnits) * 100, 1) : 0.0;
+
+        // Impayés globaux
+        $globalArrears = '0.00';
+        foreach ($organizations as $org) {
+            $cities = $this->cityRepository->findActiveByOrganization($org);
+            $cityIds = array_map(fn(City $c) => $c->getId(), $cities);
+            $globalArrears = bcadd($globalArrears, $this->sumArrears($org->getId(), $cityIds, $periodTo), 2);
+        }
+
+        // Revenus mensuels attendus (loyers du mois courant)
+        $currentMonthStart = $this->dateTime->startOfCurrentMonth();
+        $currentMonthEnd = $this->dateTime->endOfCurrentMonth();
+        $expectedMonthlyRevenue = '0.00';
+        foreach ($organizations as $org) {
+            $cities = $this->cityRepository->findActiveByOrganization($org);
+            $cityIds = array_map(fn(City $c) => $c->getId(), $cities);
+            $expectedMonthlyRevenue = bcadd($expectedMonthlyRevenue, $this->sumExpectedRents($org->getId(), $cityIds, $currentMonthStart, $currentMonthEnd), 2);
+        }
+
+        // Delta placeholders (seraient calculés vs mois précédent en prod)
         $kpis = [
             new KpiMetric(
-                id: 'orgs',
-                label: 'Organisations actives',
-                value: (string) $activeOrgs,
-                delta: $orgsDelta,
-                trend: 'up',
+                id: 'organizations',
+                label: 'Organisations',
+                value: (string) $totalOrgs,
+                delta: 0.0,
+                trend: 'flat',
                 positive: true,
-                helper: "{$activeOrgs} / {$totalOrgs} totales",
+                helper: "Actives: {$activeOrgs} • Suspendues: {$suspendedOrgs} • Inactives: {$inactiveOrgs}",
                 tone: 'primary',
                 icon: 'building',
             ),
             new KpiMetric(
                 id: 'users',
-                label: 'Utilisateurs',
+                label: 'Utilisateurs plateforme',
                 value: number_format($totalUsers, 0, ',', ' '),
-                delta: $usersDelta,
-                trend: 'up',
+                delta: 0.0,
+                trend: 'flat',
                 positive: true,
-                helper: 'Plateforme entière',
+                helper: 'Tous rôles confondus',
                 tone: 'info',
                 icon: 'users',
             ),
             new KpiMetric(
-                id: 'mrr',
-                label: 'Revenu mensuel (MRR)',
-                value: $totalRevenue . ' $',
-                delta: $revenueDelta,
-                trend: 'up',
+                id: 'units',
+                label: 'Unités / Logements',
+                value: number_format($totalUnits, 0, ',', ' '),
+                delta: 0.0,
+                trend: 'flat',
                 positive: true,
-                helper: 'Période en cours',
+                helper: "{$totalCities} villes • {$totalOccupiedUnits} occupées",
                 tone: 'success',
-                icon: 'revenue',
+                icon: 'briefcase',
             ),
             new KpiMetric(
-                id: 'churn',
-                label: 'Taux d\'inactivité',
-                value: $churnRate . ' %',
-                delta: -0.5,
-                trend: 'down',
+                id: 'leases',
+                label: 'Baux actifs',
+                value: number_format($totalActiveLeases, 0, ',', ' '),
+                delta: 0.0,
+                trend: 'flat',
                 positive: true,
-                helper: 'Objectif < 5 %',
+                helper: "Taux occupation: {$globalOccupancyRate} %",
                 tone: 'warning',
                 icon: 'pulse',
+            ),
+            new KpiMetric(
+                id: 'arrears',
+                label: 'Impayés globaux',
+                value: $globalArrears . ' $',
+                delta: 0.0,
+                trend: bccomp($globalArrears, '0', 2) > 0 ? 'up' : 'flat',
+                positive: bccomp($globalArrears, '0', 2) <= 0,
+                helper: 'Montant total dû non perçu',
+                tone: bccomp($globalArrears, '0', 2) > 0 ? 'danger' : 'success',
+                icon: 'warning',
+            ),
+            new KpiMetric(
+                id: 'expected_revenue',
+                label: 'Revenus attendus (mois)',
+                value: $expectedMonthlyRevenue . ' $',
+                delta: 0.0,
+                trend: 'flat',
+                positive: true,
+                helper: 'Loyers du mois en cours',
+                tone: 'info',
+                icon: 'revenue',
             ),
         ];
 
@@ -1230,6 +1307,61 @@ final readonly class ReportService
 
         arsort($currencyCounts);
         return array_key_first($currencyCounts);
+    }
+
+    /**
+     * Compte les baux actifs pour une liste de cityIds.
+     */
+    private function countActiveLeasesByCityIds(array $cityIds): int
+    {
+        if (empty($cityIds)) {
+            return 0;
+        }
+
+        $count = 0;
+        $cities = $this->cityRepository->findInOrganization($this->cityRepository->find($cityIds[0])->getOrganization());
+
+        foreach ($cities as $city) {
+            if (!in_array($city->getId(), $cityIds, true)) {
+                continue;
+            }
+            $parcels = $this->parcelRepository->findByCity($city);
+            foreach ($parcels as $parcel) {
+                $buildings = $this->buildingRepository->findByParcel($parcel);
+                foreach ($buildings as $building) {
+                    $units = $this->unitRepository->findByBuilding($building);
+                    foreach ($units as $unit) {
+                        if ($this->unitHasActiveLease($unit)) {
+                            $count++;
+                        }
+                    }
+                }
+            }
+        }
+
+        return $count;
+    }
+
+    /**
+     * Somme des loyers attendus (montant des échéances) pour une période.
+     */
+    private function sumExpectedRents(?int $organizationId, array $cityIds, \DateTimeImmutable $from, \DateTimeImmutable $to): string
+    {
+        $results = $this->rentRepository->getExpectedRentsSummary(
+            $organizationId ? [$organizationId] : null,
+            $cityIds ?: null,
+            $from,
+            $to
+        );
+
+        $referenceCurrency = $this->getReferenceCurrency($organizationId, $cityIds);
+        $total = '0.00';
+        foreach ($results as $row) {
+            $currency = $row['currency'] instanceof \BackedEnum ? $row['currency']->value : (string) $row['currency'];
+            $converted = $this->convertToReferenceCurrency($row['total'], \App\Enum\Currency::from($currency), $referenceCurrency, $from);
+            $total = bcadd($total, $converted, 2);
+        }
+        return $total;
     }
 
     /**
