@@ -6,8 +6,11 @@ namespace App\Controller\Api\Identity;
 
 use App\Dto\Feedback;
 use App\Dto\Request\Identity\UserRequest;
+use App\Dto\Request\Identity\UserSettingsRequest;
 use App\Dto\Request\Identity\UserSuspendRequest;
 use App\Dto\Request\PaginationQuery;
+use App\Dto\Response\Identity\UserSettingsResponse;
+use App\Service\Identity\UserSettingsService;
 use App\Service\Identity\UserService;
 use App\Trait\FeedbackTrait;
 use Nelmio\ApiDocBundle\Attribute\Model;
@@ -37,7 +40,8 @@ final class UserController extends AbstractController
      * Délègue le traitement applicatif et les opérations de persistance.
      */
     public function __construct(
-        private readonly UserService $userService
+        private readonly UserService $userService,
+        private readonly UserSettingsService $userSettingsService
     ) {
     }
 
@@ -158,5 +162,63 @@ final class UserController extends AbstractController
         $feedback = $this->userService->suspend($uuid, $request);
 
         return $this->json($feedback, $feedback->getStatus());
+    }
+
+    /**
+     * Récupère les préférences de l'utilisateur courant.
+     */
+    #[Route('/me/settings', name: 'me_settings', methods: ['GET'])]
+    #[OA\Get(
+        path: '/api/v1/identity/users/me/settings',
+        summary: 'Obtenir mes préférences utilisateur',
+        description: 'Retourne les préférences de l\'utilisateur authentifié (thème, langue, notifications, etc.).',
+        security: [['bearer' => []]],
+        responses: [
+            new OA\Response(response: 200, description: 'Préférences récupérées', content: new OA\JsonContent(ref: new Model(type: UserSettingsResponse::class))),
+            new OA\Response(response: 401, description: 'Non authentifié', content: new OA\JsonContent(ref: new Model(type: Feedback::class))),
+        ]
+    )]
+    public function getMySettings(): JsonResponse
+    {
+        $user = $this->getUser();
+
+        return $this->json(
+            UserSettingsResponse::fromUser($user),
+            200
+        );
+    }
+
+    /**
+     * Met à jour les préférences de l'utilisateur courant.
+     */
+    #[Route('/me/settings', name: 'me_settings_update', methods: ['PUT', 'PATCH'])]
+    #[OA\Put(
+        path: '/api/v1/identity/users/me/settings',
+        summary: 'Mettre à jour mes préférences utilisateur',
+        description: 'Met à jour partiellement les préférences de l\'utilisateur authentifié. Les paramètres SUPER_ADMIN sont ignorés si l\'utilisateur n\'a pas le rôle.',
+        security: [['bearer' => []]],
+        requestBody: new OA\RequestBody(
+            required: true,
+            content: new OA\JsonContent(ref: new Model(type: UserSettingsRequest::class))
+        ),
+        responses: [
+            new OA\Response(response: 200, description: 'Préférences mises à jour', content: new OA\JsonContent(ref: new Model(type: UserSettingsResponse::class))),
+            new OA\Response(response: 401, description: 'Non authentifié', content: new OA\JsonContent(ref: new Model(type: Feedback::class))),
+            new OA\Response(response: 422, description: 'Données invalides', content: new OA\JsonContent(ref: new Model(type: Feedback::class))),
+        ]
+    )]
+    public function updateMySettings(#[MapRequestPayload] UserSettingsRequest $request): JsonResponse
+    {
+        $user = $this->getUser();
+
+        $payload = array_filter(
+            (array) $request,
+            fn($value) => $value !== null,
+            ARRAY_FILTER_USE_BOTH
+        );
+
+        $settings = $this->userSettingsService->updateSettings($user, $user, $payload);
+
+        return $this->json(UserSettingsResponse::fromUser($user));
     }
 }
