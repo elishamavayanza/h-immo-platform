@@ -568,6 +568,7 @@ php tests/verify-admin-creation-email-failure.php # création compte + mailer en
 php tests/verify-p0-security.php        # rapports, dépenses, médias, statuts
 php tests/verify-p0-7-list-endpoints.php # endpoints de liste rentals (200, pas de fuite)
 php tests/verify-parcel-coordinates.php # coordonnées GPS Parcel (201/422, round-trip)
+php tests/verify-organization-suspend.php # suspension de tenant (motif obligatoire 422, 200, audit SUSPEND/ACTIVATE, 404, 403, réactivation)
 php tests/check-injected-dependencies.php # dépendances $this-> injectées (statique)
 node tests/verify-reset-password-form.ts # logique pure du formulaire de réinitialisation (features/auth)
 node tests/verify-sidebar-roles.ts # menu du sidebar vs matrice de rôles backend (Personnel pour ADMIN_IMMOBILIER, hors ADMIN_VILLE)

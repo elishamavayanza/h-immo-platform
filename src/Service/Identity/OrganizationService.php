@@ -6,6 +6,7 @@ namespace App\Service\Identity;
 
 use App\Dto\Feedback;
 use App\Dto\Request\Identity\OrganizationRequest;
+use App\Dto\Request\Identity\OrganizationSuspendRequest;
 use App\Dto\Response\Identity\SessionOrganizationMembership;
 use App\Dto\Request\Identity\OrganizationShowcaseRequest;
 use App\Dto\Request\PaginationQuery;
@@ -13,6 +14,7 @@ use App\Entity\Identity\Organization;
 use App\Entity\Identity\OrganizationUser;
 use App\Entity\Identity\User;
 use App\Enum\OrganizationRole;
+use App\Enum\OrganizationStatus;
 use App\Mapper\Identity\OrganizationMapper;
 use App\Repository\Identity\OrganizationRepository;
 use App\Repository\Identity\OrganizationUserRepository;
@@ -48,6 +50,7 @@ final readonly class OrganizationService
         private ValidatorInterface $validator,
         private SecurityServiceInterface $security,
         private PasswordResetService $passwordResetService,
+        private OrganizationNotificationService $notificationService,
         private AuditLogService $auditLogService,
         private DateTimeService $dateTimeService
     ) {
@@ -326,6 +329,150 @@ final readonly class OrganizationService
         return $feedback
             ->setData($this->mapper->toResponse($organization))
             ->setFlushDescription('L\'organisation a été mise à jour avec succès.')
+            ->setStatus(200)
+            ->autoInitFlush();
+    }
+
+    /**
+     * Suspend une organisation avec un motif obligatoire.
+     *
+     * La suspension n'est pas un `update(status)` quelconque :
+     *   1. le motif est validé (champ obligatoire) ;
+     *   2. seul un tenant `ACTIVE` peut être suspendu ;
+     *   3. le motif est archivé dans l'audit et notifié par email à chaque
+     *      membre (`OrganizationUser`) de l'organisation.
+     *
+     * L'envoi des emails est non bloquant : la suspension est déjà tracée en
+     * base quand le mailer échoue, et les échecs remontent sous forme de
+     * `warning`, pas de 500 (verdict « persistance » et verdict
+     * « notification » séparés).
+     */
+    public function suspend(string $uuid, OrganizationSuspendRequest $request): Feedback
+    {
+        $feedback = new Feedback();
+
+        $organization = $this->repository->findOneBy(['uuid' => $uuid]);
+        if (!$organization) {
+            return $feedback
+                ->addError('uuid', 'Organisation introuvable.')
+                ->setErrorFlushDescription('Impossible de suspendre l\'organisation.')
+                ->autoInitFlush()
+                ->setStatus(404);
+        }
+
+        $this->security->checkOrganizationAccess($organization, SecurityAction::SUSPEND_ORGANIZATION);
+
+        $violations = $this->validator->validate($request);
+        if (count($violations) > 0) {
+            return $feedback
+                ->bind($violations)
+                ->setErrorFlushDescription('Échec de la validation des données.')
+                ->setStatus(422)
+                ->autoInitFlush();
+        }
+
+        if ($organization->getStatus() !== OrganizationStatus::ACTIVE) {
+            return $feedback
+                ->addError('status', 'Seule une organisation active peut être suspendue.')
+                ->setErrorFlushDescription('Suspension impossible : l\'organisation n\'est pas active.')
+                ->setStatus(422)
+                ->autoInitFlush();
+        }
+
+        $reason = trim($request->reason);
+
+        $previous = ['status' => $organization->getStatus()->value];
+        $organization->setStatus(OrganizationStatus::SUSPENDED);
+        $organization->setUpdatedAt($this->dateTimeService->now());
+        $this->em->flush();
+
+        $this->auditLogService->log(
+            action: 'SUSPEND_ORGANIZATION',
+            entityType: Organization::class,
+            entityId: $organization->getId(),
+            organization: $organization,
+            user: $this->security->getCurrentUser(),
+            oldValues: $previous,
+            newValues: [
+                'status' => OrganizationStatus::SUSPENDED->value,
+                'reason' => $reason,
+            ],
+        );
+
+        // Notifie les membres APRÈS le commit. `findByOrganization` ramène les
+        // membres actifs (lignes OrganizationUser, dont le PATRON) ; on retire
+        // les doublons d'adresse avant d'envoyer.
+        $emails = array_values(array_unique(array_map(
+            static fn (OrganizationUser $membership): string => $membership->getUser()->getEmail(),
+            $this->orgUserRepository->findByOrganization($organization)
+        )));
+        $failed = $this->notificationService->notifySuspension($organization->getName(), $reason, $emails);
+
+        if ($failed !== []) {
+            $feedback->addWarning('emails', count($failed) . ' email(s) de notification n\'ont pas pu être envoyé(s).');
+        }
+
+        return $feedback
+            ->setData($this->mapper->toResponse($organization))
+            ->setFlushDescription(
+                $failed === []
+                    ? 'L\'organisation a été suspendue. Les membres ont été notifiés par email.'
+                    : 'L\'organisation a été suspendue, mais certains emails de notification n\'ont pas pu être envoyés.'
+            )
+            ->setStatus(200)
+            ->autoInitFlush();
+    }
+
+    /**
+     * Réactive une organisation précédemment suspendue.
+     *
+     * Opération d'administration plateforme : une organisation suspendue a
+     * perdu tout accès pour ses membres, donc seul le SUPER_ADMIN (ou un
+     * PATRON, jamais exclu par la matrice, tant que son organisation est
+     * active) peut la rétablir. Le retour de l'organisation active est
+     * immédiat ; l'événement est tracé dans l'audit.
+     */
+    public function reactivate(string $uuid): Feedback
+    {
+        $feedback = new Feedback();
+
+        $organization = $this->repository->findOneBy(['uuid' => $uuid]);
+        if (!$organization) {
+            return $feedback
+                ->addError('uuid', 'Organisation introuvable.')
+                ->setErrorFlushDescription('Impossible de réactiver l\'organisation.')
+                ->autoInitFlush()
+                ->setStatus(404);
+        }
+
+        $this->security->checkOrganizationAccess($organization, SecurityAction::ACTIVATE_ORGANIZATION);
+
+        if ($organization->getStatus() !== OrganizationStatus::SUSPENDED) {
+            return $feedback
+                ->addError('status', 'Seule une organisation suspendue peut être réactivée.')
+                ->setErrorFlushDescription('Réactivation impossible : l\'organisation n\'est pas suspendue.')
+                ->setStatus(422)
+                ->autoInitFlush();
+        }
+
+        $previous = ['status' => OrganizationStatus::SUSPENDED->value];
+        $organization->setStatus(OrganizationStatus::ACTIVE);
+        $organization->setUpdatedAt($this->dateTimeService->now());
+        $this->em->flush();
+
+        $this->auditLogService->log(
+            action: 'ACTIVATE_ORGANIZATION',
+            entityType: Organization::class,
+            entityId: $organization->getId(),
+            organization: $organization,
+            user: $this->security->getCurrentUser(),
+            oldValues: $previous,
+            newValues: ['status' => OrganizationStatus::ACTIVE->value],
+        );
+
+        return $feedback
+            ->setData($this->mapper->toResponse($organization))
+            ->setFlushDescription('L\'organisation a été réactivée. Les accès de ses membres sont rétablis.')
             ->setStatus(200)
             ->autoInitFlush();
     }

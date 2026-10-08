@@ -11,15 +11,14 @@ interface RowActionsProps {
     isActive: boolean;
     onEdit: () => void;
     onToggleActive: () => void;
-    onDelete: () => void;
+    onDelete?: () => void;
 }
 
 export function RowActions({ label, isActive, onEdit, onToggleActive, onDelete }: RowActionsProps) {
     const items: PopoverMenuItem[] = [
         { id: 'edit', label: 'Modifier', icon: EditIcon, onClick: onEdit },
         { id: 'toggle', label: isActive ? 'Suspendre' : 'Réactiver', icon: ToggleIcon, onClick: onToggleActive },
-        { id: 'delete-separator', label: '', separator: true },
-        { id: 'delete', label: 'Supprimer', icon: DeleteIcon, danger: true, onClick: onDelete },
+        ...(onDelete ? [{ id: 'delete-separator', label: '', separator: true } as const, { id: 'delete', label: 'Supprimer', icon: DeleteIcon, danger: true, onClick: onDelete }] : []),
     ];
     return <PopoverMenu
         placement="bottom"

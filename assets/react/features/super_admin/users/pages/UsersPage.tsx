@@ -13,11 +13,15 @@ import { Input } from '../../../../components/Forms/Input';
 import { Avatar } from '../../../../components/UI/Avatar';
 import { PlatformPageHeader } from '../../shared/PlatformPageHeader';
 import { RowActions } from '../../shared/RowActions';
-import { INITIAL_ORGANIZATIONS } from '../../organizations/services/organizationsService';
 import { UsersStats } from '../components/UsersStats';
 import type { UserRow, UserStatus } from '../types/user.types';
 import { useUsers } from '../hooks/useUsers';
 import '../../../../../styles/pages/super_admin/users/_users.scss';
+
+const INITIAL_ORGANIZATIONS: ReadonlyArray<{ id: string; name: string }> = [
+    { id: 'org-synerque', name: 'Synerque Immobilier' },
+    { id: 'org-park', name: 'Park & Partners' },
+];
 
 const ROLE_LABEL: Record<UserRow['role'], string> = { super_admin: 'Super admin', patron: 'Patron', admin_immobilier: 'Admin immobilier', admin_ville: 'Admin ville' };
 const ROLE_VARIANT: Record<UserRow['role'], 'primary' | 'secondary' | 'info'> = { super_admin: 'primary', patron: 'secondary', admin_immobilier: 'info', admin_ville: 'info' };

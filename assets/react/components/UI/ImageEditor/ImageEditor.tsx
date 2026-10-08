@@ -1,5 +1,4 @@
 import React, { useEffect, useRef, useState } from 'react';
-import '@/styles/components/UI/_imageEditor.scss';
 
 interface ImageEditorProps {
     src: string;
