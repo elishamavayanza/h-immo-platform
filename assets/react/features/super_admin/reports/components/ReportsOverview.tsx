@@ -1,5 +1,67 @@
+import { Button } from '../../../../components/UI/Button';
+import { Select } from '../../../../components/Forms/Select';
+import { Spinner } from '../../../../components/UI/Spinner';
 import { ReportsPageView } from '../../../shared/reports/components/ReportsPageView';
-import type { ReportsData } from '../types';
-export function ReportsOverview({ data, isLoading }: { data: ReportsData | null; isLoading: boolean }) {
-    return <ReportsPageView data={data} isLoading={isLoading} />;
+import type { ReportsData, ReportsPeriod } from '../../../shared/reports/types/report.types';
+
+const DOWNLOAD_ICON = (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+        <polyline points="7 10 12 15 17 10" />
+        <line x1="12" y1="15" x2="12" y2="3" />
+    </svg>
+);
+
+export function ReportsOverview({
+    data,
+    isLoading,
+    error,
+    period,
+    setPeriod,
+    downloadPdf,
+}: {
+    data: ReportsData | null;
+    isLoading: boolean;
+    error: string | null;
+    period: ReportsPeriod;
+    setPeriod: (period: ReportsPeriod) => void;
+    downloadPdf: () => void;
+}) {
+    if (isLoading) return <div className="reports-loading"><Spinner size="large" /><span>Préparation du rapport…</span></div>;
+    if (error || !data) {
+        return (
+            <main className="reports-page">
+                <h1>Rapport indisponible</h1>
+                <p>{error ?? 'Les données du rapport n\'ont pas pu être chargées.'}</p>
+            </main>
+        );
+    }
+
+    return (
+        <main className="reports-page">
+            <header className="reports-page__header">
+                <div>
+                    <span className="reports-page__eyebrow">{data.scope}</span>
+                    <h1>{data.title}</h1>
+                    <p>{data.description}</p>
+                </div>
+                <div className="reports-page__controls">
+                    <Select
+                        aria-label="Période du rapport"
+                        value={period}
+                        onChange={(event) => setPeriod(event.target.value as ReportsPeriod)}
+                        options={[
+                            { value: 'month', label: '30 derniers jours' },
+                            { value: 'quarter', label: '3 derniers mois' },
+                            { value: 'year', label: 'Année en cours' },
+                        ]}
+                    />
+                    <Button variant="outline" onClick={downloadPdf} icon={DOWNLOAD_ICON} iconPosition="left">
+                        Télécharger PDF
+                    </Button>
+                </div>
+            </header>
+            <ReportsPageView data={data} isLoading={false} />
+        </main>
+    );
 }

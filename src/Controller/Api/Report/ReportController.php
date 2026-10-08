@@ -30,6 +30,7 @@ use OpenApi\Attributes as OA;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\HttpFoundation\RequestStack;
 use Symfony\Component\HttpKernel\Attribute\MapQueryString;
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
@@ -73,7 +74,14 @@ final class ReportController extends AbstractController
         private readonly OrganizationRepository $organizationRepository,
         private readonly SecurityServiceInterface $securityService,
         private readonly DateTimeService $dateTime,
+        private readonly RequestStack $requestStack,
     ) {
+    }
+
+    private function getFormatFromRequest(): string
+    {
+        $request = $this->requestStack->getCurrentRequest();
+        return $request?->query->get('format', 'json') ?? 'json';
     }
 
     // ==================== PATRON ====================
@@ -123,8 +131,12 @@ final class ReportController extends AbstractController
 
         $report = $this->reportService->generatePatronReport($filter, $organization);
 
-        if ($filter->format === 'pdf') {
-            return $this->renderPdf('report/patron.html.twig', ['report' => $report]);
+        $format = $this->getFormatFromRequest();
+        if ($format === 'pdf') {
+            return $this->renderPdf('report/patron.html.twig', [
+                'report' => $report,
+                'title' => 'Rapport Organisation - ' . $organization->getName(),
+            ]);
         }
 
         return $this->json($report);
@@ -177,8 +189,12 @@ final class ReportController extends AbstractController
 
         $report = $this->reportService->generateAdminImmobilierReport($filter, $organization);
 
-        if ($filter->format === 'pdf') {
-            return $this->renderPdf('report/admin_immobilier.html.twig', ['report' => $report]);
+        $format = $this->getFormatFromRequest();
+        if ($format === 'pdf') {
+            return $this->renderPdf('report/admin_immobilier.html.twig', [
+                'report' => $report,
+                'title' => 'Rapport Immobilier - ' . $organization->getName(),
+            ]);
         }
 
         return $this->json($report);
@@ -234,8 +250,12 @@ final class ReportController extends AbstractController
 
         $report = $this->reportService->generateAdminVilleReport($filter, $city);
 
-        if ($filter->format === 'pdf') {
-            return $this->renderPdf('report/admin_ville.html.twig', ['report' => $report]);
+        $format = $this->getFormatFromRequest();
+        if ($format === 'pdf') {
+            return $this->renderPdf('report/admin_ville.html.twig', [
+                'report' => $report,
+                'title' => 'Rapport Ville - ' . $city->getName(),
+            ]);
         }
 
         return $this->json($report);
@@ -260,7 +280,7 @@ final class ReportController extends AbstractController
             new OA\Response(response: 401, description: 'Non authentifié', content: new OA\JsonContent(ref: new Model(type: Feedback::class))),
         ]
     )]
-    public function superAdminReport(#[MapQueryString] ReportFilterDto $filter): JsonResponse
+    public function superAdminReport(#[MapQueryString] ReportFilterDto $filter): Response
     {
         $user = $this->getUser();
 
@@ -273,10 +293,15 @@ final class ReportController extends AbstractController
 
         $this->securityService->requirePlatformRole(\App\Enum\PlatformRole::SUPER_ADMIN);
 
+        $format = $this->getFormatFromRequest();
+
         $report = $this->reportService->generateSuperAdminReport($filter);
 
-        if ($filter->format === 'pdf') {
-            return $this->renderPdf('report/super_admin.html.twig', ['report' => $report]);
+        if ($format === 'pdf') {
+            return $this->renderPdf('report/super_admin.html.twig', [
+                'report' => $report,
+                'title' => 'Rapport Plateforme H-Immo',
+            ]);
         }
 
         return $this->json($report);
