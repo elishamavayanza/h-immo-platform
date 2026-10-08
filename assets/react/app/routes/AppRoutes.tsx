@@ -12,7 +12,6 @@ import { SuperAdminDashboardPage } from '../../features/super_admin/dashbord/pag
 import { OrganizationsPage } from '../../features/super_admin/organizations/pages/OrganizationsPage';
 import { UsersPage } from '../../features/super_admin/users/pages/UsersPage';
 import { AuditLogPage } from '../../features/super_admin/audit/pages/AuditLogPage';
-import { ExchangeRatesPage } from '../../features/super_admin/exchange_rates/pages/ExchangeRatesPage';
 import { ReportsPage as SuperAdminReportsPage } from '../../features/super_admin/reports/pages/ReportsPage';
 import { OrganizationMenuPage } from './OrganizationMenuPage';
 import { ProfilePage } from '../../features/shared/account/profile/pages/ProfilePage';
@@ -101,13 +100,11 @@ export function AppRoutes() {
                                                 ? <OrganizationsPage />
                                                 : route.path === '/app/admin/utilisateurs'
                                                     ? <UsersPage />
-                                                    : route.path === '/app/admin/audit'
-                                                        ? <AuditLogPage />
-                                                        : route.path === '/app/admin/taux-change'
-                                                            ? <ExchangeRatesPage />
+: route.path === '/app/admin/audit'
+                                                            ? <AuditLogPage />
                                                             : route.path === '/app/admin/rapports'
                                                                 ? <SuperAdminReportsPage />
-                                                            : undefined
+                                                                : undefined
                                         : <OrganizationMenuPage path={route.path} />
                                 }
                             />

@@ -128,7 +128,7 @@ check(
 );
 check(
     `SUPER_ADMIN : menu plateforme ${PLATFORM.length} entrées, aucun rôle métier ne l'alourdit (reçu ${PLATFORM.length})`,
-    PLATFORM.length === 6 && idsOf(PLATFORM)[0] === 'plateforme-dashboard',
+    PLATFORM.length === 5 && idsOf(PLATFORM)[0] === 'plateforme-dashboard',
     idsOf(PLATFORM).join(', ')
 );
 check('Sans rôle : menu vide', resolveSidebar(null, null).length === 0);
