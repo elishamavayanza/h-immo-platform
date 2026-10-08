@@ -27,8 +27,8 @@
     @include flex(column, stretch, flex-start, $spacing-2);
     position: fixed;
     z-index: $z-toast;
-    max-width: 400px;
-    width: calc(100vw - #{$spacing-8});
+    width: fit-content;
+    max-width: min(400px, calc(100vw - #{$spacing-8}));
     pointer-events: none;
 }
 
@@ -180,22 +180,30 @@
 // ============================================================
 
 @include responsive(mobile) {
+    // Le toast reste un contenu compact ancré dans son coin : il n'occupe
+    // jamais toute la largeur de l'écran, même sur un petit viewport.
     .toast-container {
-        max-width: calc(100vw - #{$spacing-4});
-        width: calc(100vw - #{$spacing-4});
+        width: fit-content;
+        max-width: min(360px, calc(100vw - #{$spacing-8}));
     }
 
-    .toast-container--top-right,
-    .toast-container--top-left {
+    .toast-container--top-right {
         top: $spacing-2;
         right: $spacing-2;
+    }
+
+    .toast-container--top-left {
+        top: $spacing-2;
         left: $spacing-2;
     }
 
-    .toast-container--bottom-right,
-    .toast-container--bottom-left {
+    .toast-container--bottom-right {
         bottom: $spacing-2;
         right: $spacing-2;
+    }
+
+    .toast-container--bottom-left {
+        bottom: $spacing-2;
         left: $spacing-2;
     }
 }

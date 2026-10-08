@@ -7,6 +7,7 @@ namespace App\Controller\Api\Identity;
 use App\Dto\Feedback;
 use App\Dto\Request\Identity\OrganizationRequest;
 use App\Dto\Request\Identity\OrganizationShowcaseRequest;
+use App\Dto\Request\Identity\OrganizationSuspendRequest;
 use App\Dto\Request\PaginationQuery;
 use App\Dto\Response\Identity\SessionOrganizationMembership;
 use App\Service\Identity\OrganizationService;
@@ -140,6 +141,87 @@ final class OrganizationController extends AbstractController
     public function delete(string $uuid): JsonResponse
     {
         $feedback = $this->organizationService->delete($uuid);
+
+        return $this->json($feedback, $feedback->getStatus());
+    }
+
+    /**
+     * Suspend une organisation avec un motif obligatoire, notifie ses membres
+     * par email et archive le motif dans l'audit. Un tenant suspendu perd
+     * l'accès de tous ses membres tant qu'il n'est pas réactivé.
+     */
+    #[Route('/{uuid}/suspend', name: 'suspend', methods: ['POST'])]
+    #[OA\Post(
+        summary: 'Suspendre une organisation',
+        description: 'Suspend un tenant avec un motif obligatoire. Le motif est archivé dans l\'audit et les membres de l\'organisation sont notifiés par email. Un tenant suspendu perd l\'accès de tous ses membres.',
+        security: [['bearer' => []]],
+    )]
+    #[OA\Parameter(
+        name: 'uuid',
+        in: 'path',
+        required: true,
+        schema: new OA\Schema(type: 'string', format: 'uuid'),
+        example: '7b2e0d1a-4c3f-4a2b-9e1d-5c6f7a8b9c0d'
+    )]
+    #[OA\RequestBody(
+        required: true,
+        content: new OA\JsonContent(ref: new Model(type: OrganizationSuspendRequest::class))
+    )]
+    #[OA\Response(
+        response: 200,
+        description: 'Organisation suspendue, membres notifiés',
+        content: new OA\JsonContent(ref: new Model(type: Feedback::class))
+    )]
+    #[OA\Response(
+        response: 404,
+        description: 'Organisation introuvable'
+    )]
+    #[OA\Response(
+        response: 422,
+        description: 'Motif manquant ou organisation non active'
+    )]
+    public function suspend(
+        string $uuid,
+        #[MapRequestPayload] OrganizationSuspendRequest $request
+    ): JsonResponse {
+        $feedback = $this->organizationService->suspend($uuid, $request);
+
+        return $this->json($feedback, $feedback->getStatus());
+    }
+
+    /**
+     * Réactive une organisation précédemment suspendue : le statut repasse à
+     * `active` et les accès des membres sont rétablis.
+     */
+    #[Route('/{uuid}/reactivate', name: 'reactivate', methods: ['POST'])]
+    #[OA\Post(
+        summary: 'Réactiver une organisation',
+        description: 'Réactive une organisation suspendue (statut repasse à `active`), rétablissant les accès de ses membres.',
+        security: [['bearer' => []]],
+    )]
+    #[OA\Parameter(
+        name: 'uuid',
+        in: 'path',
+        required: true,
+        schema: new OA\Schema(type: 'string', format: 'uuid'),
+        example: '7b2e0d1a-4c3f-4a2b-9e1d-5c6f7a8b9c0d'
+    )]
+    #[OA\Response(
+        response: 200,
+        description: 'Organisation réactivée',
+        content: new OA\JsonContent(ref: new Model(type: Feedback::class))
+    )]
+    #[OA\Response(
+        response: 404,
+        description: 'Organisation introuvable'
+    )]
+    #[OA\Response(
+        response: 422,
+        description: 'Organisation non suspendue'
+    )]
+    public function reactivate(string $uuid): JsonResponse
+    {
+        $feedback = $this->organizationService->reactivate($uuid);
 
         return $this->json($feedback, $feedback->getStatus());
     }

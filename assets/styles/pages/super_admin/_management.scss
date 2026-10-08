@@ -76,6 +76,29 @@
     min-width: 0;
 }
 
+// Bloc identité des lignes de table : initiale quand aucun logo n'est
+// défini, image du logo (recadrée carré) quand une organisation en possède.
+.sa-table__logo {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    flex-shrink: 0;
+    border-radius: 50%;
+    background: $color-primary-light;
+    color: $color-primary;
+    font-size: $font-size-sm;
+    font-weight: $font-weight-medium;
+    text-transform: uppercase;
+}
+
+.sa-table__logo--img {
+    border-radius: $radius-md;
+    background: $color-bg-card;
+    object-fit: cover;
+}
+
 .sa-management-identity > span:last-child {
     display: flex;
     flex-direction: column;
