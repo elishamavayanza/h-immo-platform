@@ -1,215 +1,133 @@
 // ============================================================
 // Service du tableau de bord SUPER_ADMIN.
-// V1 : renvoie des données mockées (aucun appel réseau).
-// V2 : remplacer `MOCK` par un appel `api.get('/admin/dashboard')`
-//      en gardant la même signature `Promise<SuperAdminDashboardData>`.
+// Appel API réel : GET /api/v1/reports/super-admin/dashboard
 // ============================================================
 
+import { apiClient } from '../../../../../services/api/client';
+import type {
+    SuperAdminDashboardData,
+    KpiMetric,
+    RevenuePoint,
+    OrganizationSummary,
+    ActivityEntry,
+    SystemHealthMetric,
+    CityShare,
+    TrendDirection,
+    KpiTone,
+    HealthStatus,
+    OrganizationStatus,
+    ActivityKind,
+    DashboardIconName,
+} from '../types/superAdminDashboard.types';
 
-import {SuperAdminDashboardData} from "../types/superAdminDashboard.types.ts";
+function mapTrend(trend: string): TrendDirection {
+    if (trend === 'up' || trend === 'down' || trend === 'flat') return trend;
+    return 'flat';
+}
 
-const MOCK: SuperAdminDashboardData = {
-    kpis: [
-        {
-            id: 'orgs',
-            label: 'Organisations actives',
-            value: '148',
-            delta: 12.4,
-            trend: 'up',
-            positive: true,
-            helper: '12 nouvelles ce mois',
-            tone: 'primary',
-            icon: 'building',
-        },
-        {
-            id: 'users',
-            label: 'Utilisateurs',
-            value: '3 942',
-            delta: 8.1,
-            trend: 'up',
-            positive: true,
-            helper: 'dont 214 invités',
-            tone: 'info',
-            icon: 'users',
-        },
-        {
-            id: 'mrr',
-            label: 'Revenu mensuel (MRR)',
-            value: '42 300 $',
-            delta: 5.7,
-            trend: 'up',
-            positive: true,
-            helper: 'Prévision 44 100 $',
-            tone: 'success',
-            icon: 'revenue',
-        },
-        {
-            id: 'churn',
-            label: 'Taux de churn',
-            value: '1,8 %',
-            delta: -0.4,
-            trend: 'down',
-            positive: true,
-            helper: 'Objectif < 2 %',
-            tone: 'warning',
-            icon: 'pulse',
-        },
-    ],
+function mapTone(tone: string): KpiTone {
+    const validTones: KpiTone[] = ['primary', 'success', 'warning', 'danger', 'info'];
+    return validTones.includes(tone as KpiTone) ? tone as KpiTone : 'primary';
+}
 
-    revenueSeries: [
-        { label: 'Jan', revenue: 21800, subscriptions: 82 },
-        { label: 'Fév', revenue: 23400, subscriptions: 88 },
-        { label: 'Mar', revenue: 24100, subscriptions: 94 },
-        { label: 'Avr', revenue: 25900, subscriptions: 101 },
-        { label: 'Mai', revenue: 27600, subscriptions: 108 },
-        { label: 'Juin', revenue: 28400, subscriptions: 112 },
-        { label: 'Juil', revenue: 30200, subscriptions: 119 },
-        { label: 'Août', revenue: 31800, subscriptions: 125 },
-        { label: 'Sep', revenue: 33500, subscriptions: 131 },
-        { label: 'Oct', revenue: 36200, subscriptions: 138 },
-        { label: 'Nov', revenue: 39400, subscriptions: 143 },
-        { label: 'Déc', revenue: 42300, subscriptions: 148 },
-    ],
+function mapIcon(icon: string): DashboardIconName {
+    const validIcons: DashboardIconName[] = [
+        'building', 'users', 'briefcase', 'revenue', 'pulse', 'shield',
+        'server', 'arrow-up', 'arrow-down', 'minus', 'sparkle', 'plus',
+        'check', 'warning', 'trash', 'login',
+    ];
+    return validIcons.includes(icon as DashboardIconName) ? icon as DashboardIconName : 'building';
+}
 
-    recentOrganizations: [
-        {
-            id: 'org-1',
-            name: 'Kinshasa Immo Group',
-            slug: 'kinshasa-immo',
-            city: 'Kinshasa',
-            plan: 'Enterprise',
-            users: 42,
-            properties: 186,
-            status: 'active',
-            createdAt: '2024-11-02',
-        },
-        {
-            id: 'org-2',
-            name: 'Lubumbashi Résidences',
-            slug: 'lubu-residences',
-            city: 'Lubumbashi',
-            plan: 'Pro',
-            users: 18,
-            properties: 74,
-            status: 'active',
-            createdAt: '2024-10-21',
-        },
-        {
-            id: 'org-3',
-            name: 'Goma Patrimoine',
-            slug: 'goma-patrimoine',
-            city: 'Goma',
-            plan: 'Pro',
-            users: 9,
-            properties: 31,
-            status: 'inactive',
-            createdAt: '2024-10-14',
-        },
-        {
-            id: 'org-4',
-            name: 'Matadi Logements',
-            slug: 'matadi-logements',
-            city: 'Matadi',
-            plan: 'Starter',
-            users: 4,
-            properties: 12,
-            status: 'active',
-            createdAt: '2024-10-05',
-        },
-        {
-            id: 'org-5',
-            name: 'Bukavu Estates',
-            slug: 'bukavu-estates',
-            city: 'Bukavu',
-            plan: 'Starter',
-            users: 3,
-            properties: 8,
-            status: 'suspended',
-            createdAt: '2024-09-28',
-        },
-        {
-            id: 'org-6',
-            name: 'Kolwezi Mines Rentals',
-            slug: 'kolwezi-rentals',
-            city: 'Kolwezi',
-            plan: 'Pro',
-            users: 12,
-            properties: 45,
-            status: 'active',
-            createdAt: '2024-09-19',
-        },
-    ],
+function mapStatus(status: string): OrganizationStatus {
+    const valid: OrganizationStatus[] = ['active', 'suspended', 'inactive'];
+    return valid.includes(status as OrganizationStatus) ? status as OrganizationStatus : 'active';
+}
 
-    activity: [
-        {
-            id: 'act-1',
-            actor: 'Sarah Mbala',
-            action: 'a créé l’organisation',
-            target: 'Kinshasa Immo Group',
-            timestamp: 'il y a 4 min',
-            kind: 'create',
-        },
-        {
-            id: 'act-2',
-            actor: 'Système',
-            action: 'a suspendu',
-            target: 'Bukavu Estates',
-            timestamp: 'il y a 1 h',
-            kind: 'alert',
-        },
-        {
-            id: 'act-3',
-            actor: 'David Kalu',
-            action: 'a mis à jour le plan de',
-            target: 'Lubumbashi Résidences',
-            timestamp: 'il y a 3 h',
-            kind: 'update',
-        },
-        {
-            id: 'act-4',
-            actor: 'Sarah Mbala',
-            action: 's’est connectée au back-office',
-            target: '',
-            timestamp: 'il y a 5 h',
-            kind: 'login',
-        },
-        {
-            id: 'act-5',
-            actor: 'Système',
-            action: 'a purgé les jetons révoqués',
-            target: 'RevokedToken',
-            timestamp: 'hier',
-            kind: 'delete',
-        },
-        {
-            id: 'act-6',
-            actor: 'David Kalu',
-            action: 'a invité',
-            target: '6 utilisateurs',
-            timestamp: 'hier',
-            kind: 'create',
-        },
-    ],
+function mapHealth(status: string): HealthStatus {
+    const valid: HealthStatus[] = ['healthy', 'warning', 'critical'];
+    return valid.includes(status as HealthStatus) ? status as HealthStatus : 'healthy';
+}
 
-    health: [
-        { id: 'cpu', label: 'CPU', value: 38, unit: '%', status: 'healthy' },
-        { id: 'latency', label: 'Latence p95', value: 172, unit: 'ms', status: 'healthy' },
-        { id: 'storage', label: 'Stockage', value: 71, unit: '%', status: 'warning' },
-        { id: 'errors', label: 'Erreurs 5xx', value: 0.4, unit: '%', status: 'healthy' },
-    ],
+function mapKind(kind: string): ActivityKind {
+    const valid: ActivityKind[] = ['create', 'update', 'delete', 'login', 'alert'];
+    return valid.includes(kind as ActivityKind) ? kind as ActivityKind : 'update';
+}
 
-    topCities: [
-        { name: 'Kinshasa', count: 62, share: 0.42 },
-        { name: 'Lubumbashi', count: 34, share: 0.23 },
-        { name: 'Goma', count: 21, share: 0.14 },
-        { name: 'Bukavu', count: 17, share: 0.11 },
-        { name: 'Kolwezi', count: 14, share: 0.10 },
-    ],
-};
+interface SuperAdminDashboardResponse {
+    kpis: Array<{ id: string; label: string; value: string; delta: number; trend: string; positive: boolean; helper: string; tone: string; icon: string }>;
+    revenueSeries: Array<{ label: string; revenue: number; subscriptions: number }>;
+    recentOrganizations: Array<{ uuid: string; name: string; code: string; status: string; cityCount: number; unitCount: number; occupancyRate: number; revenues: string; expenses: string; arrears: string }>;
+    activity: Array<{ id: string; actor: string; action: string; target: string; timestamp: string; kind: string }>;
+    health: Array<{ id: string; label: string; value: number; unit: string; status: string }>;
+    topCities: Array<{ name: string; count: number; share: number }>;
+    totalOrganizations: number;
+    activeOrganizations: number;
+    totalUsers: number;
+}
 
-/** Simule un appel réseau (latence réaliste, sans backend). */
 export async function fetchSuperAdminDashboard(): Promise<SuperAdminDashboardData> {
-    await new Promise((resolve) => setTimeout(resolve, 320));
-    // Retourne une copie pour éviter toute mutation accidentelle.
-    return structuredClone(MOCK);
+    const { data } = await apiClient.get<SuperAdminDashboardResponse>('/v1/reports/super-admin/dashboard');
+
+    const kpis: KpiMetric[] = data.kpis.map((k) => ({
+        id: k.id,
+        label: k.label,
+        value: k.value,
+        delta: k.delta,
+        trend: mapTrend(k.trend),
+        positive: k.positive,
+        helper: k.helper,
+        tone: mapTone(k.tone),
+        icon: mapIcon(k.icon),
+    }));
+
+    const revenueSeries: RevenuePoint[] = data.revenueSeries.map((r) => ({
+        label: r.label,
+        revenue: r.revenue,
+        subscriptions: r.subscriptions,
+    }));
+
+    const recentOrganizations: OrganizationSummary[] = data.recentOrganizations.map((o) => ({
+        id: o.uuid,
+        name: o.name,
+        slug: o.code.toLowerCase(),
+        city: '',
+        plan: o.status === 'ACTIVE' ? 'Pro' : 'Starter',
+        users: 0,
+        properties: o.unitCount,
+        status: mapStatus(o.status.toLowerCase()),
+        createdAt: '',
+    }));
+
+    const activity: ActivityEntry[] = data.activity.map((a) => ({
+        id: a.id,
+        actor: a.actor,
+        action: a.action,
+        target: a.target,
+        timestamp: a.timestamp,
+        kind: mapKind(a.kind),
+    }));
+
+    const health: SystemHealthMetric[] = data.health.map((h) => ({
+        id: h.id,
+        label: h.label,
+        value: h.value,
+        unit: h.unit,
+        status: mapHealth(h.status),
+    }));
+
+    const topCities: CityShare[] = data.topCities.map((c) => ({
+        name: c.name,
+        count: c.count,
+        share: c.share,
+    }));
+
+    return {
+        kpis,
+        revenueSeries,
+        recentOrganizations,
+        activity,
+        health,
+        topCities,
+    };
 }
