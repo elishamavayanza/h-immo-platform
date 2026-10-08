@@ -10,6 +10,7 @@ interface AuthContextValue {
     user: SessionUserResponse | null;
     isAuthenticated: boolean;
     isLoading: boolean;
+    accessToken: string | null;
     /**
      * `POST /api/auth/login` (firewall `json_login`, champs `email`/`password`).
      * Lève une `ApiError` 401 ou 429 : le message doit être affiché tel
@@ -114,6 +115,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         user,
         isAuthenticated: user !== null,
         isLoading,
+        accessToken: tokenStorage.getAccessToken(),
         login,
         logout,
     }), [user, isLoading, login, logout]);
