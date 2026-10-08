@@ -2,6 +2,7 @@ import { useRef, useState, type ChangeEvent } from 'react';
 
 import { ImageEditor } from '../../../../../components/UI/ImageEditor/ImageEditor';
 import { Button } from '../../../../../components/UI/Button';
+import { mediaHref } from '../../../media/services/mediaService';
 
 type UserPhotoChange =
     | { kind: 'new'; dataUrl: string; file: File }
@@ -27,7 +28,7 @@ export function UserPhotoPicker({ value, change, onChange, disabled }: UserPhoto
     const inputRef = useRef<HTMLInputElement>(null);
     const [editing, setEditing] = useState<string | null>(null);
 
-    const preview = change?.kind === 'new' ? change.dataUrl : value;
+    const preview = change?.kind === 'new' ? change.dataUrl : mediaHref(value);
     const hasPicked = change?.kind === 'new';
     const removed = change?.kind === 'removed';
 
@@ -67,7 +68,7 @@ export function UserPhotoPicker({ value, change, onChange, disabled }: UserPhoto
     if (editing) {
         return (
             <div className="sa-photo-picker">
-                <p className="sa-management-form__hint">Zoomez, pivotez et cadrez la photo, puis validez. Le cadrage est carré.</p>
+                <p className="sa-management-form__hint">Glissez la photo pour ajuster le cadrage, zoomez ou pivotez, puis validez.</p>
                 <ImageEditor
                     src={editing}
                     shape="square"
