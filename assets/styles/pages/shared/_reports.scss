@@ -7,6 +7,14 @@
     min-height: 100%;
     padding: $spacing-5 clamp(8px, 1vw, 14px) $spacing-8;
     color: $color-text-primary;
+    container: reports-page / inline-size;
+}
+
+.reports-page__content {
+    display: flex;
+    flex-direction: column;
+    gap: $spacing-4;
+    min-width: 0;
 }
 
 .reports-page__header { display: flex; align-items: flex-end; justify-content: space-between; gap: $spacing-4; }
@@ -76,6 +84,12 @@
     .reports-chart__bar { width: 30%; }
     .reports-chart__footnote { flex-direction: column; gap: $spacing-1; }
     .reports-attention__list li { padding: $spacing-2; }
+}
+
+@container reports-page (max-width: 700px) {
+    .reports-page__header { align-items: stretch; flex-direction: column; gap: $spacing-3; }
+    .reports-page__controls { align-items: stretch; flex-direction: column; gap: $spacing-2; }
+    .reports-page__controls .select-field__wrapper { width: 100%; }
 }
 
 @media (prefers-reduced-motion: reduce) { .reports-chart__bar { transition: none; } }
