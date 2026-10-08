@@ -35,7 +35,7 @@ function Brand({ organizationName }: { organizationName?: string }) {
                     alt="H-Immo"
                     className="main-layout__brand-logo"
                 />
-                <span className="main-layout__brand-name">IMMO</span>
+                <span className="main-layout__brand-name">Soft-IMMO</span>
             </div>
             {organizationName && (
                 <span className="main-layout__brand-org">{organizationName}</span>
