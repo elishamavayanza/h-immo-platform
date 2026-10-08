@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Dto\Response\Identity;
 
 use App\Entity\Identity\User;
+use App\Enum\OrganizationRole;
 use App\Enum\PlatformRole;
 use OpenApi\Attributes as OA;
 
@@ -48,6 +49,20 @@ final readonly class UserResponse
         #[OA\Property(description: 'État du compte utilisateur', example: true)]
         public bool $isActive,
 
+        #[OA\Property(
+            description: 'Rattachements de l\'utilisateur aux organisations (UUID de l\'organisation, nom et rôle métier). Vide pour un compte sans affiliation (un `super_admin` de plateforme par exemple).',
+            type: 'array',
+            items: new OA\Items(
+                type: 'object',
+                properties: [
+                    new OA\Property(property: 'organizationId', description: 'UUID public de l\'organisation', type: 'string', format: 'uuid'),
+                    new OA\Property(property: 'organizationName', description: 'Nom de l\'organisation', type: 'string'),
+                    new OA\Property(property: 'role', description: 'Rôle métier au sein de l\'organisation', type: 'string', enum: OrganizationRole::class),
+                ]
+            )
+        )]
+        public array $memberships = [],
+
         #[OA\Property(description: 'Horodatage de la dernière connexion', format: 'date-time', example: '2026-03-01T09:12:00Z', nullable: true)]
         public ?\DateTimeImmutable $lastLoginAt,
 
@@ -59,7 +74,10 @@ final readonly class UserResponse
     ) {
     }
 
-    public static function fromEntity(User $user): self
+    /**
+     * @param array<int, array{organizationId: string, organizationName: string, role: string}> $memberships
+     */
+    public static function fromEntity(User $user, array $memberships = []): self
     {
         return new self(
             id: (string) $user->getUuid(),
@@ -69,6 +87,7 @@ final readonly class UserResponse
             profilePhoto: $user->getProfilePhoto(),
             platformRole: $user->getPlatformRole(),
             isActive: $user->isActive(),
+            memberships: $memberships,
             lastLoginAt: $user->getLastLoginAt(),
             createdAt: $user->getCreatedAt(),
             updatedAt: $user->getUpdatedAt(),

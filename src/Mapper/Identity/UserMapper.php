@@ -32,10 +32,12 @@ final readonly class UserMapper
      * Delegue la projection Entite -> DTO a la fabrique statique du DTO
      * de reponse, qui constitue l'unique source de verite du mapping
      * en lecture (aucune duplication de la liste des champs).
+     *
+     * @param array<int, array{organizationId: string, organizationName: string, role: string}> $memberships
      */
-    public function toResponse(User $user): UserResponse
+    public function toResponse(User $user, array $memberships = []): UserResponse
     {
-        return UserResponse::fromEntity($user);
+        return UserResponse::fromEntity($user, $memberships);
     }
 
 
