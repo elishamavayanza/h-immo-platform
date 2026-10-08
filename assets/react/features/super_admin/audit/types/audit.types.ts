@@ -11,3 +11,20 @@ export interface AuditEntry {
     newValues: Record<string, unknown> | null;
     createdAt: string;
 }
+
+export interface AuditListParams {
+    page?: number;
+    itemsPerPage?: number;
+    organizationUuid?: string;
+    action?: string;
+    entityType?: string;
+    from?: Date;
+    to?: Date;
+}
+
+export interface AuditListResponse {
+    items: AuditEntry[];
+    total: number;
+    page: number;
+    pages: number;
+}

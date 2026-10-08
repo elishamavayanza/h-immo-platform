@@ -1,16 +1,121 @@
-import { useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 
-import { INITIAL_AUDIT_ENTRIES } from '../services/auditService';
-import type { AuditEntry } from '../types/audit.types';
+import { useToast } from '../../../../app/layout/MainLayout/contexts/ToastContext';
+import { ApiError } from '../../../../../services/api/api.types';
+import { auditService } from '../services/auditService';
+import { organizationsService } from '../../organizations/services/organizationsService';
+import type { AuditEntry, AuditListParams, AuditListResponse } from '../types/audit.types';
+import type { OrganizationRow } from '../../organizations/types/organization.types';
+
+function errorMessage(cause: unknown): string {
+    return cause instanceof ApiError ? cause.message : 'Une erreur inattendue est survenue. Réessayez.';
+}
 
 export function useAuditLog() {
-    const [search, setSearch] = useState('');
-    const [action, setAction] = useState('all');
-    const [selectedEntry, setSelectedEntry] = useState<AuditEntry | null>(INITIAL_AUDIT_ENTRIES[0] ?? null);
-    const entries = useMemo(() => INITIAL_AUDIT_ENTRIES.filter((entry) => {
-        const term = search.trim().toLocaleLowerCase('fr');
-        const matchesSearch = !term || [entry.userId ?? 'Système', entry.action, entry.entityType, entry.organizationId ?? 'Plateforme'].some((value) => value.toLocaleLowerCase('fr').includes(term));
-        return matchesSearch && (action === 'all' || entry.action === action);
-    }), [search, action]);
-    return { entries, search, setSearch, action, setAction, selectedEntry, setSelectedEntry };
+    const { push } = useToast();
+
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
+    const [data, setData] = useState<AuditListResponse>({ items: [], total: 0, page: 1, pages: 1 });
+    const [selectedEntry, setSelectedEntry] = useState<AuditEntry | null>(null);
+
+    const [organizationOptions, setOrganizationOptions] = useState<OrganizationRow[]>([]);
+    const [orgLoading, setOrgLoading] = useState(true);
+
+    const [filters, setFilters] = useState<AuditListParams>({
+        page: 1,
+        itemsPerPage: 20,
+        organizationUuid: undefined,
+        action: undefined,
+        entityType: undefined,
+        from: undefined,
+        to: undefined,
+    });
+
+    const reload = useCallback(async () => {
+        setLoading(true);
+        setError(null);
+        try {
+            const response = await auditService.list(filters);
+            setData(response);
+        } catch (cause) {
+            setError(errorMessage(cause));
+        } finally {
+            setLoading(false);
+        }
+    }, [filters]);
+
+    useEffect(() => {
+        void reload();
+    }, [reload]);
+
+    const loadOrganizations = useCallback(async () => {
+        setOrgLoading(true);
+        try {
+            const orgs = await organizationsService.list({ limit: 1000 });
+            setOrganizationOptions(orgs);
+        } catch {
+            // Ignore, just won't have org names
+        } finally {
+            setOrgLoading(false);
+        }
+    }, []);
+
+    useEffect(() => {
+        loadOrganizations();
+    }, [loadOrganizations]);
+
+    const handleFilterChange = useCallback((key: keyof AuditListParams, value: AuditListParams[keyof AuditListParams]) => {
+        setFilters((prev) => {
+            const next = { ...prev, [key]: value, page: 1 };
+            return next;
+        });
+    }, []);
+
+    const handlePageChange = useCallback((page: number) => {
+        setFilters((prev) => ({ ...prev, page }));
+    }, []);
+
+    const handleSort = useCallback(() => {
+        // Backend sorts by createdAt DESC only; no-op
+    }, []);
+
+    const selectEntry = useCallback((entry: AuditEntry) => {
+        setSelectedEntry(entry);
+    }, []);
+
+    const clearSelection = useCallback(() => {
+        setSelectedEntry(null);
+    }, []);
+
+    const actionOptions = useMemo(() => [
+        { value: '', label: 'Toutes les actions' },
+        ...auditService.getActions().map((action) => ({ value: action, label: action.replace(/_/g, ' ') })),
+    ], []);
+
+    const orgOptions = useMemo(() => [
+        { value: '', label: 'Toutes les organisations (plateforme)' },
+        ...organizationOptions.map((org) => ({ value: org.id, label: org.name })),
+    ], [organizationOptions]);
+
+    return {
+        entries: data.items,
+        total: data.total,
+        page: data.page,
+        pages: data.pages,
+        loading,
+        error,
+        filters,
+        selectedEntry,
+        actionOptions,
+        orgOptions,
+        orgLoading,
+        reload,
+        handleFilterChange,
+        handlePageChange,
+        handleSort,
+        selectEntry,
+        clearSelection,
+        organizationOptions,
+    };
 }

@@ -1,12 +1,38 @@
-import type { AuditEntry } from '../types/audit.types';
+import { apiClient } from '../../../../../services/api/client';
+import type { AuditEntry, AuditListParams, AuditListResponse } from '../types/audit.types';
 
-/** Fixtures de présentation structurées comme AuditLogResponse. */
-export const INITIAL_AUDIT_ENTRIES: AuditEntry[] = [
-    { id: 'f47ac10b-58cc-4372-a567-0e02b2c3d401', organizationId: '9b1deb4d-3b7d-4bad-9bdd-2b0d7b3dcb61', userId: 'd5e6f7a8-b9c0-1d2e-3f4a-5b6c7d8e9f01', action: 'CREATE', entityType: 'App\\Entity\\Identity\\Organization', entityId: 42, oldValues: null, newValues: { name: 'Kinshasa Immo Group', status: 'ACTIVE' }, createdAt: '2026-10-07T09:42:00+02:00' },
-    { id: 'f47ac10b-58cc-4372-a567-0e02b2c3d402', organizationId: '9b1deb4d-3b7d-4bad-9bdd-2b0d7b3dcb61', userId: 'd5e6f7a8-b9c0-1d2e-3f4a-5b6c7d8e9f02', action: 'CREATE', entityType: 'App\\Entity\\Identity\\OrganizationUser', entityId: 103, oldValues: null, newValues: { role: 'admin_ville', email: 'patrick.nsimba@example.cd' }, createdAt: '2026-10-07T09:18:00+02:00' },
-    { id: 'f47ac10b-58cc-4372-a567-0e02b2c3d403', organizationId: null, userId: null, action: 'LOGIN_FAILED', entityType: 'App\\Entity\\Identity\\User', entityId: 0, oldValues: null, newValues: { reason: 'Identifiants invalides' }, createdAt: '2026-10-07T08:56:00+02:00' },
-    { id: 'f47ac10b-58cc-4372-a567-0e02b2c3d404', organizationId: null, userId: 'd5e6f7a8-b9c0-1d2e-3f4a-5b6c7d8e9f01', action: 'UPDATE', entityType: 'App\\Entity\\System\\ExchangeRate', entityId: 8, oldValues: { rate: '2825.00' }, newValues: { rate: '2850.00' }, createdAt: '2026-10-06T17:31:00+02:00' },
-    { id: 'f47ac10b-58cc-4372-a567-0e02b2c3d405', organizationId: '9b1deb4d-3b7d-4bad-9bdd-2b0d7b3dcb62', userId: 'd5e6f7a8-b9c0-1d2e-3f4a-5b6c7d8e9f01', action: 'SUSPEND', entityType: 'App\\Entity\\Identity\\User', entityId: 71, oldValues: { isActive: true }, newValues: { isActive: false }, createdAt: '2026-10-06T16:08:00+02:00' },
-    { id: 'f47ac10b-58cc-4372-a567-0e02b2c3d406', organizationId: '9b1deb4d-3b7d-4bad-9bdd-2b0d7b3dcb62', userId: 'd5e6f7a8-b9c0-1d2e-3f4a-5b6c7d8e9f01', action: 'UPDATE', entityType: 'App\\Entity\\Identity\\Organization', entityId: 51, oldValues: { status: 'ACTIVE' }, newValues: { status: 'SUSPENDED' }, createdAt: '2026-10-06T14:22:00+02:00' },
-    { id: 'f47ac10b-58cc-4372-a567-0e02b2c3d407', organizationId: '9b1deb4d-3b7d-4bad-9bdd-2b0d7b3dcb63', userId: 'd5e6f7a8-b9c0-1d2e-3f4a-5b6c7d8e9f02', action: 'UPDATE', entityType: 'App\\Entity\\Identity\\OrganizationUser', entityId: 110, oldValues: { role: 'admin_ville' }, newValues: { role: 'admin_immobilier' }, createdAt: '2026-10-06T11:05:00+02:00' },
-];
+const ACTIONS = [
+    'CREATE_ADMIN', 'CREATE_ORGANIZATION', 'CREATE_LEASE', 'CREATE_RENT', 'CREATE_PAYMENT',
+    'CREATE_EXPENSE', 'CREATE_WORKER', 'CREATE_WORKER_ASSIGNMENT',
+    'UPDATE', 'UPDATE_LEASE', 'UPDATE_RENT', 'UPDATE_EXPENSE', 'UPDATE_WORKER',
+    'ACTIVATE_LEASE', 'ACTIVATE_ORGANIZATION',
+    'SUSPEND_USER', 'SUSPEND_ORGANIZATION',
+    'TERMINATE_LEASE', 'CANCEL_LEASE', 'CANCEL_PAYMENT', 'CANCEL_EXPENSE',
+    'RESET_PASSWORD', 'FORGOT_PASSWORD',
+    'LOGIN', 'LOGOUT', 'LOGIN_FAILED',
+] as const;
+
+export const auditService = {
+    async list(params: AuditListParams = {}): Promise<AuditListResponse> {
+        const query: Record<string, string | number> = {
+            page: params.page ?? 1,
+            itemsPerPage: params.itemsPerPage ?? 20,
+            ...(params.organizationUuid ? { organizationUuid: params.organizationUuid } : {}),
+            ...(params.action ? { action: params.action } : {}),
+            ...(params.entityType ? { entityType: params.entityType } : {}),
+            ...(params.from ? { from: params.from.toISOString() } : {}),
+            ...(params.to ? { to: params.to.toISOString() } : {}),
+        };
+        const { data } = await apiClient.get<AuditListResponse>('/v1/system/audit-logs', { params: query });
+        return data;
+    },
+
+    async get(uuid: string): Promise<AuditEntry> {
+        const { data } = await apiClient.get<AuditEntry>(`/v1/system/audit-logs/${uuid}`);
+        return data;
+    },
+
+    getActions(): string[] {
+        return [...ACTIONS];
+    },
+};
