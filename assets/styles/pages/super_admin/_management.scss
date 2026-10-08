@@ -38,6 +38,7 @@
 
 .sa-management-table-card .card__body {
     padding: $spacing-4;
+    container: management-card / inline-size;
 }
 
 .sa-management-toolbar {
@@ -60,7 +61,7 @@
 
 .sa-management-filters {
     display: grid;
-    grid-template-columns: minmax(220px, 300px) minmax(150px, 180px);
+    grid-template-columns: minmax(0, 300px) minmax(150px, 180px);
     gap: $spacing-2;
     align-items: center;
 }
@@ -157,5 +158,34 @@
 
     .sa-management-toolbar h2 {
         font-size: $font-size-sm;
+    }
+}
+
+// La navigation latérale réduit parfois la carte alors que la fenêtre reste
+// large : le seuil doit suivre l'espace réellement disponible pour la barre.
+@container management-card (max-width: 680px) {
+    .sa-management-toolbar {
+        align-items: stretch;
+        flex-direction: column;
+    }
+
+    .sa-management-filters,
+    .sa-management-filters--users {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .sa-management-filters > :first-child {
+        grid-column: 1 / -1;
+    }
+}
+
+@container management-card (max-width: 420px) {
+    .sa-management-filters,
+    .sa-management-filters--users {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .sa-management-filters > :first-child {
+        grid-column: auto;
     }
 }
