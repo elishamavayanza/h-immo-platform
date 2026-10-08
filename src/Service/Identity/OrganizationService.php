@@ -402,10 +402,14 @@ final readonly class OrganizationService
         // Notifie les membres APRÈS le commit. `findByOrganization` ramène les
         // membres actifs (lignes OrganizationUser, dont le PATRON) ; on retire
         // les doublons d'adresse avant d'envoyer.
-        $emails = array_values(array_unique(array_map(
-            static fn (OrganizationUser $membership): string => $membership->getUser()->getEmail(),
-            $this->orgUserRepository->findByOrganization($organization)
-        )));
+        $emails = [];
+        foreach ($this->orgUserRepository->findByOrganization($organization) as $membership) {
+            $member = $membership->getUser();
+            if (($member->getSettings()['emailNotifications'] ?? true) !== false) {
+                $emails[] = $member->getEmail();
+            }
+        }
+        $emails = array_values(array_unique($emails));
         $failed = $this->notificationService->notifySuspension($organization->getName(), $reason, $emails);
 
         if ($failed !== []) {
@@ -416,7 +420,9 @@ final readonly class OrganizationService
             ->setData($this->mapper->toResponse($organization))
             ->setFlushDescription(
                 $failed === []
-                    ? 'L\'organisation a été suspendue. Les membres ont été notifiés par email.'
+                    ? ($emails === []
+                        ? 'L\'organisation a été suspendue. Les notifications email sont désactivées pour les membres.'
+                        : 'L\'organisation a été suspendue. Les membres abonnés ont été notifiés par email.')
                     : 'L\'organisation a été suspendue, mais certains emails de notification n\'ont pas pu être envoyés.'
             )
             ->setStatus(200)

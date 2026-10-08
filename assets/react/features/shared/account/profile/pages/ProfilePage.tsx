@@ -9,6 +9,7 @@ import { FormField } from '../../../../../components/Forms/FormField';
 import { Input } from '../../../../../components/Forms/Input';
 import { UserPhotoPicker } from '../components/UserPhotoPicker';
 import { useProfile } from '../hooks/useProfile';
+import { formatUserDate } from '../../../../../services/userPreferences';
 import './profile.scss';
 
 export function ProfilePage() {
@@ -169,7 +170,7 @@ export function ProfilePage() {
                         <div><dt>Nom complet</dt><dd>{isEditing ? `${formData.firstName} ${formData.lastName}` : profile.fullName}</dd></div>
                         <div><dt>Adresse e-mail</dt><dd>{profile.email}</dd></div>
                         <div><dt>Téléphone</dt><dd>{isEditing ? formData.phone : (profile.phone || 'Non renseigné')}</dd></div>
-                        <div><dt>Dernière connexion</dt><dd>{profile.lastLoginAt ? new Date(profile.lastLoginAt).toLocaleString('fr-FR') : 'Aucune connexion récente'}</dd></div>
+                        <div><dt>Dernière connexion</dt><dd>{profile.lastLoginAt ? formatUserDate(profile.lastLoginAt, true) : 'Aucune connexion récente'}</dd></div>
                     </dl>
                 </Card>
                 <Card header="Accès et organisations">

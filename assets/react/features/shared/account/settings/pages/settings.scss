@@ -1,11 +1,19 @@
 @use '../../_account' as *;
 
-.settings-page__sections { display:grid; gap:14px; max-width:900px; }
+.settings-page { max-width:1240px; margin-inline:auto; container:settings-page / inline-size; }
+.settings-page__sections { display:grid; grid-template-columns:repeat(2, minmax(0, 1fr)); align-items:start; gap:18px; }
 .settings-card .card__body { padding-top:4px; }
+.settings-card--platform { grid-column:1 / -1; }
 .setting-row { display:flex; align-items:center; justify-content:space-between; gap:18px; padding:14px 0; }
 .setting-row + .setting-row { border-top:1px solid var(--color-border, #29313b); }
+.setting-row > div:first-child { min-width:0; }
 .setting-row strong { display:block; font-size:.95rem; }
 .setting-row p { margin:5px 0 0; color:var(--color-text-secondary, #94a3b8); font-size:.85rem; line-height:1.5; }
+.setting-row__note,.setting-row__error { display:block; margin-top:5px; font-size:.75rem; }
+.setting-row__note { color:var(--color-text-muted, #6b7077); }
+.setting-row__error { color:var(--color-error, #e74c3c); }
+.setting-row .select-field__wrapper { width:min(220px, 42%); flex:none; }
+.setting-row input[type='number'] { width:100%; min-height:42px; padding:9px 12px; border:1px solid var(--color-border, #29313b); border-radius:var(--radius-md, 8px); color:var(--color-text-primary, #fff); background:var(--color-bg-input, #101214); }
 .setting-switch { width:42px; height:24px; flex:none; padding:3px; border:0; border-radius:99px; background:#475569; cursor:pointer; transition:background .18s ease; }
 .setting-switch span { display:block; width:18px; height:18px; border-radius:50%; background:#fff; transition:transform .18s ease; }
 .setting-switch[aria-checked="true"] { background:var(--color-primary, #0891b2); }
@@ -22,6 +30,22 @@
 }
 
 @media(max-width:600px) {
-    .setting-row { align-items:flex-start; }
+    .settings-page__sections { grid-template-columns:minmax(0, 1fr); gap:12px; }
+    .settings-card--platform { grid-column:auto; }
+    .setting-row { align-items:flex-start; flex-wrap:wrap; gap:10px; }
     .setting-row p { max-width:34ch; }
+    .setting-row .select-field__wrapper { width:100%; }
+    .setting-row .setting-switch { margin-left:auto; }
+}
+
+@container settings-page (max-width:760px) {
+    .settings-page__sections { grid-template-columns:minmax(0, 1fr); gap:12px; }
+    .settings-card--platform { grid-column:auto; }
+}
+
+@container settings-page (max-width:480px) {
+    .setting-row { align-items:flex-start; flex-wrap:wrap; gap:10px; }
+    .setting-row p { max-width:34ch; }
+    .setting-row .select-field__wrapper { width:100%; }
+    .setting-row .setting-switch { margin-left:auto; }
 }

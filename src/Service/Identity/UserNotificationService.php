@@ -42,6 +42,10 @@ final readonly class UserNotificationService
      */
     public function notifyAccountSuspended(User $user, ?string $reason): array
     {
+        if (($user->getSettings()['emailNotifications'] ?? true) === false) {
+            return [];
+        }
+
         $message = (new Email())
             ->from($this->params->get('mailer.from', 'noreply@h-immo.local'))
             ->to($user->getEmail())

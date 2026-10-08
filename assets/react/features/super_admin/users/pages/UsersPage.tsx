@@ -16,6 +16,7 @@ import { PlatformPageHeader } from '../../shared/PlatformPageHeader';
 import { UsersStats } from '../components/UsersStats';
 import type { UserRow, UserRoleFilter, UserStatus } from '../types/user.types';
 import { useUsers } from '../hooks/useUsers';
+import { formatUserDate } from '../../../../services/userPreferences';
 import { photoHref } from '../services/usersService';
 import '../../../../../styles/pages/super_admin/users/_users.scss';
 
@@ -87,7 +88,7 @@ export function UsersPage() {
         { key: 'organization', title: 'Organisation', sortable: true },
         { key: 'role', title: 'Rôle organisationnel', sortable: true, render: (user) => user.role ? <Badge variant={ROLE_VARIANT[user.role] ?? 'secondary'}>{ROLE_LABEL[user.role] ?? user.role}</Badge> : '—' },
         { key: 'status', title: 'Compte', sortable: true, render: (user) => <Badge variant={STATUS_VARIANT[user.status]}>{STATUS_LABEL[user.status]}</Badge> },
-        { key: 'lastLoginAt', title: 'Dernière connexion', sortable: true, render: (user) => user.lastLoginAt ? new Date(user.lastLoginAt).toLocaleString('fr-FR') : 'Jamais connecté' },
+        { key: 'lastLoginAt', title: 'Dernière connexion', sortable: true, render: (user) => user.lastLoginAt ? formatUserDate(user.lastLoginAt, true) : 'Jamais connecté' },
         { key: 'actions', title: 'Actions', render: (user) => (
             <Button
                 variant="danger"

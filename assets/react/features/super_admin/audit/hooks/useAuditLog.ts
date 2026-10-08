@@ -6,6 +6,7 @@ import { auditService } from '../services/auditService';
 import { organizationsService } from '../../organizations/services/organizationsService';
 import type { AuditEntry, AuditListParams, AuditListResponse } from '../types/audit.types';
 import type { OrganizationRow } from '../../organizations/types/organization.types';
+import { readAuditLogDisplayDays } from '../../../../services/userPreferences';
 
 function errorMessage(cause: unknown): string {
     return cause instanceof ApiError ? cause.message : 'Une erreur inattendue est survenue. Réessayez.';
@@ -28,7 +29,7 @@ export function useAuditLog() {
         organizationUuid: undefined,
         action: undefined,
         entityType: undefined,
-        from: undefined,
+        from: new Date(Date.now() - readAuditLogDisplayDays() * 24 * 60 * 60 * 1000),
         to: undefined,
     });
 

@@ -1,4 +1,4 @@
-import { useState, useContext } from 'react';
+import { useState } from 'react';
 import { Badge } from '../../../../../components/UI/Badge';
 import { Button } from '../../../../../components/UI/Button';
 import { Card } from '../../../../../components/UI/Card';
@@ -8,32 +8,41 @@ import { useAuth } from '../../../../../app/providers/AuthProvider';
 import { useAccountSettings } from '../hooks/useAccountSettings';
 import './settings.scss';
 
-function platformRoleLabel(role: string | null): string {
-    switch (role) {
-        case 'super_admin': return 'Super Administrateur';
-        case null: return 'Utilisateur';
-        default: return role;
-    }
-}
-
 export function SettingsPage() {
     const { user } = useAuth();
     const { settings, update, isLoading, error, reload } = useAccountSettings();
     const [saved, setSaved] = useState(false);
+    const [retentionDraft, setRetentionDraft] = useState<string | null>(null);
+    const [retentionError, setRetentionError] = useState<string | null>(null);
     const isSuperAdmin = user?.platformRole === 'super_admin';
+
+    const apply = async (key: keyof typeof settings, value: unknown) => {
+        const didSave = await update(key, value);
+        setSaved(didSave);
+        if (didSave) window.setTimeout(() => setSaved(false), 1800);
+    };
 
     const toggle = (key: keyof typeof settings) => {
         const value = !settings[key];
-        update(key, value);
-        setSaved(true);
-        window.setTimeout(() => setSaved(false), 1800);
+        void apply(key, value);
     };
 
     const handleSelectChange = (key: keyof typeof settings) => (event: React.ChangeEvent<HTMLSelectElement>) => {
-        const value = event.target.value;
-        update(key, value);
-        setSaved(true);
-        window.setTimeout(() => setSaved(false), 1800);
+        const rawValue = event.target.value;
+        const value = key === 'defaultPageSize' ? Number(rawValue) : rawValue;
+        void apply(key, value);
+    };
+
+    const saveRetention = () => {
+        if (retentionDraft === null) return;
+        const value = Number(retentionDraft);
+        if (!Number.isInteger(value) || value < 30 || value > 2555) {
+            setRetentionError('Choisissez une durée entre 30 et 2555 jours.');
+            return;
+        }
+        setRetentionError(null);
+        void apply('auditLogRetentionDays', value);
+        setRetentionDraft(null);
     };
 
     if (isLoading) return <div className="account-page__spinner"><span>Chargement des préférences…</span></div>;
@@ -59,15 +68,16 @@ export function SettingsPage() {
             </header>
 
             <div className="settings-page__sections">
-                <Card header="Affichage" className="settings-card">
+                <Card header="Affichage" className="settings-card settings-card--display">
                     <div className="setting-row">
                         <div>
                             <strong>Thème</strong>
                             <p>Choisissez l'apparence de l'interface.</p>
+                            <small className="setting-row__note">Le choix du thème sera disponible prochainement.</small>
                         </div>
                         <Select
+                            disabled
                             value={settings.theme}
-                            onChange={handleSelectChange('theme')}
                             options={[
                                 { value: 'system', label: 'Système' },
                                 { value: 'light', label: 'Clair' },
@@ -79,10 +89,11 @@ export function SettingsPage() {
                         <div>
                             <strong>Langue</strong>
                             <p>Langue de l'interface.</p>
+                            <small className="setting-row__note">Le changement de langue sera disponible prochainement.</small>
                         </div>
                         <Select
+                            disabled
                             value={settings.locale}
-                            onChange={handleSelectChange('locale')}
                             options={[
                                 { value: 'fr', label: 'Français' },
                                 { value: 'en', label: 'English' },
@@ -182,11 +193,11 @@ export function SettingsPage() {
                 </Card>
 
                 {isSuperAdmin && (
-                    <Card header="Administration plateforme (SUPER_ADMIN)" className="settings-card">
+                    <Card header="Préférences plateforme" className="settings-card settings-card--platform">
                         <div className="setting-row">
                             <div>
-                                <strong>Rétention logs d'audit (jours)</strong>
-                                <p>Durée de conservation des journaux d'audit (30–2555 jours).</p>
+                                <strong>Période d'affichage du journal (jours)</strong>
+                                <p>Limiter les résultats affichés aux événements récents (30–2555 jours).</p>
                             </div>
                             <FormField label="" htmlFor="auditRetention">
                                 <input
@@ -194,12 +205,12 @@ export function SettingsPage() {
                                     type="number"
                                     min="30"
                                     max="2555"
-                                    value={settings.auditLogRetentionDays ?? ''}
-                                    onChange={(e) => {
-                                        const value = e.target.value === '' ? undefined : parseInt(e.target.value, 10);
-                                        update('auditLogRetentionDays', value);
-                                    }}
+                                    value={retentionDraft ?? String(settings.auditLogRetentionDays ?? '')}
+                                    onChange={(e) => setRetentionDraft(e.target.value)}
+                                    onBlur={saveRetention}
+                                    onKeyDown={(event) => { if (event.key === 'Enter') { event.currentTarget.blur(); } }}
                                 />
+                                {retentionError && <small className="setting-row__error">{retentionError}</small>}
                             </FormField>
                         </div>
                         <div className="setting-row">

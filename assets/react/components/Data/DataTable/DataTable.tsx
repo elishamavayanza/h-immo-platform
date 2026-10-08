@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Pagination } from '../Pagination';
 import {useDataTable, UseDataTableProps} from "../../../hook-components/Data/DataTable";
+import { readDefaultPageSize } from '../../../services/userPreferences';
 
 export interface DataTableProps<T> extends UseDataTableProps<T> {
     /** Mode serveur : la pagination et le tri sont contrôlés par le parent. */
@@ -32,6 +33,7 @@ export function DataTable<T>({
                                  onSort,
                              }: DataTableProps<T>) {
     const isServer = mode === 'server';
+    const effectivePageSize = readDefaultPageSize(pageSize);
 
     const [serverSortKey, setServerSortKey] = useState<string | null>(initialSortKey ?? null);
     const [serverSortDirection, setServerSortDirection] = useState<'asc' | 'desc'>(initialSortDirection ?? 'asc');
@@ -48,7 +50,7 @@ export function DataTable<T>({
     } = useDataTable<T>({
         columns,
         data,
-        pageSize,
+        pageSize: effectivePageSize,
         initialSortKey,
         initialSortDirection,
         className,
@@ -58,7 +60,7 @@ export function DataTable<T>({
     const sortDirection = isServer ? serverSortDirection : localSortDirection;
 
     const displayData = isServer ? data : paginatedData;
-    const serverTotalPages = Math.max(1, Math.ceil((totalItems ?? data.length) / pageSize));
+    const serverTotalPages = Math.max(1, Math.ceil((totalItems ?? data.length) / effectivePageSize));
     const activeTotalPages = isServer ? serverTotalPages : localTotalPages;
     const activeCurrentPage = isServer ? currentPage : localCurrentPage;
 
@@ -153,7 +155,7 @@ export function DataTable<T>({
                 <div className="datatable__pagination">
                     <Pagination
                         totalItems={totalItems ?? data.length}
-                        pageSize={pageSize}
+                        pageSize={effectivePageSize}
                         initialPage={activeCurrentPage}
                         currentPage={activeCurrentPage}
                         onPageChange={handlePageChange}
