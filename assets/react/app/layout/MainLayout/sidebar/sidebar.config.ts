@@ -234,13 +234,6 @@ export const PLATFORM_SIDEBAR: SidebarMenu = [
         path: '/app/admin/audit',
     },
     {
-        id: 'plateforme-taux-change',
-        label: 'Taux de change',
-        icon: 'exchange',
-        section: 'platform',
-        path: '/app/admin/taux-change',
-    },
-    {
         id: 'plateforme-rapports',
         label: 'Rapports',
         icon: 'report',
