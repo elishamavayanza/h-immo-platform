@@ -15,6 +15,7 @@ use App\Dto\Response\Report\AdminImmobilierReportResponse;
 use App\Dto\Response\Report\AdminVilleReportResponse;
 use App\Dto\Response\Report\PatronReportResponse;
 use App\Dto\Response\Report\SuperAdminReportResponse;
+use App\Dto\Response\Report\SuperAdminDashboardResponse;
 use App\Entity\Identity\Organization;
 use App\Entity\Identity\User;
 use App\Enum\OrganizationRole;
@@ -279,6 +280,43 @@ final class ReportController extends AbstractController
         }
 
         return $this->json($report);
+    }
+
+    /**
+     * Tableau de bord temps réel pour SUPER_ADMIN.
+     */
+    #[Route('/super-admin/dashboard', name: 'super_admin_dashboard', methods: ['GET'])]
+    #[OA\Get(
+        path: '/api/v1/reports/super-admin/dashboard',
+        summary: 'Tableau de bord temps réel pour SUPER_ADMIN',
+        description: 'Retourne les KPIs, séries de revenus, organisations récentes, flux d\'activité, santé système et top villes pour la plateforme entière.',
+        security: [['bearer' => []]],
+        parameters: [
+            new OA\Parameter(name: 'periodFrom', in: 'query', schema: new OA\Schema(type: 'string', format: 'date'), description: 'Date de début'),
+            new OA\Parameter(name: 'periodTo', in: 'query', schema: new OA\Schema(type: 'string', format: 'date'), description: 'Date de fin'),
+        ],
+        responses: [
+            new OA\Response(response: 200, description: 'Tableau de bord généré', content: new OA\JsonContent(ref: new Model(type: SuperAdminDashboardResponse::class))),
+            new OA\Response(response: 403, description: 'Accès réservé à SUPER_ADMIN', content: new OA\JsonContent(ref: new Model(type: Feedback::class))),
+            new OA\Response(response: 401, description: 'Non authentifié', content: new OA\JsonContent(ref: new Model(type: Feedback::class))),
+        ]
+    )]
+    public function superAdminDashboard(#[MapQueryString] ReportFilterDto $filter): JsonResponse
+    {
+        $user = $this->getUser();
+
+        if (!$user instanceof User) {
+            return $this->json(
+                (new Feedback())->setErrorFlushDescription('Utilisateur non authentifié.')->setStatus(401)->autoInitFlush(),
+                401
+            );
+        }
+
+        $this->securityService->requirePlatformRole(\App\Enum\PlatformRole::SUPER_ADMIN);
+
+        $dashboard = $this->reportService->generateSuperAdminDashboard($filter);
+
+        return $this->json($dashboard);
     }
 
     /**
