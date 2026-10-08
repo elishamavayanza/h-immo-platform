@@ -39,7 +39,7 @@ function ValuesBlock({ title, values }: { title: string; values: Record<string, 
     );
 }
 
-export function AuditEntryDetails({ entry }: { entry: AuditEntry | null }) {
+export function AuditEntryDetails({ entry, onClose }: { entry: AuditEntry | null; onClose?: () => void }) {
     if (!entry) return <p className="audit-detail__empty">Sélectionnez un événement pour afficher son détail.</p>;
 
     const date = new Intl.DateTimeFormat('fr-FR', {
@@ -62,11 +62,21 @@ export function AuditEntryDetails({ entry }: { entry: AuditEntry | null }) {
 
     return (
         <div className="audit-detail">
-            <div className="audit-detail__summary">
-                <Badge variant={actionVariant} size="small">
-                    {entry.action}
-                </Badge>
-                <time dateTime={entry.createdAt}>{date}</time>
+            <div className="audit-detail__header">
+                <div className="audit-detail__summary">
+                    <Badge variant={actionVariant} size="small">
+                        {entry.action.replace(/_/g, ' ')}
+                    </Badge>
+                    <time dateTime={entry.createdAt}>{date}</time>
+                </div>
+                {onClose && (
+                    <button type="button" className="audit-detail__close" onClick={onClose} aria-label="Fermer le détail">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+                            <line x1="18" y1="6" x2="6" y2="18" />
+                            <line x1="6" y1="6" x2="18" y2="18" />
+                        </svg>
+                    </button>
+                )}
             </div>
 
             <dl className="audit-detail__metadata">
