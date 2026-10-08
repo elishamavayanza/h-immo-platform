@@ -14,6 +14,10 @@ export function ImageEditor({ src, onCancel, onApply, aspect = 1, outputSize = 3
     const [zoom, setZoom] = useState(1);
     const [rotation, setRotation] = useState(0);
     const [image, setImage] = useState<HTMLImageElement | null>(null);
+    const [offset, setOffset] = useState({ x: 0, y: 0 });
+    const [isDragging, setIsDragging] = useState(false);
+    const [isApplying, setIsApplying] = useState(false);
+    const dragStart = useRef<{ pointerId: number; x: number; y: number; offsetX: number; offsetY: number } | null>(null);
 
     useEffect(() => {
         const img = new Image();
@@ -33,9 +37,12 @@ export function ImageEditor({ src, onCancel, onApply, aspect = 1, outputSize = 3
 
         ctx.clearRect(0, 0, size, size);
         ctx.save();
-        ctx.translate(size / 2, size / 2);
+        ctx.translate(size / 2 + offset.x, size / 2 + offset.y);
         ctx.rotate((rotation * Math.PI) / 180);
-        const scale = zoom;
+        const isSideways = Math.abs(rotation % 180) === 90;
+        const rotatedWidth = isSideways ? image.height : image.width;
+        const rotatedHeight = isSideways ? image.width : image.height;
+        const scale = Math.max(size / rotatedWidth, size / rotatedHeight) * zoom;
         ctx.scale(scale, scale);
         ctx.drawImage(
             image,
@@ -45,19 +52,44 @@ export function ImageEditor({ src, onCancel, onApply, aspect = 1, outputSize = 3
             image.height
         );
         ctx.restore();
-    }, [image, zoom, rotation, outputSize]);
+    }, [image, zoom, rotation, outputSize, offset]);
 
     const handleApply = () => {
         const canvas = canvasRef.current;
-        if (!canvas) return;
-        const dataUrl = canvas.toDataURL('image/jpeg', 0.9);
-        // Convertir dataURL en File
-        fetch(dataUrl)
-            .then((res) => res.blob())
-            .then((blob) => {
-                const file = new File([blob], 'avatar.jpg', { type: 'image/jpeg' });
-                onApply(dataUrl, file);
-            });
+        if (!canvas || isApplying) return;
+        setIsApplying(true);
+        canvas.toBlob((blob) => {
+            if (!blob) {
+                setIsApplying(false);
+                return;
+            }
+            const file = new File([blob], 'avatar.jpg', { type: 'image/jpeg' });
+            onApply(canvas.toDataURL('image/jpeg', 0.88), file);
+            setIsApplying(false);
+        }, 'image/jpeg', 0.88);
+    };
+
+    const handlePointerDown = (event: React.PointerEvent<HTMLCanvasElement>) => {
+        event.preventDefault();
+        event.currentTarget.setPointerCapture(event.pointerId);
+        dragStart.current = { pointerId: event.pointerId, x: event.clientX, y: event.clientY, offsetX: offset.x, offsetY: offset.y };
+        setIsDragging(true);
+    };
+
+    const handlePointerMove = (event: React.PointerEvent<HTMLCanvasElement>) => {
+        const start = dragStart.current;
+        if (!start || start.pointerId !== event.pointerId) return;
+        const bounds = event.currentTarget.getBoundingClientRect();
+        setOffset({
+            x: start.offsetX + (event.clientX - start.x) * (outputSize / bounds.width),
+            y: start.offsetY + (event.clientY - start.y) * (outputSize / bounds.height),
+        });
+    };
+
+    const handlePointerEnd = (event: React.PointerEvent<HTMLCanvasElement>) => {
+        if (dragStart.current?.pointerId !== event.pointerId) return;
+        dragStart.current = null;
+        setIsDragging(false);
     };
 
     return (
@@ -69,7 +101,14 @@ export function ImageEditor({ src, onCancel, onApply, aspect = 1, outputSize = 3
                         width: outputSize,
                         height: outputSize,
                         borderRadius: shape === 'square' ? 0 : '50%',
+                        cursor: isDragging ? 'grabbing' : 'grab',
+                        touchAction: 'none',
                     }}
+                    onPointerDown={handlePointerDown}
+                    onPointerMove={handlePointerMove}
+                    onPointerUp={handlePointerEnd}
+                    onPointerCancel={handlePointerEnd}
+                    aria-label="Glissez la photo pour ajuster son cadrage"
                 />
             </div>
 
@@ -93,8 +132,8 @@ export function ImageEditor({ src, onCancel, onApply, aspect = 1, outputSize = 3
             </div>
 
             <div className="image-editor__actions">
-                <button onClick={onCancel}>{('Annuler')}</button>
-                <button onClick={handleApply}>{('Appliquer')}</button>
+                <button onClick={onCancel} disabled={isApplying}>{('Annuler')}</button>
+                <button onClick={handleApply} disabled={isApplying}>{isApplying ? 'Préparation…' : 'Appliquer'}</button>
             </div>
         </div>
     );
