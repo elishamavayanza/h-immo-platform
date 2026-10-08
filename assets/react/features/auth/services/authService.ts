@@ -13,8 +13,21 @@ import type {
     LoginRequest,
     LoginResponse,
     LogoutResponse,
+    Feedback,
+    PlatformRole,
     SessionUserResponse,
 } from '../../../../services/api/api.types';
+
+export interface UserUpdateResponse {
+    id: string;
+    email: string;
+    fullName: string;
+    phone: string | null;
+    profilePhoto: string | null;
+    platformRole: PlatformRole | null;
+    isActive: boolean;
+    lastLoginAt: string | null;
+}
 
 export const authService = {
     /** `POST /api/auth/login` — firewall `json_login`, 401 générique, 429 throttling. */
@@ -43,8 +56,8 @@ export const authService = {
         phone: string;
         profilePhoto: string;
         email: string;
-    }>): Promise<SessionUserResponse> {
-        const { data } = await apiClient.put<SessionUserResponse>(`/v1/identity/users/${uuid}`, payload);
+    }>): Promise<Feedback<UserUpdateResponse>> {
+        const { data } = await apiClient.put<Feedback<UserUpdateResponse>>(`/v1/identity/users/${uuid}`, payload);
         return data;
     },
 };

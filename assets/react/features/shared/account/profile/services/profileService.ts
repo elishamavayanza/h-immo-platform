@@ -8,19 +8,26 @@ export const profileService = {
         return data;
     },
 
-    async updateProfile(payload: ProfileUpdatePayload): Promise<Profile> {
-        const { data: currentUser } = await authService.me();
-        const updated = await authService.updateProfile(currentUser.uuid, payload);
-        return updated;
+    async updateProfile(uuid: string, payload: ProfileUpdatePayload, currentProfile: Profile): Promise<Profile> {
+        const { data } = await authService.updateProfile(uuid, payload);
+        return {
+            ...currentProfile,
+            uuid: data.id,
+            email: data.email,
+            fullName: data.fullName,
+            phone: data.phone,
+            profilePhoto: data.profilePhoto,
+            platformRole: data.platformRole,
+            isActive: data.isActive,
+            lastLoginAt: data.lastLoginAt,
+        } as Profile;
     },
 
-    async uploadPhoto(file: File): Promise<{ path: string; url: string }> {
-        const { data } = await authService.me();
-        return mediaService.uploadUserPhoto(data.uuid, file);
+    async uploadPhoto(uuid: string, file: File): Promise<{ path: string; url: string }> {
+        return mediaService.uploadUserPhoto(uuid, file);
     },
 
-    async deletePhoto(): Promise<void> {
-        const { data } = await authService.me();
-        await mediaService.deleteUserPhoto(data.uuid);
+    async deletePhoto(uuid: string): Promise<void> {
+        await mediaService.deleteUserPhoto(uuid);
     },
 };

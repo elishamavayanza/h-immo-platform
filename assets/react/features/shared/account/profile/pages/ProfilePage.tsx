@@ -21,6 +21,7 @@ export function ProfilePage() {
     });
     const [photoChange, setPhotoChange] = useState<{ kind: 'new'; dataUrl: string; file: File } | { kind: 'removed' } | null>(null);
     const [saveError, setSaveError] = useState<string | null>(null);
+    const [isSaving, setIsSaving] = useState(false);
 
     const fullName = profile?.fullName ?? '';
     const nameParts = fullName.split(' ');
@@ -55,29 +56,30 @@ export function ProfilePage() {
     };
 
     const handleSave = async () => {
+        if (isSaving) return;
         setSaveError(null);
+        setIsSaving(true);
         try {
-            const fullName = `${formData.firstName.trim()} ${formData.lastName.trim()}`.trim();
-            const payload: { firstName: string; lastName: string; phone: string; profilePhoto?: string } = {
-                firstName: formData.firstName,
-                lastName: formData.lastName,
-                phone: formData.phone,
-            };
-
-            // Si une nouvelle photo a été sélectionnée, l'uploader d'abord
             if (photoChange?.kind === 'new') {
-                const photoUrl = await uploadPhoto(photoChange.file);
-                payload.profilePhoto = photoUrl;
+                await uploadPhoto(photoChange.file);
             } else if (photoChange?.kind === 'removed') {
                 await deletePhoto();
-                payload.profilePhoto = '';
             }
 
-            await updateProfile(payload);
+            const nextFullName = `${formData.firstName.trim()} ${formData.lastName.trim()}`.trim();
+            if (nextFullName !== profile.fullName || formData.phone !== (profile.phone ?? '')) {
+                await updateProfile({
+                    firstName: formData.firstName,
+                    lastName: formData.lastName,
+                    phone: formData.phone,
+                });
+            }
             setIsEditing(false);
             setPhotoChange(null);
         } catch (err) {
             setSaveError(err instanceof Error ? err.message : 'Échec de la sauvegarde');
+        } finally {
+            setIsSaving(false);
         }
     };
 
@@ -96,12 +98,11 @@ export function ProfilePage() {
                     <p>Vos informations de compte et vos accès.</p>
                 </div>
                 <div className="account-page__header-actions">
-                    <Button variant="secondary" onClick={reload}>Actualiser</Button>
                     {isEditing ? (
                         <>
-                            <Button variant="outline" onClick={handleCancelEdit}>Annuler</Button>
-                            <Button onClick={handleSave} disabled={photoChange?.kind === 'new'}>
-                                {photoChange?.kind === 'new' ? 'Upload...' : 'Enregistrer'}
+                            <Button variant="outline" onClick={handleCancelEdit} disabled={isSaving}>Annuler</Button>
+                            <Button onClick={handleSave} isLoading={isSaving}>
+                                {isSaving ? 'Enregistrement…' : 'Enregistrer'}
                             </Button>
                         </>
                     ) : (
