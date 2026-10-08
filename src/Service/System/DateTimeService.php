@@ -105,6 +105,22 @@ final readonly class DateTimeService
     }
 
     /**
+     * Premier jour du mois courant, à minuit UTC.
+     */
+    public function startOfCurrentMonth(): \DateTimeImmutable
+    {
+        return new \DateTimeImmutable('first day of this month', new \DateTimeZone(self::STORAGE_TIMEZONE));
+    }
+
+    /**
+     * Dernier jour du mois courant, à minuit UTC.
+     */
+    public function endOfCurrentMonth(): \DateTimeImmutable
+    {
+        return new \DateTimeImmutable('last day of this month', new \DateTimeZone(self::STORAGE_TIMEZONE));
+    }
+
+    /**
      * Parsing strict d'une date `Y-m-d` fournie par le client.
      *
      * Sans disjoncteur, `DateTimeImmutable::createFromFormat()` accepte des
