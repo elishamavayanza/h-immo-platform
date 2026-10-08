@@ -23,6 +23,21 @@ body {
     @include scrollbar;
 }
 
+html[data-compact-tables='true'] .datatable__table th,
+html[data-compact-tables='true'] .datatable__table td {
+    padding-block: .45rem;
+}
+
+html[data-reduced-motion='true'],
+html[data-reduced-motion='true'] *,
+html[data-reduced-motion='true'] *::before,
+html[data-reduced-motion='true'] *::after {
+    scroll-behavior: auto !important;
+    animation-duration: .01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: .01ms !important;
+}
+
 button,
 input,
 textarea,

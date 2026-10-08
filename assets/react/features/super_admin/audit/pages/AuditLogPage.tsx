@@ -10,6 +10,7 @@ import { PlatformPageHeader } from '../../shared/PlatformPageHeader';
 import { AuditEntryDetails } from '../components/AuditEntryDetails';
 import { AuditStats } from '../components/AuditStats';
 import { useAuditLog } from '../hooks/useAuditLog';
+import { formatUserDate } from '../../../../services/userPreferences';
 import type { AuditEntry } from '../types/audit.types';
 import '../../../../../styles/pages/super_admin/audit/_audit.scss';
 
@@ -66,7 +67,7 @@ export function AuditLogPage() {
     } = useAuditLog();
 
     const columns = useMemo<DataTableColumn<AuditEntry>[]>(() => [
-        { key: 'createdAt', title: 'Date et heure', render: (entry) => new Date(entry.createdAt).toLocaleString('fr-FR') },
+        { key: 'createdAt', title: 'Date et heure', render: (entry) => formatUserDate(entry.createdAt, true) },
         {
             key: 'organizationId',
             title: 'Organisation',

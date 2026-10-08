@@ -9,6 +9,7 @@
 // ============================================================
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { areInAppNotificationsEnabled } from '../../../../services/userPreferences';
 
 export interface ToastMessage {
     id: number;
@@ -35,6 +36,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
     }, []);
 
     const push = useCallback((type: ToastMessage['type'], message: string) => {
+        if (!areInAppNotificationsEnabled()) return;
         const id = nextId.current++;
         setToasts(prev => [...prev, { id, type, message }]);
     }, []);

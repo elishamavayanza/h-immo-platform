@@ -21,6 +21,7 @@ import type { OrganizationStatus } from '../../dashbord/types';
 import type { OrganizationStatusFilter, OrganizationRow } from '../types/organization.types';
 import { useOrganizations } from '../hooks/useOrganizations';
 import { logoHref } from '../services/organizationsService';
+import { formatUserDate } from '../../../../services/userPreferences';
 import '../../../../../styles/pages/super_admin/organizations/_organizations.scss';
 
 const STATUS_LABEL: Record<OrganizationStatus, string> = { active: 'Active', suspended: 'Suspendue', inactive: 'Inactive' };
@@ -98,7 +99,7 @@ const [isWizardOpen, setWizardOpen] = useState(false);
         { key: 'city', title: 'Ville du siège', sortable: true },
         { key: 'email', title: 'Contact', sortable: true },
         { key: 'status', title: 'Statut', sortable: true, render: (organization) => <Badge variant={STATUS_VARIANT[organization.status]}>{STATUS_LABEL[organization.status]}</Badge> },
-        { key: 'createdAt', title: 'Créée le', sortable: true, render: (organization) => new Date(organization.createdAt).toLocaleDateString('fr-FR') },
+        { key: 'createdAt', title: 'Créée le', sortable: true, render: (organization) => formatUserDate(organization.createdAt) },
         { key: 'actions', title: 'Actions', render: (organization) => <RowActions label={organization.name} isActive={organization.status === 'active'} onEdit={() => openEdit(organization)} onToggleActive={() => { if (organization.status === 'active') openSuspend(organization); else void reactivateOrganization(organization); }} /> },
     ];
 
