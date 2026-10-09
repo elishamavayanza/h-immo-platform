@@ -6,7 +6,6 @@ import { LocatairesPage as PatronLocatairesPage } from '../../features/patron/lo
 import { LoyersPage as PatronLoyersPage } from '../../features/patron/loyers/pages/LoyersPage';
 import { DepensesPage as PatronDepensesPage } from '../../features/patron/depenses/pages/DepensesPage';
 import { VitrinePage as PatronVitrinePage } from '../../features/patron/vitrine/pages/VitrinePage';
-import { PersonnelPage as PatronPersonnelPage } from '../../features/patron/personnel/pages/PersonnelPage';
 import { AdministrationPage } from '../../features/patron/administration/pages/AdministrationPage';
 import { ReportsPage as PatronReportsPage } from '../../features/patron/reports/pages/ReportsPage';
 import { AdminImmobilierDashboardPage } from '../../features/admin_immobilier/dashbord/pages/AdminImmobilierDashboardPage';
@@ -66,7 +65,6 @@ export function OrganizationMenuPage({ path }: OrganizationMenuPageProps) {
         case '/app/depenses': return <PatronDepensesPage />;
         case '/app/rapports': return <PatronReportsPage />;
         case '/app/vitrine': return <PatronVitrinePage />;
-        case '/app/personnel': return <PatronPersonnelPage />;
         case '/app/administration': return <AdministrationPage />;
         default: return null;
     }

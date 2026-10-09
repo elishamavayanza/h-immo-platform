@@ -18,13 +18,15 @@
 // l'Organization ACTIVE (jamais un rôle global de compte).
 //
 // Règle d'affichage (acceptance) :
-//   - PATRON           : 9 entrées (tableau de bord, opérations, rapports)
+//   - PATRON           : 8 entrées (Personnel fusionné dans Administration :
+//                        « Équipe » et « Personnel » désignent la même
+//                        réalité — une seule liste, pas d'onglets)
 //   - ADMIN_IMMOBILIER : 8 entrées (sans Administration, AVEC Personnel :
 //                        le backend lui accorde VIEW/CREATE/UPDATE/DELETE
 //                        sur Worker et WorkerAssignment)
 //   - ADMIN_VILLE      : 7 entrées (sans Administration ni Personnel :
 //                        VIEW_WORKER seul ne justifie pas une entrée)
-//   - SUPER_ADMIN      : 6 entrées, toutes au niveau plateforme
+//   - SUPER_ADMIN      : 5 entrées, toutes au niveau plateforme
 //
 // Ce menu reflète la matrice `SecurityService::checkXxxAction()` : toute
 // divergence entre une capacité réellement accordée par l'API et un item
@@ -53,8 +55,11 @@
 //                   une entrée indépendante : le suivi mensuel des loyers
 //                   et la liste des impayés se consultent SANS passer par
 //                   un locataire précis.
-//   - Personnel    héberge les Affectations d'un ouvrier précis.
-//   - Administration héberge l'Équipe et les Villes assignées d'un membre.
+//   - Personnel    héberge les Affectations d'un ouvrier précis (rôles
+//                   ADMIN_IMMOBILIER uniquement depuis la fusion).
+//   - Administration héberge l'Équipe et les Villes assignées d'un membre ;
+//                   pour le PATRON, « Équipe » et « Personnel » désignent la
+//                   même réalité (une seule liste, pas d'onglet).
 //
 // ⚠️ Confinement : les seuls `if (role === …)` du front qui décident du
 // menu vivent ici. La garde de route (`AppRouteGuard`) ne teste jamais le
@@ -152,9 +157,11 @@ const VITRINE: AppMenuItem = {
 };
 
 /**
- * Personnel : une entrée. Les Affectations ne se consultent pas seules
+ * Personnel : une entrée, exposée aux rôles qui n'ont PAS l'Administration
+ * (ADMIN_IMMOBILIER). Les Affectations ne se consultent pas seules
  * (« les affectations de QUEL ouvrier ? ») : elles sont atteintes en
- * drill-down depuis la page d'un ouvrier, jamais au menu.
+ * drill-down depuis la page d'un ouvrier, jamais au menu. Le PATRON, lui,
+ * gère l'équipe — y compris les ouvriers — depuis sa page Administration.
  */
 const PERSONNEL: AppMenuItem = {
     id: 'personnel',
@@ -167,6 +174,8 @@ const PERSONNEL: AppMenuItem = {
 /**
  * Administration : une entrée. « Équipe » et « Villes assignées » se
  * gèrent depuis la fiche d'un membre de l'équipe (drill-down), pas au menu.
+ * Pour le PATRON, l'Équipe regroupe les personnes (cadres et ouvriers) :
+ * « Personnel » n'est donc pas une entrée de son menu.
  */
 const ADMINISTRATION: AppMenuItem = {
     id: 'administration',
@@ -188,7 +197,9 @@ const RAPPORTS: AppMenuItem = {
 /**
  * Menu des rôles métier d'organisation, par rôle.
  *
- * - `patron` : tout le menu.
+ * - `patron` : tout le menu, avec « Administration » qui regroupe l'Équipe
+ *   (une seule liste : cadres et ouvriers) — « Personnel » n'est donc plus
+ *   une entrée à part pour ce rôle.
  * - `admin_immobilier` : opérations + Personnel, qui est la 7e entrée
  *   (le backend lui accorde CREATE/UPDATE/DELETE sur Worker, cf.
  *   `SecurityService::checkAdminImmobilierAction`). Seule l'Administration
@@ -198,7 +209,7 @@ const RAPPORTS: AppMenuItem = {
  *   Administration.
  */
 export const ORGANIZATION_SIDEBAR: Record<OrganizationRole, SidebarMenu> = {
-    patron: [DASHBOARD, RAPPORTS, PATRIMOINE, LOCATAIRES, LOYERS, DEPENSES, VITRINE, PERSONNEL, ADMINISTRATION],
+    patron: [DASHBOARD, RAPPORTS, PATRIMOINE, LOCATAIRES, LOYERS, DEPENSES, VITRINE, ADMINISTRATION],
     admin_immobilier: [DASHBOARD, RAPPORTS, PATRIMOINE, LOCATAIRES, LOYERS, DEPENSES, VITRINE, PERSONNEL],
     admin_ville: [DASHBOARD, RAPPORTS, PATRIMOINE, LOCATAIRES, LOYERS, DEPENSES, VITRINE],
 };
