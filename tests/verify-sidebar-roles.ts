@@ -107,7 +107,7 @@ console.log('\n=== Structure du menu par rôle (menu plat) ===\n');
 // Menu attendu, ordre compris. « Tableau de bord » est toujours la première
 // entrée (écran de synthèse demandé par le cahier des charges), et
 // « Vitrine » est une feuille directe comme Dépenses.
-const EXPECTED_PATRON = ['dashboard', 'rapports', 'patrimoine', 'location-locataires', 'location-loyers', 'depenses', 'vitrine', 'personnel', 'administration'];
+const EXPECTED_PATRON = ['dashboard', 'rapports', 'patrimoine', 'location-locataires', 'location-loyers', 'depenses', 'vitrine', 'administration'];
 const EXPECTED_ADMIN_IMMOBILIER = ['dashboard', 'rapports', 'patrimoine', 'location-locataires', 'location-loyers', 'depenses', 'vitrine', 'personnel'];
 const EXPECTED_ADMIN_VILLE = ['dashboard', 'rapports', 'patrimoine', 'location-locataires', 'location-loyers', 'depenses', 'vitrine'];
 
@@ -178,11 +178,11 @@ check('ADMIN_VILLE ne voit PAS l\'entrée Personnel (VIEW_WORKER seul)', !hasTop
 check('ADMIN_VILLE est refusé sur /app/personnel/ouvriers', !isPathInMenu(ADMIN_VILLE, '/app/personnel/ouvriers'));
 check('ADMIN_VILLE est refusé sur /app/personnel/affectations', !isPathInMenu(ADMIN_VILLE, '/app/personnel/affectations'));
 
-check('PATRON voit l\'entrée Personnel', hasTopLevelItem(PATRON, 'personnel'));
+check('PATRON ne voit PLUS l\'entrée Personnel (fusionnée dans Administration)', !hasTopLevelItem(PATRON, 'personnel'));
 check('Tous les rôles organisationnels voient Rapports', [PATRON, ADMIN_IMMOBILIER, ADMIN_VILLE].every(menu => hasTopLevelItem(menu, 'rapports')));
 check('SUPER_ADMIN voit son entrée Rapports plateforme', hasTopLevelItem(PLATFORM, 'plateforme-rapports'));
-check('PATRON accède à /app/personnel/ouvriers', isPathInMenu(PATRON, '/app/personnel/ouvriers'));
-check('PATRON accède à /app/personnel', isPathInMenu(PATRON, '/app/personnel'));
+check('PATRON n\'accède plus à /app/personnel/ouvriers (fusionné dans Administration)', !isPathInMenu(PATRON, '/app/personnel/ouvriers'));
+check('PATRON n\'accède plus à /app/personnel (fusionné dans Administration)', !isPathInMenu(PATRON, '/app/personnel'));
 
 console.log('\n=== Administration — réservée au PATRON ===\n');
 
@@ -383,8 +383,8 @@ check(
     isPathInMenu(PATRON, '/app/location/loyers/3/paiements')
 );
 check(
-    'Personnel : /app/personnel/ouvriers/9/affectations reste couvert',
-    isPathInMenu(PATRON, '/app/personnel/ouvriers/9/affectations')
+    'Personnel : /app/personnel/ouvriers/9/affectations reste couvert (ADMIN_IMMOBILIER)',
+    isPathInMenu(ADMIN_IMMOBILIER, '/app/personnel/ouvriers/9/affectations')
 );
 check(
     'Administration : /app/administration/equipe/2/villes reste couvert',
