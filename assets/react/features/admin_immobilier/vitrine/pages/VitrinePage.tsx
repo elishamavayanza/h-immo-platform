@@ -1,4 +1,4 @@
-import { useState, type FormEvent, type ChangeEvent } from 'react';
+import { useState, type FormEvent } from 'react';
 
 import { OrganizationSummary } from '../../../shared/components/OrganizationSummary';
 import { useOrganization } from '../../../../app/providers/OrganizationProvider';
@@ -16,6 +16,7 @@ import { useVitrine } from '../hooks/useVitrine';
 import { VitrineTable } from '../components/VitrineTable';
 import { fieldErrorMap } from '../../../shared/actionErrors';
 import { ModalActions } from '../../../shared/components/ModalActions'
+import { PhotoGallery } from '../../../shared/media/components/PhotoGallery';
 import type { VitrineRow } from '../types/vitrine.types';
 import type { OrganizationRole } from '../../../../../services/api/api.types';
 import { canDo } from '../../../shared/permissions';
@@ -32,7 +33,7 @@ export function VitrinePage() {
         data, rows, isLoading, error, reload,
         search, setSearch, status, setStatus,
         pendingId, togglePublished,
-        updateUnit, addPhoto, removePhoto,
+        updateUnit,
     } = useVitrine();
 
     const [editModalOpen, setEditModalOpen] = useState(false);
@@ -47,9 +48,6 @@ export function VitrinePage() {
 
     const [photoModalOpen, setPhotoModalOpen] = useState(false);
     const [photoTarget, setPhotoTarget] = useState<VitrineRow | null>(null);
-    const [photos, setPhotos] = useState<string[]>([]);
-    const [uploadingPhoto, setUploadingPhoto] = useState(false);
-    const [removingPhotoId, setRemovingPhotoId] = useState<string | null>(null);
 
     const openEdit = (target: VitrineRow) => {
         setEditTarget(target);
@@ -91,40 +89,12 @@ export function VitrinePage() {
 
     const openPhotos = (target: VitrineRow) => {
         setPhotoTarget(target);
-        setPhotos([]);
         setPhotoModalOpen(true);
     };
 
     const closePhotoModal = () => {
         setPhotoModalOpen(false);
         setPhotoTarget(null);
-    };
-
-    const handlePhotoUpload = async (event: ChangeEvent<HTMLInputElement>) => {
-        const file = event.target.files?.[0];
-        if (!file || !photoTarget) return;
-        setUploadingPhoto(true);
-        try {
-            await addPhoto(photoTarget.id, file);
-            // Refresh would be done by hook's reload
-        } catch (cause) {
-            // toast already shown by hook
-        } finally {
-            setUploadingPhoto(false);
-            event.target.value = '';
-        }
-    };
-
-    const handleRemovePhoto = async (photoUuid: string) => {
-        if (!photoTarget) return;
-        setRemovingPhotoId(photoUuid);
-        try {
-            await removePhoto(photoTarget.id, photoUuid);
-        } catch (cause) {
-            // toast already shown by hook
-        } finally {
-            setRemovingPhotoId(null);
-        }
     };
 
     let body = <VitrineTable rows={rows} role={organizationRole} pendingId={pendingId} onTogglePublished={(row) => void togglePublished(row)} onEdit={openEdit} onAddPhoto={openPhotos} />;
@@ -166,28 +136,14 @@ export function VitrinePage() {
             onClose={closePhotoModal}
             title={photoTarget ? `Photos de « ${photoTarget.title} »` : 'Gérer les photos'}
             size="large"
-            footer={<><Button variant="outline" onClick={closePhotoModal} disabled={uploadingPhoto}>Fermer</Button></>}
+            footer={<><Button variant="outline" onClick={closePhotoModal}>Fermer</Button></>}
         >
-            <div className="vitrine-photo-manager">
-                <div className="vitrine-photo-upload">
-                    <label className="vitrine-photo-dropzone" htmlFor="photo-upload">
-                        <Input id="photo-upload" type="file" accept="image/*" onChange={handlePhotoUpload} disabled={uploadingPhoto} />
-                        <span>{uploadingPhoto ? 'Upload…' : 'Cliquez ou glissez une photo ici'}</span>
-                    </label>
-                </div>
-                <div className="vitrine-photo-gallery">
-                    {photos.length === 0 ? (
-                        <p className="vitrine-photo-empty">Aucune photo pour cette annonce.</p>
-                    ) : (
-                        photos.map((photo) => (
-                            <div key={photo} className="vitrine-photo-item">
-                                <img src={photo} alt="Photo de l'annonce" />
-                                <Button variant="danger" size="small" onClick={() => handleRemovePhoto(photo)} disabled={removingPhotoId === photo}>Retirer</Button>
-                            </div>
-                        ))
-                    )}
-                </div>
-            </div>
+            <PhotoGallery
+                entityUuid={photoTarget?.id ?? ''}
+                entityType="unit"
+                mode="single"
+                onChange={() => {}}
+            />
         </Modal>
     </main>;
 }

@@ -26,4 +26,76 @@ export const mediaService = {
     async deleteUserPhoto(uuid: string): Promise<void> {
         await apiClient.delete<Feedback<null>>(`/v1/media/users/${uuid}/photo`);
     },
+
+    /**
+     * `POST /api/v1/media/parcels/{uuid}/photos` — upload parcel photos (multiple).
+     * Returns message in `data.flushDescription`.
+     */
+    async uploadParcelPhotos(uuid: string, files: File[]): Promise<string> {
+        const formData = new FormData();
+        files.forEach((file) => formData.append('files', file));
+        const { data } = await apiClient.post<Feedback<unknown>>(`/v1/media/parcels/${uuid}/photos`, formData);
+        return data.flushDescription ?? 'Photo(s) ajoutée(s).';
+    },
+
+    /**
+     * `DELETE /api/v1/media/parcels/{uuid}/photos/{filename}` — delete a parcel photo.
+     */
+    async deleteParcelPhoto(uuid: string, filename: string): Promise<void> {
+        await apiClient.delete<Feedback<unknown>>(`/v1/media/parcels/${uuid}/photos/${filename}`);
+    },
+
+    /**
+     * `POST /api/v1/units/{uuid}/photos` — upload unit photo (single).
+     * Returns message in `data.flushDescription`.
+     */
+    async uploadUnitPhoto(uuid: string, file: File): Promise<string> {
+        const formData = new FormData();
+        formData.append('file', file);
+        const { data } = await apiClient.post<Feedback<unknown>>(`/v1/units/${uuid}/photos`, formData);
+        return data.flushDescription ?? 'Photo ajoutée.';
+    },
+
+    /**
+     * `DELETE /api/v1/units/{uuid}/photos/{photoUuid}` — delete a unit photo.
+     */
+    async deleteUnitPhoto(uuid: string, photoUuid: string): Promise<void> {
+        await apiClient.delete<Feedback<unknown>>(`/v1/units/${uuid}/photos/${photoUuid}`);
+    },
+
+    /**
+     * `POST /api/v1/media/organizations/{uuid}/logo` — upload organization logo.
+     * Returns the uploaded logo URL in `data.path` and `data.url`.
+     */
+    async uploadOrgLogo(uuid: string, file: File): Promise<{ path: string; url: string }> {
+        const formData = new FormData();
+        formData.append('file', file);
+        const { data } = await apiClient.post<Feedback<{ path: string; url: string }>>(`/v1/media/organizations/${uuid}/logo`, formData);
+        return data.data;
+    },
+
+    /**
+     * `DELETE /api/v1/media/organizations/{uuid}/logo` — delete organization logo.
+     */
+    async deleteOrgLogo(uuid: string): Promise<void> {
+        await apiClient.delete<Feedback<null>>(`/v1/media/organizations/${uuid}/logo`);
+    },
+
+    /**
+     * `GET /api/v1/media/parcels/{uuid}/photos` — list parcel photos.
+     * Note: This endpoint needs to be implemented in the backend.
+     */
+    async fetchParcelPhotos(uuid: string): Promise<string[]> {
+        const { data } = await apiClient.get<Feedback<string[]>>(`/v1/media/parcels/${uuid}/photos`);
+        return data.data ?? [];
+    },
+
+    /**
+     * `GET /api/v1/units/{uuid}/photos` — list unit photos.
+     * Note: This endpoint needs to be implemented in the backend.
+     */
+    async fetchUnitPhotos(uuid: string): Promise<string[]> {
+        const { data } = await apiClient.get<Feedback<string[]>>(`/v1/units/${uuid}/photos`);
+        return data.data ?? [];
+    },
 };
