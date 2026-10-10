@@ -11,10 +11,10 @@ import { useToast } from '../../../../app/layout/MainLayout/contexts/ToastContex
 type PhotoGalleryMode = 'multiple' | 'single';
 
 interface PhotoGalleryProps {
-    /** ID de l'entité (parcelle, unité, etc.) */
+    /** ID de l'entité (parcelle, unité, bâtiment, etc.) */
     entityUuid: string;
     /** Type d'entité pour l'API */
-    entityType: 'parcel' | 'unit';
+    entityType: 'parcel' | 'unit' | 'building';
     /** Photos actuelles (URLs ou chemins) - optionnel, sera chargé si non fourni */
     photos?: string[];
     /** Mode : multiple = galerie (parcelles), single = photo unique (unités) */
@@ -47,8 +47,10 @@ export function PhotoGallery({ entityUuid, entityType, photos: initialPhotos, mo
             let fetchedPhotos: string[] = [];
             if (entityType === 'parcel') {
                 fetchedPhotos = await mediaService.fetchParcelPhotos(entityUuid);
-            } else {
+            } else if (entityType === 'unit') {
                 fetchedPhotos = await mediaService.fetchUnitPhotos(entityUuid);
+            } else {
+                fetchedPhotos = await mediaService.fetchBuildingPhotos(entityUuid);
             }
             setPhotos(fetchedPhotos.map((p) => (p.startsWith('http') || p.startsWith('/') ? p : `/uploads/${p}`)));
         } catch {
@@ -89,8 +91,10 @@ export function PhotoGallery({ entityUuid, entityType, photos: initialPhotos, mo
             let result;
             if (entityType === 'parcel') {
                 result = await mediaService.uploadParcelPhotos(entityUuid, [file]);
-            } else {
+            } else if (entityType === 'unit') {
                 result = await mediaService.uploadUnitPhoto(entityUuid, file);
+            } else {
+                result = await mediaService.uploadBuildingPhotos(entityUuid, [file]);
             }
             push('success', result);
             await loadPhotos();
@@ -110,8 +114,10 @@ export function PhotoGallery({ entityUuid, entityType, photos: initialPhotos, mo
         try {
             if (entityType === 'parcel') {
                 await mediaService.deleteParcelPhoto(entityUuid, filename);
-            } else {
+            } else if (entityType === 'unit') {
                 await mediaService.deleteUnitPhoto(entityUuid, filename);
+            } else {
+                await mediaService.deleteBuildingPhoto(entityUuid, filename);
             }
             push('success', 'Photo retirée.');
             await loadPhotos();

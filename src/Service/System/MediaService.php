@@ -6,9 +6,11 @@ namespace App\Service\System;
 
 use App\Entity\Identity\Organization;
 use App\Entity\Identity\User;
+use App\Entity\Property\Building;
 use App\Entity\Property\Parcel;
 use App\Repository\Identity\OrganizationRepository;
 use App\Repository\Identity\UserRepository;
+use App\Repository\Property\BuildingRepository;
 use App\Repository\Property\ParcelRepository;
 use App\Security\SecurityAction;
 use App\Security\SecurityServiceInterface;
@@ -47,6 +49,7 @@ final readonly class MediaService
         private UserRepository $userRepository,
         private OrganizationRepository $organizationRepository,
         private ParcelRepository $parcelRepository,
+        private BuildingRepository $buildingRepository,
         private EntityManagerInterface $entityManager,
     ) {
     }
@@ -266,5 +269,86 @@ final readonly class MediaService
         } catch (\InvalidArgumentException) {
             return null;
         }
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | PHOTOS DE BÂTIMENT
+    |--------------------------------------------------------------------------
+    */
+
+    /**
+     * Dépose une photo dans le dossier du bâtiment.
+     *
+     * `UPDATE_BUILDING` est ouvert au PATRON, à l'ADMIN_IMMOBILIER et à
+     * l'ADMIN_VILLE, ce dernier étant déjà borné à SES villes par
+     * `checkBuildingAccess()`.
+     *
+     * @return list<array{path: string, url: string}>
+     */
+    public function addBuildingPhotos(Building $building, array $files): array
+    {
+        $this->securityService->checkBuildingAccess($building, SecurityAction::UPDATE_BUILDING);
+
+        $folder = $this->buildingFolder($building);
+        $uploaded = [];
+
+        foreach ($files as $file) {
+            if (!$file instanceof UploadedFile) {
+                continue;
+            }
+
+            $relativePath = $this->fileUploadService->upload($file, $folder);
+
+            $uploaded[] = [
+                'path' => $relativePath,
+                'url' => $this->fileUploadService->getPublicUrl($relativePath),
+            ];
+        }
+
+        return $uploaded;
+    }
+
+    /**
+     * Supprime une photo de bâtiment.
+     *
+     * Le nom de fichier venu de l'URL est réduit à son nom de base puis
+     * reconstruit dans le dossier du bâtiment. Un `filename` contenant
+     * un séparateur ne peut pas viser un autre dossier, et
+     * `FileUploadService::delete()` refuse par ailleurs tout chemin
+     * sortant de `uploads/`.
+     */
+    public function deleteBuildingPhoto(Building $building, string $filename): bool
+    {
+        $this->securityService->checkBuildingAccess($building, SecurityAction::DELETE_BUILDING);
+
+        $filename = basename($filename);
+
+        if ($filename === '' || $filename === '.' || $filename === '..') {
+            return false;
+        }
+
+        return $this->fileUploadService->delete($this->buildingFolder($building).'/'.$filename);
+    }
+
+    /**
+     * Sous-dossier de dépôt d'un bâtiment : `buildings/{uuid}`.
+     */
+    private function buildingFolder(Building $building): string
+    {
+        return 'buildings/'.$building->getUuid()->toRfc4122();
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | RÉSOLUTION DES ENTITÉS
+    |--------------------------------------------------------------------------
+    */
+
+    public function resolveBuilding(string $uuid): ?Building
+    {
+        $parsed = $this->parseUuid($uuid);
+
+        return $parsed === null ? null : $this->buildingRepository->findOneByUuid($parsed);
     }
 }
