@@ -498,4 +498,76 @@ final class MediaController extends AbstractController
 
         return $this->json($feedback, $feedback->getStatus());
     }
+
+    // ==================== PARCEL PHOTOS LIST ====================
+
+    #[Route('/parcels/{uuid}/photos', name: 'parcel_photos_list', methods: ['GET'])]
+    #[OA\Get(
+        path: '/api/v1/media/parcels/{uuid}/photos',
+        summary: 'Lister les photos d\'une parcelle',
+        parameters: [
+            new OA\Parameter(name: 'uuid', in: 'path', required: true, schema: new OA\Schema(type: 'string', format: 'uuid')),
+        ],
+        responses: [
+            new OA\Response(response: 200, description: 'Liste des photos', content: new OA\JsonContent(ref: new Model(type: Feedback::class))),
+            new OA\Response(response: 403, description: 'Accès refusé', content: new OA\JsonContent(ref: new Model(type: Feedback::class))),
+            new OA\Response(response: 404, description: 'Parcelle introuvable', content: new OA\JsonContent(ref: new Model(type: Feedback::class))),
+        ]
+    )]
+    public function listParcelPhotos(string $uuid): JsonResponse
+    {
+        $parcel = $this->mediaService->resolveParcel($uuid);
+
+        if ($parcel === null) {
+            return $this->json(
+                (new Feedback())->setErrorFlushDescription('Parcelle introuvable.')->setStatus(404)->autoInitFlush(),
+                404
+            );
+        }
+
+        $this->mediaService->checkParcelAccess($parcel, SecurityAction::VIEW_PARCEL);
+
+        $photos = $this->mediaService->fetchParcelPhotos($parcel);
+
+        return $this->json(
+            (new Feedback())->setData(['photos' => $photos])->setFlushDescription('Photos de la parcelle récupérées.')->setStatus(200)->autoInitFlush(),
+            200
+        );
+    }
+
+    // ==================== BUILDING PHOTOS LIST ====================
+
+    #[Route('/buildings/{uuid}/photos', name: 'building_photos_list', methods: ['GET'])]
+    #[OA\Get(
+        path: '/api/v1/media/buildings/{uuid}/photos',
+        summary: 'Lister les photos d\'un bâtiment',
+        parameters: [
+            new OA\Parameter(name: 'uuid', in: 'path', required: true, schema: new OA\Schema(type: 'string', format: 'uuid')),
+        ],
+        responses: [
+            new OA\Response(response: 200, description: 'Liste des photos', content: new OA\JsonContent(ref: new Model(type: Feedback::class))),
+            new OA\Response(response: 403, description: 'Accès refusé', content: new OA\JsonContent(ref: new Model(type: Feedback::class))),
+            new OA\Response(response: 404, description: 'Bâtiment introuvable', content: new OA\JsonContent(ref: new Model(type: Feedback::class))),
+        ]
+    )]
+    public function listBuildingPhotos(string $uuid): JsonResponse
+    {
+        $building = $this->mediaService->resolveBuilding($uuid);
+
+        if ($building === null) {
+            return $this->json(
+                (new Feedback())->setErrorFlushDescription('Bâtiment introuvable.')->setStatus(404)->autoInitFlush(),
+                404
+            );
+        }
+
+        $this->mediaService->checkBuildingAccess($building, SecurityAction::VIEW_BUILDING);
+
+        $photos = $this->mediaService->fetchBuildingPhotos($building);
+
+        return $this->json(
+            (new Feedback())->setData(['photos' => $photos])->setFlushDescription('Photos du bâtiment récupérées.')->setStatus(200)->autoInitFlush(),
+            200
+        );
+    }
 }

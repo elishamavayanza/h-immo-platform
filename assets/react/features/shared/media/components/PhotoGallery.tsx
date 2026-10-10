@@ -62,26 +62,51 @@ export function PhotoGallery({ entityUuid, entityType, photos: initialPhotos, mo
 
     const handleFile = async (event: ChangeEvent<HTMLInputElement>) => {
         if (disabled) return;
-        const file = event.target.files?.[0];
+        const files = Array.from(event.target.files ?? []);
         event.target.value = '';
-        if (!file) return;
+        if (files.length === 0) return;
 
-        if (!file.type.startsWith('image/')) {
-            push('error', 'Le fichier doit être une image.');
-            return;
-        }
-        if (file.size > 10 * 1024 * 1024) {
-            push('error', 'L\'image ne doit pas dépasser 10 Mo.');
-            return;
-        }
-
-        const reader = new FileReader();
-        reader.onload = () => {
-            if (typeof reader.result === 'string') {
-                setEditing(reader.result);
+        for (const file of files) {
+            if (!file.type.startsWith('image/')) {
+                push('error', 'Le fichier doit être une image.');
+                return;
             }
-        };
-        reader.readAsDataURL(file);
+            if (file.size > 10 * 1024 * 1024) {
+                push('error', 'L\'image ne doit pas dépasser 10 Mo.');
+                return;
+            }
+        }
+
+        // Pour le mode single, on ne prend que le premier fichier
+        if (isSingleMode) {
+            const reader = new FileReader();
+            reader.onload = () => {
+                if (typeof reader.result === 'string') {
+                    setEditing(reader.result);
+                }
+            };
+            reader.readAsDataURL(files[0]);
+        } else {
+            // Pour le mode multiple, on upload directement tous les fichiers
+            setIsUploading(true);
+            try {
+                let result;
+                if (entityType === 'parcel') {
+                    result = await mediaService.uploadParcelPhotos(entityUuid, files);
+                } else if (entityType === 'unit') {
+                    result = await mediaService.uploadUnitPhoto(entityUuid, files[0]);
+                } else {
+                    result = await mediaService.uploadBuildingPhotos(entityUuid, files);
+                }
+                push('success', result);
+                await loadPhotos();
+                onChange?.();
+            } catch (cause) {
+                push('error', cause instanceof Error ? cause.message : 'Échec de l\'upload.');
+            } finally {
+                setIsUploading(false);
+            }
+        }
     };
 
     const handleApply = async (dataUrl: string, file?: File) => {
@@ -209,6 +234,7 @@ export function PhotoGallery({ entityUuid, entityType, photos: initialPhotos, mo
                                 hidden
                                 onChange={handleFile}
                                 disabled={disabled}
+                                multiple={!isSingleMode}
                             />
                             <Button
                                 type="button"
