@@ -5,9 +5,11 @@ declare(strict_types=1);
 namespace App\Service\Rental;
 
 use App\Dto\Feedback;
+use App\Dto\Request\Rental\TenantFilterDto;
 use App\Dto\Request\Rental\TenantRequest;
 use App\Entity\Identity\Organization;
 use App\Dto\Response\Rental\TenantResponse;
+use App\Entity\Identity\User;
 use App\Entity\Rental\Tenant;
 use App\Enum\TenantType;
 use App\Mapper\Rental\TenantMapper;
@@ -15,6 +17,8 @@ use App\Repository\Identity\OrganizationRepository;
 use App\Repository\Rental\TenantRepository;
 use App\Security\SecurityAction;
 use App\Security\SecurityServiceInterface;
+use App\Service\System\AuditLogService;
+use App\Service\System\DateTimeService;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\Uid\Uuid;
 use Symfony\Component\Validator\Validator\ValidatorInterface;
@@ -38,7 +42,9 @@ final readonly class TenantService
         private TenantMapper $tenantMapper,
         private SecurityServiceInterface $securityService,
         private EntityManagerInterface $entityManager,
-        private ValidatorInterface $validator
+        private ValidatorInterface $validator,
+        private AuditLogService $auditLogService,
+        private DateTimeService $dateTime
     ) {
     }
 
@@ -225,20 +231,37 @@ final readonly class TenantService
      * filtrage est fait en SQL (une seule requête) plutôt qu'en
      * recontrôlant chaque ligne en PHP, afin de ne jamais fuir un
      * total incohérent avec les éléments réellement renvoyés.
+     *
+     * `organizationId` (optionnel) resserre la liste à une organisation
+     * du périmètre. Une organisation hors périmètre renvoie une liste
+     * vide : identifier « l'existence » d'un tenant d'un autre tenant
+     * via le code de réponse serait une fuite d'information.
      */
-    public function listTenants(int $page = 1, int $limit = 20, ?string $search = null): Feedback
+    public function listTenants(?TenantFilterDto $filter = null): Feedback
     {
         $feedback = new Feedback();
+        $filter ??= new TenantFilterDto();
 
         $organizations = $this->securityService->getCurrentUserOrganizations();
+        if ($filter->organizationId !== null && $filter->organizationId !== '') {
+            $restricted = $this->restrictToOrganization($filter->organizationId, $organizations);
+            if ($restricted === null) {
+                return $this->emptyListResponse($feedback, $filter->page, $filter->limit);
+            }
+
+            $organizations = $restricted;
+        }
+
         $allowedCities = $this->securityService->getAccessibleCities();
 
         $result = $this->tenantRepository->findPaginatedAccessible(
             $organizations,
             $allowedCities,
-            $page,
-            $limit,
-            $search
+            $filter->page,
+            $filter->limit,
+            $filter->search,
+            $filter->sortBy ?? 'fullName',
+            $filter->sortOrder
         );
 
         return $feedback
@@ -248,10 +271,114 @@ final readonly class TenantService
                     $result['items']
                 ),
                 'total' => $result['total'],
+                'page' => max(1, $filter->page),
+                'limit' => $filter->limit,
+            ])
+            ->setFlushDescription('Locataires listés avec succès.')
+            ->setStatus(200)
+            ->autoInitFlush();
+    }
+
+    /**
+     * Archivage (suppression logique) d'un locataire.
+     *
+     * Un locataire archivé disparaît des listes mais conserve son
+     * historique de baux : la suppression physique rendrait l'historique
+     * de location illisible. L'opération est tracée dans le journal
+     * d'audit.
+     */
+    public function archiveTenant(string $uuid, User $currentUser): Feedback
+    {
+        $feedback = new Feedback();
+
+        $tenant = $this->findTenant($uuid, $feedback);
+        if ($tenant === null) {
+            return $feedback->autoInitFlush();
+        }
+
+        $this->securityService->checkTenantAccess($tenant, SecurityAction::ARCHIVE_TENANT);
+
+        if ($tenant->getDeletedAt() !== null) {
+            return $feedback
+                ->setErrorFlushDescription('Ce locataire est déjà archivé.')
+                ->setStatus(409)
+                ->autoInitFlush();
+        }
+
+        $tenant->softDelete();
+        $this->entityManager->flush();
+
+        $this->auditLogService->log(
+            action: 'ARCHIVE_TENANT',
+            entityType: Tenant::class,
+            entityId: $tenant->getId(),
+            organization: $tenant->getOrganization(),
+            user: $currentUser,
+            oldValues: [
+                'fullName' => $tenant->getFullName(),
+                'companyName' => $tenant->getCompanyName(),
+                'phone' => $tenant->getPhone(),
+                'email' => $tenant->getEmail(),
+            ],
+            newValues: [
+                'deletedAt' => $tenant->getDeletedAt() !== null
+                    ? $this->dateTime->format($tenant->getDeletedAt(), 'Y-m-d H:i:s')
+                    : null,
+            ]
+        );
+
+        return $feedback
+            ->setData($this->tenantMapper->toResponse($tenant))
+            ->setFlushDescription('Le locataire a été archivé avec succès.')
+            ->setStatus(200)
+            ->autoInitFlush();
+    }
+
+    /**
+     * Restreint la liste des organizations du périmètre à celle demandée.
+     *
+     * Retourne `null` si l'UUID est invalide ou ne fait pas partie du
+     * périmètre de l'appelant, ce qui déclenche une liste vide.
+     *
+     * @param list<Organization> $organizations
+     *
+     * @return list<Organization>|null
+     */
+    private function restrictToOrganization(
+        string $uuid,
+        array $organizations
+    ): ?array {
+        try {
+            $parsed = Uuid::fromString($uuid);
+        } catch (\InvalidArgumentException) {
+            return null;
+        }
+
+        $organization = $this->organizationRepository->findOneByUuid($parsed);
+
+        if ($organization === null) {
+            return null;
+        }
+
+        foreach ($organizations as $candidate) {
+            if ($candidate->getId() === $organization->getId()) {
+                return [$organization];
+            }
+        }
+
+        return null;
+    }
+
+    private function emptyListResponse(Feedback $feedback, int $page, int $limit): Feedback
+    {
+        return $feedback
+            ->setData([
+                'items' => [],
+                'total' => 0,
                 'page' => max(1, $page),
                 'limit' => $limit,
             ])
-            ->setFlushDescription('Locataires listés avec succès.')
+            ->setFlushDescription('Liste vide : organisation hors périmètre.')
             ->setStatus(200)
             ->autoInitFlush();
     }

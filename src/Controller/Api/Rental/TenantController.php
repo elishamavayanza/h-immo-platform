@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Controller\Api\Rental;
 
 use App\Dto\Feedback;
+use App\Dto\Request\Rental\TenantFilterDto;
 use App\Dto\Request\Rental\TenantRequest;
 use App\Service\Rental\TenantService;
 use App\Trait\FeedbackTrait;
@@ -12,6 +13,7 @@ use Nelmio\ApiDocBundle\Attribute\Model;
 use OpenApi\Attributes as OA;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
+use Symfony\Component\HttpKernel\Attribute\MapQueryString;
 use Symfony\Component\HttpKernel\Attribute\MapRequestPayload;
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
@@ -63,6 +65,22 @@ final class TenantController extends AbstractController
         return $this->json($feedback, $feedback->getStatus());
     }
 
+    #[Route('', name: 'list', methods: ['GET'])]
+    #[OA\Get(
+        path: '/api/v1/tenants',
+        summary: 'Lister les locataires (pagination, recherche, organisation)',
+        responses: [
+            new OA\Response(response: 200, description: 'Liste paginée des locataires', content: new OA\JsonContent(ref: new Model(type: Feedback::class))),
+        ]
+    )]
+    public function list(
+        #[MapQueryString] ?TenantFilterDto $filter = null
+    ): JsonResponse {
+        $feedback = $this->tenantService->listTenants($filter);
+
+        return $this->json($feedback, $feedback->getStatus());
+    }
+
     #[Route('/{uuid}', name: 'show', methods: ['GET'])]
     #[OA\Get(
         path: '/api/v1/tenants/{uuid}',
@@ -94,6 +112,24 @@ final class TenantController extends AbstractController
         #[MapRequestPayload] TenantRequest $request
     ): JsonResponse {
         $feedback = $this->tenantService->updateTenant($uuid, $request);
+
+        return $this->json($feedback, $feedback->getStatus());
+    }
+
+    #[Route('/{uuid}/archive', name: 'archive', methods: ['PATCH'])]
+    #[OA\Patch(
+        path: '/api/v1/tenants/{uuid}/archive',
+        summary: 'Archiver un locataire (suppression logique)',
+        description: 'L\'archive conserve l\'historique des baux ; le locataire disparaît des listes.',
+        responses: [
+            new OA\Response(response: 200, description: 'Locataire archivé', content: new OA\JsonContent(ref: new Model(type: Feedback::class))),
+            new OA\Response(response: 403, description: 'Accès refusé : droit ARCHIVE_TENANT manquant'),
+            new OA\Response(response: 404, description: 'Locataire non trouvé', content: new OA\JsonContent(ref: new Model(type: Feedback::class))),
+        ]
+    )]
+    public function archive(string $uuid): JsonResponse
+    {
+        $feedback = $this->tenantService->archiveTenant($uuid, $this->getUser());
 
         return $this->json($feedback, $feedback->getStatus());
     }

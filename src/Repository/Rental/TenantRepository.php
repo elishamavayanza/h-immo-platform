@@ -132,7 +132,9 @@ class TenantRepository extends ServiceEntityRepository
         ?array $allowedCities,
         int $page,
         int $limit,
-        ?string $search = null
+        ?string $search = null,
+        string $sortBy = 'fullName',
+        string $sortOrder = 'ASC'
     ): array {
         if ($organizations === []) {
             return ['items' => [], 'total' => 0];
@@ -142,11 +144,15 @@ class TenantRepository extends ServiceEntityRepository
             return ['items' => [], 'total' => 0];
         }
 
+        $allowedSortFields = ['fullName', 'companyName', 'phone', 'email', 'createdAt'];
+        $sortBy = in_array($sortBy, $allowedSortFields, true) ? $sortBy : 'fullName';
+        $sortOrder = strtoupper($sortOrder) === 'ASC' ? 'ASC' : 'DESC';
+
         $qb = $this->createQueryBuilder('t')
             ->andWhere('t.organization IN (:organizations)')
             ->andWhere('t.deletedAt IS NULL')
             ->setParameter('organizations', $organizations)
-            ->orderBy('t.fullName', 'ASC');
+            ->orderBy("t.$sortBy", $sortOrder);
 
         if ($allowedCities !== null) {
             $qb->andWhere(

@@ -162,11 +162,18 @@ class UnitRepository extends ServiceEntityRepository
     /**
      * Liste paginée des unités accessibles.
      *
-     * @param list<City> $cities villes autorisées pour le lecteur
+     * @param list<City>    $cities   villes autorisées pour le lecteur
+     * @param Building|null $building bâtiment parent (optionnel, résolu et
+     *                                autorisé par le service ; sinon `null`)
      * @return array{items: list<Unit>, total: int}
      */
-    public function findPaginatedAccessible(array $cities, int $page, int $limit, ?string $search = null): array
-    {
+    public function findPaginatedAccessible(
+        array $cities,
+        int $page,
+        int $limit,
+        ?string $search = null,
+        ?Building $building = null
+    ): array {
         if ($cities === []) {
             return ['items' => [], 'total' => 0];
         }
@@ -180,6 +187,11 @@ class UnitRepository extends ServiceEntityRepository
             ->andWhere('p.city IN (:cities)')
             ->setParameter('cities', $cities)
             ->orderBy('u.reference', 'ASC');
+
+        if ($building !== null) {
+            $qb->andWhere('u.building = :building')
+                ->setParameter('building', $building);
+        }
 
         if ($search !== null && $search !== '') {
             $qb->andWhere('u.reference LIKE :search OR u.label LIKE :search')

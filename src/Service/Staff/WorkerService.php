@@ -197,14 +197,21 @@ final readonly class WorkerService
             ->autoInitFlush();
     }
 
-    public function listWorkers(?Uuid $organizationId = null, int $page = 1, int $limit = 20): Feedback
+    public function listWorkers(?string $organizationId = null, int $page = 1, int $limit = 20): Feedback
     {
         $feedback = new Feedback();
 
         $orgs = $this->securityService->getCurrentUserOrganizations();
         if ($organizationId !== null) {
+            if (!Uuid::isValid($organizationId)) {
+                return $feedback
+                    ->addError('organizationId', 'Organisation non accessible.')
+                    ->setFlushDescriptionWithError('Vous n\'avez pas accès à cette organisation.')
+                    ->setStatus(403)
+                    ->autoInitFlush();
+            }
             // Vérifier que l'utilisateur a accès à cette organization
-            $targetOrg = $this->organizationRepository->findOneByUuid($organizationId);
+            $targetOrg = $this->organizationRepository->findOneByUuid(Uuid::fromString($organizationId));
             if ($targetOrg === null || !$this->securityService->canAccessOrganization($targetOrg, SecurityAction::VIEW_WORKER)) {
                 return $feedback
                     ->addError('organizationId', 'Organisation non accessible.')
@@ -221,7 +228,7 @@ final readonly class WorkerService
             if (!$this->securityService->canAccessOrganization($org, SecurityAction::VIEW_WORKER)) {
                 continue;
             }
-            $result = $this->workerRepository->findByOrganization($org->getUuid());
+            $result = $this->workerRepository->findByOrganization($org);
             $total += count($result);
             $items = array_merge($items, $result);
         }

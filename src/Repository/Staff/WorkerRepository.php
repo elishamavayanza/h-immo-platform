@@ -52,11 +52,11 @@ final class WorkerRepository extends ServiceEntityRepository
             ->getOneOrNullResult();
     }
 
-    public function findByOrganization(Uuid $organizationId): array
+    public function findByOrganization(\App\Entity\Identity\Organization $organization): array
     {
         return $this->createQueryBuilder('w')
             ->andWhere('w.organization = :org')
-            ->setParameter('org', $organizationId)
+            ->setParameter('org', $organization)
             ->getQuery()
             ->getResult();
     }

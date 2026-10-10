@@ -97,11 +97,18 @@ class BuildingRepository extends ServiceEntityRepository
     /**
      * Liste paginée des bâtiments accessibles.
      *
-     * @param list<City> $cities villes autorisées pour le lecteur
+     * @param list<City>  $cities villes autorisées pour le lecteur
+     * @param Parcel|null $parcel parcelle parente (optionnelle, résolue et
+     *                            autorisée par le service ; sinon `null`)
      * @return array{items: list<Building>, total: int}
      */
-    public function findPaginatedAccessible(array $cities, int $page, int $limit, ?string $search = null): array
-    {
+    public function findPaginatedAccessible(
+        array $cities,
+        int $page,
+        int $limit,
+        ?string $search = null,
+        ?Parcel $parcel = null
+    ): array {
         if ($cities === []) {
             return ['items' => [], 'total' => 0];
         }
@@ -113,6 +120,11 @@ class BuildingRepository extends ServiceEntityRepository
             ->andWhere('p.city IN (:cities)')
             ->setParameter('cities', $cities)
             ->orderBy('b.name', 'ASC');
+
+        if ($parcel !== null) {
+            $qb->andWhere('b.parcel = :parcel')
+                ->setParameter('parcel', $parcel);
+        }
 
         if ($search !== null && $search !== '') {
             $qb->andWhere('b.name LIKE :search OR b.reference LIKE :search')

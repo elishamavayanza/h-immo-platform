@@ -143,6 +143,83 @@ class RentRepository extends ServiceEntityRepository
     }
 
     /**
+     * Liste paginée générale des échéances selon les organisations, villes
+     * et filtres (bail, statut calculé) autorisés.
+     *
+     * Le `status` comparé est le statut CALCULÉ (computed) exposé par
+     * `RentResponse` : `overdue` n'est jamais persisté, une échéance
+     * PENDING/PARTIALLY_PAID passée est OVERDUE à la lecture et ne doit pas
+     * réapparaître sous son statut persistant.
+     *
+     * @param list<int>|null $organizationIds
+     * @param list<int>|null $cityIds
+     * @param Lease|null     $lease bail de rattachement (déjà autorisé par le service)
+     *
+     * @return array{items: list<Rent>, total: int}
+     */
+    public function findPaginatedAccessible(
+        ?array $organizationIds = null,
+        ?array $cityIds = null,
+        ?Lease $lease = null,
+        ?string $status = null,
+        int $page = 1,
+        int $limit = 20,
+        ?string $sortBy = 'dueDate',
+        ?string $sortOrder = 'ASC'
+    ): array {
+        $allowedSortFields = ['dueDate', 'period', 'amount', 'createdAt'];
+        $sortBy = in_array($sortBy, $allowedSortFields, true) ? $sortBy : 'dueDate';
+        $sortOrder = strtoupper($sortOrder) === 'ASC' ? 'ASC' : 'DESC';
+
+        $today = $this->dateTime->today();
+
+        $qb = $this->createQueryBuilder('r')
+            ->innerJoin('r.lease', 'l')
+            ->andWhere('l.deletedAt IS NULL')
+            ->orderBy("r.$sortBy", $sortOrder);
+
+        if ($organizationIds !== null && !empty($organizationIds)) {
+            $qb->andWhere('l.organization IN (:orgs)')
+                ->setParameter('orgs', $organizationIds);
+        }
+
+        if ($cityIds !== null && !empty($cityIds)) {
+            $qb->innerJoin('l.unit', 'u')
+                ->innerJoin('u.building', 'b')
+                ->innerJoin('b.parcel', 'par')
+                ->innerJoin('par.city', 'c')
+                ->andWhere('c.id IN (:cities)')
+                ->setParameter('cities', $cityIds);
+        }
+
+        if ($lease !== null) {
+            $qb->andWhere('r.lease = :lease')
+                ->setParameter('lease', $lease);
+        }
+
+        if ($status !== null && $status !== '') {
+            if ($status === 'overdue') {
+                $qb->andWhere('r.dueDate < :today')
+                    ->andWhere('r.status IN (:openStatuses)')
+                    ->setParameter('today', $today)
+                    ->setParameter('openStatuses', [RentStatus::PENDING, RentStatus::PARTIALLY_PAID]);
+            } else {
+                $qb->andWhere('r.status = :status')
+                    ->setParameter('status', RentStatus::from($status));
+
+                if ($status !== 'paid') {
+                    // pending / partially_paid : exclure les échéances passées
+                    // qui sont OVERDUE à la lecture.
+                    $qb->andWhere('r.dueDate >= :today')
+                        ->setParameter('today', $today);
+                }
+            }
+        }
+
+        return $this->fetchPaginated($qb, $page, $limit);
+    }
+
+    /**
      * Liste les échéances en retard de paiement d'une organisation
      * (date d'échéance dépassée et statut non soldé).
      *

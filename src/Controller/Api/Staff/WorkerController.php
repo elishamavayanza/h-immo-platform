@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Controller\Api\Staff;
 
 use App\Dto\Feedback;
+use App\Dto\Request\Staff\WorkerFilterDto;
 use App\Dto\Request\Staff\WorkerRequest;
 use App\Service\Staff\WorkerService;
 use App\Trait\FeedbackTrait;
@@ -12,6 +13,7 @@ use Nelmio\ApiDocBundle\Attribute\Model;
 use OpenApi\Attributes as OA;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
+use Symfony\Component\HttpKernel\Attribute\MapQueryString;
 use Symfony\Component\HttpKernel\Attribute\MapRequestPayload;
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
@@ -78,10 +80,10 @@ final class WorkerController extends AbstractController
         ]
     )]
     public function list(
-        #[MapRequestPayload] \App\Dto\Request\Staff\WorkerFilterDto $filter
+        #[MapQueryString] WorkerFilterDto $filter
     ): JsonResponse {
         $feedback = $this->workerService->listWorkers(
-            organizationId: $filter->organizationId !== null ? \Symfony\Component\Uid\Uuid::fromString($filter->organizationId) : null,
+            organizationId: $filter->organizationId,
             page: $filter->page,
             limit: $filter->limit
         );

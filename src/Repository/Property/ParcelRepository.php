@@ -98,10 +98,17 @@ class ParcelRepository extends ServiceEntityRepository
      * Liste paginée des parcelles accessibles.
      *
      * @param list<City> $cities villes autorisées pour le lecteur
+     * @param City|null  $city   ville parente (optionnelle, résolue et
+     *                           autorisée par le service ; sinon `null`)
      * @return array{items: list<Parcel>, total: int}
      */
-    public function findPaginatedAccessible(array $cities, int $page, int $limit, ?string $search = null): array
-    {
+    public function findPaginatedAccessible(
+        array $cities,
+        int $page,
+        int $limit,
+        ?string $search = null,
+        ?City $city = null
+    ): array {
         if ($cities === []) {
             return ['items' => [], 'total' => 0];
         }
@@ -111,6 +118,11 @@ class ParcelRepository extends ServiceEntityRepository
             ->andWhere('p.city IN (:cities)')
             ->setParameter('cities', $cities)
             ->orderBy('p.name', 'ASC');
+
+        if ($city !== null) {
+            $qb->andWhere('p.city = :city')
+                ->setParameter('city', $city);
+        }
 
         if ($search !== null && $search !== '') {
             $qb->andWhere('p.name LIKE :search OR p.reference LIKE :search')

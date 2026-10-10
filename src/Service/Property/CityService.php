@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Service\Property;
 
 use App\Dto\Feedback;
-use App\Dto\Request\PaginationQuery;
+use App\Dto\Request\Property\CityFilterDto;
 use App\Dto\Request\Property\CityRequest;
 use App\Entity\Identity\Organization;
 use App\Entity\Property\City;
@@ -44,27 +44,86 @@ final readonly class CityService
 
     /**
      * Liste paginée des villes accessibles à l'appelant.
+     *
+     * `organizationId` (optionnel) resserre la liste à une organisation du
+     * périmètre ; hors périmètre, liste vide (pas d'énumération).
      */
-    public function list(PaginationQuery $query): Feedback
+    public function list(?CityFilterDto $filter = null): Feedback
     {
         $feedback = new Feedback();
+        $filter ??= new CityFilterDto();
+
+        $organizations = $this->securityService->getCurrentUserOrganizations();
+        if ($filter->organizationId !== null && $filter->organizationId !== '') {
+            $restricted = $this->restrictToOrganization($filter->organizationId, $organizations);
+            if ($restricted === null) {
+                return $this->emptyListResponse($feedback, $filter->page, $filter->limit);
+            }
+
+            $organizations = $restricted;
+        }
 
         $result = $this->cityRepository->findPaginatedAccessible(
-            $this->securityService->getCurrentUserOrganizations(),
+            $organizations,
             $this->securityService->getAccessibleCities(),
-            $query->page,
-            $query->limit,
-            $query->search
+            $filter->page,
+            $filter->limit,
+            $filter->search
         );
 
         return $feedback
             ->setData([
                 'items' => array_map([$this->mapper, 'toResponse'], $result['items']),
                 'total' => $result['total'],
-                'page' => $query->page,
-                'limit' => $query->limit,
+                'page' => $filter->page,
+                'limit' => $filter->limit,
             ])
             ->setFlushDescription('Liste des villes récupérée avec succès.')
+            ->setStatus(200)
+            ->autoInitFlush();
+    }
+
+    /**
+     * Restreint la liste des organizations du périmètre à celle demandée.
+     *
+     * @param list<Organization> $organizations
+     *
+     * @return list<Organization>|null `null` = hors périmètre (liste vide)
+     */
+    private function restrictToOrganization(
+        string $uuid,
+        array $organizations
+    ): ?array {
+        try {
+            $parsed = Uuid::fromString($uuid);
+        } catch (\InvalidArgumentException) {
+            return null;
+        }
+
+        $organization = $this->organizationRepository->findOneByUuid($parsed);
+
+        if ($organization === null) {
+            return null;
+        }
+
+        foreach ($organizations as $candidate) {
+            if ($candidate->getId() === $organization->getId()) {
+                return [$organization];
+            }
+        }
+
+        return null;
+    }
+
+    private function emptyListResponse(Feedback $feedback, int $page, int $limit): Feedback
+    {
+        return $feedback
+            ->setData([
+                'items' => [],
+                'total' => 0,
+                'page' => max(1, $page),
+                'limit' => $limit,
+            ])
             ->setStatus(200)
             ->autoInitFlush();
     }
