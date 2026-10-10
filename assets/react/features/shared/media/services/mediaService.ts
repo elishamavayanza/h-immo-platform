@@ -98,4 +98,31 @@ export const mediaService = {
         const { data } = await apiClient.get<Feedback<string[]>>(`/v1/units/${uuid}/photos`);
         return data.data ?? [];
     },
+
+    /**
+     * `POST /api/v1/media/buildings/{uuid}/photos` — upload building photos (multiple).
+     * Returns message in `data.flushDescription`.
+     */
+    async uploadBuildingPhotos(uuid: string, files: File[]): Promise<string> {
+        const formData = new FormData();
+        files.forEach((file) => formData.append('files', file));
+        const { data } = await apiClient.post<Feedback<unknown>>(`/v1/media/buildings/${uuid}/photos`, formData);
+        return data.flushDescription ?? 'Photo(s) ajoutée(s).';
+    },
+
+    /**
+     * `DELETE /api/v1/media/buildings/{uuid}/photos/{filename}` — delete a building photo.
+     */
+    async deleteBuildingPhoto(uuid: string, filename: string): Promise<void> {
+        await apiClient.delete<Feedback<unknown>>(`/v1/media/buildings/${uuid}/photos/${filename}`);
+    },
+
+    /**
+     * `GET /api/v1/media/buildings/{uuid}/photos` — list building photos.
+     * Note: This endpoint needs to be implemented in the backend.
+     */
+    async fetchBuildingPhotos(uuid: string): Promise<string[]> {
+        const { data } = await apiClient.get<Feedback<string[]>>(`/v1/media/buildings/${uuid}/photos`);
+        return data.data ?? [];
+    },
 };

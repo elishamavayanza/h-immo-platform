@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace App\Controller\Api\System;
 
 use App\Dto\Feedback;
+use App\Entity\Property\Building;
+use App\Entity\Property\Parcel;
 use App\Service\System\FileUploadService;
 use App\Service\System\MediaService;
 use App\Trait\FeedbackTrait;
@@ -372,6 +374,119 @@ final class MediaController extends AbstractController
         }
 
         $deleted = $this->mediaService->deleteParcelPhoto($parcel, $filename);
+
+        $feedback = new Feedback();
+
+        if ($deleted) {
+            $feedback->setFlushDescription('Fichier supprimé.')->setStatus(200);
+        } else {
+            $feedback->setErrorFlushDescription('Fichier introuvable.')->setStatus(404);
+        }
+
+        return $this->json($feedback, $feedback->getStatus());
+    }
+
+    // ==================== BUILDING PHOTOS ====================
+
+    #[Route('/buildings/{uuid}/photos', name: 'building_photos_upload', methods: ['POST'])]
+    #[OA\Post(
+        path: '/api/v1/media/buildings/{uuid}/photos',
+        summary: 'Uploader des photos pour un bâtiment',
+        description: 'Ajoute des photos dans le dossier du bâtiment. Types acceptés : JPEG, PNG, WebP, GIF. Max 10 Mo.',
+        parameters: [
+            new OA\Parameter(name: 'uuid', in: 'path', required: true, schema: new OA\Schema(type: 'string', format: 'uuid')),
+        ],
+        requestBody: new OA\RequestBody(
+            description: 'Fichier(s) (multipart/form-data)',
+            required: true,
+            content: new OA\MediaType(
+                mediaType: 'multipart/form-data',
+                schema: new OA\Schema(
+                    type: 'object',
+                    properties: [
+                        new OA\Property(property: 'files', type: 'array', items: new OA\Items(type: 'string', format: 'binary'), description: 'Fichiers images (max 10 Mo chacun)')
+                    ],
+                    required: ['files']
+                )
+            )
+        ),
+        responses: [
+            new OA\Response(response: 200, description: 'Fichiers uploadés', content: new OA\JsonContent(ref: new Model(type: Feedback::class))),
+            new OA\Response(response: 403, description: 'Accès refusé', content: new OA\JsonContent(ref: new Model(type: Feedback::class))),
+            new OA\Response(response: 422, description: 'Fichier(s) invalide(s)', content: new OA\JsonContent(ref: new Model(type: Feedback::class))),
+            new OA\Response(response: 404, description: 'Bâtiment introuvable', content: new OA\JsonContent(ref: new Model(type: Feedback::class))),
+        ]
+    )]
+    public function uploadBuildingPhotos(string $uuid, Request $request): JsonResponse
+    {
+        $files = $request->files->get('files');
+
+        if (!$files || !is_array($files)) {
+            return $this->json(
+                (new Feedback())->addError('files', 'Aucun fichier fourni.')->setErrorFlushDescription('Fichiers requis.')->setStatus(422)->autoInitFlush(),
+                422
+            );
+        }
+
+        $building = $this->mediaService->resolveBuilding($uuid);
+
+        if ($building === null) {
+            return $this->json(
+                (new Feedback())->setErrorFlushDescription('Bâtiment introuvable.')->setStatus(404)->autoInitFlush(),
+                404
+            );
+        }
+
+        $uploaded = [];
+        $errors = [];
+
+        try {
+            $uploaded = $this->mediaService->addBuildingPhotos($building, $files);
+        } catch (\InvalidArgumentException|\RuntimeException $e) {
+            $errors[] = ['file' => null, 'error' => $e->getMessage()];
+        }
+
+        $feedback = new Feedback();
+        $feedback->setData([
+            'uploaded' => $uploaded,
+            'errors' => $errors,
+        ]);
+
+        if ([] === $uploaded) {
+            $feedback->setErrorFlushDescription('Aucun fichier uploadé.')->setStatus(422);
+        } else {
+            $feedback->setFlushDescription(sprintf('%d fichier(s) uploadé(s).', count($uploaded)))->setStatus(200);
+        }
+
+        return $this->json($feedback, $feedback->getStatus());
+    }
+
+    #[Route('/buildings/{uuid}/photos/{filename}', name: 'building_photo_delete', methods: ['DELETE'])]
+    #[OA\Delete(
+        path: '/api/v1/media/buildings/{uuid}/photos/{filename}',
+        summary: 'Supprimer une photo d\'un bâtiment',
+        parameters: [
+            new OA\Parameter(name: 'uuid', in: 'path', required: true, schema: new OA\Schema(type: 'string', format: 'uuid')),
+            new OA\Parameter(name: 'filename', in: 'path', required: true, schema: new OA\Schema(type: 'string')),
+        ],
+        responses: [
+            new OA\Response(response: 200, description: 'Fichier supprimé', content: new OA\JsonContent(ref: new Model(type: Feedback::class))),
+            new OA\Response(response: 403, description: 'Accès refusé', content: new OA\JsonContent(ref: new Model(type: Feedback::class))),
+            new OA\Response(response: 404, description: 'Fichier introuvable', content: new OA\JsonContent(ref: new Model(type: Feedback::class))),
+        ]
+    )]
+    public function deleteBuildingPhoto(string $uuid, string $filename): JsonResponse
+    {
+        $building = $this->mediaService->resolveBuilding($uuid);
+
+        if ($building === null) {
+            return $this->json(
+                (new Feedback())->setErrorFlushDescription('Bâtiment introuvable.')->setStatus(404)->autoInitFlush(),
+                404
+            );
+        }
+
+        $deleted = $this->mediaService->deleteBuildingPhoto($building, $filename);
 
         $feedback = new Feedback();
 

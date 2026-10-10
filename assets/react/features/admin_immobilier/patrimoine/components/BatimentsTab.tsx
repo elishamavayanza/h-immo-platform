@@ -20,6 +20,7 @@ import type { OrganizationRole } from '../../../../../services/api/api.types';
 import { canDo } from '../../../shared/permissions';
 import { fieldErrorMap } from '../../../shared/actionErrors';
 import { ModalActions } from '../../../shared/components/ModalActions';
+import { PhotoGallery } from '../../../shared/media/components/PhotoGallery';
 import type { BuildingItem, CityItem, ParcelItem } from '../../shared/types/reference.types';
 import type { BuildingPayload } from '../services/patrimoineService';
 
@@ -85,6 +86,9 @@ export function BatimentsTab({ buildings, parcels, cities, role, isLoading, erro
     const [submitting, setSubmitting] = useState(false);
     const [deleteTarget, setDeleteTarget] = useState<BuildingItem | null>(null);
 
+    const [photoModalOpen, setPhotoModalOpen] = useState(false);
+    const [photoTarget, setPhotoTarget] = useState<BuildingItem | null>(null);
+
     const parcelById = new Map(parcels.map((parcel) => [parcel.id, parcel]));
     const cityById = new Map(cities.map((city) => [city.id, city]));
     const parcelOptions = parcels.map((parcel) => ({ value: parcel.id, label: `${parcel.name} · ${cityById.get(parcel.cityId)?.name ?? 'Ville'} · ${parcel.reference}` }));
@@ -106,9 +110,19 @@ export function BatimentsTab({ buildings, parcels, cities, role, isLoading, erro
         setEditTarget(target);
     };
 
+    const openPhotos = (target: BuildingItem) => {
+        setPhotoTarget(target);
+        setPhotoModalOpen(true);
+    };
+
     const closeModal = () => {
         setModalOpen(false);
         setEditTarget(null);
+    };
+
+    const closePhotoModal = () => {
+        setPhotoModalOpen(false);
+        setPhotoTarget(null);
     };
 
     const submit = async (event: FormEvent<HTMLFormElement>) => {
@@ -166,6 +180,9 @@ export function BatimentsTab({ buildings, parcels, cities, role, isLoading, erro
                 const items: PopoverMenuItem[] = [
                     ...(canDo(role, 'update_building')
                         ? [{ id: 'edit', label: 'Modifier', icon: <Icon name="edit" />, onClick: () => openEdit(building) }]
+                        : []),
+                    ...(canDo(role, 'update_building')
+                        ? [{ id: 'photos', label: 'Gérer les photos', icon: <Icon name="camera" />, onClick: () => openPhotos(building) }]
                         : []),
                     ...(canDo(role, 'delete_building')
                         ? [{ id: 'delete', label: 'Supprimer', icon: <Icon name="trash" />, danger: true, onClick: () => setDeleteTarget(building) }]
@@ -242,6 +259,21 @@ export function BatimentsTab({ buildings, parcels, cities, role, isLoading, erro
                 confirmLabel="Supprimer"
                 cancelLabel="Annuler"
             />
+
+            <Modal
+                isOpen={photoModalOpen}
+                onClose={closePhotoModal}
+                title={photoTarget ? `Photos de « ${photoTarget.name} »` : 'Gérer les photos'}
+                size="large"
+                footer={<><Button variant="outline" onClick={closePhotoModal}>Fermer</Button></>}
+            >
+                <PhotoGallery
+                    entityUuid={photoTarget?.id ?? ''}
+                    entityType="building"
+                    mode="multiple"
+                    onChange={() => {}}
+                />
+            </Modal>
         </Card>
     );
 }

@@ -60,6 +60,12 @@ class Building extends SoftDeletableEntity
     #[ORM\Column(type: Types::TEXT, nullable: true)]
     private ?string $description = null;
 
+    /**
+     * Photos du bâtiment (noms de fichiers stockés sous buildings/{uuid}/).
+     */
+    #[ORM\Column(type: Types::JSON, nullable: true)]
+    private ?array $photos = null;
+
     public function getParcel(): Parcel
     {
         return $this->parcel;
@@ -130,5 +136,39 @@ class Building extends SoftDeletableEntity
         $this->description = $description;
 
         return $this;
+    }
+
+    public function getPhotos(): array
+    {
+        return $this->photos ?? [];
+    }
+
+    public function setPhotos(?array $photos): static
+    {
+        $this->photos = $photos;
+
+        return $this;
+    }
+
+    public function addPhoto(string $filename): static
+    {
+        $photos = $this->getPhotos();
+        $photos[] = $filename;
+        $this->photos = $photos;
+
+        return $this;
+    }
+
+    public function removePhoto(string $filename): bool
+    {
+        $photos = $this->getPhotos();
+        $key = array_search($filename, $photos, true);
+        if ($key === false) {
+            return false;
+        }
+        unset($photos[$key]);
+        $this->photos = array_values($photos);
+
+        return true;
     }
 }

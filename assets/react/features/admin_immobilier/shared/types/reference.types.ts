@@ -52,6 +52,7 @@ export interface BuildingItem {
     type: string;
     numberOfFloors: number | null;
     description: string | null;
+    photos: string[];
 }
 
 /** `UnitResponse` — `GET /api/v1/units` (`isPublished` = annonce vitrine). */
