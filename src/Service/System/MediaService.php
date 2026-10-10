@@ -226,6 +226,21 @@ final readonly class MediaService
         return 'parcels/'.$parcel->getUuid()->toRfc4122();
     }
 
+    /**
+     * Liste les photos d'une parcelle.
+     *
+     * @return list<string> Chemins relatifs des photos
+     */
+    public function fetchParcelPhotos(Parcel $parcel): array
+    {
+        $this->securityService->checkParcelAccess($parcel, SecurityAction::VIEW_PARCEL);
+
+        $folder = $this->parcelFolder($parcel);
+        $files = $this->fileUploadService->listFiles('parcels', $parcel->getUuid()->toRfc4122());
+
+        return array_map(fn(array $file): string => $file['path'], $files);
+    }
+
     /*
     |--------------------------------------------------------------------------
     | RÉSOLUTION DES ENTITÉS
@@ -337,6 +352,21 @@ final readonly class MediaService
     private function buildingFolder(Building $building): string
     {
         return 'buildings/'.$building->getUuid()->toRfc4122();
+    }
+
+    /**
+     * Liste les photos d'un bâtiment.
+     *
+     * @return list<string> Chemins relatifs des photos
+     */
+    public function fetchBuildingPhotos(Building $building): array
+    {
+        $this->securityService->checkBuildingAccess($building, SecurityAction::VIEW_BUILDING);
+
+        $folder = $this->buildingFolder($building);
+        $files = $this->fileUploadService->listFiles('buildings', $building->getUuid()->toRfc4122());
+
+        return array_map(fn(array $file): string => $file['path'], $files);
     }
 
     /*

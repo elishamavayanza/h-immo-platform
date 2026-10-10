@@ -261,14 +261,35 @@ final readonly class FileUploadService
     }
 
     /**
-     * Retourne la configuration pour la documentation OpenAPI.
+     * Liste les fichiers dans un sous-dossier d'un type d'entité.
+     *
+     * @return array<int, array{filename: string, path: string, url: string, size: int, mimeType: string, modifiedAt: int}>
      */
-    public static function getOpenApiConfig(): array
+    public function listFiles(string $entityType, string $subFolder): array
     {
-        return [
-            'maxFileSize' => self::MAX_FILE_SIZE,
-            'allowedMimeTypes' => self::ALLOWED_MIME_TYPES,
-            'allowedExtensions' => self::ALLOWED_EXTENSIONS,
-        ];
+        $dir = $this->uploadsDir . '/' . $entityType . '/' . $subFolder;
+        
+        if (!is_dir($dir)) {
+            return [];
+        }
+        
+        $files = [];
+        $iterator = new \FilesystemIterator($dir, \FilesystemIterator::SKIP_DOTS);
+        
+        foreach ($iterator as $fileInfo) {
+            if ($fileInfo->isFile()) {
+                $relativePath = $entityType . '/' . $subFolder . '/' . $fileInfo->getFilename();
+                $files[] = [
+                    'filename' => $fileInfo->getFilename(),
+                    'path' => $entityType . '/' . $subFolder . '/' . $fileInfo->getFilename(),
+                    'url' => $this->getPublicUrl($entityType . '/' . $subFolder . '/' . $fileInfo->getFilename()),
+                    'size' => $fileInfo->getSize(),
+                    'mimeType' => mime_content_type($fileInfo->getPathname()),
+                    'modifiedAt' => $fileInfo->getMTime(),
+                ];
+            }
+        }
+        
+        return $files;
     }
 }
