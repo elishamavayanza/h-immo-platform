@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Controller\Api\Property;
 
-use App\Dto\Request\PaginationQuery;
+use App\Dto\Request\Property\BuildingFilterDto;
 use App\Dto\Request\Property\BuildingRequest;
 use App\Service\Property\BuildingService;
 use App\Trait\FeedbackTrait;
@@ -43,10 +43,21 @@ final class BuildingController extends AbstractController
      * Mappe la Query String sur le DTO de pagination et renvoie la réponse Feedback.
      */
     #[Route('', name: 'list', methods: ['GET'])]
+    #[OA\Get(
+        summary: 'Lister les bâtiments avec pagination et filtres',
+        description: 'Récupère la liste paginée et filtrable des bâtiments.',
+        parameters: [
+            new OA\Parameter(name: 'organizationId', in: 'query', schema: new OA\Schema(type: 'string', format: 'uuid'), description: 'Filtrer par organisation (optionnel)'),
+            new OA\Parameter(name: 'parcelUuid', in: 'query', schema: new OA\Schema(type: 'string', format: 'uuid'), description: 'Filtrer par parcelle parente (optionnel)'),
+            new OA\Parameter(name: 'search', in: 'query', schema: new OA\Schema(type: 'string'), description: 'Terme de recherche'),
+            new OA\Parameter(name: 'page', in: 'query', schema: new OA\Schema(type: 'integer', default: 1), description: 'Numéro de page'),
+            new OA\Parameter(name: 'limit', in: 'query', schema: new OA\Schema(type: 'integer', default: 10, minimum: 1, maximum: 100), description: 'Éléments par page'),
+        ]
+    )]
     public function list(
-        #[MapQueryString] ?PaginationQuery $query = null
+        #[MapQueryString] ?BuildingFilterDto $filter = null
     ): JsonResponse {
-        $feedback = $this->buildingService->list($query ?? new PaginationQuery());
+        $feedback = $this->buildingService->list($filter);
 
         return $this->json($feedback, $feedback->getStatus());
     }

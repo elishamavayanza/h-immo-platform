@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Controller\Api\Rental;
 
 use App\Dto\Feedback;
+use App\Dto\Request\Rental\RentFilterDto;
 use App\Dto\Request\Rental\RentOverdueFilterDto;
 use App\Dto\Request\Rental\RentRequest;
 use App\Entity\Identity\User;
@@ -62,6 +63,31 @@ final class RentController extends AbstractController
         #[MapRequestPayload] RentRequest $request
     ): JsonResponse {
         $feedback = $this->rentService->createRent($request, $this->getUser());
+
+        return $this->json($feedback, $feedback->getStatus());
+    }
+
+    #[Route('', name: 'list', methods: ['GET'])]
+    #[OA\Get(
+        path: '/api/v1/rents',
+        summary: 'Lister les échéances avec pagination et filtres',
+        parameters: [
+            new OA\Parameter(name: 'organizationId', in: 'query', schema: new OA\Schema(type: 'string', format: 'uuid'), description: 'Filtrer par organisation (optionnel)'),
+            new OA\Parameter(name: 'leaseUuid', in: 'query', schema: new OA\Schema(type: 'string', format: 'uuid'), description: 'Filtrer par bail (optionnel)'),
+            new OA\Parameter(name: 'status', in: 'query', schema: new OA\Schema(type: 'string', enum: ['pending', 'partially_paid', 'paid', 'overdue']), description: 'Filtrer par statut calculé (optionnel)'),
+            new OA\Parameter(name: 'page', in: 'query', schema: new OA\Schema(type: 'integer', default: 1), description: 'Numéro de page'),
+            new OA\Parameter(name: 'limit', in: 'query', schema: new OA\Schema(type: 'integer', default: 20, minimum: 1, maximum: 100), description: 'Éléments par page'),
+            new OA\Parameter(name: 'sortBy', in: 'query', schema: new OA\Schema(type: 'string', default: 'dueDate'), description: 'Champ de tri'),
+            new OA\Parameter(name: 'sortOrder', in: 'query', schema: new OA\Schema(type: 'string', enum: ['ASC', 'DESC'], default: 'ASC'), description: 'Ordre de tri'),
+        ],
+        responses: [
+            new OA\Response(response: 200, description: 'Liste paginée', content: new OA\JsonContent(ref: new Model(type: Feedback::class))),
+        ]
+    )]
+    public function list(
+        #[MapQueryString] ?RentFilterDto $filter = null
+    ): JsonResponse {
+        $feedback = $this->rentService->listRents($filter);
 
         return $this->json($feedback, $feedback->getStatus());
     }

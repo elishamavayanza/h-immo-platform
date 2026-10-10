@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Service\Rental;
 
 use App\Dto\Feedback;
+use App\Dto\Request\Rental\RentFilterDto;
 use App\Dto\Request\Rental\RentOverdueFilterDto;
 use App\Dto\Request\Rental\RentRequest;
 use App\Entity\Identity\User;
@@ -285,11 +286,133 @@ final readonly class RentService
         return $feedback
             ->setData([
                 'items' => array_values($items),
-                'total' => count($items),
+                // Total du repo (= nombre réel d'échéances correspondantes) :
+                // count($items) ne vaut que la taille de la page courante,
+                // ce qui trompait tout affichage de « total » et de pagination.
+                'total' => $result['total'],
                 'page' => max(1, $filter->page),
                 'limit' => $filter->limit,
             ])
             ->setFlushDescription('Échéances en retard listées avec succès.')
+            ->setStatus(200)
+            ->autoInitFlush();
+    }
+
+    /**
+     * Liste paginée générale des échéances sur le périmètre autorisé.
+     *
+     * Supports gouvernement : organizateur du périmètre, bail (vérifié via
+     * `checkLeaseAccess`), statut calculé (incluant OVERDUE dérivé à la
+     * lecture). Un `organizationId` ou un `leaseUuid` hors périmètre
+     * renvoie une liste vide : distinguer un 404 d'un 200 révélerait
+     * l'existence de ressources d'un autre tenant.
+     */
+    public function listRents(?RentFilterDto $filter = null): Feedback
+    {
+        $feedback = new Feedback();
+        $filter ??= new RentFilterDto();
+
+        $organizations = $this->securityService->getCurrentUserOrganizations();
+        $organizationIds = array_map(fn ($o) => $o->getId(), $organizations);
+
+        $cityIds = [];
+        foreach ($organizations as $org) {
+            $cities = $this->cityRepository->findActiveByOrganization($org);
+            foreach ($cities as $city) {
+                if ($this->securityService->canAccessCity($city, SecurityAction::VIEW_RENT)) {
+                    $cityIds[] = $city->getId();
+                }
+            }
+        }
+
+        if ($cityIds === []) {
+            return $this->emptyListResponse($feedback, $filter->page, $filter->limit);
+        }
+
+        $targetOrgIds = $organizationIds;
+        if ($filter->organizationId !== null && $filter->organizationId !== '') {
+            $restricted = $this->restrictToOrganizationId($filter->organizationId, $organizationIds);
+            if ($restricted === null) {
+                return $this->emptyListResponse($feedback, $filter->page, $filter->limit);
+            }
+
+            $targetOrgIds = $restricted;
+        }
+
+        $lease = null;
+        if ($filter->leaseUuid !== null && $filter->leaseUuid !== '') {
+            $lease = $this->resolveLease($filter->leaseUuid, SecurityAction::VIEW_RENT, $feedback);
+            if ($lease === null) {
+                return $feedback->autoInitFlush();
+            }
+
+            if (!in_array($lease->getOrganization()->getId(), $targetOrgIds, true)) {
+                return $this->emptyListResponse($feedback, $filter->page, $filter->limit);
+            }
+        }
+
+        $result = $this->rentRepository->findPaginatedAccessible(
+            organizationIds: $targetOrgIds,
+            cityIds: $cityIds,
+            lease: $lease,
+            status: $filter->status,
+            page: $filter->page,
+            limit: $filter->limit,
+            sortBy: $filter->sortBy,
+            sortOrder: $filter->sortOrder
+        );
+
+        // Contrôle d'accès résiduel par échéance (défense en profondeur).
+        $items = array_values(array_filter($result['items'], function (Rent $rent): bool {
+            return $this->securityService->canAccessRent($rent, SecurityAction::VIEW_RENT);
+        }));
+
+        return $feedback
+            ->setData([
+                'items' => array_map(fn (Rent $r) => $this->rentMapper->toResponse($r), $items),
+                'total' => $result['total'],
+                'page' => max(1, $filter->page),
+                'limit' => $filter->limit,
+            ])
+            ->setFlushDescription('Échéances listées avec succès.')
+            ->setStatus(200)
+            ->autoInitFlush();
+    }
+
+    /**
+     * Restreint les identifiants d'organizations du périmètre à celui demandé.
+     *
+     * @param list<int> $organizationIds
+     *
+     * @return list<int>|null `null` = hors périmètre (liste vide)
+     */
+    private function restrictToOrganizationId(string $uuid, array $organizationIds): ?array
+    {
+        try {
+            $parsed = Uuid::fromString($uuid);
+        } catch (\InvalidArgumentException) {
+            return null;
+        }
+
+        $organization = $this->organizationRepository->findOneByUuid($parsed);
+
+        if ($organization === null || !in_array($organization->getId(), $organizationIds, true)) {
+            return null;
+        }
+
+        return [$organization->getId()];
+    }
+
+    private function emptyListResponse(Feedback $feedback, int $page, int $limit): Feedback
+    {
+        return $feedback
+            ->setData([
+                'items' => [],
+                'total' => 0,
+                'page' => max(1, $page),
+                'limit' => $limit,
+            ])
+            ->setFlushDescription('Aucune échéance accessible pour ce périmètre.')
             ->setStatus(200)
             ->autoInitFlush();
     }

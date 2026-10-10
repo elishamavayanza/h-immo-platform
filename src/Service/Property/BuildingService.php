@@ -5,9 +5,10 @@ declare(strict_types=1);
 namespace App\Service\Property;
 
 use App\Dto\Feedback;
-use App\Dto\Request\PaginationQuery;
+use App\Dto\Request\Property\BuildingFilterDto;
 use App\Dto\Request\Property\BuildingRequest;
 use App\Entity\Property\Building;
+use App\Entity\Property\City;
 use App\Entity\Property\Parcel;
 use App\Mapper\Property\BuildingMapper;
 use App\Repository\Property\ParcelRepository;
@@ -41,25 +42,106 @@ final readonly class BuildingService
     ) {
     }
 
-    public function list(PaginationQuery $query): Feedback
+    public function list(?BuildingFilterDto $filter = null): Feedback
     {
         $feedback = new Feedback();
+        $filter ??= new BuildingFilterDto();
+
+        $cities = $this->securityService->getScopedCities();
+
+        if ($filter->organizationId !== null && $filter->organizationId !== '') {
+            $cities = $this->citiesOfOrganization($cities, $filter->organizationId);
+        }
+
+        if ($cities === []) {
+            return $this->emptyListResponse($feedback, $filter->page, $filter->limit);
+        }
+
+        $parcel = null;
+        if ($filter->parcelUuid !== null && $filter->parcelUuid !== '') {
+            $parcel = $this->resolveScopedParcel($filter->parcelUuid);
+            if ($parcel === null) {
+                return $this->emptyListResponse($feedback, $filter->page, $filter->limit);
+            }
+        }
 
         $result = $this->buildingRepository->findPaginatedAccessible(
-            $this->securityService->getScopedCities(),
-            $query->page,
-            $query->limit,
-            $query->search
+            $cities,
+            $filter->page,
+            $filter->limit,
+            $filter->search,
+            $parcel
         );
 
         return $feedback
             ->setData([
                 'items' => array_map([$this->buildingMapper, 'toResponse'], $result['items']),
                 'total' => $result['total'],
-                'page' => $query->page,
-                'limit' => $query->limit,
+                'page' => $filter->page,
+                'limit' => $filter->limit,
             ])
             ->setFlushDescription('Liste des bâtiments récupérée avec succès.')
+            ->setStatus(200)
+            ->autoInitFlush();
+    }
+
+    /**
+     * Filtre une liste de villes sur celles d'une organisation donnée.
+     *
+     * @param list<City> $cities
+     *
+     * @return list<City>
+     */
+    private function citiesOfOrganization(array $cities, string $uuid): array
+    {
+        try {
+            $parsed = Uuid::fromString($uuid);
+        } catch (\InvalidArgumentException) {
+            return [];
+        }
+
+        $target = (string) $parsed;
+
+        return array_values(array_filter(
+            $cities,
+            fn (City $city): bool => (string) $city->getOrganization()->getUuid() === $target
+        ));
+    }
+
+    /**
+     * Résout une parcelle parente de filtre, sous contrôle d'accès.
+     *
+     * Retourne `null` (liste vide) pour une parcelle inexistante ou hors
+     * périmètre : distinguer les deux révélerait son existence.
+     */
+    private function resolveScopedParcel(string $uuid): ?Parcel
+    {
+        try {
+            $parsed = Uuid::fromString($uuid);
+        } catch (\InvalidArgumentException) {
+            return null;
+        }
+
+        $parcel = $this->parcelRepository->findOneByUuid($parsed);
+
+        if ($parcel === null
+            || !$this->securityService->canAccessParcel($parcel, SecurityAction::VIEW_BUILDING)
+        ) {
+            return null;
+        }
+
+        return $parcel;
+    }
+
+    private function emptyListResponse(Feedback $feedback, int $page, int $limit): Feedback
+    {
+        return $feedback
+            ->setData([
+                'items' => [],
+                'total' => 0,
+                'page' => max(1, $page),
+                'limit' => $limit,
+            ])
             ->setStatus(200)
             ->autoInitFlush();
     }

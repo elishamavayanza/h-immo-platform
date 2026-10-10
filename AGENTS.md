@@ -288,11 +288,16 @@ cohérence de l'API et le schéma OpenAPI.
 - Filtres de query string (pagination, tri, filtres) → `#[MapQueryString]`.
 
 > **Écart constaté (D1)** : plusieurs endpoints `GET` de liste ajoutés
-> récemment (`PaymentController::list`, `ExpenseController`, `WorkerController`,
-> `WorkerAssignmentController`, `LeaseController::list`, `RentController`) utilisent
-> `#[MapRequestPayload]` sur un DTO de filtre. Les neuf contrôleurs Identity /
-> Property / Report utilisent correctement `#[MapQueryString]`. Vérifie le
-> mapping avant d'ajouter un endpoint GET, et ne recopie pas le pattern fautif.
+> récemment utilisaient `#[MapRequestPayload]` sur un DTO de filtre, ce qui
+> renvoyait **415** sur un GET sans corps. C'est corrigé partout :
+> `PaymentController::list`, `LeaseController::list`, `RentController::list` /
+> `listOverdue`, `ExpenseController::list`, `WorkerController::list` et
+> `WorkerAssignmentController::list` passent par `#[MapQueryString]`
+> (vérifié par `tests/verify-admin-immobilier.php`). Vérifie le mapping avant
+> d'ajouter un endpoint GET, et ne recopie pas le pattern fautif. Attention :
+> `#[MapQueryString]` ne valide pas automatiquement les contraintes du DTO —
+> un `status=foo` invalide est donc à refuser via `#[Assert\Choice]` sur le
+> DTO, pas à laisser remonter un `ValueError`.
 
 Les DTOs de filtre incluent `page`, `limit` (borné), `sortBy`, `sortOrder` :
 **tout `sortBy` doit être validé par whitelist** côté repository, jamais
@@ -567,6 +572,7 @@ php tests/verify-password-reset.php     # flux mot de passe oublié
 php tests/verify-admin-creation-email-failure.php # création compte + mailer en échec (201 + warning)
 php tests/verify-p0-security.php        # rapports, dépenses, médias, statuts
 php tests/verify-p0-7-list-endpoints.php # endpoints de liste rentals (200, pas de fuite)
+php tests/verify-admin-immobilier.php # espace ADMIN_IMMOBILIER : listes locataires/loyers/patrimoine + isolation dépenses/affectations (31 contrôles)
 php tests/verify-parcel-coordinates.php # coordonnées GPS Parcel (201/422, round-trip)
 php tests/verify-organization-suspend.php # suspension de tenant (motif obligatoire 422, 200, audit SUSPEND/ACTIVATE, 404, 403, réactivation)
 php tests/check-injected-dependencies.php # dépendances $this-> injectées (statique)

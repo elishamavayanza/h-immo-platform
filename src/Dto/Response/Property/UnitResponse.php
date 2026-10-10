@@ -57,6 +57,9 @@ final readonly class UnitResponse
         #[OA\Property(description: 'Description détaillée des équipements ou spécificités', example: 'Vue panoramique sur le lac, balcons inclus', nullable: true)]
         public ?string $description,
 
+        #[OA\Property(description: 'Annonce publiée sur la vitrine publique (faux = brouillon)', example: false)]
+        public bool $isPublished,
+
         #[OA\Property(description: 'Horodatage de création', format: 'date-time', example: '2026-01-15T10:00:00Z')]
         public \DateTimeImmutable $createdAt,
 
@@ -80,6 +83,7 @@ final readonly class UnitResponse
             monthlyRent: $unit->getMonthlyRent(),
             currency: $unit->getCurrency(),
             description: $unit->getDescription(),
+            isPublished: $unit->isPublished(),
             createdAt: $unit->getCreatedAt(),
             updatedAt: $unit->getUpdatedAt(),
         );

@@ -260,22 +260,53 @@ final readonly class WorkerAssignmentService
     ): Feedback {
         $feedback = new Feedback();
 
-        // Vérifier l'accès aux villes demandées
-        if ($cityIds !== null && !empty($cityIds)) {
-            foreach ($cityIds as $cityId) {
-                try {
-                    $city = $this->cityRepository->findOneById($cityId);
-                    if ($city !== null) {
-                        $this->securityService->checkCityAccess($city, SecurityAction::VIEW_WORKER_ASSIGNMENT);
-                    }
-                } catch (\Throwable) {
-                    // Ville introuvable : ignorer
+        // Périmètre serveur : les affectations des villes accessibles à
+        // l'appelant (villes de ses organisations, bornées par son périmètre
+        // `UserCity` s'il est `ADMIN_VILLE`). `WorkerAssignment` n'a pas de
+        // colonne `organization` : la ville, toujours renseignée, porte
+        // l'appartenance. Sans ce filtre, la liste renvoyait les affectations
+        // de TOUTES les organisations — une fuite inter-tenant.
+        $organizations = $this->securityService->getCurrentUserOrganizations();
+
+        $allowedCityIds = [];
+        foreach ($organizations as $organization) {
+            foreach ($this->cityRepository->findActiveByOrganization($organization) as $city) {
+                if ($this->securityService->canAccessCity($city, SecurityAction::VIEW_WORKER_ASSIGNMENT)) {
+                    $allowedCityIds[] = $city->getId();
                 }
             }
         }
 
+        // `cityIds` (UUID, filtre du client) ne peut que restreindre le
+        // périmètre, jamais l'étendre.
+        $targetCityIds = $allowedCityIds;
+        if ($cityIds !== null && $cityIds !== []) {
+            $requestedCityIds = [];
+            foreach ($cityIds as $rawCityId) {
+                try {
+                    $city = $this->cityRepository->findOneByUuid(Uuid::fromString((string) $rawCityId));
+                } catch (\InvalidArgumentException) {
+                    $city = null;
+                }
+
+                if ($city !== null) {
+                    $requestedCityIds[] = $city->getId();
+                }
+            }
+
+            $targetCityIds = array_values(array_intersect($allowedCityIds, $requestedCityIds));
+        }
+
+        if ($targetCityIds === []) {
+            return $feedback
+                ->setData(['items' => [], 'total' => 0])
+                ->setFlushDescription('Aucune affectation accessible sur ce périmètre.')
+                ->setStatus(200)
+                ->autoInitFlush();
+        }
+
         $result = $this->assignmentRepository->findByFilters(
-            cityIds: $cityIds,
+            cityIds: $targetCityIds,
             page: $page,
             limit: $limit,
             sortBy: $sortBy,

@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Controller\Api\Property;
 
-use App\Dto\Request\PaginationQuery;
+use App\Dto\Request\Property\CityFilterDto;
 use App\Dto\Request\Property\CityRequest;
 use App\Service\Property\CityService;
 use App\Trait\FeedbackTrait;
@@ -43,10 +43,20 @@ final class CityController extends AbstractController
      * Récupère la Query String de pagination et renvoie le Feedback au format JSON.
      */
     #[Route('', name: 'list', methods: ['GET'])]
+    #[OA\Get(
+        summary: 'Lister les villes avec pagination et filtres',
+        description: 'Récupère la liste paginée des villes d\'exploitation accessibles.',
+        parameters: [
+            new OA\Parameter(name: 'organizationId', in: 'query', schema: new OA\Schema(type: 'string', format: 'uuid'), description: 'Filtrer par organisation (optionnel)'),
+            new OA\Parameter(name: 'search', in: 'query', schema: new OA\Schema(type: 'string'), description: 'Terme de recherche'),
+            new OA\Parameter(name: 'page', in: 'query', schema: new OA\Schema(type: 'integer', default: 1), description: 'Numéro de page'),
+            new OA\Parameter(name: 'limit', in: 'query', schema: new OA\Schema(type: 'integer', default: 10, minimum: 1, maximum: 100), description: 'Éléments par page'),
+        ]
+    )]
     public function list(
-        #[MapQueryString] ?PaginationQuery $query = null
+        #[MapQueryString] ?CityFilterDto $filter = null
     ): JsonResponse {
-        $feedback = $this->cityService->list($query ?? new PaginationQuery());
+        $feedback = $this->cityService->list($filter);
 
         return $this->json($feedback, $feedback->getStatus());
     }

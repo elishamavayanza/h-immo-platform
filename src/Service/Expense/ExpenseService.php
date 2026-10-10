@@ -329,22 +329,58 @@ final readonly class ExpenseService
     ): Feedback {
         $feedback = new Feedback();
 
-        // Vérifier l'accès aux villes demandées (si ADMIN_VILLE)
-        if ($cityIds !== null && !empty($cityIds)) {
-            foreach ($cityIds as $cityId) {
-                try {
-                    $city = $this->cityRepository->findOneById($cityId);
-                    if ($city !== null) {
-                        $this->securityService->checkCityAccess($city, SecurityAction::VIEW_EXPENSE);
-                    }
-                } catch (\Throwable) {
-                    // Ville introuvable : ignorer, le repository renverra liste vide
+        // Périmètre serveur, jamais déduit du client : les dépenses des
+        // organisations de l'appelant, restreintes aux villes auxquelles il a
+        // accès (`ADMIN_VILLE`). Auparavant, `findByFilters()` était appelé
+        // sans `organizationIds` : la liste renvoyait alors les dépenses de
+        // TOUTES les organisations — une fuite inter-tenant.
+        $organizations = $this->securityService->getCurrentUserOrganizations();
+        $organizationIds = array_map(
+            static fn (Organization $organization) => $organization->getId(),
+            $organizations
+        );
+
+        $allowedCityIds = [];
+        foreach ($organizations as $organization) {
+            foreach ($this->cityRepository->findActiveByOrganization($organization) as $city) {
+                if ($this->securityService->canAccessCity($city, SecurityAction::VIEW_EXPENSE)) {
+                    $allowedCityIds[] = $city->getId();
                 }
             }
         }
 
+        // `cityIds` (UUID, filtre du client) est une intention : elle ne peut
+        // que restreindre le périmètre, jamais l'étendre. Un UUID hors
+        // périmètre est ignoré plutôt que de faire élargir la lecture.
+        $targetCityIds = $allowedCityIds;
+        if ($cityIds !== null && $cityIds !== []) {
+            $requestedCityIds = [];
+            foreach ($cityIds as $rawCityId) {
+                try {
+                    $city = $this->cityRepository->findOneByUuid(Uuid::fromString((string) $rawCityId));
+                } catch (\InvalidArgumentException) {
+                    $city = null;
+                }
+
+                if ($city !== null) {
+                    $requestedCityIds[] = $city->getId();
+                }
+            }
+
+            $targetCityIds = array_values(array_intersect($allowedCityIds, $requestedCityIds));
+        }
+
+        if ($organizationIds === [] || $targetCityIds === []) {
+            return $feedback
+                ->setData(['items' => [], 'total' => 0])
+                ->setFlushDescription('Aucune dépense accessible sur ce périmètre.')
+                ->setStatus(200)
+                ->autoInitFlush();
+        }
+
         $result = $this->expenseRepository->findByFilters(
-            cityIds: $cityIds,
+            organizationIds: $organizationIds,
+            cityIds: $targetCityIds,
             page: $page,
             limit: $limit,
             sortBy: $sortBy,
