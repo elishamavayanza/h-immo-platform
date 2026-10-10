@@ -1,16 +1,54 @@
 import { DataTable } from '../../../../components/Data/DataTable';
 import type { DataTableColumn } from '../../../../hook-components/Data/DataTable';
 import { Badge } from '../../../../components/UI/Badge';
-import { PatronManagedTable, type PatronTableAction } from '../../../patron/shared/PatronManagedTable';
-import type { LocataireRow } from '../types/locataire.types';
+import { PopoverMenu } from '../../../../components/UI/PopoverMenu';
+import type { PopoverMenuItem } from '../../../../hook-components/UI/PopoverMenu';
+import { formatUserDate } from '../../../../services/userPreferences';
+import type { LocataireRow, TenantKind } from '../types/locataire.types';
 
-const ARCHIVE_ACTION: PatronTableAction<LocataireRow> = { id: 'archive', label: () => 'Archiver', apply: () => ({ status: 'Ancien' }), visible: (row) => row.status !== 'Ancien' };
+const TYPE_LABEL: Record<TenantKind, string> = {
+    individual: 'Personne physique',
+    company: 'Personne morale',
+};
+const TYPE_VARIANT: Record<TenantKind, 'secondary' | 'info'> = {
+    individual: 'secondary',
+    company: 'info',
+};
 
-const columns: DataTableColumn<LocataireRow>[] = [
-    { key: 'name', title: 'Locataire', sortable: true, render: (item) => <div className="organization-property-name"><strong>{item.name}</strong><small>{item.email} · {item.phone}</small></div> },
-    { key: 'property', title: 'Bien / unité', sortable: true }, { key: 'leaseEnd', title: 'Fin du bail', sortable: true },
-    { key: 'balance', title: 'Solde', sortable: true },
-    { key: 'status', title: 'Statut', sortable: true, render: (item) => <Badge variant={item.status === 'Actif' ? 'success' : item.status === 'En attente' ? 'warning' : 'secondary'}>{item.status}</Badge> },
-];
+interface LocatairesTableProps {
+    rows: LocataireRow[];
+    onArchive: (row: LocataireRow) => void;
+}
 
-export function LocatairesTable({ rows }: { rows: LocataireRow[] }) { return <PatronManagedTable rows={rows} columns={columns} title="un locataire" createLabel="Ajouter un locataire" initialSortKey="name" fields={[{ key: 'name', label: 'Nom complet', required: true }, { key: 'email', label: 'E-mail', required: true }, { key: 'phone', label: 'Téléphone' }, { key: 'city', label: 'Ville' }, { key: 'property', label: 'Bien / unité' }, { key: 'leaseEnd', label: 'Fin du bail' }, { key: 'balance', label: 'Solde' }, { key: 'status', label: 'Statut' }]} createRecord={(values) => ({ id: crypto.randomUUID(), name: values.name ?? '', email: values.email ?? '', phone: values.phone ?? '', city: values.city ?? '', property: values.property ?? '', leaseEnd: values.leaseEnd ?? '—', balance: values.balance ?? '0 USD', status: (values.status as LocataireRow['status']) ?? 'En attente' })} />; }
+/**
+ * Table des locataires : une seule action, Archiver (suppression logique
+ * `ARCHIVE_TENANT`). Pas de suppression définitive côté UI : l'historique
+ * comptable des baux doit rester consultable.
+ */
+export function LocatairesTable({ rows, onArchive }: LocatairesTableProps) {
+    const columns: DataTableColumn<LocataireRow>[] = [
+        {
+            key: 'name',
+            title: 'Locataire',
+            sortable: true,
+            render: (row) => <div className="organization-property-name"><strong>{row.name}</strong><small>{row.sublabel}</small></div>,
+        },
+        { key: 'type', title: 'Type', sortable: true, render: (row) => <Badge variant={TYPE_VARIANT[row.type]}>{TYPE_LABEL[row.type]}</Badge> },
+        { key: 'unitReference', title: 'Unité', sortable: true, render: (row) => row.unitReference ?? '—' },
+        { key: 'address', title: 'Adresse', sortable: true },
+        { key: 'leaseEnd', title: 'Fin du bail', sortable: true, render: (row) => (row.leaseEnd ? formatUserDate(row.leaseEnd) : 'Aucun bail actif') },
+        {
+            key: 'actions',
+            title: 'Actions',
+            render: (row) => {
+                const items: PopoverMenuItem[] = [
+                    { id: 'archive', label: 'Archiver', icon: <span aria-hidden="true">🗄</span>, danger: true, onClick: () => onArchive(row) },
+                ];
+
+                return <PopoverMenu placement="bottom" offset={6} items={items} trigger={<span className="organization-row-actions" aria-label={`Actions pour ${row.name}`}><span aria-hidden="true">•••</span></span>} />;
+            },
+        },
+    ];
+
+    return <DataTable columns={columns} data={rows} pageSize={12} initialSortKey="name" />;
+}

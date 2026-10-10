@@ -1,12 +1,56 @@
 import { DataTable } from '../../../../components/Data/DataTable';
 import type { DataTableColumn } from '../../../../hook-components/Data/DataTable';
 import { Badge } from '../../../../components/UI/Badge';
-import { PatronManagedTable, type PatronTableAction } from '../../../patron/shared/PatronManagedTable';
-import type { VitrineListing } from '../types/vitrine.types';
-const variants = { Publiée: 'success', Brouillon: 'secondary', 'À compléter': 'warning' } as const;
-const PUBLISH_ACTION: PatronTableAction<VitrineListing> = { id: 'publish', label: (row) => row.status === 'Publiée' ? 'Dépublier' : 'Publier', apply: (row) => ({ status: row.status === 'Publiée' ? 'Brouillon' : 'Publiée' }), visible: (row) => row.status !== 'À compléter' };
+import { PopoverMenu } from '../../../../components/UI/PopoverMenu';
+import type { PopoverMenuItem } from '../../../../hook-components/UI/PopoverMenu';
+import { formatMoney } from '../../../../../utils/format.utils';
+import type { VitrineRow } from '../types/vitrine.types';
 
-const columns: DataTableColumn<VitrineListing>[] = [
-    { key: 'title', title: 'Annonce', sortable: true }, { key: 'city', title: 'Ville', sortable: true }, { key: 'type', title: 'Type de bien', sortable: true }, { key: 'rent', title: 'Loyer affiché', sortable: true }, { key: 'views', title: 'Vues', sortable: true }, { key: 'status', title: 'Statut', sortable: true, render: (row) => <Badge variant={variants[row.status]}>{row.status}</Badge> },
-];
-export function VitrineTable({ rows }: { rows: VitrineListing[] }) { return <PatronManagedTable rows={rows} columns={columns} title="une annonce" createLabel="Ajouter une annonce" initialSortKey="title" fields={[{ key: 'title', label: 'Titre', required: true }, { key: 'city', label: 'Ville', required: true }, { key: 'type', label: 'Type de bien' }, { key: 'rent', label: 'Loyer affiché (devise incluse)' }, { key: 'views', label: 'Vues', type: 'number' }, { key: 'status', label: 'Statut' }]} createRecord={(values) => ({ id: crypto.randomUUID(), title: values.title ?? '', city: values.city ?? '', type: values.type ?? '', rent: values.rent ?? '', views: Number(values.views) || 0, status: (values.status as VitrineListing['status']) ?? 'Brouillon' })} />; }
+interface VitrineTableProps {
+    rows: VitrineRow[];
+    onTogglePublished: (row: VitrineRow) => void;
+    pendingId: string | null;
+}
+
+/**
+ * Table des annonces vitrine.
+ *
+ * La publication bascule `isPublished` (`PATCH …/publish`). Une unité occupée
+ * par un bail actif ne peut pas être publiée : l'action est désactivée côté
+ * UI, le backend refusant de toute façon en 422.
+ */
+export function VitrineTable({ rows, onTogglePublished, pendingId }: VitrineTableProps) {
+    const columns: DataTableColumn<VitrineRow>[] = [
+        { key: 'title', title: 'Annonce', sortable: true },
+        { key: 'city', title: 'Ville', sortable: true },
+        { key: 'type', title: 'Type de bien', sortable: true, render: (row) => row.type },
+        { key: 'rent', title: 'Loyer affiché', sortable: true, render: (row) => formatMoney(row.rent, row.currency) },
+        {
+            key: 'isPublished',
+            title: 'Statut',
+            sortable: true,
+            render: (row) => <Badge variant={row.isPublished ? 'success' : 'secondary'}>{row.isPublished ? 'Publiée' : 'Brouillon'}</Badge>,
+        },
+        {
+            key: 'actions',
+            title: 'Actions',
+            render: (row) => {
+                const canPublish = row.isPublished || !row.isOccupied;
+                const label = row.isPublished ? 'Dépublier' : 'Publier';
+                const items: PopoverMenuItem[] = [
+                    {
+                        id: 'toggle',
+                        label: row.isOccupied && !row.isPublished ? 'Unité occupée' : label,
+                        icon: <span aria-hidden="true">🌐</span>,
+                        disabled: !canPublish || pendingId === row.id,
+                        onClick: () => onTogglePublished(row),
+                    },
+                ];
+
+                return <PopoverMenu placement="bottom" offset={6} items={items} trigger={<span className="organization-row-actions" aria-label={`Actions pour ${row.title}`}><span aria-hidden="true">•••</span></span>} />;
+            },
+        },
+    ];
+
+    return <DataTable columns={columns} data={rows} pageSize={12} initialSortKey="title" />;
+}
