@@ -21,6 +21,7 @@ import { formatInteger } from '../../../../../utils/format.utils';
 import { canDo } from '../../../shared/permissions';
 import { fieldErrorMap } from '../../../shared/actionErrors';
 import { ModalActions } from '../../../shared/components/ModalActions';
+import { PhotoGallery } from '../../../shared/media/components/PhotoGallery';
 import type { CityItem, ParcelItem } from '../../shared/types/reference.types';
 import type { ParcelPayload } from '../services/patrimoineService';
 
@@ -75,8 +76,6 @@ interface ParcellesTabProps {
     onCreate: (payload: ParcelPayload) => Promise<void>;
     onUpdate: (uuid: string, payload: ParcelPayload) => Promise<void>;
     onDelete: (uuid: string) => Promise<void>;
-    onAddPhotos: (parcelUuid: string, files: File[]) => Promise<void>;
-    onDeletePhoto: (parcelUuid: string, filename: string) => Promise<void>;
     selectedCityId: string | null;
     onCityFilter: (uuid: string | null) => void;
     onOpen: (uuid: string) => void;
@@ -91,7 +90,7 @@ interface ParcellesTabProps {
  * `ParcelRequest`. Latitude/longitude forment une paire indivisible,
  * contrôlée côté client avant l'envoi.
  */
-export function ParcellesTab({ parcels, cities, role, isLoading, error, note, onReload, onCreate, onUpdate, onDelete, onAddPhotos, onDeletePhoto, selectedCityId, onCityFilter, onOpen }: ParcellesTabProps) {
+export function ParcellesTab({ parcels, cities, role, isLoading, error, note, onReload, onCreate, onUpdate, onDelete, selectedCityId, onCityFilter, onOpen }: ParcellesTabProps) {
     const [search, setSearch] = useState('');
     const [modalOpen, setModalOpen] = useState(false);
     const [editTarget, setEditTarget] = useState<ParcelItem | null>(null);
@@ -99,12 +98,10 @@ export function ParcellesTab({ parcels, cities, role, isLoading, error, note, on
     const [formErrors, setFormErrors] = useState<Record<string, string>>({});
     const [submitting, setSubmitting] = useState(false);
     const [deleteTarget, setDeleteTarget] = useState<ParcelItem | null>(null);
+    const [mapTargetId, setMapTargetId] = useState<string | null>(null);
 
     const [photoModalOpen, setPhotoModalOpen] = useState(false);
     const [photoTarget, setPhotoTarget] = useState<ParcelItem | null>(null);
-    const [uploadingPhoto, setUploadingPhoto] = useState(false);
-    const [removingPhotoId, setRemovingPhotoId] = useState<string | null>(null);
-    const [mapTargetId, setMapTargetId] = useState<string | null>(null);
 
     const cityById = new Map(cities.map((city) => [city.id, city]));
     const cityOptions = cities.map((city) => ({ value: city.id, label: city.name }));
@@ -139,32 +136,6 @@ export function ParcellesTab({ parcels, cities, role, isLoading, error, note, on
     const closePhotoModal = () => {
         setPhotoModalOpen(false);
         setPhotoTarget(null);
-    };
-
-    const handlePhotoUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
-        const files = event.target.files;
-        if (!files || !photoTarget) return;
-        setUploadingPhoto(true);
-        try {
-            await onAddPhotos(photoTarget.id, Array.from(files));
-        } catch (cause) {
-            // toast already shown by hook
-        } finally {
-            setUploadingPhoto(false);
-            event.target.value = '';
-        }
-    };
-
-    const handleRemovePhoto = async (filename: string) => {
-        if (!photoTarget) return;
-        setRemovingPhotoId(filename);
-        try {
-            await onDeletePhoto(photoTarget.id, filename);
-        } catch (cause) {
-            // toast already shown by hook
-        } finally {
-            setRemovingPhotoId(null);
-        }
     };
 
     const submit = async (event: FormEvent<HTMLFormElement>) => {
@@ -354,19 +325,14 @@ export function ParcellesTab({ parcels, cities, role, isLoading, error, note, on
                 onClose={closePhotoModal}
                 title={photoTarget ? `Photos de « ${photoTarget.name} »` : 'Gérer les photos'}
                 size="large"
-                footer={<><Button variant="outline" onClick={closePhotoModal} disabled={uploadingPhoto}>Fermer</Button></>}
+                footer={<><Button variant="outline" onClick={closePhotoModal}>Fermer</Button></>}
             >
-                <div className="patrimoine-photo-manager">
-                    <div className="patrimoine-photo-upload">
-                        <label className="patrimoine-photo-dropzone" htmlFor="parcel-photo-upload">
-                            <Input id="parcel-photo-upload" type="file" accept="image/*" multiple onChange={handlePhotoUpload} disabled={uploadingPhoto} />
-                            <span>{uploadingPhoto ? 'Upload…' : 'Cliquez ou glissez des photos ici'}</span>
-                        </label>
-                    </div>
-                    <div className="patrimoine-photo-gallery">
-                        <p className="patrimoine-photo-empty">Aucune photo pour cette parcelle.</p>
-                    </div>
-                </div>
+                <PhotoGallery
+                    entityUuid={photoTarget?.id ?? ''}
+                    entityType="parcel"
+                    mode="multiple"
+                    onChange={() => {}}
+                />
             </Modal>
         </Card>
     );

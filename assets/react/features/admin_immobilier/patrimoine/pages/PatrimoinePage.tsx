@@ -136,7 +136,7 @@ export function PatrimoinePage() {
                 }
 
                 if (activeTabId === 'parcelles') {
-                    return <ParcellesTab parcels={parcels} cities={cities} role={organizationRole} isLoading={isLoading} error={error} note={note} onReload={() => void reload()} onCreate={createParcel} onUpdate={updateParcel} onDelete={deleteParcel} onAddPhotos={addParcelPhotos} onDeletePhoto={deleteParcelPhoto} selectedCityId={selectedCityId} onCityFilter={(id) => goToLevel(id ? 'parcelles' : 'parcelles', id, null, null)} onOpen={(id) => { const parcel = parcels.find((item) => item.id === id); goToLevel('batiments', parcel?.cityId ?? selectedCityId, id, null); }} />;
+                    return <ParcellesTab parcels={parcels} cities={cities} role={organizationRole} isLoading={isLoading} error={error} note={note} onReload={() => void reload()} onCreate={createParcel} onUpdate={updateParcel} onDelete={deleteParcel} selectedCityId={selectedCityId} onCityFilter={(id) => goToLevel(id ? 'parcelles' : 'parcelles', id, null, null)} onOpen={(id) => { const parcel = parcels.find((item) => item.id === id); goToLevel('batiments', parcel?.cityId ?? selectedCityId, id, null); }} />;
                 }
 
                 if (activeTabId === 'batiments') {
