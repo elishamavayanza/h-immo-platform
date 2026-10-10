@@ -1,1 +1,9 @@
+@use '../../../baseVariables/variables' as *;
 @use '../../shared/reports';
+
+/* Libellé de période réelle (le rapport affiche ses bornes backend). */
+.reports-page__period-label {
+    color: $color-text-secondary;
+    font-size: $font-size-xs;
+    white-space: nowrap;
+}

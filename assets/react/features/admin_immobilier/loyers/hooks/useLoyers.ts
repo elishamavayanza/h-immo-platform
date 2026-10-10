@@ -1,5 +1,64 @@
-import { useMemo, useState } from 'react';
-import { LOYERS } from '../services/loyersService';
-import { useAuth } from '../../../../app/providers/AuthProvider';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+
 import { useOrganization } from '../../../../app/providers/OrganizationProvider';
-export function useLoyers() { const [search, setSearch] = useState(''); const [status, setStatus] = useState('all'); const { user } = useAuth(); const { organizationRole } = useOrganization(); const cities = organizationRole === 'admin_ville' ? user?.cities.map((city) => city.name) ?? [] : null; const rows = useMemo(() => LOYERS.filter((row) => (cities === null || cities.includes(row.city)) && (() => { const q = search.trim().toLocaleLowerCase('fr'); return (!q || [row.tenant, row.property, row.period].some((v) => v.toLocaleLowerCase('fr').includes(q))) && (status === 'all' || row.status === status); })()), [search, status, cities]); return { rows, search, setSearch, status, setStatus }; }
+import { ApiError } from '../../../../../services/api/api.types';
+import { fetchLoyers } from '../services/loyersService';
+import type { LoyersData } from '../types/loyer.types';
+
+/**
+ * Chargement des échéances de l'organization active.
+ *
+ * Le filtre de statut est serveur (les valeurs `overdue` sont dérivées côté
+ * backend) : changer de statut relance la requête. La recherche texte, elle,
+ * reste locale sur le jeu chargé.
+ */
+export function useLoyers() {
+    const { currentOrganization } = useOrganization();
+    const organizationUuid = currentOrganization?.uuid ?? null;
+
+    const [data, setData] = useState<LoyersData | null>(null);
+    const [isLoading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
+
+    const [search, setSearch] = useState('');
+    const [status, setStatus] = useState('all');
+
+    const reload = useCallback(async () => {
+        if (!organizationUuid) {
+            setData(null);
+            setLoading(false);
+
+            return;
+        }
+        setLoading(true);
+        setError(null);
+        try {
+            setData(await fetchLoyers(organizationUuid, status));
+        } catch (cause) {
+            setError(cause instanceof ApiError ? cause.message : 'Impossible de charger les échéances de l’organisation.');
+        } finally {
+            setLoading(false);
+        }
+    }, [organizationUuid, status]);
+
+    useEffect(() => { void reload(); }, [reload]);
+
+    const rows = useMemo(() => {
+        const query = search.trim().toLocaleLowerCase('fr');
+        return (data?.rows ?? []).filter((row) =>
+            !query || [row.tenant, row.unitLabel, row.periodLabel].some((value) => value.toLocaleLowerCase('fr').includes(query)),
+        );
+    }, [data, search]);
+
+    return {
+        data,
+        rows,
+        isLoading,
+        error,
+        reload,
+        search,
+        setSearch,
+        status,
+        setStatus,
+    };
+}

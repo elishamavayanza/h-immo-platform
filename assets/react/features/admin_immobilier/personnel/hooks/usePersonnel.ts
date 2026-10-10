@@ -1,32 +1,71 @@
-import { useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 
-import { useAuth } from '../../../../app/providers/AuthProvider';
 import { useOrganization } from '../../../../app/providers/OrganizationProvider';
-import { PERSONNEL } from '../services/personnelService';
+import { ApiError } from '../../../../../services/api/api.types';
+import { fetchPersonnel } from '../services/personnelService';
+import type { PersonnelData } from '../types/personnel.types';
 
+/**
+ * Chargement du personnel de l'organization active.
+ *
+ * Le périmètre (organisations et villes accessibles) est appliqué par le
+ * backend ; la recherche et le filtre de ville restent locaux sur le jeu
+ * chargé.
+ */
 export function usePersonnel() {
+    const { currentOrganization } = useOrganization();
+    const organizationUuid = currentOrganization?.uuid ?? null;
+
+    const [data, setData] = useState<PersonnelData | null>(null);
+    const [isLoading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
+
     const [search, setSearch] = useState('');
     const [city, setCity] = useState('all');
-    const { user } = useAuth();
-    const { organizationRole } = useOrganization();
-    const assignedCities = organizationRole === 'admin_ville'
-        ? user?.cities.map((item) => item.name) ?? []
-        : null;
-    const scopedRows = useMemo(
-        () => PERSONNEL.filter((row) => assignedCities === null || assignedCities.includes(row.city)),
-        [assignedCities],
-    );
+
+    const reload = useCallback(async () => {
+        if (!organizationUuid) {
+            setData(null);
+            setLoading(false);
+
+            return;
+        }
+        setLoading(true);
+        setError(null);
+        try {
+            setData(await fetchPersonnel(organizationUuid));
+        } catch (cause) {
+            setError(cause instanceof ApiError ? cause.message : 'Impossible de charger le personnel de l’organisation.');
+        } finally {
+            setLoading(false);
+        }
+    }, [organizationUuid]);
+
+    useEffect(() => { void reload(); }, [reload]);
+
     const availableCities = useMemo(
-        () => [...new Set(scopedRows.map((row) => row.city))],
-        [scopedRows],
+        () => [...new Set((data?.rows ?? []).map((row) => row.city).filter((value) => value !== '—'))],
+        [data],
     );
+
     const rows = useMemo(() => {
         const query = search.trim().toLocaleLowerCase('fr');
-        return scopedRows.filter((row) =>
+        return (data?.rows ?? []).filter((row) =>
             (!query || [row.name, row.role, row.city].some((value) => value.toLocaleLowerCase('fr').includes(query)))
             && (city === 'all' || row.city === city),
         );
-    }, [scopedRows, search, city]);
+    }, [data, search, city]);
 
-    return { rows, availableCities, search, setSearch, city, setCity };
+    return {
+        data,
+        rows,
+        availableCities,
+        isLoading,
+        error,
+        reload,
+        search,
+        setSearch,
+        city,
+        setCity,
+    };
 }

@@ -1,9 +1,25 @@
 import { DataTable } from '../../../../components/Data/DataTable';
 import type { DataTableColumn } from '../../../../hook-components/Data/DataTable';
-import { Badge } from '../../../../components/UI/Badge';
-import { PatronManagedTable } from '../../../patron/shared/PatronManagedTable';
+import { formatUserDate } from '../../../../services/userPreferences';
+import { formatMoney } from '../../../../../utils/format.utils';
 import type { DepenseRow } from '../types/depense.types';
-const columns: DataTableColumn<DepenseRow>[] = [
-    { key: 'date', title: 'Date', sortable: true }, { key: 'category', title: 'Catégorie', sortable: true }, { key: 'property', title: 'Bien concerné', sortable: true }, { key: 'description', title: 'Description', sortable: true }, { key: 'amount', title: 'Montant', sortable: true }, { key: 'status', title: 'Statut', sortable: true, render: (row) => <Badge variant={row.status === 'Validée' ? 'success' : 'warning'}>{row.status}</Badge> },
-];
-export function DepensesTable({ rows }: { rows: DepenseRow[] }) { return <PatronManagedTable rows={rows} columns={columns} title="une dépense" createLabel="Ajouter une dépense" initialSortKey="date" fields={[{ key: 'date', label: 'Date', required: true }, { key: 'category', label: 'Catégorie', required: true }, { key: 'property', label: 'Bien concerné' }, { key: 'description', label: 'Description', required: true }, { key: 'amount', label: 'Montant (devise incluse)', required: true }, { key: 'status', label: 'Statut' }]} createRecord={(values) => ({ id: crypto.randomUUID(), date: values.date ?? '', city: rows[0]?.city ?? '', category: values.category ?? '', property: values.property ?? '', description: values.description ?? '', amount: values.amount ?? '', status: (values.status as DepenseRow['status']) ?? 'À valider' })}  />; }
+
+/**
+ * Table des dépenses : lecture seule.
+ *
+ * La colonne « statut » de la maquette est supprimée : le backend n'expose
+ * aucun statut de dépense (une correction se fait par contre-écriture). La
+ * création d'une dépense n'est pas branchée dans ce lot.
+ */
+export function DepensesTable({ rows }: { rows: DepenseRow[] }) {
+    const columns: DataTableColumn<DepenseRow>[] = [
+        { key: 'date', title: 'Date', sortable: true, render: (row) => formatUserDate(row.date) },
+        { key: 'category', title: 'Catégorie', sortable: true },
+        { key: 'property', title: 'Bien concerné', sortable: true, render: (row) => row.property },
+        { key: 'description', title: 'Description', sortable: true },
+        { key: 'city', title: 'Ville', sortable: true },
+        { key: 'amount', title: 'Montant', sortable: true, render: (row) => formatMoney(row.amount, row.currency) },
+    ];
+
+    return <DataTable columns={columns} data={rows} pageSize={12} initialSortKey="date" initialSortDirection="desc" />;
+}
