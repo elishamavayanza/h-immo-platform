@@ -608,6 +608,72 @@ check(
 );
 
 // ---------------------------------------------------------------------
+section('Villes : CRUD, unicité du code, isolation inter-organisation');
+
+$newCityCode = 'CIT' . strtoupper(substr($suffix, 0, 8));
+
+[$status, $payload, $raw] = $request('POST', '/api/v1/property/cities', [
+    'organizationUuid' => $uuidOrgA,
+    'name' => 'Ville Créée',
+    'code' => $newCityCode,
+    'province' => 'Nord-Kivu',
+    'country' => 'RDC',
+], $token);
+$uuidCreatedCity = is_array($payload) ? ($payload['data']['id'] ?? null) : null;
+check(
+    'POST /api/v1/property/cities : ville créée (200 — D14 : autoInitFlush écrase le 201)',
+    $status === 200 && is_string($uuidCreatedCity),
+    "obtenu {$status} : " . substr($raw, 0, 300)
+);
+
+[$status, $payload] = $request('POST', '/api/v1/property/cities', [
+    'organizationUuid' => $uuidOrgA,
+    'name' => 'Doublon',
+    'code' => $newCityCode,
+], $token);
+check(
+    'POST /api/v1/property/cities : code déjà utilisé refusé (422 — D14 écrase le 409)',
+    $status === 422 && isset($payload['errors']['code']),
+    "obtenu {$status} : " . substr(json_encode($payload), 0, 300)
+);
+
+[$status, $payload] = $request('POST', '/api/v1/property/cities', [
+    'organizationUuid' => $uuidOrgB,
+    'name' => 'Intrusion',
+    'code' => 'INTRUS' . strtoupper(substr($suffix, 0, 4)),
+], $token);
+check(
+    'POST /api/v1/property/cities dans une autre organization : 403',
+    $status === 403,
+    "obtenu {$status}"
+);
+
+if (is_string($uuidCreatedCity)) {
+    [$status, $payload] = $request('PUT', '/api/v1/property/cities/' . $uuidCreatedCity, [
+        'name' => 'Ville Modifiée',
+        'code' => $newCityCode,
+        'status' => 'inactive',
+    ], $token);
+    check(
+        'PUT /api/v1/property/cities/{uuid} : 200 et nom modifié',
+        $status === 200 && (($payload['data']['name'] ?? null) === 'Ville Modifiée'),
+        "obtenu {$status}"
+    );
+
+    [$status, $payload] = $request('DELETE', '/api/v1/property/cities/' . $uuidCreatedCity, null, $token);
+    check('DELETE /api/v1/property/cities/{uuid} : 200', $status === 200, "obtenu {$status}");
+}
+
+[$status, $payload] = $request('PUT', '/api/v1/property/cities/' . $uuidCityB, [
+    'name' => 'Piratage',
+    'code' => 'HACK' . strtoupper(substr($suffix, 0, 4)),
+], $token);
+check('PUT ville d\'une autre organization : 403', $status === 403, "obtenu {$status}");
+
+[$status, $payload] = $request('DELETE', '/api/v1/property/cities/' . $uuidCityB, null, $token);
+check('DELETE ville d\'une autre organization : 403', $status === 403, "obtenu {$status}");
+
+// ---------------------------------------------------------------------
 section('Annulation de la transaction');
 
 $rollback();

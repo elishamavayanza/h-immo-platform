@@ -1,12 +1,21 @@
 import { Button } from '../../../../components/UI/Button';
 import { EmptyState } from '../../../../components/Data/EmptyState';
 import { Spinner } from '../../../../components/UI/Spinner';
+import { useOrganization } from '../../../../app/providers/OrganizationProvider';
 import { useReports } from '../hooks/useReports';
 import { ReportsOverview } from '../components/ReportsOverview';
+import { canDo } from '../../../shared/permissions';
 import '../../../../../styles/pages/admin_immobilier/reports/_reports.scss';
 
 export function ReportsPage() {
+    const { organizationRole } = useOrganization();
     const { data, isLoading, error, reload } = useReports();
+
+    const handleExportPdf = () => {
+        const url = new URL(window.location.href);
+        url.searchParams.set('format', 'pdf');
+        window.open(url.toString(), '_blank');
+    };
 
     if (isLoading) {
         return <div className="reports-loading" aria-busy="true"><Spinner size="large" /><span>Préparation du rapport…</span></div>;
@@ -30,6 +39,11 @@ export function ReportsPage() {
                 </div>
                 <div className="reports-page__controls">
                     <span className="reports-page__period-label">Période : {data.periodCovered.replace(' to ', ' → ')}</span>
+                    {canDo(organizationRole, 'export_report') && (
+                        <Button variant="outline" onClick={handleExportPdf}>
+                            Exporter en PDF
+                        </Button>
+                    )}
                 </div>
             </header>
             <ReportsOverview data={data} />

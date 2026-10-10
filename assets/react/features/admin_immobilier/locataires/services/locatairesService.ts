@@ -13,7 +13,7 @@
 import { apiClient } from '../../../../../services/api/client';
 import type { Feedback } from '../../../../../services/api/api.types';
 import { REFERENCE_LIMIT, fetchLeases, fetchTenants, fetchUnits, tenantLabel } from '../../shared/services/referenceService';
-import type { LeaseItem } from '../../shared/types/reference.types';
+import type { LeaseItem, TenantItem } from '../../shared/types/reference.types';
 import type { LocataireRow, LocatairesData } from '../types/locataire.types';
 
 export async function fetchLocataires(organizationUuid: string): Promise<LocatairesData> {
@@ -59,6 +59,62 @@ export async function fetchLocataires(organizationUuid: string): Promise<Locatai
         : null;
 
     return { rows, total: tenants.total, activeLeases: activeLeaseByTenant.size, note };
+}
+
+/** Payload pour créer un locataire (personne physique ou morale). */
+export interface CreateTenantPayload {
+    organizationUuid: string;
+    type: 'individual' | 'company';
+    firstName?: string;
+    lastName?: string;
+    companyName?: string;
+    phone: string;
+    email?: string;
+    address?: string;
+    notes?: string;
+}
+
+/** Payload pour modifier un locataire. */
+export interface UpdateTenantPayload {
+    type: 'individual' | 'company';
+    firstName?: string;
+    lastName?: string;
+    companyName?: string;
+    phone: string;
+    email?: string;
+    address?: string;
+    notes?: string;
+}
+
+/** `POST /api/v1/tenants` — créer un locataire. */
+export async function createTenant(payload: CreateTenantPayload): Promise<TenantItem> {
+    const { data } = await apiClient.post<Feedback<TenantItem>>('/v1/tenants', payload);
+    return data.data;
+}
+
+/** `PUT /api/v1/tenants/{uuid}` — modifier un locataire. */
+export async function updateTenant(uuid: string, payload: UpdateTenantPayload): Promise<TenantItem> {
+    const { data } = await apiClient.put<Feedback<TenantItem>>(`/v1/tenants/${uuid}`, payload);
+    return data.data;
+}
+
+/** Payload pour créer un bail. */
+export interface CreateLeasePayload {
+    tenantUuid: string;
+    unitUuid: string;
+    reference: string;
+    startDate: string;
+    endDate?: string;
+    monthlyRent: string;
+    depositAmount?: string;
+    currency: 'USD' | 'CDF';
+    notes?: string;
+}
+
+/** `POST /api/v1/leases` — créer un bail (état DRAFT). */
+export async function createLease(payload: CreateLeasePayload): Promise<unknown> {
+    const { data } = await apiClient.post<Feedback<unknown>>('/v1/leases', payload);
+    return data.data;
 }
 
 /** Archive (suppression logique) un locataire ; lève une `ApiError` en cas d'échec. */

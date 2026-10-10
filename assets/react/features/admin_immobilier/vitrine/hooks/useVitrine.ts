@@ -3,15 +3,36 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useToast } from '../../../../app/layout/MainLayout/contexts/ToastContext';
 import { useOrganization } from '../../../../app/providers/OrganizationProvider';
 import { ApiError } from '../../../../../services/api/api.types';
-import { fetchVitrine, setUnitPublished } from '../services/vitrineService';
+import {
+    addUnitPhoto,
+    fetchVitrine,
+    removeUnitPhoto,
+    setUnitPublished,
+    updateUnit,
+    type UpdateUnitPayload,
+} from '../services/vitrineService';
 import type { VitrineData, VitrineRow } from '../types/vitrine.types';
 
 function actionErrorMessage(cause: unknown): string {
     return cause instanceof ApiError ? cause.message : 'Une erreur inattendue est survenue. Réessayez.';
 }
 
+function isValidationError(cause: unknown): boolean {
+    return cause instanceof ApiError && cause.status === 422;
+}
+
+const runAction = async (push: ReturnType<typeof useToast>['push'], successMessage: string, action: () => Promise<unknown>): Promise<void> => {
+    try {
+        await action();
+        push('success', successMessage);
+    } catch (cause) {
+        if (!isValidationError(cause)) push('error', actionErrorMessage(cause));
+        throw cause;
+    }
+};
+
 /**
- * Chargement des annonces de l'organization active + bascule de publication.
+ * Chargement des annonces de l'organization active + actions d'écriture.
  *
  * `PATCH …/publish` renvoie 422 si un bail actif occupe l'unité : le message
  * du backend est remonté tel quel, la liste étant rechargée pour refléter
@@ -53,14 +74,29 @@ export function useVitrine() {
     const togglePublished = useCallback(async (row: VitrineRow) => {
         setPendingId(row.id);
         try {
-            push('success', await setUnitPublished(row.id, !row.isPublished));
+            await runAction(push, row.isPublished ? 'Annonce retirée.' : 'Annonce publiée.', () => setUnitPublished(row.id, !row.isPublished));
             await reload();
         } catch (cause) {
-            push('error', actionErrorMessage(cause));
+            // toast already shown by runAction
         } finally {
             setPendingId(null);
         }
-    }, [reload, push]);
+    }, [push, reload]);
+
+    const updateUnitAction = useCallback(async (unitUuid: string, payload: UpdateUnitPayload): Promise<void> => {
+        await runAction(push, 'Annonce mise à jour.', () => updateUnit(unitUuid, payload));
+        await reload();
+    }, [push, reload]);
+
+    const addPhotoAction = useCallback(async (unitUuid: string, file: File): Promise<void> => {
+        await runAction(push, 'Photo ajoutée.', () => addUnitPhoto(unitUuid, file));
+        await reload();
+    }, [push, reload]);
+
+    const removePhotoAction = useCallback(async (unitUuid: string, photoUuid: string): Promise<void> => {
+        await runAction(push, 'Photo retirée.', () => removeUnitPhoto(unitUuid, photoUuid));
+        await reload();
+    }, [push, reload]);
 
     const rows = useMemo(() => {
         const query = search.trim().toLocaleLowerCase('fr');
@@ -84,5 +120,8 @@ export function useVitrine() {
         setStatus,
         pendingId,
         togglePublished,
+        updateUnit: updateUnitAction,
+        addPhoto: addPhotoAction,
+        removePhoto: removePhotoAction,
     };
 }

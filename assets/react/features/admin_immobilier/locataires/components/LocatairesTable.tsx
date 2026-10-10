@@ -4,6 +4,8 @@ import { Badge } from '../../../../components/UI/Badge';
 import { PopoverMenu } from '../../../../components/UI/PopoverMenu';
 import type { PopoverMenuItem } from '../../../../hook-components/UI/PopoverMenu';
 import { formatUserDate } from '../../../../services/userPreferences';
+import { canDo } from '../../../shared/permissions';
+import type { OrganizationRole } from '../../../../../services/api/api.types';
 import type { LocataireRow, TenantKind } from '../types/locataire.types';
 
 const TYPE_LABEL: Record<TenantKind, string> = {
@@ -17,15 +19,17 @@ const TYPE_VARIANT: Record<TenantKind, 'secondary' | 'info'> = {
 
 interface LocatairesTableProps {
     rows: LocataireRow[];
+    role: OrganizationRole | null;
+    onEdit: (row: LocataireRow) => void;
     onArchive: (row: LocataireRow) => void;
+    onNewLease: (row: LocataireRow) => void;
 }
 
 /**
- * Table des locataires : une seule action, Archiver (suppression logique
- * `ARCHIVE_TENANT`). Pas de suppression définitive côté UI : l'historique
- * comptable des baux doit rester consultable.
+ * Table des locataires : actions Modifier, Archiver, Nouveau bail.
+ * Archiver = suppression logique (`ARCHIVE_TENANT`). Pas de suppression définitive.
  */
-export function LocatairesTable({ rows, onArchive }: LocatairesTableProps) {
+export function LocatairesTable({ rows, role, onEdit, onArchive, onNewLease }: LocatairesTableProps) {
     const columns: DataTableColumn<LocataireRow>[] = [
         {
             key: 'name',
@@ -42,8 +46,18 @@ export function LocatairesTable({ rows, onArchive }: LocatairesTableProps) {
             title: 'Actions',
             render: (row) => {
                 const items: PopoverMenuItem[] = [
-                    { id: 'archive', label: 'Archiver', icon: <span aria-hidden="true">🗄</span>, danger: true, onClick: () => onArchive(row) },
+                    ...(canDo(role, 'update_tenant')
+                        ? [{ id: 'edit', label: 'Modifier', icon: <span aria-hidden="true">✎</span>, onClick: () => onEdit(row) }]
+                        : []),
+                    ...(canDo(role, 'create_lease')
+                        ? [{ id: 'new-lease', label: 'Nouveau bail', icon: <span aria-hidden="true">📄</span>, onClick: () => onNewLease(row) }]
+                        : []),
+                    ...(canDo(role, 'archive_tenant')
+                        ? [{ id: 'archive', label: 'Archiver', icon: <span aria-hidden="true">🗄</span>, danger: true, onClick: () => onArchive(row) }]
+                        : []),
                 ];
+
+                if (items.length === 0) return '—';
 
                 return <PopoverMenu placement="bottom" offset={6} items={items} trigger={<span className="organization-row-actions" aria-label={`Actions pour ${row.name}`}><span aria-hidden="true">•••</span></span>} />;
             },

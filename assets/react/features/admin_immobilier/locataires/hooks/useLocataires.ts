@@ -3,21 +3,38 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useToast } from '../../../../app/layout/MainLayout/contexts/ToastContext';
 import { useOrganization } from '../../../../app/providers/OrganizationProvider';
 import { ApiError } from '../../../../../services/api/api.types';
-import { archiveTenant, fetchLocataires } from '../services/locatairesService';
+import {
+    archiveTenant,
+    createTenant,
+    fetchLocataires,
+    updateTenant,
+    type CreateTenantPayload,
+    type UpdateTenantPayload,
+} from '../services/locatairesService';
+import { createLease, type CreateLeasePayload } from '../services/locatairesService';
 import type { LocataireRow, LocatairesData } from '../types/locataire.types';
 
 function actionErrorMessage(cause: unknown): string {
     return cause instanceof ApiError ? cause.message : 'Une erreur inattendue est survenue. Réessayez.';
 }
 
+function isValidationError(cause: unknown): boolean {
+    return cause instanceof ApiError && cause.status === 422;
+}
+
+const runAction = async (push: ReturnType<typeof useToast>['push'], successMessage: string, action: () => Promise<unknown>): Promise<void> => {
+    try {
+        await action();
+        push('success', successMessage);
+    } catch (cause) {
+        if (!isValidationError(cause)) push('error', actionErrorMessage(cause));
+        throw cause;
+    }
+};
+
 /**
  * Chargement des locataires de l'organization active + filtrage local
- * (recherche, type) sur le jeu chargé, et archivage d'un locataire.
- *
- * L'archivage passe par `PATCH …/archive` (soft delete côté backend) : après
- * succès on recharge la liste, le locataire archivé disparaissant de la
- * requête serveur (`deletedAt IS NULL`). En cas d'échec (409 déjà archivé,
- * 403, 404), le message de l'API est remonté tel quel au toast.
+ * (recherche, type) sur le jeu chargé, et archivage/création/modification d'un locataire.
  */
 export function useLocataires() {
     const { currentOrganization } = useOrganization();
@@ -69,6 +86,21 @@ export function useLocataires() {
         }
     }, [pending, reload, push]);
 
+    const createTenantAction = useCallback(async (payload: CreateTenantPayload): Promise<void> => {
+        await runAction(push, 'Locataire créé.', () => createTenant(payload));
+        await reload();
+    }, [push, reload]);
+
+    const updateTenantAction = useCallback(async (uuid: string, payload: UpdateTenantPayload): Promise<void> => {
+        await runAction(push, 'Locataire mis à jour.', () => updateTenant(uuid, payload));
+        await reload();
+    }, [push, reload]);
+
+    const createLeaseAction = useCallback(async (payload: CreateLeasePayload): Promise<void> => {
+        await runAction(push, 'Bail créé.', () => createLease(payload));
+        await reload();
+    }, [push, reload]);
+
     const rows = useMemo(() => {
         const query = search.trim().toLocaleLowerCase('fr');
         return (data?.rows ?? []).filter((row) =>
@@ -92,5 +124,8 @@ export function useLocataires() {
         cancelArchive: () => setPending(null),
         confirmArchive: archive,
         isArchiving,
+        createTenant: createTenantAction,
+        updateTenant: updateTenantAction,
+        createLease: createLeaseAction,
     };
 }

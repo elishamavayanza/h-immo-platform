@@ -6,7 +6,13 @@
  * (villes/parcelles/immeubles/unités) et les travailleurs, `ExpenseResponse`
  * n'exposant que des UUID. Le libellé « Bien concerné » descend au niveau le
  * plus précis renseigné (unité → immeuble → parcelle → ville).
+ *
+ * Écriture : créer une dépense (`POST /v1/expenses`), modifier une dépense
+ * (`PUT /v1/expenses/{uuid}`), annuler une dépense
+ * (`POST /v1/expenses/{uuid}/cancel` — contre-écriture).
  */
+import { apiClient } from '../../../../../services/api/client';
+import type { Feedback } from '../../../../../services/api/api.types';
 import { REFERENCE_LIMIT, fetchExpenses, fetchPropertyCatalog, fetchWorkers } from '../../shared/services/referenceService';
 import type { BuildingItem, CityItem, ExpenseItem, ParcelItem, UnitItem, WorkerItem } from '../../shared/types/reference.types';
 import type { DepenseRow, DepensesData } from '../types/depense.types';
@@ -94,4 +100,70 @@ export async function fetchDepenses(organizationUuid: string): Promise<DepensesD
         : null;
 
     return { rows, total: expenses.total, note };
+}
+
+export const CATEGORY_OPTIONS = Object.entries(CATEGORY_LABEL).map(([value, label]) => ({ value, label }));
+
+export const CURRENCY_OPTIONS = [
+    { value: 'USD', label: 'USD' },
+    { value: 'CDF', label: 'CDF' },
+];
+
+export const EXPENSE_METHOD_OPTIONS = [
+    { value: 'cash', label: 'Espèces' },
+    { value: 'bank_transfer', label: 'Virement bancaire' },
+    { value: 'mobile_money', label: 'Mobile Money' },
+    { value: 'check', label: 'Chèque' },
+    { value: 'other', label: 'Autre' },
+];
+
+/** Payload pour créer une dépense. */
+export interface CreateExpensePayload {
+    cityUuid: string;
+    category: string;
+    amount: string;
+    currency: 'USD' | 'CDF';
+    expenseDate: string;
+    method?: string;
+    supplier?: string;
+    reference?: string;
+    notes?: string;
+    parcelUuid?: string;
+    buildingUuid?: string;
+    unitUuid?: string;
+    workerUuid?: string;
+}
+
+/** `POST /api/v1/expenses` — créer une dépense. */
+export async function createExpense(payload: CreateExpensePayload): Promise<unknown> {
+    const { data } = await apiClient.post<Feedback<unknown>>('/v1/expenses', payload);
+    return data.data;
+}
+
+/** Payload pour modifier une dépense. */
+export interface UpdateExpensePayload {
+    category: string;
+    amount: string;
+    currency: 'USD' | 'CDF';
+    expenseDate: string;
+    method?: string;
+    supplier?: string;
+    reference?: string;
+    notes?: string;
+    parcelUuid?: string;
+    buildingUuid?: string;
+    unitUuid?: string;
+    workerUuid?: string;
+}
+
+/** `PUT /api/v1/expenses/{uuid}` — modifier une dépense. */
+export async function updateExpense(expenseUuid: string, payload: UpdateExpensePayload): Promise<unknown> {
+    const { data } = await apiClient.put<Feedback<unknown>>(`/v1/expenses/${expenseUuid}`, payload);
+    return data.data;
+}
+
+/** `POST /api/v1/expenses/{uuid}/cancel` — annuler une dépense (contre-écriture). */
+export async function cancelExpense(expenseUuid: string, reason: string): Promise<string> {
+    const { data } = await apiClient.post<Feedback<unknown>>(`/v1/expenses/${expenseUuid}/cancel`, { reason });
+    return data.flushDescription ?? 'La dépense a été annulée.';
 }
