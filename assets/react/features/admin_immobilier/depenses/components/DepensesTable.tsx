@@ -3,6 +3,7 @@ import type { DataTableColumn } from '../../../../hook-components/Data/DataTable
 import { Badge } from '../../../../components/UI/Badge';
 import { PopoverMenu } from '../../../../components/UI/PopoverMenu';
 import type { PopoverMenuItem } from '../../../../hook-components/UI/PopoverMenu';
+import { Icon } from '../../../../components/UI/Icon/Icon';
 import { formatUserDate } from '../../../../services/userPreferences';
 import { formatMoney } from '../../../../../utils/format.utils';
 import { canDo } from '../../../shared/permissions';
@@ -27,7 +28,7 @@ export function DepensesTable({ rows, role, onEdit, onCancel }: { rows: DepenseR
             render: (row) => {
                 const items: PopoverMenuItem[] = [
                     ...(canDo(role, 'update_expense')
-                        ? [{ id: 'edit', label: 'Modifier', icon: <span aria-hidden="true">✎</span>, onClick: () => onEdit(row) }]
+                        ? [{ id: 'edit', label: 'Modifier', icon: <Icon name="edit" />, onClick: () => onEdit(row) }]
                         : []),
                     ...(canDo(role, 'delete_expense')
                         ? [{ id: 'cancel', label: 'Annuler', icon: <span aria-hidden="true">↩</span>, danger: true, onClick: () => onCancel(row) }]
@@ -36,7 +37,7 @@ export function DepensesTable({ rows, role, onEdit, onCancel }: { rows: DepenseR
 
                 if (items.length === 0) return '—';
 
-                return <PopoverMenu placement="bottom" offset={6} items={items} trigger={<span className="organization-row-actions" aria-label={`Actions pour ${row.description}`}><span aria-hidden="true">•••</span></span>} />;
+                return <PopoverMenu placement="bottom" offset={6} items={items} trigger={<span className="organization-row-actions" aria-label={`Actions pour ${row.description}`}><Icon name="more" /></span>} />;
             },
         },
     ];

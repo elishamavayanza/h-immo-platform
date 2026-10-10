@@ -1,4 +1,5 @@
 import { useState, type FormEvent } from 'react';
+import { useSearchParams } from 'react-router-dom';
 
 import { OrganizationSummary } from '../../../shared/components/OrganizationSummary';
 import { Card } from '../../../../components/UI/Card';
@@ -54,13 +55,17 @@ function tenantToForm(row: LocataireRow): TenantForm {
 }
 
 export function LocatairesPage() {
-    const { organizationRole } = useOrganization();
+    const [searchParams] = useSearchParams();
+    const parcelUuid = searchParams.get('parcelUuid');
+    const buildingUuid = searchParams.get('buildingUuid');
+    const { organizationRole, currentOrganization } = useOrganization();
     const {
-        data, rows, isLoading, error, reload,
+        data, rows: allRows, isLoading, error, reload,
         search, setSearch, type, setType,
         pending, requestArchive, cancelArchive, confirmArchive, isArchiving,
-        createTenant, updateTenant, createLease,
+        createTenant, updateTenant, createLease, activateLease,
     } = useLocataires();
+    const rows = allRows.filter((row) => (!parcelUuid || row.parcelId === parcelUuid) && (!buildingUuid || row.buildingId === buildingUuid));
 
     const [tenantModalOpen, setTenantModalOpen] = useState(false);
     const [editTarget, setEditTarget] = useState<LocataireRow | null>(null);
@@ -70,6 +75,7 @@ export function LocatairesPage() {
 
     const [leaseModalOpen, setLeaseModalOpen] = useState(false);
     const [leaseTarget, setLeaseTarget] = useState<LocataireRow | null>(null);
+    const [leaseToActivate, setLeaseToActivate] = useState<LocataireRow | null>(null);
     const [leaseForm, setLeaseForm] = useState({
         unitUuid: '',
         reference: '',
@@ -123,7 +129,8 @@ export function LocatairesPage() {
             if (editTarget) {
                 await updateTenant(editTarget.id, payload);
             } else {
-                await createTenant({ ...payload, organizationUuid: '' });
+                if (!currentOrganization?.uuid) throw new Error('Aucune organisation active.');
+                await createTenant({ ...payload, organizationUuid: currentOrganization.uuid });
             }
             closeTenantModal();
         } catch (cause) {
@@ -135,7 +142,9 @@ export function LocatairesPage() {
 
     const openNewLease = (target: LocataireRow) => {
         setLeaseTarget(target);
-        setLeaseForm({ unitUuid: '', reference: '', startDate: '', endDate: '', monthlyRent: '', depositAmount: '', currency: 'USD', notes: '' });
+        const now = new Date();
+        const startDate = new Date(now.getTime() - now.getTimezoneOffset() * 60_000).toISOString().slice(0, 10);
+        setLeaseForm({ unitUuid: '', reference: '', startDate, endDate: '', monthlyRent: '', depositAmount: '', currency: 'USD', notes: '' });
         setLeaseFormErrors({});
         setLeaseModalOpen(true);
     };
@@ -173,7 +182,7 @@ export function LocatairesPage() {
         }
     };
 
-    let body = <LocatairesTable rows={rows} role={organizationRole} onEdit={openEdit} onArchive={requestArchive} onNewLease={openNewLease} />;
+    let body = <LocatairesTable rows={rows} role={organizationRole} onEdit={openEdit} onArchive={requestArchive} onNewLease={openNewLease} onActivateLease={setLeaseToActivate} />;
     if (isLoading) {
         body = <EmptyState icon={<Spinner size="large" />} title="Chargement des locataires…" description="Récupération des fiches et de leurs baux en cours." />;
     } else if (error) {
@@ -195,6 +204,15 @@ export function LocatairesPage() {
             title="Archiver ce locataire ?"
             message={`${pending?.name ?? 'Ce locataire'} sera retiré des listes. Ses baux et son historique restent conservés.`}
             confirmLabel={isArchiving ? 'Archivage…' : 'Archiver'}
+            cancelLabel="Annuler"
+        />
+        <ConfirmDialog
+            isOpen={leaseToActivate !== null}
+            onClose={() => setLeaseToActivate(null)}
+            onConfirm={() => { const uuid = leaseToActivate?.leaseUuid; setLeaseToActivate(null); if (uuid) void activateLease(uuid); }}
+            title="Activer ce bail ?"
+            message={`${leaseToActivate?.name ?? 'Ce locataire'} pourra être facturé selon les conditions du bail.`}
+            confirmLabel="Activer le bail"
             cancelLabel="Annuler"
         />
         <Modal
@@ -247,7 +265,7 @@ export function LocatairesPage() {
             <form id="lease-form" className="organization-management-form" onSubmit={submitLease}>
                 <p className="organization-management-form__hint">Création d'un bail à l'état <strong>Brouillon (DRAFT)</strong>. Il devra être activé pour générer les échéances.</p>
                 <FormField label="Unité" htmlFor="lease-unit" required error={leaseFormErrors.unitUuid}>
-                    <Select id="lease-unit" value={leaseForm.unitUuid} onChange={(event) => setLeaseForm((current) => ({ ...current, unitUuid: event.target.value }))} options={[]} placeholder="Sélectionner une unité disponible" />
+                    <Select id="lease-unit" value={leaseForm.unitUuid} onChange={(event) => setLeaseForm((current) => ({ ...current, unitUuid: event.target.value }))} options={(data?.units ?? []).map((unit) => ({ value: unit.id, label: `${data?.buildings.find((building) => building.id === unit.buildingId)?.name ?? 'Bâtiment'} · ${unit.reference} · ${unit.monthlyRent} ${unit.currency}` }))} placeholder="Sélectionner une unité" required />
                 </FormField>
                 <FormField label="Référence du bail" htmlFor="lease-reference" required error={leaseFormErrors.reference}>
                     <Input id="lease-reference" value={leaseForm.reference} onChange={(event) => setLeaseForm((current) => ({ ...current, reference: event.target.value }))} placeholder="Ex. : LEASE-2026-0042" required fullWidth maxLength={50} />

@@ -13,7 +13,7 @@ import { Textarea } from '../../../../components/Forms/Textarea';
 import { FormField } from '../../../../components/Forms/FormField';
 import { Modal } from '../../../../components/UI/Modal';
 import { ConfirmDialog } from '../../../../components/UI/ConfirmDialog';
-import { Badge } from '../../../../components/UI/Badge';
+import { Icon } from '../../../../components/UI/Icon/Icon';
 import { PopoverMenu } from '../../../../components/UI/PopoverMenu';
 import type { PopoverMenuItem } from '../../../../hook-components/UI/PopoverMenu';
 import type { OrganizationRole } from '../../../../../services/api/api.types';
@@ -38,6 +38,16 @@ interface ParcelForm {
 }
 
 const EMPTY_PARCEL_FORM: ParcelForm = { cityUuid: '', reference: '', name: '', address: '', area: '', titleNumber: '', quarter: '', latitude: '', longitude: '', description: '' };
+
+function parcelCoordinates(parcel: ParcelItem): { latitude: number; longitude: number } | null {
+    if (!parcel.latitude || !parcel.longitude) return null;
+    const latitude = Number(parcel.latitude);
+    const longitude = Number(parcel.longitude);
+    return Number.isFinite(latitude) && Number.isFinite(longitude)
+        && latitude >= -90 && latitude <= 90 && longitude >= -180 && longitude <= 180
+        ? { latitude, longitude }
+        : null;
+}
 
 function parcelToForm(parcel: ParcelItem): ParcelForm {
     return {
@@ -67,6 +77,9 @@ interface ParcellesTabProps {
     onDelete: (uuid: string) => Promise<void>;
     onAddPhotos: (parcelUuid: string, files: File[]) => Promise<void>;
     onDeletePhoto: (parcelUuid: string, filename: string) => Promise<void>;
+    selectedCityId: string | null;
+    onCityFilter: (uuid: string | null) => void;
+    onOpen: (uuid: string) => void;
 }
 
 /**
@@ -78,7 +91,7 @@ interface ParcellesTabProps {
  * `ParcelRequest`. Latitude/longitude forment une paire indivisible,
  * contrôlée côté client avant l'envoi.
  */
-export function ParcellesTab({ parcels, cities, role, isLoading, error, note, onReload, onCreate, onUpdate, onDelete, onAddPhotos, onDeletePhoto }: ParcellesTabProps) {
+export function ParcellesTab({ parcels, cities, role, isLoading, error, note, onReload, onCreate, onUpdate, onDelete, onAddPhotos, onDeletePhoto, selectedCityId, onCityFilter, onOpen }: ParcellesTabProps) {
     const [search, setSearch] = useState('');
     const [modalOpen, setModalOpen] = useState(false);
     const [editTarget, setEditTarget] = useState<ParcelItem | null>(null);
@@ -91,17 +104,18 @@ export function ParcellesTab({ parcels, cities, role, isLoading, error, note, on
     const [photoTarget, setPhotoTarget] = useState<ParcelItem | null>(null);
     const [uploadingPhoto, setUploadingPhoto] = useState(false);
     const [removingPhotoId, setRemovingPhotoId] = useState<string | null>(null);
+    const [mapTargetId, setMapTargetId] = useState<string | null>(null);
 
     const cityById = new Map(cities.map((city) => [city.id, city]));
     const cityOptions = cities.map((city) => ({ value: city.id, label: city.name }));
 
     const filtered = parcels.filter((parcel) => {
         const query = search.trim().toLocaleLowerCase('fr');
-        return !query || [parcel.name, parcel.reference, parcel.address, cityById.get(parcel.cityId)?.name ?? ''].some((value) => value.toLocaleLowerCase('fr').includes(query));
+        return (selectedCityId === null || parcel.cityId === selectedCityId) && (!query || [parcel.name, parcel.reference, parcel.address, cityById.get(parcel.cityId)?.name ?? ''].some((value) => value.toLocaleLowerCase('fr').includes(query)));
     });
 
     const openCreate = () => {
-        setForm({ ...EMPTY_PARCEL_FORM, cityUuid: cities[0]?.id ?? '' });
+        setForm({ ...EMPTY_PARCEL_FORM, cityUuid: selectedCityId ?? cities[0]?.id ?? '' });
         setFormErrors({});
         setModalOpen(true);
     };
@@ -163,6 +177,11 @@ export function ParcellesTab({ parcels, cities, role, isLoading, error, note, on
             setFormErrors({ latitude: 'Renseignez la latitude et la longitude ensemble.', longitude: 'Renseignez la latitude et la longitude ensemble.' });
             return;
         }
+        if (hasLatitude && (!Number.isFinite(Number(form.latitude)) || Math.abs(Number(form.latitude)) > 90
+            || !Number.isFinite(Number(form.longitude)) || Math.abs(Number(form.longitude)) > 180)) {
+            setFormErrors({ latitude: 'La latitude doit être comprise entre −90 et 90.', longitude: 'La longitude doit être comprise entre −180 et 180.' });
+            return;
+        }
         if (!form.cityUuid) {
             setFormErrors({ cityUuid: 'Sélectionnez une ville.' });
             return;
@@ -208,31 +227,37 @@ export function ParcellesTab({ parcels, cities, role, isLoading, error, note, on
             key: 'name',
             title: 'Parcelle',
             sortable: true,
-            render: (parcel) => <div className="organization-property-name"><strong>{parcel.name}</strong><small>{parcel.reference}</small></div>,
+            render: (parcel) => <div className="organization-property-name"><button type="button" className="patrimoine-link" onClick={() => onOpen(parcel.id)} aria-label={`Voir les bâtiments de ${parcel.name}`}><strong>{parcel.name}</strong></button><small>{parcel.reference} · Voir les bâtiments →</small></div>,
         },
-        { key: 'city', title: 'Ville', sortable: true, render: (parcel) => cityById.get(parcel.cityId)?.name ?? '—' },
+        { key: 'city', title: 'Ville', sortable: true, render: (parcel) => <button type="button" className="patrimoine-link" onClick={() => onCityFilter(parcel.cityId)}>{cityById.get(parcel.cityId)?.name ?? '—'}</button> },
         { key: 'address', title: 'Adresse', render: (parcel) => [parcel.quarter, parcel.address].filter(Boolean).join(' · ') || '—' },
         { key: 'area', title: 'Superficie', sortable: true, render: (parcel) => `${formatInteger(Number(parcel.area))} m²` },
-        { key: 'geo', title: 'GPS', render: (parcel) => (parcel.latitude && parcel.longitude ? <Badge variant="secondary">Localisée</Badge> : '—') },
+        { key: 'geo', title: 'Carte', render: (parcel) => {
+            const hasAnyCoordinate = Boolean(parcel.latitude || parcel.longitude);
+            const valid = parcelCoordinates(parcel);
+            return hasAnyCoordinate
+                ? <button type="button" className="patrimoine-link" onClick={() => setMapTargetId(parcel.id)} aria-label={`${valid ? 'Afficher' : 'Vérifier les coordonnées de'} ${parcel.name} sur la carte`}>{valid ? '⌖ Voir la carte' : 'Coordonnées invalides'}</button>
+                : <span className="patrimoine-muted">GPS absent</span>;
+        } },
         {
             key: 'actions',
             title: 'Actions',
             render: (parcel) => {
                 const items: PopoverMenuItem[] = [
                     ...(canDo(role, 'update_parcel')
-                        ? [{ id: 'edit', label: 'Modifier', icon: <span aria-hidden="true">✎</span>, onClick: () => openEdit(parcel) }]
+                        ? [{ id: 'edit', label: 'Modifier', icon: <Icon name="edit" />, onClick: () => openEdit(parcel) }]
                         : []),
                     ...(canDo(role, 'create_parcel')
-                        ? [{ id: 'photos', label: 'Gérer les photos', icon: <span aria-hidden="true">📷</span>, onClick: () => openPhotos(parcel) }]
+                        ? [{ id: 'photos', label: 'Gérer les photos', icon: <Icon name="camera" />, onClick: () => openPhotos(parcel) }]
                         : []),
                     ...(canDo(role, 'delete_parcel')
-                        ? [{ id: 'delete', label: 'Supprimer', icon: <span aria-hidden="true">🗑</span>, danger: true, onClick: () => setDeleteTarget(parcel) }]
+                        ? [{ id: 'delete', label: 'Supprimer', icon: <Icon name="trash" />, danger: true, onClick: () => setDeleteTarget(parcel) }]
                         : []),
                 ];
 
                 if (items.length === 0) return '—';
 
-                return <PopoverMenu placement="bottom" offset={6} items={items} trigger={<span className="organization-row-actions" aria-label={`Actions pour ${parcel.name}`}><span aria-hidden="true">•••</span></span>} />;
+                return <PopoverMenu placement="bottom" offset={6} items={items} trigger={<span className="organization-row-actions" aria-label={`Actions pour ${parcel.name}`}><Icon name="more" /></span>} />;
             },
         },
     ];
@@ -255,10 +280,22 @@ export function ParcellesTab({ parcels, cities, role, isLoading, error, note, on
                 <div><h2>Parcelles</h2><p>{note ?? 'Chaque parcelle est rattachée à une ville et porte les immeubles.'}</p></div>
                 <div className="organization-filters">
                     <SearchInput value={search} onSearch={setSearch} placeholder="Rechercher une parcelle…" fullWidth />
-                    <span />
+                    <Select aria-label="Filtrer par ville" value={selectedCityId ?? 'all'} onChange={(event) => onCityFilter(event.target.value === 'all' ? null : event.target.value)} options={[{ value: 'all', label: 'Toutes les villes' }, ...cities.map((city) => ({ value: city.id, label: city.name }))]} />
                     {canDo(role, 'create_parcel') && <Button onClick={openCreate} disabled={cities.length === 0}>＋ Ajouter une parcelle</Button>}
                 </div>
             </div>
+            {selectedCityId && <div className="patrimoine-context"><span>Ville sélectionnée : <strong>{cityById.get(selectedCityId)?.name ?? 'Ville'}</strong></span><Button variant="outline" onClick={() => onCityFilter(null)}>Effacer le filtre</Button></div>}
+            {mapTargetId && (() => {
+                const parcel = parcels.find((item) => item.id === mapTargetId);
+                if (!parcel) return null;
+                const coordinates = parcelCoordinates(parcel);
+                return <section className="patrimoine-map" aria-label={`Carte de ${parcel.name}`}>
+                    <div className="patrimoine-map__header"><div><strong>{parcel.name}</strong><span>{parcel.address || 'Adresse non renseignée'}</span>{coordinates && <span>GPS : {coordinates.latitude}, {coordinates.longitude}</span>}</div><div>{coordinates && <a href={`https://www.openstreetmap.org/?mlat=${coordinates.latitude}&mlon=${coordinates.longitude}#map=17/${coordinates.latitude}/${coordinates.longitude}`} target="_blank" rel="noreferrer">Ouvrir dans OpenStreetMap ↗</a>}<Button variant="outline" onClick={() => setMapTargetId(null)}>Fermer</Button></div></div>
+                    {coordinates
+                        ? <iframe title={`Emplacement de ${parcel.name}`} src={`https://www.openstreetmap.org/export/embed.html?bbox=${coordinates.longitude - 0.01}%2C${coordinates.latitude - 0.01}%2C${coordinates.longitude + 0.01}%2C${coordinates.latitude + 0.01}&layer=mapnik&marker=${coordinates.latitude}%2C${coordinates.longitude}`} loading="lazy" referrerPolicy="no-referrer" />
+                        : <p className="patrimoine-map__empty">{parcel.latitude || parcel.longitude ? 'Les coordonnées enregistrées sont invalides. Modifiez la parcelle pour les corriger.' : 'Aucune coordonnée GPS n’est enregistrée pour cette parcelle.'}</p>}
+                </section>;
+            })()}
             {body}
 
             <Modal
@@ -291,10 +328,10 @@ export function ParcellesTab({ parcels, cities, role, isLoading, error, note, on
                         <Input id="parcel-title" value={form.titleNumber} onChange={(event) => setForm((current) => ({ ...current, titleNumber: event.target.value }))} placeholder="Ex. : 1234/2024" fullWidth maxLength={100} />
                     </FormField>
                     <FormField label="Latitude" htmlFor="parcel-latitude" error={formErrors.latitude}>
-                        <Input id="parcel-latitude" type="number" step="any" inputMode="decimal" value={form.latitude} onChange={(event) => setForm((current) => ({ ...current, latitude: event.target.value }))} placeholder="Ex. : -1.6795" fullWidth />
+                        <Input id="parcel-latitude" type="number" min="-90" max="90" step="any" inputMode="decimal" value={form.latitude} onChange={(event) => setForm((current) => ({ ...current, latitude: event.target.value }))} placeholder="Ex. : -1.6795" fullWidth />
                     </FormField>
                     <FormField label="Longitude" htmlFor="parcel-longitude" error={formErrors.longitude}>
-                        <Input id="parcel-longitude" type="number" step="any" inputMode="decimal" value={form.longitude} onChange={(event) => setForm((current) => ({ ...current, longitude: event.target.value }))} placeholder="Ex. : 29.2228" fullWidth />
+                        <Input id="parcel-longitude" type="number" min="-180" max="180" step="any" inputMode="decimal" value={form.longitude} onChange={(event) => setForm((current) => ({ ...current, longitude: event.target.value }))} placeholder="Ex. : 29.2228" fullWidth />
                     </FormField>
                     <FormField label="Description" htmlFor="parcel-description" error={formErrors.description}>
                         <Textarea id="parcel-description" value={form.description} onChange={(event) => setForm((current) => ({ ...current, description: event.target.value }))} rows={3} fullWidth maxLength={1000} />

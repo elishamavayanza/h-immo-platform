@@ -415,7 +415,7 @@ final readonly class WorkerAssignmentService
         }
 
         $worker = $this->workerRepository->findOneByUuid($parsed);
-        if ($worker === null || $worker->getOrganization() !== $organization) {
+        if ($worker === null || $worker->getOrganization()->getId() !== $organization->getId()) {
             $feedback
                 ->addError('workerUuid', 'Travailleur introuvable ou n\'appartient pas à l\'organisation.')
                 ->setFlushDescriptionWithError('Le travailleur doit appartenir à la même organisation que l\'affectation.')
@@ -476,7 +476,7 @@ final readonly class WorkerAssignmentService
             switch ($type) {
                 case 'parcel':
                     $target = $this->parcelRepository->findOneByUuid($parsed);
-                    if ($target === null || $target->getCity() !== $city) {
+                    if ($target === null || $target->getCity()->getId() !== $city->getId()) {
                         $feedback
                             ->addError('parcelUuid', 'Parcelle introuvable ou n\'appartient pas à la ville.')
                             ->setFlushDescriptionWithError('La parcelle doit appartenir à la ville fournie.')
@@ -487,7 +487,7 @@ final readonly class WorkerAssignmentService
 
                 case 'building':
                     $target = $this->buildingRepository->findOneByUuid($parsed);
-                    if ($target === null || $target->getParcel()->getCity() !== $city) {
+                    if ($target === null || $target->getParcel()->getCity()->getId() !== $city->getId()) {
                         $feedback
                             ->addError('buildingUuid', 'Immeuble introuvable ou n\'appartient pas à la ville.')
                             ->setFlushDescriptionWithError('L\'immeuble doit appartenir à la ville fournie.')
@@ -498,7 +498,7 @@ final readonly class WorkerAssignmentService
 
                 case 'unit':
                     $target = $this->unitRepository->findOneByUuid($parsed);
-                    if ($target === null || $target->getBuilding()->getParcel()->getCity() !== $city) {
+                    if ($target === null || $target->getBuilding()->getParcel()->getCity()->getId() !== $city->getId()) {
                         $feedback
                             ->addError('unitUuid', 'Unité introuvable ou n\'appartient pas à la ville.')
                             ->setFlushDescriptionWithError('L\'unité doit appartenir à la ville fournie.')

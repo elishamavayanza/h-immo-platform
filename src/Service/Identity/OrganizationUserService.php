@@ -32,7 +32,8 @@ use Symfony\Component\Validator\Validator\ValidatorInterface;
  * Gère l'affectation et la révocation des accès/rôles des utilisateurs
  * au sein des différentes organisations (Tenants) via Feedback.
  *
- * Permet au PATRON de créer des ADMIN_IMMOBILIER et ADMIN_VILLE :
+ * Permet au PATRON de créer les administrateurs déléguables et à
+ * l'ADMIN_IMMOBILIER de créer un ADMIN_VILLE dans son organisation :
  * - Création de l'utilisateur (email, nom, téléphone)
  * - Rattachement à l'organisation avec le rôle approprié
  * - Pour ADMIN_VILLE : attribution des villes via UserCity
@@ -342,14 +343,19 @@ final readonly class OrganizationUserService
                 ->autoInitFlush();
         }
 
-        // Vérifier que l'appelant est PATRON de cette organisation
-        $this->security->checkOrganizationAccess($organization, SecurityAction::MANAGE_USERS);
+        // L'ADMIN_IMMOBILIER peut uniquement créer un ADMIN_VILLE.
+        $this->security->checkOrganizationAccess(
+            $organization,
+            $role === OrganizationRole::ADMIN_VILLE ? SecurityAction::CREATE_CITY_ADMIN : SecurityAction::MANAGE_USERS
+        );
         $currentUser = $this->security->getCurrentUser();
         $currentUserRole = $this->security->getOrganizationRole($currentUser, $organization);
 
-        if ($currentUserRole !== OrganizationRole::PATRON) {
+        $canCreateRequestedRole = $currentUserRole === OrganizationRole::PATRON
+            || ($currentUserRole === OrganizationRole::ADMIN_IMMOBILIER && $role === OrganizationRole::ADMIN_VILLE);
+        if (!$canCreateRequestedRole) {
             return $feedback
-                ->setErrorFlushDescription('Seul le PATRON peut créer des administrateurs.')
+                ->setErrorFlushDescription('Vous ne pouvez pas créer cet administrateur pour cette organisation.')
                 ->setStatus(403)
                 ->autoInitFlush();
         }

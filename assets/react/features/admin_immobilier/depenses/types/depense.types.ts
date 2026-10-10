@@ -33,6 +33,8 @@ export interface DepenseRow {
     category: string;
     /** Bien concerné : « Immeuble · Référence » ou niveau le plus précis. */
     property: string;
+    parcelId: string | null;
+    buildingId: string | null;
     description: string;
     amount: string;
     currency: string;
@@ -40,8 +42,10 @@ export interface DepenseRow {
 
 export interface DepensesData {
     rows: DepenseRow[];
+    cities: CityItem[];
     /** Total serveur des dépenses accessibles sur le périmètre. */
     total: number;
     /** Note de troncature si la liste a été bornée à REFERENCE_LIMIT. */
     note: string | null;
 }
+import type { CityItem } from '../../shared/types/reference.types';

@@ -74,9 +74,12 @@ export function usePersonnel() {
 
     useEffect(() => { void reload(); }, [reload]);
 
-    const createWorkerAction = useCallback(async (payload: CreateWorkerPayload): Promise<void> => {
-        await runAction(push, 'Ouvrier créé.', () => createWorker(payload));
+    const createWorkerAction = useCallback(async (payload: CreateWorkerPayload) => {
+        const worker = await createWorker(payload);
+        push('success', 'Ouvrier créé.');
         await reload();
+
+        return worker;
     }, [push, reload]);
 
     const updateWorkerAction = useCallback(async (workerUuid: string, payload: UpdateWorkerPayload): Promise<void> => {

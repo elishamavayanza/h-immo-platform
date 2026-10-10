@@ -24,6 +24,10 @@ use Symfony\Component\Validator\Constraints as Assert;
 final readonly class WorkerRequest
 {
     public function __construct(
+        #[OA\Property(description: 'Organisation active de la session (vérifiée côté serveur)', format: 'uuid', nullable: true)]
+        #[Assert\Uuid(groups: ['create'])]
+        public ?string $organizationUuid = null,
+
         #[OA\Property(
             description: 'Nom complet du travailleur',
             maxLength: 200,

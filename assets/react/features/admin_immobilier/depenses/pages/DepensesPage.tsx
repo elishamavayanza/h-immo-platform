@@ -1,4 +1,5 @@
 import { useState, type FormEvent } from 'react';
+import { useSearchParams } from 'react-router-dom';
 
 import { OrganizationSummary } from '../../../shared/components/OrganizationSummary';
 import { Card } from '../../../../components/UI/Card';
@@ -24,12 +25,16 @@ import type { OrganizationRole } from '../../../../../services/api/api.types';
 import '../../../../../styles/pages/admin_immobilier/depenses/_depenses.scss';
 
 export function DepensesPage() {
+    const [searchParams] = useSearchParams();
+    const parcelUuid = searchParams.get('parcelUuid');
+    const buildingUuid = searchParams.get('buildingUuid');
     const { organizationRole } = useOrganization();
     const {
-        data, rows, availableCategories, isLoading, error, reload,
+        data, rows: allRows, availableCategories, isLoading, error, reload,
         search, setSearch, category, setCategory,
         createExpense, updateExpense, cancelExpense,
     } = useDepenses();
+    const rows = allRows.filter((row) => (!parcelUuid || row.parcelId === parcelUuid) && (!buildingUuid || row.buildingId === buildingUuid));
 
     const [expenseModalOpen, setExpenseModalOpen] = useState(false);
     const [editTarget, setEditTarget] = useState<DepenseRow | null>(null);
@@ -193,7 +198,7 @@ export function DepensesPage() {
         >
             <form id="expense-form" className="organization-management-form" onSubmit={submitExpense}>
                 <FormField label="Ville" htmlFor="expense-city" required error={formErrors.cityUuid}>
-                    <Select id="expense-city" value={form.cityUuid} onChange={(event) => setForm((current) => ({ ...current, cityUuid: event.target.value }))} options={[] as { value: string; label: string }[]} placeholder="Sélectionner une ville" required />
+                    <Select id="expense-city" value={form.cityUuid} onChange={(event) => setForm((current) => ({ ...current, cityUuid: event.target.value }))} options={(data?.cities ?? []).map((city) => ({ value: city.id, label: city.name }))} placeholder="Sélectionner une ville" required />
                 </FormField>
                 <FormField label="Catégorie" htmlFor="expense-category" required error={formErrors.category}>
                     <Select id="expense-category" value={form.category} onChange={(event) => setForm((current) => ({ ...current, category: event.target.value }))} options={CATEGORY_OPTIONS} required />

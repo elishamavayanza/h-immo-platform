@@ -13,21 +13,21 @@ use Symfony\Component\Validator\Constraints as Assert;
  *
  * Package : Identity & Access — DTO de requête
  *
- * Données pour la création d'un administrateur (ADMIN_IMMOBILIER ou ADMIN_VILLE)
- * par le PATRON d'une organisation.
+ * Données pour la création d'un administrateur par un utilisateur autorisé.
  *
  * Le mot de passe n'est PAS fourni : l'utilisateur le définira via le flux
- * "mot de passe oublié" après réception de l'email d'activation.
+ * "mot de passe oublié" après réception de l'email d'activation. Un ADMIN_IMMOBILIER
+ * ne peut créer que le rôle ADMIN_VILLE, limité aux villes transmises.
  */
 #[OA\Schema(
     title: 'CreateAdminRequest',
-    description: 'Création d\'un administrateur (ADMIN_IMMOBILIER ou ADMIN_VILLE) par le PATRON.'
+    description: 'Création d\'un administrateur selon le rôle de l\'appelant.'
 )]
 final readonly class CreateAdminRequest
 {
     public function __construct(
         #[OA\Property(
-            description: 'UUID de l\'organisation du PATRON',
+            description: 'UUID de l\'organisation cible, vérifié côté serveur',
             format: 'uuid',
             example: '9b1deb4d-3b7d-4bad-9bdd-2b0d7b3dcb6d'
         )]
@@ -36,11 +36,11 @@ final readonly class CreateAdminRequest
         public string $organizationUuid,
 
         #[OA\Property(
-            // La liste est explicitement restreinte aux deux rôles qu'un PATRON
+            // La liste est explicitement restreinte aux rôles qu'un PATRON
             // peut déléguer : `enum: OrganizationRole::class` annoncerait aussi
             // `patron`, que `Assert\Choice` refuse. « Try it out » proposerait
             // donc une valeur rejetée en 422.
-            description: 'Rôle à attribuer (admin_immobilier ou admin_ville). Le rôle patron n\'est pas délégable.',
+            description: 'Rôle à attribuer (admin_immobilier ou admin_ville). Un ADMIN_IMMOBILIER appelant ne peut créer qu’un ADMIN_VILLE.',
             type: 'string',
             example: 'admin_immobilier',
             enum: [OrganizationRole::ADMIN_IMMOBILIER->value, OrganizationRole::ADMIN_VILLE->value]

@@ -74,6 +74,7 @@ import {
     toRelativeAppRoutePath,
 } from '../assets/react/app/routes/appRoutes.config.ts';
 import type { OrganizationRole, PlatformRole } from '../assets/services/api/api.types.ts';
+import { canDo } from '../assets/react/features/shared/permissions.ts';
 import { readFileSync } from 'node:fs';
 
 let checks = 0;
@@ -132,6 +133,12 @@ check(
     idsOf(PLATFORM).join(', ')
 );
 check('Sans rôle : menu vide', resolveSidebar(null, null).length === 0);
+
+console.log('\n=== Permissions de création des Admin ville ===\n');
+check('ADMIN_IMMOBILIER peut créer un ADMIN_VILLE', canDo('admin_immobilier', 'create_city_admin'));
+check('ADMIN_IMMOBILIER ne reçoit pas la gestion générale des membres', !canDo('admin_immobilier', 'manage_users'));
+check('ADMIN_VILLE ne peut pas créer un autre administrateur', !canDo('admin_ville', 'create_city_admin'));
+check('PATRON conserve la création des administrateurs déléguables', canDo('patron', 'create_city_admin'));
 
 // ── Menu plat : une relation 1─N du modèle ne crée PAS de sous-menu ──
 const ALL_MENUS = [PATRON, ADMIN_IMMOBILIER, ADMIN_VILLE, PLATFORM];

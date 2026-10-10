@@ -7,6 +7,7 @@ namespace App\Repository\Staff;
 use App\Entity\Property\City;
 use App\Entity\Staff\Worker;
 use App\Entity\Staff\WorkerAssignment;
+use App\Repository\UuidParameterTrait;
 use App\Service\System\DateTimeService;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\ORM\QueryBuilder;
@@ -20,6 +21,8 @@ use Symfony\Component\Uid\Uuid;
  */
 final class WorkerRepository extends ServiceEntityRepository
 {
+    use UuidParameterTrait;
+
     public function __construct(ManagerRegistry $registry, private readonly DateTimeService $dateTime)
     {
         parent::__construct($registry, Worker::class);
@@ -47,7 +50,7 @@ final class WorkerRepository extends ServiceEntityRepository
     {
         return $this->createQueryBuilder('w')
             ->andWhere('w.uuid = :uuid')
-            ->setParameter('uuid', $uuid)
+            ->setParameter('uuid', $this->bindableUuid($uuid))
             ->getQuery()
             ->getOneOrNullResult();
     }

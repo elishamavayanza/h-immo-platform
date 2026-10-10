@@ -1027,16 +1027,17 @@ final class SecurityService implements SecurityServiceInterface
     }
 
     /**
-     * L'ADMIN_IMMOBILIER gère le patrimoine et la location, et
-     * consulte l'Organization de rattachement en lecture seule.
-     * Il ne peut ni administrer la plateforme, ni suspendre une
-     * Organization, ni attribuer des rôles.
+     * L'ADMIN_IMMOBILIER gère le patrimoine et la location, consulte
+     * l'Organization en lecture seule et peut inviter des ADMIN_VILLE dans
+     * son organisation. Cette permission dédiée ne donne pas accès à la
+     * gestion générale des membres.
      */
     private function checkAdminImmobilierAction(SecurityAction $action): void
     {
         $allowed = [
             SecurityAction::VIEW,
             SecurityAction::VIEW_ORGANIZATION,
+            SecurityAction::CREATE_CITY_ADMIN,
 
             SecurityAction::VIEW_CITY, SecurityAction::CREATE_CITY, SecurityAction::UPDATE_CITY,
             SecurityAction::DELETE_CITY, SecurityAction::ACTIVATE_CITY, SecurityAction::DEACTIVATE_CITY,

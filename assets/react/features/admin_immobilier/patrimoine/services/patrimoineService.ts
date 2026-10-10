@@ -127,6 +127,24 @@ export async function deleteCity(uuid: string): Promise<void> {
     await apiClient.delete(`/v1/property/cities/${uuid}`);
 }
 
+/** Création d'un ADMIN_VILLE rattaché à la ville choisie. */
+export async function createCityAdmin(payload: {
+    organizationUuid: string;
+    cityUuid: string;
+    fullName: string;
+    email: string;
+    phone: string;
+}): Promise<void> {
+    await apiClient.post('/v1/identity/organization-users/create-admin', {
+        organizationUuid: payload.organizationUuid,
+        role: 'admin_ville',
+        cityUuids: [payload.cityUuid],
+        fullName: payload.fullName,
+        email: payload.email,
+        phone: payload.phone,
+    });
+}
+
 /**
  * Payload d'écriture d'une parcelle (`ParcelRequest`).
  * `cityUuid` est requis à la création ; à la mise à jour il est renvoyé à

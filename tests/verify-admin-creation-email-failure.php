@@ -189,6 +189,13 @@ $patron = (new User())
     ->setIsActive(true);
 $em->persist($patron);
 
+$propertyAdmin = (new User())
+    ->setEmail('propertyadmin.' . $suffix . '@test.local')
+    ->setFullName('Admin Immobilier Test')
+    ->setPassword(password_hash('MotDePasse!123', PASSWORD_BCRYPT))
+    ->setIsActive(true);
+$em->persist($propertyAdmin);
+
 $root = (new User())
     ->setEmail('root.' . $suffix . '@test.local')
     ->setFullName('Root Test')
@@ -206,6 +213,7 @@ $org = (new Organization())
 $em->persist($org);
 
 $em->persist((new OrganizationUser())->setUser($patron)->setOrganization($org)->setRole(OrganizationRole::PATRON));
+$em->persist((new OrganizationUser())->setUser($propertyAdmin)->setOrganization($org)->setRole(OrganizationRole::ADMIN_IMMOBILIER));
 
 $city = (new City())
     ->setName('Ville Test')
@@ -234,6 +242,36 @@ if (!is_string($bearer)) {
 
 $orgUuid = $org->getUuid()->toRfc4122();
 $cityUuid = $city->getUuid()->toRfc4122();
+
+// L'ADMIN_IMMOBILIER peut créer uniquement un ADMIN_VILLE, dans cette
+// organisation et avec un périmètre de ville explicite.
+section('ADMIN_IMMOBILIER : création limitée à ADMIN_VILLE');
+
+[$status, $propertyPayload] = $request('POST', '/api/auth/login', [
+    'email' => 'propertyadmin.' . $suffix . '@test.local',
+    'password' => 'MotDePasse!123',
+]);
+$propertyBearer = $propertyPayload['accessToken'] ?? null;
+check('l’ADMIN_IMMOBILIER est authentifié', $status === 200 && is_string($propertyBearer), "obtenu {$status}");
+
+[$status, $propertyAdminPayload, $propertyAdminRaw] = $request('POST', '/api/v1/identity/organization-users/create-admin', [
+    'organizationUuid' => $orgUuid,
+    'role' => 'admin_ville',
+    'email' => 'ville.par.created.' . $suffix . '@test.local',
+    'fullName' => 'Admin Ville par Admin Immobilier',
+    'phone' => '+000',
+    'cityUuids' => [$cityUuid],
+], is_string($propertyBearer) ? $propertyBearer : null);
+check('un ADMIN_VILLE peut être créé par l’ADMIN_IMMOBILIER', $status === 201, "obtenu {$status} : " . substr($propertyAdminRaw, 0, 250));
+
+[$status, , $restrictedRoleRaw] = $request('POST', '/api/v1/identity/organization-users/create-admin', [
+    'organizationUuid' => $orgUuid,
+    'role' => 'admin_immobilier',
+    'email' => 'immobilier.par.created.' . $suffix . '@test.local',
+    'fullName' => 'Admin Immobilier non autorisé',
+    'phone' => '+000',
+], is_string($propertyBearer) ? $propertyBearer : null);
+check('l’ADMIN_IMMOBILIER ne peut pas déléguer le rôle ADMIN_IMMOBILIER', $status === 403, "obtenu {$status} : " . substr($restrictedRoleRaw, 0, 250));
 
 // ---------------------------------------------------------------------
 // create-admin avec un mailer en panne

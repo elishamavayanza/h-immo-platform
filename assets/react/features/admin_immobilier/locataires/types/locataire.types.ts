@@ -19,8 +19,12 @@ export interface LocataireRow {
     address: string;
     /** Référence de l'unité du bail en cours, `null` si aucun bail actif. */
     unitReference: string | null;
+    buildingId: string | null;
+    parcelId: string | null;
     /** Fin du bail en cours (ISO), `null` si aucun bail actif. */
     leaseEnd: string | null;
+    leaseUuid: string | null;
+    leaseStatus: string | null;
 }
 
 export interface LocatairesData {
@@ -31,4 +35,6 @@ export interface LocatairesData {
     activeLeases: number;
     /** Note de troncature si une liste a été bornée à REFERENCE_LIMIT. */
     note: string | null;
+    units: Array<{ id: string; buildingId: string; reference: string; monthlyRent: string; currency: string }>;
+    buildings: Array<{ id: string; name: string }>;
 }

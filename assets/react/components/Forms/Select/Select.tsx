@@ -1,5 +1,7 @@
 import React, { forwardRef, useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import {useSelect, UseSelectProps} from "../../../hook-components/Forms/Select";
+import { Icon } from '../../UI/Icon/Icon';
 
 
 export interface SelectOption {
@@ -55,6 +57,7 @@ export const Select = forwardRef<HTMLSelectElement, SelectProps>(
     ) => {
         const selectRef = useRef<HTMLSelectElement | null>(null);
         const triggerRef = useRef<HTMLButtonElement | null>(null);
+        const menuRef = useRef<HTMLDivElement | null>(null);
         const [isOpen, setIsOpen] = useState(false);
         const [menuStyle, setMenuStyle] = useState<React.CSSProperties>({});
         const [activeIndex, setActiveIndex] = useState(0);
@@ -79,7 +82,8 @@ export const Select = forwardRef<HTMLSelectElement, SelectProps>(
             window.addEventListener('resize', updateMenuPosition);
             window.addEventListener('scroll', updateMenuPosition, true);
             const handleOutside = (event: PointerEvent) => {
-                if (!triggerRef.current?.parentElement?.contains(event.target as Node)) setIsOpen(false);
+                const target = event.target as Node;
+                if (!triggerRef.current?.parentElement?.contains(target) && !menuRef.current?.contains(target)) setIsOpen(false);
             };
             document.addEventListener('pointerdown', handleOutside);
             return () => {
@@ -156,10 +160,10 @@ export const Select = forwardRef<HTMLSelectElement, SelectProps>(
                     onKeyDown={handleTriggerKeyDown}
                 >
                     <span>{selectedOption?.label ?? placeholder ?? ''}</span>
-                    <span className="select-field__arrow" aria-hidden="true" />
+                    <Icon name="chevronDown" size={18} className="select-field__arrow" />
                 </button>
-                {isOpen && (
-                    <div className="select-field__menu" role="listbox" style={menuStyle}>
+                {isOpen && createPortal(
+                    <div ref={menuRef} className="select-field__menu" role="listbox" style={menuStyle}>
                         {options.map((option, index) => (
                             <button
                                 key={option.value}
@@ -174,7 +178,8 @@ export const Select = forwardRef<HTMLSelectElement, SelectProps>(
                                 {option.label}
                             </button>
                         ))}
-                    </div>
+                    </div>,
+                    document.body,
                 )}
             </div>
         );

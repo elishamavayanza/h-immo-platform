@@ -8,6 +8,7 @@ import { EmptyState } from '../../../components/Data/EmptyState';
 import { ConfirmDialog } from '../../../components/UI/ConfirmDialog';
 import { Modal } from '../../../components/UI/Modal';
 import { PopoverMenu } from '../../../components/UI/PopoverMenu';
+import { Icon } from '../../../components/UI/Icon/Icon';
 import type { PopoverMenuItem } from '../../../hook-components/UI/PopoverMenu';
 
 export interface EditableField<T> { key: keyof T; label: string; required?: boolean; type?: 'text' | 'number'; }
@@ -51,14 +52,14 @@ export function PatronManagedTable<T extends { id: string }>({ rows, columns, fi
     };
     const actionColumns: DataTableColumn<T>[] = [...columns, { key: 'rowActions', title: 'Actions', render: (row) => {
         const items: PopoverMenuItem[] = [
-            ...(allowEdit ? [{ id: 'edit', label: 'Modifier', icon: <span aria-hidden="true">✎</span>, onClick: () => openEdit(row) }] : []),
-            ...(toggleStatus ? [{ id: 'toggle', label: statusLabel?.(row) ?? 'Changer le statut', icon: <span aria-hidden="true">⏻</span>, onClick: () => setRecords((current) => current.map((item) => item.id === row.id ? { ...item, ...toggleStatus(row) } : item)) }] : []),
-            ...(statusAction && (statusAction.visible?.(row) ?? true) ? [{ id: statusAction.id, label: statusAction.label(row), icon: <span aria-hidden="true">⏻</span>, onClick: () => setRecords((current) => current.map((item) => item.id === row.id ? { ...item, ...statusAction.apply(row) } : item)) }] : []),
+            ...(allowEdit ? [{ id: 'edit', label: 'Modifier', icon: <Icon name="edit" />, onClick: () => openEdit(row) }] : []),
+            ...(toggleStatus ? [{ id: 'toggle', label: statusLabel?.(row) ?? 'Changer le statut', icon: <Icon name="power" />, onClick: () => setRecords((current) => current.map((item) => item.id === row.id ? { ...item, ...toggleStatus(row) } : item)) }] : []),
+            ...(statusAction && (statusAction.visible?.(row) ?? true) ? [{ id: statusAction.id, label: statusAction.label(row), icon: <Icon name="power" />, onClick: () => setRecords((current) => current.map((item) => item.id === row.id ? { ...item, ...statusAction.apply(row) } : item)) }] : []),
             ...extraActions.filter((action) => action.visible?.(row) ?? true).map((action) => ({ id: action.id, label: action.label(row), onClick: () => setRecords((current) => current.map((item) => item.id === row.id ? { ...item, ...action.apply(row) } : item)) })),
-            ...(allowDelete ? [{ id: 'delete-separator', label: '', separator: true }, { id: 'delete', label: 'Supprimer', icon: <span aria-hidden="true">⌫</span>, danger: true, onClick: () => setPendingDelete(row) }] : []),
+            ...(allowDelete ? [{ id: 'delete-separator', label: '', separator: true }, { id: 'delete', label: 'Supprimer', icon: <Icon name="trash" />, danger: true, onClick: () => setPendingDelete(row) }] : []),
         ];
         const rowLabel = String(row[columns[0]?.key as keyof T] ?? row.id);
-        return <PopoverMenu placement="bottom" offset={6} items={items} trigger={<span className="organization-row-actions" aria-label={`Actions pour ${rowLabel}`}><span aria-hidden="true">•••</span></span>} />;
+        return <PopoverMenu placement="bottom" offset={6} items={items} trigger={<span className="organization-row-actions" aria-label={`Actions pour ${rowLabel}`}><Icon name="more" /></span>} />;
     } }];
 
     return <>

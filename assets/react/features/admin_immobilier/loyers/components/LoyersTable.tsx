@@ -3,6 +3,7 @@ import type { DataTableColumn } from '../../../../hook-components/Data/DataTable
 import { Badge } from '../../../../components/UI/Badge';
 import { PopoverMenu } from '../../../../components/UI/PopoverMenu';
 import type { PopoverMenuItem } from '../../../../hook-components/UI/PopoverMenu';
+import { Icon } from '../../../../components/UI/Icon/Icon';
 import { formatUserDate } from '../../../../services/userPreferences';
 import { formatMoney } from '../../../../../utils/format.utils';
 import { canDo } from '../../../shared/permissions';
@@ -51,19 +52,19 @@ export function LoyersTable({ rows, role, onRecordPayment, onMarkOverdue, onUpda
                 const isOverdue = row.status === 'overdue';
                 const items: PopoverMenuItem[] = [
                     ...(!isPaid && canDo(role, 'create_payment')
-                        ? [{ id: 'payment', label: 'Enregistrer un paiement', icon: <span aria-hidden="true">💰</span>, onClick: () => onRecordPayment(row) }]
+                        ? [{ id: 'payment', label: 'Enregistrer un paiement', icon: <Icon name="money" />, onClick: () => onRecordPayment(row) }]
                         : []),
                     ...(!isOverdue && !isPaid && canDo(role, 'mark_rent_overdue')
-                        ? [{ id: 'overdue', label: 'Marquer en retard', icon: <span aria-hidden="true">⚠</span>, onClick: () => onMarkOverdue(row) }]
+                        ? [{ id: 'overdue', label: 'Marquer en retard', icon: <Icon name="alert" />, onClick: () => onMarkOverdue(row) }]
                         : []),
                     ...(canDo(role, 'update_rent')
-                        ? [{ id: 'edit', label: 'Modifier', icon: <span aria-hidden="true">✎</span>, onClick: () => onUpdate(row) }]
+                        ? [{ id: 'edit', label: 'Modifier', icon: <Icon name="edit" />, onClick: () => onUpdate(row) }]
                         : []),
                 ];
 
                 if (items.length === 0) return '—';
 
-                return <PopoverMenu placement="bottom" offset={6} items={items} trigger={<span className="organization-row-actions" aria-label={`Actions pour ${row.tenant}`}><span aria-hidden="true">•••</span></span>} />;
+                return <PopoverMenu placement="bottom" offset={6} items={items} trigger={<span className="organization-row-actions" aria-label={`Actions pour ${row.tenant}`}><Icon name="more" /></span>} />;
             },
         },
     ];

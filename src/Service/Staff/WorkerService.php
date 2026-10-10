@@ -62,7 +62,9 @@ final readonly class WorkerService
         }
 
         // Déduire l'Organization selon le rôle
-        $organization = $this->resolveOrganization($currentUser, $feedback);
+        $organization = $request->organizationUuid !== null
+            ? $this->resolveRequestedOrganization($request->organizationUuid, $feedback)
+            : $this->resolveOrganization($currentUser, $feedback);
         if ($organization === null) {
             return $feedback->autoInitFlush();
         }
@@ -270,6 +272,30 @@ final readonly class WorkerService
 
         // Le contrôle `checkWorkerAccess` qui suit validera l'accès réel
         return $orgs[0];
+    }
+
+    private function resolveRequestedOrganization(string $organizationUuid, Feedback $feedback): ?Organization
+    {
+        try {
+            $uuid = Uuid::fromString($organizationUuid);
+        } catch (\InvalidArgumentException) {
+            $feedback->addError('organizationUuid', 'Organisation invalide.')
+                ->setFlushDescriptionWithError('L’organisation sélectionnée est invalide.')
+                ->setStatus(400);
+
+            return null;
+        }
+
+        $organization = $this->organizationRepository->findOneByUuid($uuid);
+        if ($organization === null) {
+            $feedback->addError('organizationUuid', 'Organisation introuvable.')
+                ->setFlushDescriptionWithError('L’organisation sélectionnée est introuvable.')
+                ->setStatus(404);
+
+            return null;
+        }
+
+        return $organization;
     }
 
     private function findWorker(string $uuid, Feedback $feedback): ?Worker

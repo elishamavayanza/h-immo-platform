@@ -1,6 +1,7 @@
 import { DataTable } from '../../../../components/Data/DataTable';
 import type { DataTableColumn } from '../../../../hook-components/Data/DataTable';
 import { Badge } from '../../../../components/UI/Badge';
+import { Icon } from '../../../../components/UI/Icon/Icon';
 import { PopoverMenu } from '../../../../components/UI/PopoverMenu';
 import type { PopoverMenuItem } from '../../../../hook-components/UI/PopoverMenu';
 import { formatMoney } from '../../../../../utils/format.utils';
@@ -47,21 +48,21 @@ export function VitrineTable({ rows, role, onTogglePublished, onEdit, onAddPhoto
                     {
                         id: 'toggle',
                         label: row.isOccupied && !row.isPublished ? 'Unité occupée' : label,
-                        icon: <span aria-hidden="true">🌐</span>,
+                        icon: <Icon name="globe" />,
                         disabled: !canPublish || pendingId === row.id,
                         onClick: () => onTogglePublished(row),
                     },
                     ...(canDo(role, 'update_unit')
-                        ? [{ id: 'edit', label: 'Modifier la description', icon: <span aria-hidden="true">✎</span>, onClick: () => onEdit(row) }]
+                        ? [{ id: 'edit', label: 'Modifier la description', icon: <Icon name="edit" />, onClick: () => onEdit(row) }]
                         : []),
                     ...(canDo(role, 'publish_listing')
-                        ? [{ id: 'photos', label: 'Gérer les photos', icon: <span aria-hidden="true">📷</span>, onClick: () => { /* handled in page */ } }]
+                        ? [{ id: 'photos', label: 'Gérer les photos', icon: <Icon name="camera" />, onClick: () => { /* handled in page */ } }]
                         : []),
                 ];
 
                 if (items.length === 0) return '—';
 
-                return <PopoverMenu placement="bottom" offset={6} items={items} trigger={<span className="organization-row-actions" aria-label={`Actions pour ${row.title}`}><span aria-hidden="true">•••</span></span>} />;
+                return <PopoverMenu placement="bottom" offset={6} items={items} trigger={<span className="organization-row-actions" aria-label={`Actions pour ${row.title}`}><Icon name="more" /></span>} />;
             },
         },
     ];

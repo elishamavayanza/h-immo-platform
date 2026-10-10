@@ -1,1 +1,37 @@
 @use '../base';
+@use '../../../baseVariables/variables' as *;
+
+.patrimoine-link {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--color-primary, #315dca);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.patrimoine-link:hover { text-decoration: underline; }
+.patrimoine-link:focus-visible { outline: 2px solid currentColor; outline-offset: 3px; border-radius: 2px; }
+.patrimoine-muted { color: $color-text-muted; }
+.patrimoine-breadcrumb { display: flex; flex-wrap: wrap; align-items: center; gap: .55rem; margin: 1rem 0; color: $color-text-muted; font-size: .9rem; }
+.patrimoine-breadcrumb button { border: 0; padding: .2rem; background: transparent; color: $color-primary; font: inherit; cursor: pointer; }
+.patrimoine-breadcrumb button:hover { text-decoration: underline; }
+.patrimoine-context { display: flex; justify-content: space-between; align-items: center; gap: 1rem; margin: 0 0 1rem; padding: .75rem 1rem; border: 1px solid $color-border; border-radius: .75rem; color: $color-text-primary; background: $color-bg-card-hover; }
+.patrimoine-map { margin: 0 0 1rem; overflow: hidden; border: 1px solid $color-border; border-radius: .85rem; background: $color-bg-card; }
+.patrimoine-map__header { display: flex; justify-content: space-between; align-items: center; gap: 1rem; padding: .85rem 1rem; }
+.patrimoine-map__header > div:first-child { display: grid; gap: .25rem; }
+.patrimoine-map__header span { color: $color-text-muted; font-size: .875rem; }
+.patrimoine-map__header > div:last-child { display: flex; align-items: center; gap: .75rem; }
+.patrimoine-map iframe { display: block; width: 100%; height: 360px; border: 0; }
+.patrimoine-map__empty { margin: 0; padding: 1.25rem; color: $color-text-secondary; background: $color-bg-card-hover; }
+.patrimoine-related { display: flex; flex-wrap: wrap; align-items: center; gap: .65rem 1rem; margin: 0 0 1rem; padding: .75rem 1rem; border: 1px solid $color-border; border-radius: .75rem; color: $color-text-secondary; background: $color-bg-card; }
+.patrimoine-related strong { margin-right: .25rem; }
+.patrimoine-related a { color: $color-primary; text-decoration: none; }
+.patrimoine-related a:hover { text-decoration: underline; }
+.patrimoine-related a:focus-visible { outline: 2px solid currentColor; outline-offset: 3px; border-radius: 2px; }
+@media (max-width: 640px) {
+  .patrimoine-context, .patrimoine-map__header, .patrimoine-related { align-items: flex-start; flex-direction: column; }
+  .patrimoine-map__header > div:last-child { flex-wrap: wrap; }
+  .patrimoine-map iframe { height: 280px; }
+}

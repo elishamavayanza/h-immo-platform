@@ -21,6 +21,7 @@ enum SecurityAction: string
     case UPDATE_USER = 'update_user';
     case DELETE_USER = 'delete_user';
     case MANAGE_USERS = 'manage_users';
+    case CREATE_CITY_ADMIN = 'create_city_admin';
     case SUSPEND_USER = 'suspend_user';
     case ACTIVATE_USER = 'activate_user';
     case ASSIGN_USER_CITY = 'assign_user_city';

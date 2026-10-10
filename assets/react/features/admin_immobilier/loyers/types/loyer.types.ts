@@ -14,6 +14,8 @@ export interface LoyerRow {
     tenant: string;
     /** Immeuble · référence d'unité. */
     unitLabel: string;
+    buildingId: string | null;
+    parcelId: string | null;
     /** Période lisible, ex. « Octobre 2026 ». */
     periodLabel: string;
     /** Échéance ISO. */

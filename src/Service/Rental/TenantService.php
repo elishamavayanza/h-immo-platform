@@ -9,9 +9,11 @@ use App\Dto\Request\Rental\TenantFilterDto;
 use App\Dto\Request\Rental\TenantRequest;
 use App\Entity\Identity\Organization;
 use App\Dto\Response\Rental\TenantResponse;
+use App\Entity\Property\City;
 use App\Entity\Identity\User;
 use App\Entity\Rental\Tenant;
 use App\Enum\TenantType;
+use App\Enum\OrganizationRole;
 use App\Mapper\Rental\TenantMapper;
 use App\Repository\Identity\OrganizationRepository;
 use App\Repository\Rental\TenantRepository;
@@ -252,7 +254,21 @@ final readonly class TenantService
             $organizations = $restricted;
         }
 
-        $allowedCities = $this->securityService->getAccessibleCities();
+        $user = $this->securityService->getCurrentUser();
+        $fullAccessOrganizations = [];
+        $cityScopedOrganizations = [];
+        foreach ($organizations as $organization) {
+            if ($this->securityService->getOrganizationRole($user, $organization) === OrganizationRole::ADMIN_VILLE) {
+                $cityScopedOrganizations[] = $organization;
+            } else {
+                $fullAccessOrganizations[] = $organization;
+            }
+        }
+        $cityScopedOrganizationIds = array_map(static fn (Organization $organization): int => $organization->getId(), $cityScopedOrganizations);
+        $allowedCities = array_values(array_filter(
+            $this->securityService->getAccessibleCities() ?? [],
+            static fn (City $city): bool => in_array($city->getOrganization()->getId(), $cityScopedOrganizationIds, true)
+        ));
 
         $result = $this->tenantRepository->findPaginatedAccessible(
             $organizations,
@@ -261,7 +277,8 @@ final readonly class TenantService
             $filter->limit,
             $filter->search,
             $filter->sortBy ?? 'fullName',
-            $filter->sortOrder
+            $filter->sortOrder,
+            $fullAccessOrganizations
         );
 
         return $feedback

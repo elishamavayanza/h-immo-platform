@@ -14,7 +14,7 @@ import type { OrganizationRole } from '../../../services/api/api.types';
 export type SecurityAction =
     | 'view' | 'create' | 'update' | 'delete'
     | 'manage_organization' | 'suspend_organization' | 'activate_organization' | 'view_organization'
-    | 'view_user' | 'update_user' | 'delete_user' | 'manage_users' | 'suspend_user' | 'activate_user' | 'assign_user_city' | 'revoke_user_city'
+    | 'view_user' | 'update_user' | 'delete_user' | 'manage_users' | 'create_city_admin' | 'suspend_user' | 'activate_user' | 'assign_user_city' | 'revoke_user_city'
     | 'view_city' | 'create_city' | 'update_city' | 'delete_city' | 'activate_city' | 'deactivate_city'
     | 'view_parcel' | 'create_parcel' | 'update_parcel' | 'delete_parcel'
     | 'view_building' | 'create_building' | 'update_building' | 'delete_building'
@@ -36,6 +36,7 @@ export type SecurityAction =
  */
 const ADMIN_IMMOBILIER_ACTIONS: ReadonlyArray<SecurityAction> = [
     'view', 'view_organization',
+    'create_city_admin',
     'view_city', 'create_city', 'update_city', 'delete_city', 'activate_city', 'deactivate_city',
     'view_parcel', 'create_parcel', 'update_parcel', 'delete_parcel',
     'view_building', 'create_building', 'update_building', 'delete_building',

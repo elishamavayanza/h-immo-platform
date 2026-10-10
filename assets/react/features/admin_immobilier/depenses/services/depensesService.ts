@@ -90,6 +90,8 @@ export async function fetchDepenses(organizationUuid: string): Promise<DepensesD
         categoryCode: expense.category,
         category: categoryLabel(expense.category),
         property: propertyLabel(expense, cities, parcels, buildings, units),
+        parcelId: expense.parcelId ?? (expense.buildingId ? buildings.get(expense.buildingId)?.parcelId ?? null : expense.unitId ? buildings.get(units.get(expense.unitId)?.buildingId ?? '')?.parcelId ?? null : null),
+        buildingId: expense.buildingId ?? (expense.unitId ? units.get(expense.unitId)?.buildingId ?? null : null),
         description: descriptionLabel(expense, workerById),
         amount: expense.amount,
         currency: expense.currency,
@@ -99,7 +101,7 @@ export async function fetchDepenses(organizationUuid: string): Promise<DepensesD
         ? `Liste partielle : ${expenses.total} dépenses au total, les ${REFERENCE_LIMIT} plus récentes sont affichées.`
         : null;
 
-    return { rows, total: expenses.total, note };
+    return { rows, cities: catalog.cities.items, total: expenses.total, note };
 }
 
 export const CATEGORY_OPTIONS = Object.entries(CATEGORY_LABEL).map(([value, label]) => ({ value, label }));
