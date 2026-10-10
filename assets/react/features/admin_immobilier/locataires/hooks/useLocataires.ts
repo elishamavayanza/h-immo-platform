@@ -5,6 +5,7 @@ import { useOrganization } from '../../../../app/providers/OrganizationProvider'
 import { ApiError } from '../../../../../services/api/api.types';
 import {
     archiveTenant,
+    activateLease,
     createTenant,
     fetchLocataires,
     updateTenant,
@@ -101,6 +102,11 @@ export function useLocataires() {
         await reload();
     }, [push, reload]);
 
+    const activateLeaseAction = useCallback(async (leaseUuid: string): Promise<void> => {
+        await runAction(push, 'Bail activé.', () => activateLease(leaseUuid));
+        await reload();
+    }, [push, reload]);
+
     const rows = useMemo(() => {
         const query = search.trim().toLocaleLowerCase('fr');
         return (data?.rows ?? []).filter((row) =>
@@ -127,5 +133,6 @@ export function useLocataires() {
         createTenant: createTenantAction,
         updateTenant: updateTenantAction,
         createLease: createLeaseAction,
+        activateLease: activateLeaseAction,
     };
 }

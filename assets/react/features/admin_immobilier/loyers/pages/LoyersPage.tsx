@@ -1,4 +1,5 @@
 import { useState, type FormEvent } from 'react';
+import { useSearchParams } from 'react-router-dom';
 
 import { OrganizationSummary } from '../../../shared/components/OrganizationSummary';
 import { Card } from '../../../../components/UI/Card';
@@ -36,12 +37,16 @@ const CURRENCY_OPTIONS = [
 ];
 
 export function LoyersPage() {
+    const [searchParams] = useSearchParams();
+    const parcelUuid = searchParams.get('parcelUuid');
+    const buildingUuid = searchParams.get('buildingUuid');
     const { organizationRole } = useOrganization();
     const {
-        data, rows, isLoading, error, reload,
+        data, rows: allRows, isLoading, error, reload,
         search, setSearch, status, setStatus,
         recordPayment, markOverdue, updateRent,
     } = useLoyers();
+    const rows = allRows.filter((row) => (!parcelUuid || row.parcelId === parcelUuid) && (!buildingUuid || row.buildingId === buildingUuid));
 
     const [paymentModalOpen, setPaymentModalOpen] = useState(false);
     const [paymentTarget, setPaymentTarget] = useState<LoyerRow | null>(null);

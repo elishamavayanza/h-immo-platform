@@ -134,13 +134,14 @@ class TenantRepository extends ServiceEntityRepository
         int $limit,
         ?string $search = null,
         string $sortBy = 'fullName',
-        string $sortOrder = 'ASC'
+        string $sortOrder = 'ASC',
+        ?array $unrestrictedOrganizations = null
     ): array {
         if ($organizations === []) {
             return ['items' => [], 'total' => 0];
         }
 
-        if ($allowedCities !== null && $allowedCities === []) {
+        if ($unrestrictedOrganizations === null && $allowedCities !== null && $allowedCities === []) {
             return ['items' => [], 'total' => 0];
         }
 
@@ -149,12 +150,56 @@ class TenantRepository extends ServiceEntityRepository
         $sortOrder = strtoupper($sortOrder) === 'ASC' ? 'ASC' : 'DESC';
 
         $qb = $this->createQueryBuilder('t')
-            ->andWhere('t.organization IN (:organizations)')
             ->andWhere('t.deletedAt IS NULL')
-            ->setParameter('organizations', $organizations)
             ->orderBy("t.$sortBy", $sortOrder);
 
-        if ($allowedCities !== null) {
+        if ($unrestrictedOrganizations === null) {
+            $qb->andWhere('t.organization IN (:organizations)')
+                ->setParameter('organizations', $organizations);
+        } else {
+            $unrestrictedIds = array_map(static fn (Organization $organization): int => $organization->getId(), $unrestrictedOrganizations);
+            $scopedOrganizations = array_values(array_filter(
+                $organizations,
+                static fn (Organization $organization): bool => !in_array($organization->getId(), $unrestrictedIds, true)
+            ));
+            if ($unrestrictedOrganizations === [] && $scopedOrganizations === []) {
+                return ['items' => [], 'total' => 0];
+            }
+
+            if ($scopedOrganizations === [] || $allowedCities === []) {
+                $qb->andWhere('t.organization IN (:fullAccessOrganizations)')
+                    ->setParameter('fullAccessOrganizations', $unrestrictedOrganizations);
+            } elseif ($unrestrictedOrganizations === []) {
+                $qb->andWhere('t.organization IN (:cityScopedOrganizations) AND EXISTS (
+                    SELECT 1
+                    FROM App\\Entity\\Rental\\Lease l
+                    JOIN App\\Entity\\Property\\Unit un WITH un = l.unit
+                    JOIN App\\Entity\\Property\\Building b WITH b = un.building
+                    JOIN App\\Entity\\Property\\Parcel p WITH p = b.parcel
+                    WHERE l.tenant = t
+                      AND l.deletedAt IS NULL
+                      AND p.city IN (:allowedCities)
+                )')
+                    ->setParameter('cityScopedOrganizations', $scopedOrganizations)
+                    ->setParameter('allowedCities', $allowedCities);
+            } else {
+                $qb->andWhere('(t.organization IN (:fullAccessOrganizations) OR (t.organization IN (:cityScopedOrganizations) AND EXISTS (
+                    SELECT 1
+                    FROM App\\Entity\\Rental\\Lease l
+                    JOIN App\\Entity\\Property\\Unit un WITH un = l.unit
+                    JOIN App\\Entity\\Property\\Building b WITH b = un.building
+                    JOIN App\\Entity\\Property\\Parcel p WITH p = b.parcel
+                    WHERE l.tenant = t
+                      AND l.deletedAt IS NULL
+                      AND p.city IN (:allowedCities)
+                )))')
+                    ->setParameter('fullAccessOrganizations', $unrestrictedOrganizations)
+                    ->setParameter('cityScopedOrganizations', $scopedOrganizations)
+                    ->setParameter('allowedCities', $allowedCities);
+            }
+        }
+
+        if ($unrestrictedOrganizations === null && $allowedCities !== null) {
             $qb->andWhere(
                 'EXISTS (
                     SELECT 1

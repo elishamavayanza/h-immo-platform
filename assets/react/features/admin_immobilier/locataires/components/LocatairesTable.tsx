@@ -3,6 +3,7 @@ import type { DataTableColumn } from '../../../../hook-components/Data/DataTable
 import { Badge } from '../../../../components/UI/Badge';
 import { PopoverMenu } from '../../../../components/UI/PopoverMenu';
 import type { PopoverMenuItem } from '../../../../hook-components/UI/PopoverMenu';
+import { Icon } from '../../../../components/UI/Icon/Icon';
 import { formatUserDate } from '../../../../services/userPreferences';
 import { canDo } from '../../../shared/permissions';
 import type { OrganizationRole } from '../../../../../services/api/api.types';
@@ -23,13 +24,14 @@ interface LocatairesTableProps {
     onEdit: (row: LocataireRow) => void;
     onArchive: (row: LocataireRow) => void;
     onNewLease: (row: LocataireRow) => void;
+    onActivateLease: (row: LocataireRow) => void;
 }
 
 /**
  * Table des locataires : actions Modifier, Archiver, Nouveau bail.
  * Archiver = suppression logique (`ARCHIVE_TENANT`). Pas de suppression définitive.
  */
-export function LocatairesTable({ rows, role, onEdit, onArchive, onNewLease }: LocatairesTableProps) {
+export function LocatairesTable({ rows, role, onEdit, onArchive, onNewLease, onActivateLease }: LocatairesTableProps) {
     const columns: DataTableColumn<LocataireRow>[] = [
         {
             key: 'name',
@@ -40,26 +42,29 @@ export function LocatairesTable({ rows, role, onEdit, onArchive, onNewLease }: L
         { key: 'type', title: 'Type', sortable: true, render: (row) => <Badge variant={TYPE_VARIANT[row.type]}>{TYPE_LABEL[row.type]}</Badge> },
         { key: 'unitReference', title: 'Unité', sortable: true, render: (row) => row.unitReference ?? '—' },
         { key: 'address', title: 'Adresse', sortable: true },
-        { key: 'leaseEnd', title: 'Fin du bail', sortable: true, render: (row) => (row.leaseEnd ? formatUserDate(row.leaseEnd) : 'Aucun bail actif') },
+        { key: 'leaseEnd', title: 'Bail', sortable: true, render: (row) => (row.leaseStatus === 'draft' ? <Badge variant="secondary">Brouillon</Badge> : row.leaseStatus === 'active' ? (row.leaseEnd ? `Actif · fin ${formatUserDate(row.leaseEnd)}` : 'Actif · sans date de fin') : 'Aucun bail actif') },
         {
             key: 'actions',
             title: 'Actions',
             render: (row) => {
                 const items: PopoverMenuItem[] = [
                     ...(canDo(role, 'update_tenant')
-                        ? [{ id: 'edit', label: 'Modifier', icon: <span aria-hidden="true">✎</span>, onClick: () => onEdit(row) }]
+                        ? [{ id: 'edit', label: 'Modifier', icon: <Icon name="edit" />, onClick: () => onEdit(row) }]
                         : []),
                     ...(canDo(role, 'create_lease')
-                        ? [{ id: 'new-lease', label: 'Nouveau bail', icon: <span aria-hidden="true">📄</span>, onClick: () => onNewLease(row) }]
+                        ? [{ id: 'new-lease', label: 'Nouveau bail', icon: <Icon name="document" />, onClick: () => onNewLease(row) }]
+                        : []),
+                    ...(row.leaseStatus === 'draft' && row.leaseUuid && canDo(role, 'activate_lease')
+                        ? [{ id: 'activate-lease', label: 'Activer le bail', icon: <Icon name="check" />, onClick: () => onActivateLease(row) }]
                         : []),
                     ...(canDo(role, 'archive_tenant')
-                        ? [{ id: 'archive', label: 'Archiver', icon: <span aria-hidden="true">🗄</span>, danger: true, onClick: () => onArchive(row) }]
+                        ? [{ id: 'archive', label: 'Archiver', icon: <Icon name="archive" />, danger: true, onClick: () => onArchive(row) }]
                         : []),
                 ];
 
                 if (items.length === 0) return '—';
 
-                return <PopoverMenu placement="bottom" offset={6} items={items} trigger={<span className="organization-row-actions" aria-label={`Actions pour ${row.name}`}><span aria-hidden="true">•••</span></span>} />;
+                return <PopoverMenu placement="bottom" offset={6} items={items} trigger={<span className="organization-row-actions" aria-label={`Actions pour ${row.name}`}><Icon name="more" /></span>} />;
             },
         },
     ];

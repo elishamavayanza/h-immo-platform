@@ -13,6 +13,7 @@ import { FormField } from '../../../../components/Forms/FormField';
 import { Modal } from '../../../../components/UI/Modal';
 import { ConfirmDialog } from '../../../../components/UI/ConfirmDialog';
 import { Badge } from '../../../../components/UI/Badge';
+import { Icon } from '../../../../components/UI/Icon/Icon';
 import { PopoverMenu } from '../../../../components/UI/PopoverMenu';
 import type { PopoverMenuItem } from '../../../../hook-components/UI/PopoverMenu';
 import type { OrganizationRole } from '../../../../../services/api/api.types';
@@ -46,9 +47,11 @@ interface VillesTabProps {
     error: string | null;    note?: string | null;
     onReload: () => void;
     onCreate: (payload: CityPayload) => Promise<void>;
+    onCreateAdmin: (cityUuid: string, payload: { fullName: string; email: string; phone: string }) => Promise<void>;
     onUpdate: (uuid: string, payload: CityPayload) => Promise<void>;
     onSetStatus: (city: CityItem, status: CityPayload['status']) => Promise<void>;
     onDelete: (uuid: string) => Promise<void>;
+    onOpen: (uuid: string) => void;
 }
 
 /**
@@ -59,7 +62,7 @@ interface VillesTabProps {
  * parent. Les boutons sont gatés par `canDo` (miroir de `SecurityService`) ;
  * l'API demeure l'autorité.
  */
-export function VillesTab({ cities, role, isLoading, error, note, onReload, onCreate, onUpdate, onSetStatus, onDelete }: VillesTabProps) {
+export function VillesTab({ cities, role, isLoading, error, note, onReload, onCreate, onCreateAdmin, onUpdate, onSetStatus, onDelete, onOpen }: VillesTabProps) {
     const [search, setSearch] = useState('');
     const [modalOpen, setModalOpen] = useState(false);
     const [editTarget, setEditTarget] = useState<CityItem | null>(null);
@@ -67,6 +70,10 @@ export function VillesTab({ cities, role, isLoading, error, note, onReload, onCr
     const [formErrors, setFormErrors] = useState<Record<string, string>>({});
     const [submitting, setSubmitting] = useState(false);
     const [deleteTarget, setDeleteTarget] = useState<CityItem | null>(null);
+    const [adminCity, setAdminCity] = useState<CityItem | null>(null);
+    const [adminForm, setAdminForm] = useState({ fullName: '', email: '', phone: '' });
+    const [adminErrors, setAdminErrors] = useState<Record<string, string>>({});
+    const [creatingAdmin, setCreatingAdmin] = useState(false);
 
     const filtered = cities.filter((entry) => {
         const query = search.trim().toLocaleLowerCase('fr');
@@ -123,12 +130,32 @@ export function VillesTab({ cities, role, isLoading, error, note, onReload, onCr
         await onDelete(target.id);
     };
 
+    const submitAdmin = async (event: FormEvent<HTMLFormElement>) => {
+        event.preventDefault();
+        if (!adminCity || creatingAdmin) return;
+        setCreatingAdmin(true);
+        setAdminErrors({});
+        try {
+            await onCreateAdmin(adminCity.id, {
+                fullName: adminForm.fullName.trim(),
+                email: adminForm.email.trim(),
+                phone: adminForm.phone.trim(),
+            });
+            setAdminCity(null);
+            setAdminForm({ fullName: '', email: '', phone: '' });
+        } catch (cause) {
+            setAdminErrors(fieldErrorMap(cause));
+        } finally {
+            setCreatingAdmin(false);
+        }
+    };
+
     const columns: DataTableColumn<CityItem>[] = [
         {
             key: 'name',
             title: 'Ville',
             sortable: true,
-            render: (city) => <div className="organization-property-name"><strong>{city.name}</strong><small>{city.code}</small></div>,
+            render: (city) => <div className="organization-property-name"><button type="button" className="patrimoine-link" onClick={() => onOpen(city.id)} aria-label={`Voir les parcelles de ${city.name}`}><strong>{city.name}</strong></button><small>{city.code} · Voir les parcelles →</small></div>,
         },
         { key: 'province', title: 'Province', sortable: true, render: (city) => city.province || '—' },
         { key: 'country', title: 'Pays', sortable: true, render: (city) => city.country || '—' },
@@ -143,21 +170,22 @@ export function VillesTab({ cities, role, isLoading, error, note, onReload, onCr
             title: 'Actions',
             render: (city) => {
                 const isActive = city.status === 'active';
+                const addCityAdmin = () => { setAdminCity(city); setAdminForm({ fullName: '', email: '', phone: '' }); setAdminErrors({}); };
                 const items: PopoverMenuItem[] = [
                     ...(canDo(role, 'update_city')
-                        ? [{ id: 'edit', label: 'Modifier', icon: <span aria-hidden="true">✎</span>, onClick: () => openEdit(city) }]
+                        ? [{ id: 'edit', label: 'Modifier', icon: <Icon name="edit" />, onClick: () => openEdit(city) }]
                         : []),
                     ...(canDo(role, isActive ? 'deactivate_city' : 'activate_city')
-                        ? [{ id: 'toggle', label: isActive ? 'Désactiver' : 'Activer', icon: <span aria-hidden="true">⏻</span>, onClick: () => void onSetStatus(city, isActive ? 'inactive' : 'active') }]
+                        ? [{ id: 'toggle', label: isActive ? 'Désactiver' : 'Activer', icon: <Icon name="power" />, onClick: () => void onSetStatus(city, isActive ? 'inactive' : 'active') }]
                         : []),
                     ...(canDo(role, 'delete_city')
-                        ? [{ id: 'delete', label: 'Supprimer', icon: <span aria-hidden="true">🗑</span>, danger: true, onClick: () => setDeleteTarget(city) }]
+                        ? [{ id: 'delete', label: 'Supprimer', icon: <Icon name="trash" />, danger: true, onClick: () => setDeleteTarget(city) }]
                         : []),
                 ];
 
                 if (items.length === 0) return '—';
 
-                return <PopoverMenu placement="bottom" offset={6} items={items} trigger={<span className="organization-row-actions" aria-label={`Actions pour ${city.name}`}><span aria-hidden="true">•••</span></span>} />;
+                return <div className="ville-row-actions">{canDo(role, 'create_city_admin') && <Button size="small" variant="secondary" onClick={addCityAdmin} aria-label={`Ajouter un admin ville pour ${city.name}`}><Icon name="plus" size={14} /> Admin ville</Button>}{items.length > 0 && <PopoverMenu placement="bottom" offset={6} items={items} trigger={<span className="organization-row-actions" aria-label={`Actions pour ${city.name}`}><Icon name="more" /></span>} />}</div>;
             },
         },
     ];
@@ -209,6 +237,27 @@ export function VillesTab({ cities, role, isLoading, error, note, onReload, onCr
                     </FormField>
                     <FormField label="Statut" htmlFor="city-status" error={formErrors.status}>
                         <Select id="city-status" value={form.status} onChange={(event) => setForm((current) => ({ ...current, status: event.target.value }))} options={CITY_STATUS_OPTIONS} />
+                    </FormField>
+                </form>
+            </Modal>
+
+            <Modal
+                isOpen={adminCity !== null}
+                onClose={() => setAdminCity(null)}
+                title={adminCity ? `Administrateur · ${adminCity.name}` : 'Ajouter un administrateur de ville'}
+                size="medium"
+                footer={<ModalActions formId="city-admin-form" onCancel={() => setAdminCity(null)} submitLabel="Créer l’administrateur" loadingLabel="Création…" isLoading={creatingAdmin} />}
+            >
+                <form id="city-admin-form" className="organization-management-form" onSubmit={submitAdmin}>
+                    <p className="organization-management-form__hint">Ce compte aura le rôle <strong>Admin ville</strong> et sera automatiquement limité à <strong>{adminCity?.name}</strong>. Un email de configuration du mot de passe sera envoyé.</p>
+                    <FormField label="Nom complet" htmlFor="city-admin-name" required error={adminErrors.fullName}>
+                        <Input id="city-admin-name" value={adminForm.fullName} onChange={(event) => setAdminForm((current) => ({ ...current, fullName: event.target.value }))} placeholder="Ex. : Aline Kasereka" required fullWidth maxLength={200} />
+                    </FormField>
+                    <FormField label="Adresse e-mail" htmlFor="city-admin-email" required helpText="Cette adresse servira d’identifiant." error={adminErrors.email}>
+                        <Input id="city-admin-email" type="email" value={adminForm.email} onChange={(event) => setAdminForm((current) => ({ ...current, email: event.target.value }))} placeholder="admin-ville@example.test" required fullWidth maxLength={180} />
+                    </FormField>
+                    <FormField label="Téléphone" htmlFor="city-admin-phone" required error={adminErrors.phone}>
+                        <Input id="city-admin-phone" value={adminForm.phone} onChange={(event) => setAdminForm((current) => ({ ...current, phone: event.target.value }))} placeholder="+243…" required fullWidth maxLength={30} />
                     </FormField>
                 </form>
             </Modal>

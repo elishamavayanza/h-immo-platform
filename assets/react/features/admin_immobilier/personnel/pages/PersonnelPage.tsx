@@ -1,4 +1,5 @@
 import { useState, type FormEvent } from 'react';
+import { useSearchParams } from 'react-router-dom';
 
 import { OrganizationSummary } from '../../../shared/components/OrganizationSummary';
 import { Card } from '../../../../components/UI/Card';
@@ -23,12 +24,16 @@ import { canDo } from '../../../shared/permissions';
 import '../../../../../styles/pages/admin_immobilier/personnel/_personnel.scss';
 
 export function PersonnelPage() {
-    const { organizationRole } = useOrganization();
+    const [searchParams] = useSearchParams();
+    const parcelUuid = searchParams.get('parcelUuid');
+    const buildingUuid = searchParams.get('buildingUuid');
+    const { organizationRole, currentOrganization } = useOrganization();
     const {
-        data, rows, availableCities, isLoading, error, reload,
+        data, rows: allRows, availableCities, isLoading, error, reload,
         search, setSearch, city, setCity,
         createWorker, updateWorker, createAssignment,
     } = usePersonnel();
+    const rows = allRows.filter((row) => (!parcelUuid || row.parcelIds.includes(parcelUuid)) && (!buildingUuid || row.buildingIds.includes(buildingUuid)));
 
     const [workerModalOpen, setWorkerModalOpen] = useState(false);
     const [editTarget, setEditTarget] = useState<PersonnelRow | null>(null);
@@ -39,6 +44,14 @@ export function PersonnelPage() {
         nationalId: '',
         address: '',
         notes: '',
+        cityUuid: '',
+        targetType: 'parcel' as 'parcel' | 'building' | 'unit',
+        parcelUuid: '',
+        buildingUuid: '',
+        unitUuid: '',
+        role: 'gardien',
+        monthlySalary: '',
+        currency: 'USD' as 'USD' | 'CDF',
     });
     const [formErrors, setFormErrors] = useState<Record<string, string>>({});
     const [submitting, setSubmitting] = useState(false);
@@ -61,14 +74,14 @@ export function PersonnelPage() {
     const [submittingAssignment, setSubmittingAssignment] = useState(false);
 
     const openCreateWorker = () => {
-        setForm({ fullName: '', phone: '', email: '', nationalId: '', address: '', notes: '' });
+        setForm({ fullName: '', phone: '', email: '', nationalId: '', address: '', notes: '', cityUuid: '', targetType: 'parcel', parcelUuid: '', buildingUuid: '', unitUuid: '', role: 'gardien', monthlySalary: '', currency: 'USD' });
         setFormErrors({});
         setEditTarget(null);
         setWorkerModalOpen(true);
     };
 
     const openEditWorker = (target: PersonnelRow) => {
-        setForm({ fullName: target.name, phone: target.phone ?? '', email: '', nationalId: '', address: '', notes: '' });
+        setForm({ fullName: target.name, phone: target.phone ?? '', email: '', nationalId: '', address: '', notes: '', cityUuid: '', targetType: 'parcel', parcelUuid: '', buildingUuid: '', unitUuid: '', role: 'gardien', monthlySalary: '', currency: 'USD' });
         setFormErrors({});
         setEditTarget(target);
         setWorkerModalOpen(true);
@@ -94,11 +107,36 @@ export function PersonnelPage() {
             notes: form.notes.trim() || undefined,
         };
 
+        if (!editTarget && (!currentOrganization?.uuid || !form.cityUuid || !form.monthlySalary.trim())) {
+            setFormErrors({ ...(!currentOrganization?.uuid ? { organizationUuid: 'Aucune organisation active.' } : {}), ...(!form.cityUuid ? { cityUuid: 'Sélectionnez une ville.' } : {}), ...(!form.monthlySalary.trim() ? { monthlySalary: 'Indiquez le salaire mensuel.' } : {}) });
+            setSubmitting(false);
+            return;
+        }
+
+        const targetUuid = form.targetType === 'parcel' ? form.parcelUuid : form.targetType === 'building' ? form.buildingUuid : form.unitUuid;
+        if (!editTarget && !targetUuid) {
+            setFormErrors({ [form.targetType === 'parcel' ? 'parcelUuid' : form.targetType === 'building' ? 'buildingUuid' : 'unitUuid']: 'Choisissez le bien auquel affecter cette personne.' });
+            setSubmitting(false);
+            return;
+        }
+
         try {
             if (editTarget) {
                 await updateWorker(editTarget.id, payload);
             } else {
-                await createWorker(payload);
+                const worker = await createWorker({ ...payload, organizationUuid: currentOrganization!.uuid });
+                await createAssignment({
+                    workerUuid: worker.id,
+                    cityUuid: form.cityUuid,
+                    role: form.role,
+                    monthlySalary: form.monthlySalary.trim(),
+                    currency: form.currency,
+                    startDate: new Date().toISOString().slice(0, 10),
+                    ...(form.targetType === 'parcel' ? { parcelUuid: targetUuid } : {}),
+                    ...(form.targetType === 'building' ? { buildingUuid: targetUuid } : {}),
+                    ...(form.targetType === 'unit' ? { unitUuid: targetUuid } : {}),
+                    notes: form.notes.trim() || undefined,
+                });
             }
             closeWorkerModal();
         } catch (cause) {
@@ -136,6 +174,13 @@ export function PersonnelPage() {
         if (submittingAssignment || !assignTarget) return;
         setSubmittingAssignment(true);
         setAssignmentFormErrors({});
+
+        const selectedTargets = [assignmentForm.parcelUuid, assignmentForm.buildingUuid, assignmentForm.unitUuid].filter(Boolean);
+        if (selectedTargets.length !== 1) {
+            setAssignmentFormErrors({ parcelUuid: 'Choisissez une seule parcelle, un bâtiment ou une unité.' });
+            setSubmittingAssignment(false);
+            return;
+        }
 
         const payload = {
             workerUuid: assignTarget.id,
@@ -184,6 +229,7 @@ export function PersonnelPage() {
             footer={<ModalActions formId="worker-form" onCancel={closeWorkerModal} submitLabel={editTarget ? 'Enregistrer' : 'Créer l\'ouvrier'} loadingLabel={editTarget ? 'Enregistrement…' : 'Création…'} isLoading={submitting} />}
         >
             <form id="worker-form" className="organization-management-form" onSubmit={submitWorker}>
+                {Object.values(formErrors).filter(Boolean).length > 0 && <p className="organization-form-error" role="alert">{Object.values(formErrors).filter(Boolean).join(' · ')}</p>}
                 <FormField label="Nom complet" htmlFor="worker-fullname" required error={formErrors.fullName}>
                     <Input id="worker-fullname" value={form.fullName} onChange={(event) => setForm((current) => ({ ...current, fullName: event.target.value }))} placeholder="Ex. : Jean Dupont" required fullWidth maxLength={200} />
                 </FormField>
@@ -202,6 +248,21 @@ export function PersonnelPage() {
                 <FormField label="Notes" htmlFor="worker-notes" error={formErrors.notes}>
                     <Textarea id="worker-notes" value={form.notes} onChange={(event) => setForm((current) => ({ ...current, notes: event.target.value }))} rows={3} fullWidth maxLength={1000} />
                 </FormField>
+                {!editTarget && <>
+                    <div className="organization-management-form__section"><h3>Affectation obligatoire</h3><p>Chaque nouveau membre est rattaché à une ville et à un bien.</p></div>
+                    <FormField label="Ville" htmlFor="worker-city" required error={formErrors.cityUuid}>
+                        <Select id="worker-city" value={form.cityUuid} onChange={(event) => setForm((current) => ({ ...current, cityUuid: event.target.value, parcelUuid: '', buildingUuid: '', unitUuid: '' }))} options={(data?.cities ?? []).map((city) => ({ value: city.id, label: city.name }))} placeholder="Sélectionner une ville" required />
+                    </FormField>
+                    <FormField label="Type de rattachement" htmlFor="worker-target-type" required>
+                        <Select id="worker-target-type" value={form.targetType} onChange={(event) => setForm((current) => ({ ...current, targetType: event.target.value as 'parcel' | 'building' | 'unit', parcelUuid: '', buildingUuid: '', unitUuid: '' }))} options={[{ value: 'parcel', label: 'Parcelle' }, { value: 'building', label: 'Bâtiment' }, { value: 'unit', label: 'Unité' }]} />
+                    </FormField>
+                    {form.targetType === 'parcel' && <FormField label="Parcelle" htmlFor="worker-parcel" required error={formErrors.parcelUuid}><Select id="worker-parcel" value={form.parcelUuid} onChange={(event) => setForm((current) => ({ ...current, parcelUuid: event.target.value }))} options={(data?.parcels ?? []).filter((parcel) => parcel.cityId === form.cityUuid).map((parcel) => ({ value: parcel.id, label: `${parcel.name} · ${parcel.reference}` }))} placeholder="Sélectionner une parcelle" required /></FormField>}
+                    {form.targetType === 'building' && <FormField label="Bâtiment" htmlFor="worker-building" required error={formErrors.buildingUuid}><Select id="worker-building" value={form.buildingUuid} onChange={(event) => setForm((current) => ({ ...current, buildingUuid: event.target.value }))} options={(data?.buildings ?? []).filter((building) => (data?.parcels ?? []).some((parcel) => parcel.id === building.parcelId && parcel.cityId === form.cityUuid)).map((building) => ({ value: building.id, label: building.name }))} placeholder="Sélectionner un bâtiment" required /></FormField>}
+                    {form.targetType === 'unit' && <FormField label="Unité" htmlFor="worker-unit" required error={formErrors.unitUuid}><Select id="worker-unit" value={form.unitUuid} onChange={(event) => setForm((current) => ({ ...current, unitUuid: event.target.value }))} options={(data?.units ?? []).filter((unit) => (data?.buildings ?? []).some((building) => building.id === unit.buildingId && (data?.parcels ?? []).some((parcel) => parcel.id === building.parcelId && parcel.cityId === form.cityUuid))).map((unit) => ({ value: unit.id, label: unit.reference }))} placeholder="Sélectionner une unité" required /></FormField>}
+                    <FormField label="Fonction" htmlFor="worker-assignment-role" required error={formErrors.role}><Select id="worker-assignment-role" value={form.role} onChange={(event) => setForm((current) => ({ ...current, role: event.target.value }))} options={ASSIGNMENT_ROLE_OPTIONS} /></FormField>
+                    <FormField label="Salaire mensuel" htmlFor="worker-assignment-salary" required error={formErrors.monthlySalary}><Input id="worker-assignment-salary" type="number" min="0" step="0.01" value={form.monthlySalary} onChange={(event) => setForm((current) => ({ ...current, monthlySalary: event.target.value }))} required fullWidth /></FormField>
+                    <FormField label="Devise" htmlFor="worker-assignment-currency" required><Select id="worker-assignment-currency" value={form.currency} onChange={(event) => setForm((current) => ({ ...current, currency: event.target.value as 'USD' | 'CDF' }))} options={CURRENCY_OPTIONS} /></FormField>
+                </>}
             </form>
         </Modal>
         <Modal
@@ -212,8 +273,9 @@ export function PersonnelPage() {
             footer={<ModalActions formId="assignment-form" onCancel={closeAssignmentModal} submitLabel="Créer l'affectation" loadingLabel="Création…" isLoading={submittingAssignment} />}
         >
             <form id="assignment-form" className="organization-management-form" onSubmit={submitAssignment}>
+                {Object.values(assignmentFormErrors).filter(Boolean).length > 0 && <p className="organization-form-error" role="alert">{Object.values(assignmentFormErrors).filter(Boolean).join(' · ')}</p>}
                 <FormField label="Ville" htmlFor="assign-city" required error={assignmentFormErrors.cityUuid}>
-                    <Select id="assign-city" value={assignmentForm.cityUuid} onChange={(event) => setAssignmentForm((current) => ({ ...current, cityUuid: event.target.value }))} options={[] as { value: string; label: string }[]} placeholder="Sélectionner une ville" required />
+                    <Select id="assign-city" value={assignmentForm.cityUuid} onChange={(event) => setAssignmentForm((current) => ({ ...current, cityUuid: event.target.value, parcelUuid: '', buildingUuid: '', unitUuid: '' }))} options={(data?.cities ?? []).map((city) => ({ value: city.id, label: city.name }))} placeholder="Sélectionner une ville" required />
                 </FormField>
                 <FormField label="Fonction" htmlFor="assign-role" required error={assignmentFormErrors.role}>
                     <Select id="assign-role" value={assignmentForm.role} onChange={(event) => setAssignmentForm((current) => ({ ...current, role: event.target.value }))} options={ASSIGNMENT_ROLE_OPTIONS} />
@@ -230,14 +292,14 @@ export function PersonnelPage() {
                 <FormField label="Date de fin (optionnel)" htmlFor="assign-end" error={assignmentFormErrors.endDate}>
                     <Input id="assign-end" type="date" value={assignmentForm.endDate} onChange={(event) => setAssignmentForm((current) => ({ ...current, endDate: event.target.value }))} fullWidth />
                 </FormField>
-                <FormField label="Parcel (optionnel)" htmlFor="assign-parcel" error={assignmentFormErrors.parcelUuid}>
-                    <Select id="assign-parcel" value={assignmentForm.parcelUuid} onChange={(event) => setAssignmentForm((current) => ({ ...current, parcelUuid: event.target.value }))} options={[] as { value: string; label: string }[]} placeholder="Sélectionner une parcelle" />
+                <FormField label="Parcelle" htmlFor="assign-parcel" error={assignmentFormErrors.parcelUuid}>
+                    <Select id="assign-parcel" value={assignmentForm.parcelUuid} onChange={(event) => setAssignmentForm((current) => ({ ...current, parcelUuid: event.target.value, buildingUuid: '', unitUuid: '' }))} options={(data?.parcels ?? []).filter((parcel) => parcel.cityId === assignmentForm.cityUuid).map((parcel) => ({ value: parcel.id, label: `${parcel.name} · ${parcel.reference}` }))} placeholder="Sélectionner une parcelle (ou un bâtiment / une unité)" />
                 </FormField>
-                <FormField label="Bâtiment (optionnel)" htmlFor="assign-building" error={assignmentFormErrors.buildingUuid}>
-                    <Select id="assign-building" value={assignmentForm.buildingUuid} onChange={(event) => setAssignmentForm((current) => ({ ...current, buildingUuid: event.target.value }))} options={[] as { value: string; label: string }[]} placeholder="Sélectionner un bâtiment" />
+                <FormField label="Bâtiment" htmlFor="assign-building" error={assignmentFormErrors.buildingUuid}>
+                    <Select id="assign-building" value={assignmentForm.buildingUuid} onChange={(event) => setAssignmentForm((current) => ({ ...current, buildingUuid: event.target.value, parcelUuid: '', unitUuid: '' }))} options={(data?.buildings ?? []).filter((building) => (data?.parcels ?? []).some((parcel) => parcel.id === building.parcelId && parcel.cityId === assignmentForm.cityUuid)).map((building) => ({ value: building.id, label: building.name }))} placeholder="Sélectionner un bâtiment" />
                 </FormField>
-                <FormField label="Unité (optionnel)" htmlFor="assign-unit" error={assignmentFormErrors.unitUuid}>
-                    <Select id="assign-unit" value={assignmentForm.unitUuid} onChange={(event) => setAssignmentForm((current) => ({ ...current, unitUuid: event.target.value }))} options={[] as { value: string; label: string }[]} placeholder="Sélectionner une unité" />
+                <FormField label="Unité" htmlFor="assign-unit" error={assignmentFormErrors.unitUuid}>
+                    <Select id="assign-unit" value={assignmentForm.unitUuid} onChange={(event) => setAssignmentForm((current) => ({ ...current, unitUuid: event.target.value, parcelUuid: '', buildingUuid: '' }))} options={(data?.units ?? []).filter((unit) => (data?.buildings ?? []).some((building) => building.id === unit.buildingId && (data?.parcels ?? []).some((parcel) => parcel.id === building.parcelId && parcel.cityId === assignmentForm.cityUuid))).map((unit) => ({ value: unit.id, label: unit.reference }))} placeholder="Sélectionner une unité" />
                 </FormField>
                 <FormField label="Notes" htmlFor="assign-notes" error={assignmentFormErrors.notes}>
                     <Textarea id="assign-notes" value={assignmentForm.notes} onChange={(event) => setAssignmentForm((current) => ({ ...current, notes: event.target.value }))} rows={3} fullWidth maxLength={1000} />

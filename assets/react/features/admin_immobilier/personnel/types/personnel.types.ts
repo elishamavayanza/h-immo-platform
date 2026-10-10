@@ -17,12 +17,21 @@ export interface PersonnelRow {
     city: string;
     /** Nombre d'affectations de ce travailleur. */
     assignments: number;
+    parcelId: string | null;
+    buildingId: string | null;
+    parcelIds: string[];
+    buildingIds: string[];
     phone: string;
     email: string | null;
 }
 
 export interface PersonnelData {
     rows: PersonnelRow[];
+    cities: CityItem[];
+    parcels: ParcelItem[];
+    buildings: BuildingItem[];
+    units: UnitItem[];
     total: number;
     note: string | null;
 }
+import type { BuildingItem, CityItem, ParcelItem, UnitItem } from '../../shared/types/reference.types';

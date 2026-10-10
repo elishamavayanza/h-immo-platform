@@ -10,7 +10,7 @@
  */
 import { apiClient } from '../../../../../services/api/client';
 import type { Feedback } from '../../../../../services/api/api.types';
-import { REFERENCE_LIMIT, fetchCities, fetchWorkerAssignments, fetchWorkers } from '../../shared/services/referenceService';
+import { REFERENCE_LIMIT, fetchBuildings, fetchCities, fetchParcels, fetchUnits, fetchWorkerAssignments, fetchWorkers } from '../../shared/services/referenceService';
 import type { CityItem, WorkerAssignmentItem, WorkerItem } from '../../shared/types/reference.types';
 import type { PersonnelData, PersonnelRow } from '../types/personnel.types';
 
@@ -29,13 +29,17 @@ export function roleLabel(role: string): string {
 }
 
 export async function fetchPersonnel(organizationUuid: string): Promise<PersonnelData> {
-    const [workers, assignments, cities] = await Promise.all([
+    const [workers, assignments, cities, parcels, buildings, units] = await Promise.all([
         fetchWorkers(organizationUuid),
         fetchWorkerAssignments(),
         fetchCities(organizationUuid),
+        fetchParcels(organizationUuid),
+        fetchBuildings(organizationUuid),
+        fetchUnits(organizationUuid),
     ]);
 
     const cityById = new Map(cities.items.map((city) => [city.id, city]));
+    const buildingById = new Map(buildings.items.map((building) => [building.id, building]));
 
     const assignmentsByWorker = new Map<string, typeof assignments.items>();
     for (const assignment of assignments.items) {
@@ -54,6 +58,10 @@ export async function fetchPersonnel(organizationUuid: string): Promise<Personne
             role: latest ? roleLabel(latest.role) : '—',
             city: latest ? (cityById.get(latest.cityId)?.name ?? '—') : '—',
             assignments: workerAssignments.length,
+            parcelId: latest?.parcelId ?? null,
+            buildingId: latest?.buildingId ?? null,
+            parcelIds: [...new Set(workerAssignments.flatMap((assignment) => assignment.parcelId ? [assignment.parcelId] : assignment.buildingId && buildingById.has(assignment.buildingId) ? [buildingById.get(assignment.buildingId)!.parcelId] : []))],
+            buildingIds: [...new Set(workerAssignments.flatMap((assignment) => assignment.buildingId ? [assignment.buildingId] : []))],
             phone: worker.phone,
             email: worker.email,
         };
@@ -64,7 +72,7 @@ export async function fetchPersonnel(organizationUuid: string): Promise<Personne
         ? `Liste partielle : ${workers.total} membres au total, les ${REFERENCE_LIMIT} premiers sont affichés.`
         : null;
 
-    return { rows, total: workers.total, note };
+    return { rows, cities: cities.items, parcels: parcels.items, buildings: buildings.items, units: units.items, total: workers.total, note };
 }
 
 export const WORKER_ROLE_OPTIONS = Object.entries(ROLE_LABEL).map(([value, label]) => ({ value, label }));
@@ -78,6 +86,7 @@ export const CURRENCY_OPTIONS = [
 
 /** Payload pour créer un travailleur. */
 export interface CreateWorkerPayload {
+    organizationUuid: string;
     fullName: string;
     phone: string;
     email?: string;

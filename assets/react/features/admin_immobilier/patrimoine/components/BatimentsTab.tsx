@@ -13,13 +13,14 @@ import { Textarea } from '../../../../components/Forms/Textarea';
 import { FormField } from '../../../../components/Forms/FormField';
 import { Modal } from '../../../../components/UI/Modal';
 import { ConfirmDialog } from '../../../../components/UI/ConfirmDialog';
+import { Icon } from '../../../../components/UI/Icon/Icon';
 import { PopoverMenu } from '../../../../components/UI/PopoverMenu';
 import type { PopoverMenuItem } from '../../../../hook-components/UI/PopoverMenu';
 import type { OrganizationRole } from '../../../../../services/api/api.types';
 import { canDo } from '../../../shared/permissions';
 import { fieldErrorMap } from '../../../shared/actionErrors';
 import { ModalActions } from '../../../shared/components/ModalActions';
-import type { BuildingItem, ParcelItem } from '../../shared/types/reference.types';
+import type { BuildingItem, CityItem, ParcelItem } from '../../shared/types/reference.types';
 import type { BuildingPayload } from '../services/patrimoineService';
 
 const BUILDING_TYPE_OPTIONS = [
@@ -64,6 +65,10 @@ interface BatimentsTabProps {
     onCreate: (payload: BuildingPayload) => Promise<void>;
     onUpdate: (uuid: string, payload: BuildingPayload) => Promise<void>;
     onDelete: (uuid: string) => Promise<void>;
+    cities: CityItem[];
+    selectedParcelId: string | null;
+    onParcelFilter: (uuid: string | null) => void;
+    onOpen: (uuid: string) => void;
 }
 
 /**
@@ -71,7 +76,7 @@ interface BatimentsTabProps {
  * La parcelle est choisie à la création puis figée (rattachement non
  * modifiable côté backend).
  */
-export function BatimentsTab({ buildings, parcels, role, isLoading, error, note, onReload, onCreate, onUpdate, onDelete }: BatimentsTabProps) {
+export function BatimentsTab({ buildings, parcels, cities, role, isLoading, error, note, onReload, onCreate, onUpdate, onDelete, selectedParcelId, onParcelFilter, onOpen }: BatimentsTabProps) {
     const [search, setSearch] = useState('');
     const [modalOpen, setModalOpen] = useState(false);
     const [editTarget, setEditTarget] = useState<BuildingItem | null>(null);
@@ -81,15 +86,16 @@ export function BatimentsTab({ buildings, parcels, role, isLoading, error, note,
     const [deleteTarget, setDeleteTarget] = useState<BuildingItem | null>(null);
 
     const parcelById = new Map(parcels.map((parcel) => [parcel.id, parcel]));
-    const parcelOptions = parcels.map((parcel) => ({ value: parcel.id, label: `${parcel.name} · ${parcel.reference}` }));
+    const cityById = new Map(cities.map((city) => [city.id, city]));
+    const parcelOptions = parcels.map((parcel) => ({ value: parcel.id, label: `${parcel.name} · ${cityById.get(parcel.cityId)?.name ?? 'Ville'} · ${parcel.reference}` }));
 
     const filtered = buildings.filter((building) => {
         const query = search.trim().toLocaleLowerCase('fr');
-        return !query || [building.name, building.reference, parcelById.get(building.parcelId)?.name ?? ''].some((value) => value.toLocaleLowerCase('fr').includes(query));
+        return (selectedParcelId === null || building.parcelId === selectedParcelId) && (!query || [building.name, building.reference, parcelById.get(building.parcelId)?.name ?? ''].some((value) => value.toLocaleLowerCase('fr').includes(query)));
     });
 
     const openCreate = () => {
-        setForm({ ...EMPTY_BUILDING_FORM, parcelUuid: parcels[0]?.id ?? '' });
+        setForm({ ...EMPTY_BUILDING_FORM, parcelUuid: selectedParcelId ?? parcels[0]?.id ?? '' });
         setFormErrors({});
         setModalOpen(true);
     };
@@ -148,9 +154,9 @@ export function BatimentsTab({ buildings, parcels, role, isLoading, error, note,
             key: 'name',
             title: 'Bâtiment',
             sortable: true,
-            render: (building) => <div className="organization-property-name"><strong>{building.name}</strong><small>{building.reference}</small></div>,
+            render: (building) => <div className="organization-property-name"><button type="button" className="patrimoine-link" onClick={() => onOpen(building.id)} aria-label={`Voir les unités de ${building.name}`}><strong>{building.name}</strong></button><small>{building.reference} · Voir les unités →</small></div>,
         },
-        { key: 'parcel', title: 'Parcelle', sortable: true, render: (building) => parcelById.get(building.parcelId)?.name ?? '—' },
+        { key: 'parcel', title: 'Parcelle', sortable: true, render: (building) => <button type="button" className="patrimoine-link" onClick={() => onParcelFilter(building.parcelId)}>{parcelById.get(building.parcelId)?.name ?? '—'}</button> },
         { key: 'type', title: 'Type', sortable: true, render: (building) => BUILDING_TYPE_LABELS[building.type] ?? building.type },
         { key: 'floors', title: 'Niveaux', render: (building) => (building.numberOfFloors !== null ? String(building.numberOfFloors) : '—') },
         {
@@ -159,16 +165,16 @@ export function BatimentsTab({ buildings, parcels, role, isLoading, error, note,
             render: (building) => {
                 const items: PopoverMenuItem[] = [
                     ...(canDo(role, 'update_building')
-                        ? [{ id: 'edit', label: 'Modifier', icon: <span aria-hidden="true">✎</span>, onClick: () => openEdit(building) }]
+                        ? [{ id: 'edit', label: 'Modifier', icon: <Icon name="edit" />, onClick: () => openEdit(building) }]
                         : []),
                     ...(canDo(role, 'delete_building')
-                        ? [{ id: 'delete', label: 'Supprimer', icon: <span aria-hidden="true">🗑</span>, danger: true, onClick: () => setDeleteTarget(building) }]
+                        ? [{ id: 'delete', label: 'Supprimer', icon: <Icon name="trash" />, danger: true, onClick: () => setDeleteTarget(building) }]
                         : []),
                 ];
 
                 if (items.length === 0) return '—';
 
-                return <PopoverMenu placement="bottom" offset={6} items={items} trigger={<span className="organization-row-actions" aria-label={`Actions pour ${building.name}`}><span aria-hidden="true">•••</span></span>} />;
+                return <PopoverMenu placement="bottom" offset={6} items={items} trigger={<span className="organization-row-actions" aria-label={`Actions pour ${building.name}`}><Icon name="more" /></span>} />;
             },
         },
     ];
@@ -191,10 +197,11 @@ export function BatimentsTab({ buildings, parcels, role, isLoading, error, note,
                 <div><h2>Bâtiments</h2><p>{note ?? 'Chaque bâtiment est rattaché à une parcelle et regroupe les unités locatives.'}</p></div>
                 <div className="organization-filters">
                     <SearchInput value={search} onSearch={setSearch} placeholder="Rechercher un bâtiment…" fullWidth />
-                    <span />
+                    <Select aria-label="Filtrer par parcelle" value={selectedParcelId ?? 'all'} onChange={(event) => onParcelFilter(event.target.value === 'all' ? null : event.target.value)} options={[{ value: 'all', label: 'Toutes les parcelles' }, ...parcelOptions]} />
                     {canDo(role, 'create_building') && <Button onClick={openCreate} disabled={parcels.length === 0}>＋ Ajouter un bâtiment</Button>}
                 </div>
             </div>
+            {selectedParcelId && <div className="patrimoine-context"><span>Parcelle sélectionnée : <strong>{parcelById.get(selectedParcelId)?.name ?? 'Parcelle'}</strong> · {cityById.get(parcelById.get(selectedParcelId)?.cityId ?? '')?.name ?? ''}</span><Button variant="outline" onClick={() => onParcelFilter(null)}>Effacer le filtre</Button></div>}
             {body}
 
             <Modal

@@ -14,7 +14,7 @@
  */
 import { apiClient } from '../../../../../services/api/client';
 import type { Feedback } from '../../../../../services/api/api.types';
-import { REFERENCE_LIMIT, fetchBuildings, fetchLeases, fetchRents, fetchTenants, fetchUnits, tenantLabel } from '../../shared/services/referenceService';
+import { REFERENCE_LIMIT, fetchBuildings, fetchLeases, fetchParcels, fetchRents, fetchTenants, fetchUnits, tenantLabel } from '../../shared/services/referenceService';
 import type { RentStatusCode } from '../types/loyer.types';
 import type { LoyerRow, LoyersData } from '../types/loyer.types';
 
@@ -32,18 +32,20 @@ function periodLabel(period: string): string {
 }
 
 export async function fetchLoyers(organizationUuid: string, status: string): Promise<LoyersData> {
-    const [rents, leases, tenants, units, buildings] = await Promise.all([
+    const [rents, leases, tenants, units, buildings, parcels] = await Promise.all([
         fetchRents(organizationUuid, status),
         fetchLeases(organizationUuid),
         fetchTenants(organizationUuid),
         fetchUnits(organizationUuid),
         fetchBuildings(organizationUuid),
+        fetchParcels(organizationUuid),
     ]);
 
     const leaseById = new Map(leases.items.map((lease) => [lease.id, lease]));
     const tenantById = new Map(tenants.items.map((tenant) => [tenant.id, tenant]));
     const unitById = new Map(units.items.map((unit) => [unit.id, unit]));
     const buildingById = new Map(buildings.items.map((building) => [building.id, building]));
+    const parcelById = new Map(parcels.items.map((parcel) => [parcel.id, parcel]));
 
     const rows: LoyerRow[] = rents.items.map((rent) => {
         const lease = leaseById.get(rent.leaseId);
@@ -59,6 +61,8 @@ export async function fetchLoyers(organizationUuid: string, status: string): Pro
             id: rent.id,
             tenant: tenant ? tenantLabel(tenant) : '—',
             unitLabel,
+            buildingId: building?.id ?? null,
+            parcelId: building ? parcelById.get(building.parcelId)?.id ?? null : null,
             periodLabel: periodLabel(rent.period),
             dueDate: rent.dueDate,
             amount: rent.amount,

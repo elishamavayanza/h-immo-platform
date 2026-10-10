@@ -6,6 +6,7 @@ import { ApiError } from '../../../../../services/api/api.types';
 import { actionErrorMessage, isValidationError } from '../../../shared/actionErrors';
 import {
     addParcelPhotos,
+    createCityAdmin as createCityAdminRequest,
     addUnitPhoto,
     createBuilding as createBuildingRequest,
     createCity as createCityRequest,
@@ -103,6 +104,13 @@ export function usePatrimoine() {
         return runAction('Ville enregistrée.', () => createCityRequest(organizationUuid, payload));
     };
 
+    const createCityAdmin = (cityUuid: string, payload: { fullName: string; email: string; phone: string }) => {
+        if (!organizationUuid) return Promise.resolve();
+        return runAction('Administrateur de ville créé. Un email de configuration lui sera envoyé.', () =>
+            createCityAdminRequest({ organizationUuid, cityUuid, ...payload }),
+        );
+    };
+
     const updateCity = (uuid: string, payload: CityPayload) =>
         runAction('Ville mise à jour.', () => updateCityRequest(uuid, payload));
 
@@ -180,6 +188,7 @@ export function usePatrimoine() {
         kind,
         setKind,
         createCity,
+        createCityAdmin,
         updateCity,
         setCityStatus,
         deleteCity,

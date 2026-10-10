@@ -14,6 +14,7 @@ import { FormField } from '../../../../components/Forms/FormField';
 import { Modal } from '../../../../components/UI/Modal';
 import { ConfirmDialog } from '../../../../components/UI/ConfirmDialog';
 import { Badge } from '../../../../components/UI/Badge';
+import { Icon } from '../../../../components/UI/Icon/Icon';
 import { PopoverMenu } from '../../../../components/UI/PopoverMenu';
 import type { PopoverMenuItem } from '../../../../hook-components/UI/PopoverMenu';
 import type { OrganizationRole } from '../../../../../services/api/api.types';
@@ -85,6 +86,8 @@ interface UnitesTabProps {
     onUpdate: (uuid: string, payload: UnitPayload) => Promise<void>;
     onDelete: (uuid: string) => Promise<void>;
     onPublish: (unit: UnitItem) => Promise<void>;
+    selectedBuildingId: string | null;
+    onBuildingFilter: (uuid: string | null) => void;
 }
 
 /**
@@ -92,7 +95,7 @@ interface UnitesTabProps {
  * Le bâtiment est figé après création. « Publier / Retirer » suit l'état
  * courant (`isPublished`) ; une unité occupée est refusée par le backend (422).
  */
-export function UnitesTab({ units, buildings, role, isLoading, error, note, onReload, onCreate, onUpdate, onDelete, onPublish }: UnitesTabProps) {
+export function UnitesTab({ units, buildings, role, isLoading, error, note, onReload, onCreate, onUpdate, onDelete, onPublish, selectedBuildingId, onBuildingFilter }: UnitesTabProps) {
     const [search, setSearch] = useState('');
     const [modalOpen, setModalOpen] = useState(false);
     const [editTarget, setEditTarget] = useState<UnitItem | null>(null);
@@ -106,11 +109,11 @@ export function UnitesTab({ units, buildings, role, isLoading, error, note, onRe
 
     const filtered = units.filter((unit) => {
         const query = search.trim().toLocaleLowerCase('fr');
-        return !query || [unit.reference, buildingById.get(unit.buildingId)?.name ?? ''].some((value) => value.toLocaleLowerCase('fr').includes(query));
+        return (selectedBuildingId === null || unit.buildingId === selectedBuildingId) && (!query || [unit.reference, buildingById.get(unit.buildingId)?.name ?? ''].some((value) => value.toLocaleLowerCase('fr').includes(query)));
     });
 
     const openCreate = () => {
-        setForm({ ...EMPTY_UNIT_FORM, buildingUuid: buildings[0]?.id ?? '' });
+        setForm({ ...EMPTY_UNIT_FORM, buildingUuid: selectedBuildingId ?? buildings[0]?.id ?? '' });
         setFormErrors({});
         setModalOpen(true);
     };
@@ -176,7 +179,7 @@ export function UnitesTab({ units, buildings, role, isLoading, error, note, onRe
             sortable: true,
             render: (unit) => <div className="organization-property-name"><strong>{unit.reference}</strong><small>{UNIT_TYPE_LABELS[unit.type] ?? unit.type} · niveau {unit.floor}</small></div>,
         },
-        { key: 'building', title: 'Bâtiment', sortable: true, render: (unit) => buildingById.get(unit.buildingId)?.name ?? '—' },
+        { key: 'building', title: 'Bâtiment', sortable: true, render: (unit) => <button type="button" className="patrimoine-link" onClick={() => onBuildingFilter(unit.buildingId)}>{buildingById.get(unit.buildingId)?.name ?? '—'}</button> },
         { key: 'rent', title: 'Loyer mensuel', sortable: true, render: (unit) => formatMoney(unit.monthlyRent, unit.currency) },
         {
             key: 'published',
@@ -190,19 +193,19 @@ export function UnitesTab({ units, buildings, role, isLoading, error, note, onRe
             render: (unit) => {
                 const items: PopoverMenuItem[] = [
                     ...(canDo(role, 'update_unit')
-                        ? [{ id: 'edit', label: 'Modifier', icon: <span aria-hidden="true">✎</span>, onClick: () => openEdit(unit) }]
+                        ? [{ id: 'edit', label: 'Modifier', icon: <Icon name="edit" />, onClick: () => openEdit(unit) }]
                         : []),
                     ...(canDo(role, 'publish_listing')
-                        ? [{ id: 'publish', label: unit.isPublished ? 'Retirer de la vitrine' : 'Publier', icon: <span aria-hidden="true">☁</span>, onClick: () => void onPublish(unit) }]
+                        ? [{ id: 'publish', label: unit.isPublished ? 'Retirer de la vitrine' : 'Publier', icon: <Icon name="cloud" />, onClick: () => void onPublish(unit) }]
                         : []),
                     ...(canDo(role, 'delete_unit')
-                        ? [{ id: 'delete', label: 'Supprimer', icon: <span aria-hidden="true">🗑</span>, danger: true, onClick: () => setDeleteTarget(unit) }]
+                        ? [{ id: 'delete', label: 'Supprimer', icon: <Icon name="trash" />, danger: true, onClick: () => setDeleteTarget(unit) }]
                         : []),
                 ];
 
                 if (items.length === 0) return '—';
 
-                return <PopoverMenu placement="bottom" offset={6} items={items} trigger={<span className="organization-row-actions" aria-label={`Actions pour ${unit.reference}`}><span aria-hidden="true">•••</span></span>} />;
+                return <PopoverMenu placement="bottom" offset={6} items={items} trigger={<span className="organization-row-actions" aria-label={`Actions pour ${unit.reference}`}><Icon name="more" /></span>} />;
             },
         },
     ];
@@ -225,10 +228,11 @@ export function UnitesTab({ units, buildings, role, isLoading, error, note, onRe
                 <div><h2>Unités locatives</h2><p>{note ?? 'Chaque unité est rattachée à un bâtiment et peut être publiée sur la vitrine.'}</p></div>
                 <div className="organization-filters">
                     <SearchInput value={search} onSearch={setSearch} placeholder="Rechercher une unité…" fullWidth />
-                    <span />
+                    <Select aria-label="Filtrer par bâtiment" value={selectedBuildingId ?? 'all'} onChange={(event) => onBuildingFilter(event.target.value === 'all' ? null : event.target.value)} options={[{ value: 'all', label: 'Tous les bâtiments' }, ...buildingOptions]} />
                     {canDo(role, 'create_unit') && <Button onClick={openCreate} disabled={buildings.length === 0}>＋ Ajouter une unité</Button>}
                 </div>
             </div>
+            {selectedBuildingId && <div className="patrimoine-context"><span>Bâtiment sélectionné : <strong>{buildingById.get(selectedBuildingId)?.name ?? 'Bâtiment'}</strong></span><Button variant="outline" onClick={() => onBuildingFilter(null)}>Effacer le filtre</Button></div>}
             {body}
 
             <Modal

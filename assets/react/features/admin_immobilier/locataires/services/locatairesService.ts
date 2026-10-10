@@ -12,32 +12,34 @@
  */
 import { apiClient } from '../../../../../services/api/client';
 import type { Feedback } from '../../../../../services/api/api.types';
-import { REFERENCE_LIMIT, fetchLeases, fetchTenants, fetchUnits, tenantLabel } from '../../shared/services/referenceService';
-import type { LeaseItem, TenantItem } from '../../shared/types/reference.types';
+import { REFERENCE_LIMIT, fetchBuildings, fetchLeases, fetchTenants, fetchUnits, tenantLabel } from '../../shared/services/referenceService';
+import type { BuildingItem, LeaseItem, TenantItem } from '../../shared/types/reference.types';
 import type { LocataireRow, LocatairesData } from '../types/locataire.types';
 
 export async function fetchLocataires(organizationUuid: string): Promise<LocatairesData> {
-    const [tenants, leases, units] = await Promise.all([
+    const [tenants, leases, units, buildings] = await Promise.all([
         fetchTenants(organizationUuid),
         fetchLeases(organizationUuid),
         fetchUnits(organizationUuid),
+        fetchBuildings(organizationUuid),
     ]);
 
     const unitById = new Map(units.items.map((unit) => [unit.id, unit]));
+    const buildingById = new Map(buildings.items.map((building: BuildingItem) => [building.id, building]));
 
     // Un locataire ne devrait avoir qu'un bail actif (contrôle métier en
     // PHP) : au cas où, on garde la fin de bail la plus lointaine.
-    const activeLeaseByTenant = new Map<string, LeaseItem>();
+    const currentLeaseByTenant = new Map<string, LeaseItem>();
     leases.items.forEach((lease) => {
-        if (lease.status !== 'active') return;
-        const existing = activeLeaseByTenant.get(lease.tenantId);
-        if (!existing || (lease.endDate ?? '') > (existing.endDate ?? '')) {
-            activeLeaseByTenant.set(lease.tenantId, lease);
-        }
+        if (lease.status !== 'active' && lease.status !== 'draft') return;
+        const existing = currentLeaseByTenant.get(lease.tenantId);
+        const preferred = lease.status === 'active' || existing?.status !== 'active';
+        if (preferred && (!existing || lease.createdAt >= existing.createdAt)) currentLeaseByTenant.set(lease.tenantId, lease);
     });
 
     const rows: LocataireRow[] = tenants.items.map((tenant) => {
-        const lease = activeLeaseByTenant.get(tenant.id) ?? null;
+        const lease = currentLeaseByTenant.get(tenant.id) ?? null;
+        const activeLease = lease?.status === 'active' ? lease : null;
 
         return {
             id: tenant.id,
@@ -47,7 +49,11 @@ export async function fetchLocataires(organizationUuid: string): Promise<Locatai
             phone: tenant.phone,
             address: tenant.address ?? '—',
             unitReference: lease ? unitById.get(lease.unitId)?.reference ?? null : null,
-            leaseEnd: lease?.endDate ?? null,
+            buildingId: lease ? unitById.get(lease.unitId)?.buildingId ?? null : null,
+            parcelId: lease ? buildingById.get(unitById.get(lease.unitId)?.buildingId ?? '')?.parcelId ?? null : null,
+            leaseEnd: activeLease?.endDate ?? null,
+            leaseUuid: lease?.id ?? null,
+            leaseStatus: lease?.status ?? null,
         };
     });
 
@@ -58,7 +64,9 @@ export async function fetchLocataires(organizationUuid: string): Promise<Locatai
         ? `Liste partielle : ${tenants.total} locataires, ${leases.total} baux et ${units.total} unités au total — les ${REFERENCE_LIMIT} premières entrées de chaque liste sont affichées.`
         : null;
 
-    return { rows, total: tenants.total, activeLeases: activeLeaseByTenant.size, note };
+    const activeTenantIds = new Set(leases.items.filter((lease) => lease.status === 'active').map((lease) => lease.tenantId));
+
+    return { rows, total: tenants.total, activeLeases: activeTenantIds.size, note, units: units.items, buildings: buildings.items };
 }
 
 /** Payload pour créer un locataire (personne physique ou morale). */
@@ -114,6 +122,12 @@ export interface CreateLeasePayload {
 /** `POST /api/v1/leases` — créer un bail (état DRAFT). */
 export async function createLease(payload: CreateLeasePayload): Promise<unknown> {
     const { data } = await apiClient.post<Feedback<unknown>>('/v1/leases', payload);
+    return data.data;
+}
+
+/** `PATCH /api/v1/leases/{uuid}/activate` — transition DRAFT → ACTIVE. */
+export async function activateLease(leaseUuid: string): Promise<unknown> {
+    const { data } = await apiClient.patch<Feedback<unknown>>(`/v1/leases/${leaseUuid}/activate`);
     return data.data;
 }
 

@@ -1,9 +1,10 @@
 import { PopoverMenu } from '../../../components/UI/PopoverMenu';
 import type { PopoverMenuItem } from '../../../hook-components/UI/PopoverMenu';
+import { Icon } from '../../../components/UI/Icon/Icon';
 
-const EditIcon = <span aria-hidden="true">✎</span>;
-const ToggleIcon = <span aria-hidden="true">⏻</span>;
-const DeleteIcon = <span aria-hidden="true">⌫</span>;
+const EditIcon = <Icon name="edit" />;
+const ToggleIcon = <Icon name="power" />;
+const DeleteIcon = <Icon name="trash" />;
 const MoreIcon = <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor" aria-hidden="true"><circle cx="5" cy="12" r="1.5" /><circle cx="12" cy="12" r="1.5" /><circle cx="19" cy="12" r="1.5" /></svg>;
 
 interface RowActionsProps {

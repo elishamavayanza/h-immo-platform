@@ -17,6 +17,10 @@
 .organization-kpi span { color: $color-text-secondary; font-size: $font-size-sm; }
 .organization-table-card .card__body { padding: $spacing-4; }
 .organization-management-form { display: grid; gap: $spacing-3; }
+.organization-management-form__section { border-top: 1px solid $color-border; padding-top: $spacing-3; }
+.organization-management-form__section h3 { margin: 0 0 $spacing-1; font-size: $font-size-sm; color: $color-text-primary; }
+.organization-management-form__section p { margin: 0; color: $color-text-muted; font-size: $font-size-xs; line-height: 1.5; }
+.organization-form-error { margin: 0; padding: $spacing-2 $spacing-3; border: 1px solid $color-danger; border-radius: $radius-md; color: $color-danger; font-size: $font-size-xs; line-height: 1.5; }
 .organization-management-form__hint { margin: 0; color: $color-text-muted; font-size: $font-size-xs; line-height: 1.5; }
 
 .organization-table-toolbar__actions { display: flex; justify-content: flex-end; margin: 0 0 $spacing-3; }
@@ -30,6 +34,7 @@
 .organization-property-name { display: flex; flex-direction: column; gap: 2px; }
 .organization-property-name strong { color: $color-text-primary; }
 .organization-property-name small { color: $color-text-muted; }
+.ville-row-actions { display: flex; align-items: center; justify-content: flex-end; gap: $spacing-2; }
 
 @media (max-width: 760px) {
     .organization-table-toolbar { align-items: stretch; flex-direction: column; }
@@ -46,4 +51,5 @@
     .organization-table-card .card__body { padding: $spacing-3; }
     .organization-table-toolbar { gap: $spacing-3; margin-bottom: $spacing-3; }
     .organization-table-toolbar h2 { font-size: $font-size-sm; }
+    .ville-row-actions { align-items: stretch; flex-direction: column; }
 }

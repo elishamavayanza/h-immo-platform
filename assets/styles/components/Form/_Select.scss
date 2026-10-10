@@ -52,7 +52,7 @@
 
     // Chevron suit la couleur du focus
     &:focus-within .select-field__arrow {
-        border-color: $color-primary;
+        color: $color-primary;
     }
 }
 
@@ -195,13 +195,12 @@
     position: absolute;
     top: 50%;
     right: $spacing-3;
-    width: 8px;
-    height: 8px;
-    border-right: 2px solid $color-text-muted;
-    border-bottom: 2px solid $color-text-muted;
-    transform: translateY(-70%) rotate(45deg);
+    width: 18px;
+    height: 18px;
+    color: $color-text-muted;
+    transform: translateY(-50%);
     pointer-events: none;
-    transition: border-color $transition-fast;
+    transition: color $transition-fast;
 }
 
 
@@ -218,8 +217,8 @@
 
     & + .select-field__arrow {
         right: $spacing-2;
-        width: 6px;
-        height: 6px;
+        width: 16px;
+        height: 16px;
     }
 }
 
@@ -238,8 +237,8 @@
 
     & + .select-field__arrow {
         right: $spacing-4;
-        width: 10px;
-        height: 10px;
+        width: 20px;
+        height: 20px;
     }
 }
 
@@ -279,7 +278,7 @@
     }
 
     & + .select-field__arrow {
-        border-color: $color-danger;
+        color: $color-danger;
     }
 }
 
@@ -298,7 +297,7 @@
     }
 
     & + .select-field__arrow {
-        border-color: $color-success;
+        color: $color-success;
     }
 }
 

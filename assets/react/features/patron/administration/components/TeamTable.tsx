@@ -1,6 +1,7 @@
 import { DataTable } from '../../../../components/Data/DataTable';
 import type { DataTableColumn } from '../../../../hook-components/Data/DataTable';
 import { Badge } from '../../../../components/UI/Badge';
+import { Icon } from '../../../../components/UI/Icon/Icon';
 import { PopoverMenu } from '../../../../components/UI/PopoverMenu';
 import type { PopoverMenuItem } from '../../../../hook-components/UI/PopoverMenu';
 import type { OrganizationRole } from '../../../../../services/api/api.types';
@@ -48,13 +49,13 @@ export function TeamTable({ rows, onEdit, onSuspend }: TeamTableProps) {
             title: 'Actions',
             render: (member) => {
                 const items: PopoverMenuItem[] = [
-                    { id: 'edit', label: 'Modifier', icon: <span aria-hidden="true">✎</span>, onClick: () => onEdit(member) },
+                    { id: 'edit', label: 'Modifier', icon: <Icon name="edit" />, onClick: () => onEdit(member) },
                     ...(member.status === 'active' && !member.isSelf
-                        ? [{ id: 'suspend', label: 'Suspendre', icon: <span aria-hidden="true">⏻</span>, danger: true, onClick: () => onSuspend(member) }]
+                        ? [{ id: 'suspend', label: 'Suspendre', icon: <Icon name="power" />, danger: true, onClick: () => onSuspend(member) }]
                         : []),
                 ];
 
-                return <PopoverMenu placement="bottom" offset={6} items={items} trigger={<span className="organization-row-actions" aria-label={`Actions pour ${member.name}`}><span aria-hidden="true">•••</span></span>} />;
+                return <PopoverMenu placement="bottom" offset={6} items={items} trigger={<span className="organization-row-actions" aria-label={`Actions pour ${member.name}`}><Icon name="more" /></span>} />;
             },
         },
     ];

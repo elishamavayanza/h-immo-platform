@@ -566,6 +566,33 @@ check(
     'liste=' . implode(',', $payloadIds($payload)) . ' | raw=' . substr($rawWorkers, 0, 300)
 );
 
+[$status, $payload, $rawCreatedWorker] = $request('POST', '/api/v1/workers', [
+    'organizationUuid' => $uuidOrgA,
+    'fullName' => 'Ouvrier affecté ' . $suffix,
+    'phone' => '+243990000099',
+], $token);
+$uuidCreatedWorker = is_array($payload) ? ($payload['data']['id'] ?? null) : null;
+check(
+    'POST /api/v1/workers : l’organisation active est prise en compte',
+    $status === 201 && is_string($uuidCreatedWorker),
+    "obtenu {$status} : " . substr($rawCreatedWorker, 0, 250)
+);
+
+[$status, $payload, $rawCreatedAssignment] = $request('POST', '/api/v1/worker-assignments', [
+    'workerUuid' => $uuidCreatedWorker,
+    'cityUuid' => $uuidCityA,
+    'parcelUuid' => $uuidParcelA,
+    'role' => 'gardien',
+    'monthlySalary' => '150.00',
+    'currency' => 'USD',
+    'startDate' => (new DateTimeImmutable('today'))->format('Y-m-d'),
+], $token);
+check(
+    'POST /api/v1/worker-assignments : rattachement au même tenant accepté',
+    $status === 201,
+    "obtenu {$status} : " . substr($rawCreatedAssignment, 0, 250)
+);
+
 [$status, $payload, $rawExpenses] = $request('GET', '/api/v1/expenses', null, $token);
 check(
     'GET /api/v1/expenses : 200 (mapping query string)',
