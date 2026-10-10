@@ -7,6 +7,8 @@
  * rapport par `levelUuid` : une parcelle sans unité renvoie 0 / `null`,
  * pas un taux fictif.
  */
+import type { BuildingItem, CityItem, ParcelItem, UnitItem } from '../../shared/types/reference.types';
+
 export type PatrimoineKind = 'Parcelle' | 'Bâtiment';
 
 export interface PatrimoineRow {
@@ -23,6 +25,14 @@ export interface PatrimoineRow {
 
 export interface PatrimoineData {
     rows: PatrimoineRow[];
+    /** Villes brutes de l'organisation (gestion du niveau Ville). */
+    cities: CityItem[];
+    /** Parcelles brutes (gestion du niveau Parcelle). */
+    parcels: ParcelItem[];
+    /** Immeubles bruts (gestion du niveau Bâtiment). */
+    buildings: BuildingItem[];
+    /** Unités brutes (gestion du niveau Unité). */
+    units: UnitItem[];
     /** Villes présentes dans le jeu chargé (options du filtre). */
     availableCities: string[];
     /** Indicateurs issus du rapport (non paginés). */

@@ -4,8 +4,14 @@
  * Lecture : `workers` (périmètre multi-organisation serveur) joint côté client
  * aux affectations (`worker-assignments`) et aux villes pour composer la
  * fonction et la ville courantes — `WorkerResponse` ne les expose pas.
+ *
+ * Écriture : Worker CRUD (`POST/PUT /v1/workers`), Assignment CRUD
+ * (`POST/PUT /v1/worker-assignments`, `POST /v1/worker-assignments/{uuid}/end`).
  */
+import { apiClient } from '../../../../../services/api/client';
+import type { Feedback } from '../../../../../services/api/api.types';
 import { REFERENCE_LIMIT, fetchCities, fetchWorkerAssignments, fetchWorkers } from '../../shared/services/referenceService';
+import type { CityItem, WorkerAssignmentItem, WorkerItem } from '../../shared/types/reference.types';
 import type { PersonnelData, PersonnelRow } from '../types/personnel.types';
 
 const ROLE_LABEL: Record<string, string> = {
@@ -13,12 +19,12 @@ const ROLE_LABEL: Record<string, string> = {
     sentinelle: 'Sentinelle',
     menager: 'Ménager',
     gardien: 'Gardien',
-    agent_entretien: 'Agent d’entretien',
+    agent_entretien: 'Agent d\'entretien',
     agent_administratif: 'Agent administratif',
     autre: 'Autre',
 };
 
-function roleLabel(role: string): string {
+export function roleLabel(role: string): string {
     return ROLE_LABEL[role] ?? role;
 }
 
@@ -59,4 +65,91 @@ export async function fetchPersonnel(organizationUuid: string): Promise<Personne
         : null;
 
     return { rows, total: workers.total, note };
+}
+
+export const WORKER_ROLE_OPTIONS = Object.entries(ROLE_LABEL).map(([value, label]) => ({ value, label }));
+
+export const ASSIGNMENT_ROLE_OPTIONS = WORKER_ROLE_OPTIONS;
+
+export const CURRENCY_OPTIONS = [
+    { value: 'USD', label: 'USD' },
+    { value: 'CDF', label: 'CDF' },
+];
+
+/** Payload pour créer un travailleur. */
+export interface CreateWorkerPayload {
+    fullName: string;
+    phone: string;
+    email?: string;
+    nationalId?: string;
+    address?: string;
+    notes?: string;
+}
+
+/** `POST /api/v1/workers` — créer un travailleur. */
+export async function createWorker(payload: CreateWorkerPayload): Promise<WorkerItem> {
+    const { data } = await apiClient.post<Feedback<WorkerItem>>('/v1/workers', payload);
+    return data.data;
+}
+
+/** Payload pour modifier un travailleur. */
+export interface UpdateWorkerPayload {
+    fullName: string;
+    phone: string;
+    email?: string;
+    nationalId?: string;
+    address?: string;
+    notes?: string;
+}
+
+/** `PUT /api/v1/workers/{uuid}` — modifier un travailleur. */
+export async function updateWorker(workerUuid: string, payload: UpdateWorkerPayload): Promise<WorkerItem> {
+    const { data } = await apiClient.put<Feedback<WorkerItem>>(`/v1/workers/${workerUuid}`, payload);
+    return data.data;
+}
+
+/** Payload pour créer une affectation. */
+export interface CreateAssignmentPayload {
+    workerUuid: string;
+    cityUuid: string;
+    role: string;
+    monthlySalary: string;
+    currency: 'USD' | 'CDF';
+    startDate: string;
+    endDate?: string;
+    parcelUuid?: string;
+    buildingUuid?: string;
+    unitUuid?: string;
+    notes?: string;
+}
+
+/** `POST /api/v1/worker-assignments` — créer une affectation. */
+export async function createAssignment(payload: CreateAssignmentPayload): Promise<WorkerAssignmentItem> {
+    const { data } = await apiClient.post<Feedback<WorkerAssignmentItem>>('/v1/worker-assignments', payload);
+    return data.data;
+}
+
+/** Payload pour modifier une affectation. */
+export interface UpdateAssignmentPayload {
+    role: string;
+    monthlySalary: string;
+    currency: 'USD' | 'CDF';
+    startDate: string;
+    endDate?: string;
+    parcelUuid?: string;
+    buildingUuid?: string;
+    unitUuid?: string;
+    notes?: string;
+}
+
+/** `PUT /api/v1/worker-assignments/{uuid}` — modifier une affectation. */
+export async function updateAssignment(assignmentUuid: string, payload: UpdateAssignmentPayload): Promise<WorkerAssignmentItem> {
+    const { data } = await apiClient.put<Feedback<WorkerAssignmentItem>>(`/v1/worker-assignments/${assignmentUuid}`, payload);
+    return data.data;
+}
+
+/** `POST /api/v1/worker-assignments/{uuid}/end` — terminer une affectation. */
+export async function endAssignment(assignmentUuid: string, endDate: string): Promise<string> {
+    const { data } = await apiClient.post<Feedback<unknown>>(`/v1/worker-assignments/${assignmentUuid}/end`, { endDate });
+    return data.flushDescription ?? 'Affectation terminée.';
 }

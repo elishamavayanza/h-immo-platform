@@ -5,10 +5,13 @@
  * parcelle → ville) et aux baux, pour connaître le libellé et l'occupation.
  * Écriture : `PATCH /v1/units/{uuid}/publish` (bascule `isPublished`), refusée
  * en 422 par le backend si un bail actif occupe l'unité.
+ *          `PUT /v1/units/{uuid}` (modifier description et autres champs).
+ *          `POST /v1/units/{uuid}/photos` (ajouter photo), `DELETE /v1/units/{uuid}/photos/{photoUuid}` (retirer photo).
  */
 import { apiClient } from '../../../../../services/api/client';
 import { REFERENCE_LIMIT, fetchLeases, fetchPropertyCatalog } from '../../shared/services/referenceService';
 import type { Feedback } from '../../../../../services/api/api.types';
+import type { UnitItem } from '../../shared/types/reference.types';
 import type { VitrineData, VitrineRow } from '../types/vitrine.types';
 
 const UNIT_TYPE_LABEL: Record<string, string> = {
@@ -69,4 +72,33 @@ export async function setUnitPublished(unitUuid: string, isPublished: boolean): 
     const { data } = await apiClient.patch<Feedback<unknown>>(`/v1/units/${unitUuid}/publish`, { isPublished });
 
     return data.flushDescription ?? 'État de publication mis à jour.';
+}
+
+/** Payload pour modifier une unité (description, etc.). */
+export interface UpdateUnitPayload {
+    description?: string;
+    monthlyRent?: string;
+    currency?: 'USD' | 'CDF';
+}
+
+/** `PUT /api/v1/units/{uuid}` — modifier une unité. */
+export async function updateUnit(unitUuid: string, payload: UpdateUnitPayload): Promise<UnitItem> {
+    const { data } = await apiClient.put<Feedback<UnitItem>>(`/v1/units/${unitUuid}`, payload);
+    return data.data;
+}
+
+/** `POST /api/v1/units/{uuid}/photos` — ajouter une photo à l'unité. */
+export async function addUnitPhoto(unitUuid: string, file: File): Promise<string> {
+    const formData = new FormData();
+    formData.append('file', file);
+    const { data } = await apiClient.post<Feedback<unknown>>(`/v1/units/${unitUuid}/photos`, formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+    });
+    return data.flushDescription ?? 'Photo ajoutée.';
+}
+
+/** `DELETE /api/v1/units/{uuid}/photos/{photoUuid}` — retirer une photo de l'unité. */
+export async function removeUnitPhoto(unitUuid: string, photoUuid: string): Promise<string> {
+    const { data } = await apiClient.delete<Feedback<unknown>>(`/v1/units/${unitUuid}/photos/${photoUuid}`);
+    return data.flushDescription ?? 'Photo retirée.';
 }
