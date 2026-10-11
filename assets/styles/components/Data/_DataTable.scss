@@ -32,6 +32,7 @@
 .datatable__wrapper {
     @include scrollbar;
     width: 100%;
+    min-width: 0;
     overflow-x: auto;
     -webkit-overflow-scrolling: touch;
     border-radius: $radius-lg;
@@ -190,6 +191,9 @@
 
 .datatable__pagination {
     @include flex-between;
+    flex-wrap: wrap;
+    gap: $spacing-2;
+    min-width: 0;
     padding: $spacing-3 $spacing-4;
     border-top: 1px solid $color-border;
     background-color: $color-bg-app;
@@ -203,7 +207,7 @@
 // densité d'affichage.
 // ============================================================
 
-@include responsive(mobile) {
+@media (max-width: 600px) {
     .datatable__table {
         th, td {
             padding: $spacing-2 $spacing-3;
@@ -220,7 +224,14 @@
         font-size: $font-size-xs;
     }
 
-    .datatable__pagination { padding: $spacing-2 $spacing-3; }
+    .datatable__pagination {
+        padding: $spacing-2 $spacing-3;
+
+        > * {
+            min-width: 0;
+            max-width: 100%;
+        }
+    }
 }
 
 

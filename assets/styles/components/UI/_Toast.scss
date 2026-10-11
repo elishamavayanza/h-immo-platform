@@ -78,8 +78,10 @@
     line-height: $line-height-snug;
     animation: toast-in $transition-normal both;
 
-    // Variable locale pour la couleur d’accent
-    --toast-accent: #{$color-info};
+    // L’accent suit la palette choisie dans les préférences de l’utilisateur.
+    // Les variantes restent identifiables par leur type et leur contenu.
+    --toast-accent: var(--color-primary, #{$color-primary});
+    border-color: color-mix(in srgb, var(--toast-accent) 28%, #{$color-border-light});
     border-left-color: var(--toast-accent);
 }
 
@@ -159,19 +161,19 @@
 // ============================================================
 
 .toast--info {
-    --toast-accent: #{$color-info};
+    --toast-accent: var(--color-primary, #{$color-primary});
 }
 
 .toast--success {
-    --toast-accent: #{$color-success};
+    --toast-accent: var(--color-primary, #{$color-primary});
 }
 
 .toast--warning {
-    --toast-accent: #{$color-warning};
+    --toast-accent: var(--color-primary, #{$color-primary});
 }
 
 .toast--error {
-    --toast-accent: #{$color-danger};
+    --toast-accent: var(--color-primary, #{$color-primary});
 }
 
 
@@ -179,12 +181,12 @@
 // RESPONSIVE
 // ============================================================
 
-@include responsive(mobile) {
-    // Le toast reste un contenu compact ancré dans son coin : il n'occupe
-    // jamais toute la largeur de l'écran, même sur un petit viewport.
+@media (max-width: #{$breakpoint-mobile}) {
+    // La pile reste dans les marges de sécurité et ses messages peuvent
+    // s'étendre sans provoquer de débordement horizontal.
     .toast-container {
-        width: fit-content;
-        max-width: min(360px, calc(100vw - #{$spacing-8}));
+        width: min(360px, calc(100vw - #{$spacing-4}));
+        max-width: calc(100vw - #{$spacing-4});
     }
 
     .toast-container--top-right {
@@ -205,6 +207,13 @@
     .toast-container--bottom-left {
         bottom: $spacing-2;
         left: $spacing-2;
+    }
+
+    .toast {
+        width: 100%;
+        min-width: 0;
+        padding: $spacing-3;
+        overflow-wrap: anywhere;
     }
 }
 
