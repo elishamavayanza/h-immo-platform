@@ -40,6 +40,7 @@ export interface PatronReport {
     financialSummary: FinancialSummaryItem[];
     occupancyByCity: OccupancyItem[];
     occupancyByParcel: OccupancyItem[];
+    occupancyByBuilding: OccupancyItem[];
     arrears: ArrearsItem[];
     expensesByCategory: ExpenseSummaryItem[];
     expensesByCity: ExpenseSummaryItem[];

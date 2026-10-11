@@ -441,6 +441,14 @@ check(
     $status === 200,
     "obtenu {$status} | " . substr((string) ($payload['message'] ?? ''), 0, 120)
 );
+check(
+    'le rapport PATRON expose l’occupation par parcelle et bâtiment pour le patrimoine en lecture seule',
+    $status === 200
+        && count($payload['occupancyByParcel'] ?? []) === 1
+        && count($payload['occupancyByBuilding'] ?? []) === 1,
+    'parcelles=' . count($payload['occupancyByParcel'] ?? [])
+        . ', bâtiments=' . count($payload['occupancyByBuilding'] ?? [])
+);
 
 // Le cas que l'ancien code ne gérait pas : un compte appartenant à deux
 // organisations doit lire celle qu'il designate, pas « la première ».

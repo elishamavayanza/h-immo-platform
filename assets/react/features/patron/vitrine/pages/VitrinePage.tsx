@@ -13,6 +13,7 @@ import { FormField } from '../../../../components/Forms/FormField';
 import { SearchInput } from '../../../../components/Forms/SearchInput';
 import { Select } from '../../../../components/Forms/Select';
 import { OrganizationSummary } from '../../../shared/components/OrganizationSummary';
+import { Tabs } from '../../../../components/Navigation/Tabs';
 import { OrganizationLogoPicker, type OrganizationLogoChange } from '../../../super_admin/organizations/components/OrganizationLogoPicker';
 import { useVitrine } from '../../../admin_immobilier/vitrine/hooks/useVitrine';
 import { VitrineTable } from '../../../admin_immobilier/vitrine/components/VitrineTable';
@@ -35,6 +36,7 @@ export function VitrinePage() {
     const { organizationRole } = useOrganization();
     const { settings, isLoading, error, reload, save, saveLogo, removeLogo } = usePublicSettings();
     const vitrine = useVitrine();
+    const allRows = vitrine.data?.rows ?? [];
     const navigate = useNavigate();
 
     const [slug, setSlug] = useState('');
@@ -123,7 +125,15 @@ export function VitrinePage() {
             ) : error ? (
                 <EmptyState title="Réglages indisponibles" description={error} action={<Button onClick={() => void reload()}>Réessayer</Button>} />
             ) : (
-                <div className="patron-vitrine-settings">
+                <Tabs
+                    className="patron-vitrine-tabs"
+                    variant="underline"
+                    tabs={[
+                        { id: 'settings', label: 'Réglages de la vitrine' },
+                        { id: 'listings', label: `Annonces (${allRows.length})` },
+                    ]}
+                    renderContent={(activeTabId) => activeTabId === 'settings' ? (
+                        <div className="patron-vitrine-settings">
                     <Card className="organization-table-card" padding="medium">
                         <div className="organization-table-toolbar">
                             <div>
@@ -190,38 +200,42 @@ export function VitrinePage() {
                             </Button>
                         </div>
                     </Card>
-                </div>
+                        </div>
+                    ) : (
+                        <>
+                            <OrganizationSummary
+                                items={[
+                                    { label: 'Annonces chargées', value: <>{allRows.length}</> },
+                                    { label: 'Publiées', value: <>{allRows.filter((row) => row.isPublished).length}</> },
+                                    { label: 'Brouillons', value: <>{allRows.filter((row) => !row.isPublished).length}</> },
+                                ]}
+                            />
+                            <Card className="organization-table-card" padding="medium">
+                                <div className="organization-table-toolbar">
+                                    <div>
+                                        <h2>Annonces immobilières</h2>
+                                        <p>{vitrine.data?.note ?? 'La publication des annonces est gérée par votre administrateur immobilier.'}</p>
+                                    </div>
+                                    <div className="organization-filters organization-filters--tenant">
+                                        <SearchInput value={vitrine.search} onSearch={vitrine.setSearch} placeholder="Rechercher une annonce…" fullWidth />
+                                        <Select
+                                            aria-label="Filtrer par statut"
+                                            value={vitrine.status}
+                                            onChange={(event) => vitrine.setStatus(event.target.value)}
+                                            options={[
+                                                { value: 'all', label: 'Tous les statuts' },
+                                                { value: 'published', label: 'Publiées' },
+                                                { value: 'unpublished', label: 'Brouillons' },
+                                            ]}
+                                        />
+                                    </div>
+                                </div>
+                                {listingBody}
+                            </Card>
+                        </>
+                    )}
+                />
             )}
-
-            <OrganizationSummary
-                items={[
-                    { label: 'Annonces affichées', value: <>{vitrine.rows.length}</> },
-                    { label: 'Publiées', value: <>{vitrine.rows.filter((row) => row.isPublished).length}</> },
-                    { label: 'Brouillons', value: <>{vitrine.rows.filter((row) => !row.isPublished).length}</> },
-                ]}
-            />
-            <Card className="organization-table-card" padding="medium">
-                <div className="organization-table-toolbar">
-                    <div>
-                        <h2>Annonces immobilières</h2>
-                        <p>{vitrine.data?.note ?? 'La publication des annonces est gérée par votre administrateur immobilier.'}</p>
-                    </div>
-                    <div className="organization-filters organization-filters--tenant">
-                        <SearchInput value={vitrine.search} onSearch={vitrine.setSearch} placeholder="Rechercher une annonce…" fullWidth />
-                        <Select
-                            aria-label="Filtrer par statut"
-                            value={vitrine.status}
-                            onChange={(event) => vitrine.setStatus(event.target.value)}
-                            options={[
-                                { value: 'all', label: 'Tous les statuts' },
-                                { value: 'published', label: 'Publiées' },
-                                { value: 'unpublished', label: 'Brouillons' },
-                            ]}
-                        />
-                    </div>
-                </div>
-                {listingBody}
-            </Card>
         </main>
     );
 }
