@@ -39,10 +39,14 @@
 .organization-property-name small { color: $color-text-muted; }
 .ville-row-actions { display: flex; align-items: center; justify-content: flex-end; gap: $spacing-2; }
 
+@media (max-width: #{$breakpoint-desktop}) {
+    .organization-table-toolbar { align-items: stretch; flex-direction: column; }
+    .organization-filters, .organization-filters--tenant { grid-template-columns: minmax(0, 1fr); width: 100%; max-width: none; }
+    .organization-filters > * { grid-column: 1 / -1; min-width: 0; }
+}
+
 @media (max-width: 760px) {
     .organization-table-toolbar { align-items: stretch; flex-direction: column; }
-    .organization-filters, .organization-filters--tenant { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-    .organization-filters > :first-child { grid-column: 1 / -1; }
 }
 @media (max-width: 600px) {
     .organization-page { gap: $spacing-3; padding: $spacing-3 0 $spacing-5; }
