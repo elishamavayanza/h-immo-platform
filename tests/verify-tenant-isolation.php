@@ -570,6 +570,27 @@ try {
 }
 
 try {
+    // D-V1 : un locataire sans bail doit rester visible d'un administrateur
+    // de ville (il vient de le créer et doit pouvoir saisir son 1er bail).
+    $loanlessTenant = $makeTenant('Locataire sans bail', $orgA);
+    $em->flush();
+
+    $r = $tenantRepo->findPaginatedAccessible([$orgA], [$cityA1], 1, 50, null);
+    check(
+        'D-V1 : un locataire sans bail est visible d\'un ADMIN_VILLE',
+        $r['total'] === 2,
+        'total=' . $r['total']
+    );
+
+    check('D-V1 : TenantRepository::hasAnyLease (avec bail)', $tenantRepo->hasAnyLease($tenantA) === true);
+    check('D-V1 : TenantRepository::hasAnyLease (sans bail)', $tenantRepo->hasAnyLease($loanlessTenant) === false);
+    check('D-V1 : TenantRepository::hasLeaseInCities (ville allouée)', $tenantRepo->hasLeaseInCities($tenantA, [$cityA1]) === true);
+    check('D-V1 : TenantRepository::hasLeaseInCities (ville allouée, autre locataire)', $tenantRepo->hasLeaseInCities($tenantB, [$cityA1]) === false);
+} catch (\Throwable $e) {
+    check('D-V1 : locataire sans bail / helpers de leases', false, $e->getMessage());
+}
+
+try {
     $r = $orgRepo->findPaginatedByUuids([(string) $orgA->getUuid()], 1, 50, null);
     check('OrganizationRepository::findPaginatedByUuids', $r['total'] === 1, 'total=' . $r['total']);
 } catch (\Throwable $e) {

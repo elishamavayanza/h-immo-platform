@@ -119,9 +119,12 @@ class TenantRepository extends ServiceEntityRepository
      *
      * Un locataire n'étant rattaché à aucune ville, le périmètre
      * `ADMIN_VILLE` ne peut pas être filtré directement : il se déduit
-     * des baux que le locataire détient. Un locataire n'est donc visible
-     * par un administrateur de ville que s'il occupe, via un bail, une
-     * unité située dans l'une de ses villes attitrées.
+     * des baux que le locataire détient. Un locataire est visible par un
+     * administrateur de ville s'il occupe, via un bail, une unité située
+     * dans l'une de ses villes attitrées, OU s'il n'a encore AUCUN bail :
+     * sans cette seconde condition, un locataire qu'un administrateur de
+     * ville vient de créer disparaîtrait de la liste et serait introuvable
+     * au moment de saisir son premier bail (D-V1).
      *
      * @param list<Organization> $organizations
      * @param list<City>|null   $allowedCities `null` = pas de restriction
@@ -149,6 +152,26 @@ class TenantRepository extends ServiceEntityRepository
         $sortBy = in_array($sortBy, $allowedSortFields, true) ? $sortBy : 'fullName';
         $sortOrder = strtoupper($sortOrder) === 'ASC' ? 'ASC' : 'DESC';
 
+        // Fragment DQL partagé : un locataire sans bail OU dont au moins un
+        // bail porte une unité de l'une des villes autorisées. La sous-requête
+        // « sans bail » utilise `l0` (alias distinct) pour ne pas entrer en
+        // collision avec le `l` de la seconde sous-requête.
+        $noLeaseOrInAllowedCities = '
+            (NOT EXISTS (
+                SELECT 1
+                FROM App\\Entity\\Rental\\Lease l0
+                WHERE l0.tenant = t AND l0.deletedAt IS NULL
+            ) OR EXISTS (
+                SELECT 1
+                FROM App\\Entity\\Rental\\Lease l
+                JOIN App\\Entity\\Property\\Unit un WITH un = l.unit
+                JOIN App\\Entity\\Property\\Building b WITH b = un.building
+                JOIN App\\Entity\\Property\\Parcel p WITH p = b.parcel
+                WHERE l.tenant = t
+                  AND l.deletedAt IS NULL
+                  AND p.city IN (:allowedCities)
+            ))';
+
         $qb = $this->createQueryBuilder('t')
             ->andWhere('t.deletedAt IS NULL')
             ->orderBy("t.$sortBy", $sortOrder);
@@ -156,6 +179,11 @@ class TenantRepository extends ServiceEntityRepository
         if ($unrestrictedOrganizations === null) {
             $qb->andWhere('t.organization IN (:organizations)')
                 ->setParameter('organizations', $organizations);
+
+            if ($allowedCities !== null) {
+                $qb->andWhere($noLeaseOrInAllowedCities)
+                    ->setParameter('allowedCities', $allowedCities);
+            }
         } else {
             $unrestrictedIds = array_map(static fn (Organization $organization): int => $organization->getId(), $unrestrictedOrganizations);
             $scopedOrganizations = array_values(array_filter(
@@ -170,49 +198,15 @@ class TenantRepository extends ServiceEntityRepository
                 $qb->andWhere('t.organization IN (:fullAccessOrganizations)')
                     ->setParameter('fullAccessOrganizations', $unrestrictedOrganizations);
             } elseif ($unrestrictedOrganizations === []) {
-                $qb->andWhere('t.organization IN (:cityScopedOrganizations) AND EXISTS (
-                    SELECT 1
-                    FROM App\\Entity\\Rental\\Lease l
-                    JOIN App\\Entity\\Property\\Unit un WITH un = l.unit
-                    JOIN App\\Entity\\Property\\Building b WITH b = un.building
-                    JOIN App\\Entity\\Property\\Parcel p WITH p = b.parcel
-                    WHERE l.tenant = t
-                      AND l.deletedAt IS NULL
-                      AND p.city IN (:allowedCities)
-                )')
+                $qb->andWhere('t.organization IN (:cityScopedOrganizations) AND ' . $noLeaseOrInAllowedCities)
                     ->setParameter('cityScopedOrganizations', $scopedOrganizations)
                     ->setParameter('allowedCities', $allowedCities);
             } else {
-                $qb->andWhere('(t.organization IN (:fullAccessOrganizations) OR (t.organization IN (:cityScopedOrganizations) AND EXISTS (
-                    SELECT 1
-                    FROM App\\Entity\\Rental\\Lease l
-                    JOIN App\\Entity\\Property\\Unit un WITH un = l.unit
-                    JOIN App\\Entity\\Property\\Building b WITH b = un.building
-                    JOIN App\\Entity\\Property\\Parcel p WITH p = b.parcel
-                    WHERE l.tenant = t
-                      AND l.deletedAt IS NULL
-                      AND p.city IN (:allowedCities)
-                )))')
+                $qb->andWhere('(t.organization IN (:fullAccessOrganizations) OR (t.organization IN (:cityScopedOrganizations) AND ' . $noLeaseOrInAllowedCities . '))')
                     ->setParameter('fullAccessOrganizations', $unrestrictedOrganizations)
                     ->setParameter('cityScopedOrganizations', $scopedOrganizations)
                     ->setParameter('allowedCities', $allowedCities);
             }
-        }
-
-        if ($unrestrictedOrganizations === null && $allowedCities !== null) {
-            $qb->andWhere(
-                'EXISTS (
-                    SELECT 1
-                    FROM App\\Entity\\Rental\\Lease l
-                    JOIN App\\Entity\\Property\\Unit un WITH un = l.unit
-                    JOIN App\\Entity\\Property\\Building b WITH b = un.building
-                    JOIN App\\Entity\\Property\\Parcel p WITH p = b.parcel
-                    WHERE l.tenant = t
-                      AND l.deletedAt IS NULL
-                      AND p.city IN (:allowedCities)
-                )'
-            )
-                ->setParameter('allowedCities', $allowedCities);
         }
 
         if ($search !== null && $search !== '') {
@@ -224,5 +218,59 @@ class TenantRepository extends ServiceEntityRepository
         }
 
         return $this->fetchPaginated($qb, $page, $limit);
+    }
+
+    /**
+     * Le locataire possède-t-il au moins un bail non supprimé ?
+     *
+     * D-V1 : un locataire sans aucun bail doit rester accessible à un
+     * ADMIN_VILLE pour pouvoir lui saisir son premier bail.
+     */
+    public function hasAnyLease(Tenant $tenant): bool
+    {
+        return $this->createQueryBuilder('t')
+            ->select('t.id')
+            ->where('t.id = :tenantId')
+            ->andWhere('EXISTS (
+                SELECT 1
+                FROM App\\Entity\\Rental\\Lease l
+                WHERE l.tenant = t AND l.deletedAt IS NULL
+            )')
+            ->setParameter('tenantId', $tenant->getId())
+            ->setMaxResults(1)
+            ->getQuery()
+            ->getOneOrNullResult() !== null;
+    }
+
+    /**
+     * Le locataire a-t-il un bail (non supprimé) sur une unité située dans
+     * l'une de ces villes ?
+     *
+     * @param list<City> $cities
+     */
+    public function hasLeaseInCities(Tenant $tenant, array $cities): bool
+    {
+        if ($cities === []) {
+            return false;
+        }
+
+        return $this->createQueryBuilder('t')
+            ->select('t.id')
+            ->where('t.id = :tenantId')
+            ->andWhere('EXISTS (
+                SELECT 1
+                FROM App\\Entity\\Rental\\Lease l
+                JOIN App\\Entity\\Property\\Unit un WITH un = l.unit
+                JOIN App\\Entity\\Property\\Building b WITH b = un.building
+                JOIN App\\Entity\\Property\\Parcel p WITH p = b.parcel
+                WHERE l.tenant = t
+                  AND l.deletedAt IS NULL
+                  AND p.city IN (:cities)
+            )')
+            ->setParameter('tenantId', $tenant->getId())
+            ->setParameter('cities', $cities)
+            ->setMaxResults(1)
+            ->getQuery()
+            ->getOneOrNullResult() !== null;
     }
 }

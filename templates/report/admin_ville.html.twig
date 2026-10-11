@@ -124,8 +124,8 @@
                 <td>{{ item.category }}</td>
                 <td>{{ item.level }}</td>
                 <td>{{ item.levelLabel }}</td>
-                <td class="text-right">{{ item.totalAmount }} {{ item.currency }}</td>
-                <td>{{ item.currency }}</td>
+                <td class="text-right">{{ item.totalAmount }} {{ item.currency.value }}</td>
+                <td>{{ item.currency.value }}</td>
             </tr>
             {% endfor %}
         </tbody>

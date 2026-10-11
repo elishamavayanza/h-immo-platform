@@ -1,8 +1,10 @@
-import { OrganizationSummary } from '../../../shared/components/OrganizationSummary';
-import { Card } from '../../../../components/UI/Card';
-import { SearchInput } from '../../../../components/Forms/SearchInput';
-import { Select } from '../../../../components/Forms/Select';
-import { useLoyers } from '../hooks/useLoyers';
-import { LoyersTable } from '../components/LoyersTable';
-import '../../../../../styles/pages/admin_ville/loyers/_loyers.scss';
-export function LoyersPage() { const { rows, search, setSearch, status, setStatus } = useLoyers(); return <main className="organization-page organization-operational-page"><header className="organization-page__header"><div><span className="organization-page__eyebrow">SUIVI FINANCIER</span><h1>Loyers</h1><p>Suivez les échéances, paiements et retards de votre portefeuille.</p></div></header><OrganizationSummary items={[{ label: 'Échéances visibles', value: <>{rows.length}</> }, { label: 'Échéances payées', value: <>{rows.filter((row) => row.status === 'Payé').length}</> }, { label: 'En retard', value: <>{rows.filter((row) => row.status === 'En retard').length}</> }]} /><Card className="organization-table-card" padding="medium"><div className="organization-table-toolbar"><div><h2>Échéances récentes</h2><p>Maquette locale, paiements non connectés à l’API.</p></div><div className="organization-filters organization-filters--tenant"><SearchInput value={search} onSearch={setSearch} placeholder="Rechercher un loyer…" fullWidth /><Select aria-label="Filtrer par statut" value={status} onChange={(e) => setStatus(e.target.value)} options={[{ value: 'all', label: 'Tous les statuts' }, ...['Payé', 'Partiel', 'En attente', 'En retard'].map((value) => ({ value, label: value }))]} /></div></div><LoyersTable rows={rows} /></Card></main>; }
+/**
+ * Page Loyers de l'espace ADMIN_VILLE.
+ *
+ * Réutilise l'écran ADMIN_IMMOBILIER `LoyersPage` : chaque action (créer un
+ * paiement, marquer une échéance en retard, modifier une échéance) est gatée
+ * par `canDo(...)`. Sous admin_ville, `update_payment` est absent : l'écran
+ * n'expose que créer/annuler un paiement, et le backend applique la même
+ * matrice.
+ */
+export { LoyersPage } from '../../../admin_immobilier/loyers/pages/LoyersPage';

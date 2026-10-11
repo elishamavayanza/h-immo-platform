@@ -1,15 +1,10 @@
-import { OrganizationSummary } from '../../../shared/components/OrganizationSummary';
-import { Card } from '../../../../components/UI/Card';
-import { SearchInput } from '../../../../components/Forms/SearchInput';
-import { Select } from '../../../../components/Forms/Select';
-import { useLocataires } from '../hooks/useLocataires';
-import { LocatairesTable } from '../components/LocatairesTable';
-import '../../../../../styles/pages/admin_ville/locataires/_locataires.scss';
-
-export function LocatairesPage() {
-    const { rows, search, setSearch, status, setStatus } = useLocataires();
-    return <main className="organization-page organization-operational-page"><header className="organization-page__header"><div><span className="organization-page__eyebrow">GESTION LOCATIVE</span><h1>Locataires</h1><p>Retrouvez les occupants, leurs baux et leur situation.</p></div></header>
-        <OrganizationSummary items={[{ label: 'Locataires visibles', value: <>{rows.length}</> }, { label: 'Locataires actifs', value: <>{rows.filter((row) => row.status === 'Actif').length}</> }, { label: 'Soldes à suivre', value: <>{rows.filter((row) => row.balance !== '0 $').length}</> }]} />
-        <Card className="organization-table-card" padding="medium"><div className="organization-table-toolbar"><div><h2>Liste des locataires</h2><p>La liste est une maquette avec données locales.</p></div><div className="organization-filters organization-filters--tenant"><SearchInput value={search} onSearch={setSearch} placeholder="Rechercher un locataire…" fullWidth /><Select aria-label="Filtrer par statut" value={status} onChange={(event) => setStatus(event.target.value)} options={[{ value: 'all', label: 'Tous les statuts' }, ...['Actif', 'En attente', 'Ancien'].map((value) => ({ value, label: value }))]} /></div></div><LocatairesTable rows={rows} /></Card>
-    </main>;
-}
+/**
+ * Page Locataires de l'espace ADMIN_VILLE.
+ *
+ * Réutilise l'écran ADMIN_IMMOBILIER `LocatairesPage` : il est paramétré par
+ * le rôle actif et gate chaque action via `canDo(...)`. Sous admin_ville,
+ * l'assistant « ajouter un locataire (sans bail) → créer son bail → activer
+ * le bail » (décision D-V1) est identique, tandis que la suppression physique
+ * (`delete_tenant`) reste hors périmètre : l'archive est la seule sortie.
+ */
+export { LocatairesPage } from '../../../admin_immobilier/locataires/pages/LocatairesPage';
