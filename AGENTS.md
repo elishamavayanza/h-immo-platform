@@ -573,6 +573,7 @@ php tests/verify-admin-creation-email-failure.php # création compte + mailer en
 php tests/verify-p0-security.php        # rapports, dépenses, médias, statuts
 php tests/verify-p0-7-list-endpoints.php # endpoints de liste rentals (200, pas de fuite)
 php tests/verify-admin-immobilier.php # espace ADMIN_IMMOBILIER : listes locataires/loyers/patrimoine + isolation dépenses/affectations (31 contrôles)
+php tests/verify-admin-ville.php # espace ADMIN_VILLE : rapport borné à UserCity, D-V1 locataire sans bail, D-V2 dépense non annulable, matrice de permissions (34 contrôles)
 php tests/verify-parcel-coordinates.php # coordonnées GPS Parcel (201/422, round-trip)
 php tests/verify-organization-suspend.php # suspension de tenant (motif obligatoire 422, 200, audit SUSPEND/ACTIVATE, 404, 403, réactivation)
 php tests/check-injected-dependencies.php # dépendances $this-> injectées (statique)

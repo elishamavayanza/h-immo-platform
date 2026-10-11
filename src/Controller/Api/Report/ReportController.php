@@ -107,7 +107,7 @@ final class ReportController extends AbstractController
             new OA\Response(response: 401, description: 'Non authentifié', content: new OA\JsonContent(ref: new Model(type: Feedback::class))),
         ]
     )]
-    public function patronReport(#[MapQueryString] PatronReportFilterDto $filter): JsonResponse
+    public function patronReport(#[MapQueryString] PatronReportFilterDto $filter): Response
     {
         $user = $this->getUser();
 
@@ -165,7 +165,7 @@ final class ReportController extends AbstractController
             new OA\Response(response: 401, description: 'Non authentifié', content: new OA\JsonContent(ref: new Model(type: Feedback::class))),
         ]
     )]
-    public function adminImmobilierReport(#[MapQueryString] AdminImmobilierReportFilterDto $filter): JsonResponse
+    public function adminImmobilierReport(#[MapQueryString] AdminImmobilierReportFilterDto $filter): Response
     {
         $user = $this->getUser();
 
@@ -221,7 +221,7 @@ final class ReportController extends AbstractController
             new OA\Response(response: 401, description: 'Non authentifié', content: new OA\JsonContent(ref: new Model(type: Feedback::class))),
         ]
     )]
-    public function adminVilleReport(string $cityUuid, #[MapQueryString] AdminVilleReportFilterDto $filter): JsonResponse
+    public function adminVilleReport(string $cityUuid, #[MapQueryString] AdminVilleReportFilterDto $filter): Response
     {
         $user = $this->getUser();
 

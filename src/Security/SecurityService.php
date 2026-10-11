@@ -26,6 +26,7 @@ use App\Exception\UnauthenticatedException;
 use App\Repository\Identity\OrganizationUserRepository;
 use App\Repository\Identity\UserCityRepository;
 use App\Repository\Property\CityRepository;
+use App\Repository\Rental\TenantRepository;
 use Symfony\Bundle\SecurityBundle\Security;
 
 /**
@@ -76,6 +77,7 @@ final class SecurityService implements SecurityServiceInterface
         private readonly OrganizationUserRepository $organizationUserRepository,
         private readonly UserCityRepository $userCityRepository,
         private readonly CityRepository $cityRepository,
+        private readonly TenantRepository $tenantRepository,
     ) {
     }
 
@@ -538,6 +540,25 @@ final class SecurityService implements SecurityServiceInterface
     }
 
     /**
+     * Villes que l'utilisateur courant peut manipuler DANS une organisation
+     * donnée :
+     * - autre rôle qu'ADMIN_VILLE : toutes les villes de l'organisation ;
+     * - ADMIN_VILLE : uniquement ses villes attribuées via UserCity.
+     *
+     * @return list<City>
+     */
+    public function getAccessibleCitiesForOrganization(Organization $organization): array
+    {
+        $user = $this->getCurrentUser();
+
+        if ($this->getOrganizationRole($user, $organization) === OrganizationRole::ADMIN_VILLE) {
+            return $this->cityRepository->findAssignedToUserInOrganization($user, $organization);
+        }
+
+        return $this->cityRepository->findInOrganization($organization);
+    }
+
+    /**
      * Villes à utiliser pour BORNER une requête de liste.
      *
      * Différence avec `getAccessibleCities()` : cette méthode ne renvoie
@@ -638,14 +659,46 @@ final class SecurityService implements SecurityServiceInterface
 
     /**
      * Un Tenant appartient directement à une Organization. Un
-     * ADMIN_VILLE n'est donc PAS restreint par UserCity sur un Tenant :
-     * sa limitation par ville ne s'exerce que sur le patrimoine
+     * ADMIN_VILLE n'est donc PAS restreint par UserCity sur un Tenant en
+     * tant que tel : sa limitation par ville s'exerce sur le patrimoine
      * (City -> Parcel -> Building -> Unit) et sur les leases rattachés à
-     * ce patrimoine. Voir `checkLeaseAccess()` pour ce cas.
+     * ce patrimoine. Pour rester cohérent avec la liste des locataires
+     * (D-V1), un ADMIN_VILLE ne peut consulter un locataire de son
+     * organisation que s'il est rattaché à une de SES villes via un bail,
+     * ou s'il n'a encore aucun bail (locataire fraîchement créé, avant la
+     * saisie de son premier bail).
+     *
+     * Le rôle est résolu dans l'Organization DU TENANT : un utilisateur
+     * PATRON de l'organization A et ADMIN_VILLE de B conserve sur A la
+     * latitude d'un patron.
      */
     public function checkTenantAccess(Tenant $tenant, SecurityAction $action): void
     {
         $this->checkOrganizationAccess($tenant->getOrganization(), $action);
+
+        if ($this->isSuperAdmin()) {
+            return;
+        }
+
+        $organization = $tenant->getOrganization();
+        if ($this->getOrganizationRole($this->getCurrentUser(), $organization) !== OrganizationRole::ADMIN_VILLE) {
+            return;
+        }
+
+        if (!$this->tenantRepository->hasAnyLease($tenant)) {
+            return;
+        }
+
+        if ($this->tenantRepository->hasLeaseInCities(
+            $tenant,
+            $this->getAccessibleCitiesForOrganization($organization)
+        )) {
+            return;
+        }
+
+        throw new AccessDeniedException(
+            'Accès refusé : ce locataire n\'est rattaché à aucune de vos villes.'
+        );
     }
 
     public function canAccessTenant(Tenant $tenant, SecurityAction $action = SecurityAction::VIEW): bool
