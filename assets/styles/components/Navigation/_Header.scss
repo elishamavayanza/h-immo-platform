@@ -23,7 +23,7 @@
 
 .header {
     width: 100%;
-    background-color: $color-bg-app;
+    background-color: $color-bg-topbar;
     border-bottom: 1px solid $color-border;
     z-index: $z-fixed;
 }
@@ -47,7 +47,7 @@
 
 // ----- Variantes -----
 .header--default {
-    background-color: $color-bg-app;
+    background-color: $color-bg-topbar;
 }
 
 .header--transparent {

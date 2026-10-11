@@ -23,6 +23,79 @@
     font-family: $font-family-base;
 }
 
+.auth-theme-switch {
+    display: inline-flex;
+    align-items: center;
+    align-self: flex-end;
+    gap: 7px;
+    min-height: 38px;
+    padding: 6px 11px;
+    border: 1px solid var(--color-border);
+    border-radius: $radius-full;
+    background: var(--color-bg-input);
+    color: var(--color-text-secondary);
+    font: inherit;
+    font-size: $font-size-sm;
+    cursor: pointer;
+    transition: border-color $transition-fast, background-color $transition-fast, color $transition-fast;
+
+    &:hover {
+        border-color: var(--color-primary);
+        background: var(--color-primary-light);
+        color: var(--color-primary);
+    }
+
+    &:focus-visible {
+        outline: 2px solid var(--color-primary);
+        outline-offset: 3px;
+    }
+}
+
+.auth-theme-switch__track {
+    display: inline-flex;
+    width: 34px;
+    height: 20px;
+    align-items: center;
+    padding: 2px;
+    border-radius: $radius-full;
+    background: var(--color-border-strong);
+    transition: background-color $transition-fast;
+}
+
+.auth-theme-switch[aria-checked='true'] .auth-theme-switch__track {
+    background: var(--color-primary);
+}
+
+.auth-theme-switch__thumb {
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background: var(--color-text-inverse);
+    box-shadow: 0 1px 2px rgba(0, 0, 0, .2);
+    transition: transform $transition-fast;
+}
+
+.auth-theme-switch[aria-checked='true'] .auth-theme-switch__thumb {
+    transform: translateX(14px);
+}
+
+.auth-theme-switch__icon {
+    display: inline-flex;
+    color: var(--color-text-muted);
+    transition: color $transition-fast;
+}
+
+.auth-theme-switch__icon.is-active {
+    color: var(--color-primary);
+}
+
+.auth-theme-switch__label {
+    margin-left: 2px;
+    padding-left: 9px;
+    border-left: 1px solid var(--color-border);
+    font-weight: $font-weight-semibold;
+}
+
 .auth-page__header {
     display: flex;
     flex-direction: column;

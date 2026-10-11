@@ -35,7 +35,7 @@
 
     --alert-color: #{$color-info};
     --alert-bg: #{$color-info-light};
-    --alert-border: #{rgba(37, 189, 232, 0.35)};
+    --alert-border: color-mix(in srgb, var(--color-info) 35%, transparent);
 
     color: var(--alert-color);
     background-color: var(--alert-bg);
@@ -117,25 +117,25 @@
 .alert--info {
     --alert-color: #{$color-info};
     --alert-bg: #{$color-info-light};
-    --alert-border: #{rgba(37, 189, 232, 0.35)};
+    --alert-border: color-mix(in srgb, var(--color-info) 35%, transparent);
 }
 
 .alert--success {
     --alert-color: #{$color-success};
     --alert-bg: #{$color-success-light};
-    --alert-border: #{rgba(101, 214, 165, 0.35)};
+    --alert-border: color-mix(in srgb, var(--color-success) 35%, transparent);
 }
 
 .alert--warning {
     --alert-color: #{$color-warning};
     --alert-bg: #{$color-warning-light};
-    --alert-border: #{rgba(243, 201, 105, 0.35)};
+    --alert-border: color-mix(in srgb, var(--color-warning) 35%, transparent);
 }
 
 .alert--error {
     --alert-color: #{$color-danger};
     --alert-bg: #{$color-danger-light};
-    --alert-border: #{rgba(239, 91, 120, 0.35)};
+    --alert-border: color-mix(in srgb, var(--color-danger) 35%, transparent);
 }
 
 

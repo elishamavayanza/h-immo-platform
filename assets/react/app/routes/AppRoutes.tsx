@@ -56,6 +56,10 @@ function AccessDenied() {
     const { platformRole, organizationRole } = useOrganization();
     const landingPath = defaultPathFor(platformRole, organizationRole);
 
+    if (platformRole !== null || organizationRole !== null) {
+        return <Navigate to={landingPath} replace />;
+    }
+
     return (
         <ErrorState
             status={403}

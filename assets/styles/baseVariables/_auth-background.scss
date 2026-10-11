@@ -9,8 +9,9 @@
 @use 'variables' as *;
 
 
-// Fond principal : noir profond, plus sombre que $color-bg-base
-$auth-page-bg: #060709;
+// Les écrans d'authentification suivent le thème actif au lieu d'imposer
+// un fond sombre indépendant du reste de l'application.
+$auth-page-bg: var(--color-bg-base, #181818);
 
 
 // ------------------------------------------------------------
@@ -39,6 +40,15 @@ $auth-page-bg: #060709;
 
 .auth-page {
 
+    --auth-bg-start: var(--color-bg-topbar, #1D1D1D);
+    --auth-bg-end: var(--color-bg-base, #181818);
+    --auth-wave-primary: color-mix(in srgb, var(--color-primary, #66B5C9) 12%, transparent);
+    --auth-wave-secondary: color-mix(in srgb, var(--color-purple, #B0A4E8) 9%, transparent);
+    --auth-aurora-primary: color-mix(in srgb, var(--color-primary, #66B5C9) 8%, transparent);
+    --auth-aurora-secondary: color-mix(in srgb, var(--color-purple, #B0A4E8) 7%, transparent);
+    --auth-grid-line: color-mix(in srgb, var(--color-primary, #66B5C9) 3%, transparent);
+    --auth-vignette: color-mix(in srgb, var(--color-bg-base, #181818) 52%, transparent);
+
     // --- Contexte d'empilement isolé ---
     position: relative;
     isolation: isolate;
@@ -47,20 +57,19 @@ $auth-page-bg: #060709;
     // ========================================================
     // COUCHE 1 — BASE + VAGUES + WATERMARK IMMO
     // ========================================================
-    // Fond quasi-noir, watermark et vagues à peine perceptibles.
+    // Le fond, les vagues et le motif suivent les tokens de l'application.
     // ========================================================
     background-color: $auth-page-bg;
     background-image:
-        // --- Watermark IMMO (opacité fortement réduite) ---
+        // --- Watermark IMMO ---
         url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='280' height='280' viewBox='0 0 280 280'%3E%3Cg fill='none' stroke='%2325BDE8' stroke-width='1.2' stroke-opacity='0.05'%3E%3Crect x='20' y='20' width='240' height='240' rx='24'/%3E%3Cpath d='M60 200 L60 120 L90 120 L90 90 L120 90 L120 70 L160 70 L160 90 L190 90 L190 120 L220 120 L220 200 Z'/%3E%3Cpath d='M100 200 L100 150 L120 150 L120 200'/%3E%3Cpath d='M160 200 L160 150 L180 150 L180 200'/%3E%3Cpath d='M135 100 L145 100 L145 120 L135 120 Z'/%3E%3C/g%3E%3Ctext x='140' y='248' font-family='Inter, sans-serif' font-size='22' font-weight='700' letter-spacing='6' text-anchor='middle' fill='%2325BDE8' fill-opacity='0.06'%3EIMMO%3C/text%3E%3C/svg%3E"),
-            // --- Vagues très sombres ---
-        url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1440 700' preserveAspectRatio='none'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='1' y2='0'%3E%3Cstop offset='0%25' stop-color='%2325BDE8' stop-opacity='0.35'/%3E%3Cstop offset='50%25' stop-color='%238C78F0' stop-opacity='0.28'/%3E%3Cstop offset='100%25' stop-color='%23DFA0E8' stop-opacity='0.22'/%3E%3C/linearGradient%3E%3C/defs%3E%3Cpath d='M0,470 C240,420 420,520 740,480 C1060,440 1240,500 1440,460 L1440,700 L0,700 Z' fill='url(%23g)' fill-opacity='0.03'/%3E%3Cpath d='M0,560 C260,510 460,600 780,565 C1100,530 1260,585 1440,550 L1440,700 L0,700 Z' fill='url(%23g)' fill-opacity='0.06'/%3E%3Cpath d='M0,630 C280,595 500,660 820,635 C1140,610 1280,645 1440,625 L1440,700 L0,700 Z' fill='%23060709' fill-opacity='0.95'/%3E%3C/svg%3E"),
-            // --- Voile radial très sombre ---
-        radial-gradient(120% 90% at 50% -10%, #0A0C0F 0%, $auth-page-bg 55%, #000000 100%);
+        radial-gradient(100% 48% at 8% 100%, var(--auth-wave-primary) 0%, transparent 82%),
+        radial-gradient(100% 46% at 92% 100%, var(--auth-wave-secondary) 0%, transparent 82%),
+        linear-gradient(135deg, var(--auth-bg-start), var(--auth-bg-end) 58%, var(--auth-bg-start));
 
-    background-repeat: repeat, no-repeat, no-repeat;
-    background-position: center, bottom center, center;
-    background-size: 280px 280px, 100% 78vh, 100% 100%;
+    background-repeat: repeat, no-repeat, no-repeat, no-repeat;
+    background-position: center, bottom left, bottom right, center;
+    background-size: 280px 280px, 100% 78vh, 100% 78vh, 100% 100%;
 
     // ========================================================
     // COUCHE 2 — AURORA + TRAME ARCHITECTURALE (::before)
@@ -75,16 +84,13 @@ $auth-page-bg: #060709;
         pointer-events: none;
 
         background-image:
-            // Auroras effacés
-            radial-gradient(circle at 15% 10%, rgba(37, 189, 232, 0.05) 0%, transparent 42%),
-            radial-gradient(circle at 85% 15%, rgba(140, 120, 240, 0.04) 0%, transparent 44%),
-            radial-gradient(circle at 50% 105%, rgba(223, 160, 232, 0.03) 0%, transparent 46%),
-                // Trame fine très discrète
-            linear-gradient(to right,  rgba(37, 189, 232, 0.018) 1px, transparent 1px),
-            linear-gradient(to bottom, rgba(37, 189, 232, 0.018) 1px, transparent 1px),
-                // Repères larges quasi invisibles
-            linear-gradient(to right,  rgba(255, 255, 255, 0.012) 1px, transparent 1px),
-            linear-gradient(to bottom, rgba(255, 255, 255, 0.012) 1px, transparent 1px);
+            radial-gradient(circle at 15% 10%, var(--auth-aurora-primary) 0%, transparent 42%),
+            radial-gradient(circle at 85% 15%, var(--auth-aurora-secondary) 0%, transparent 44%),
+            radial-gradient(circle at 50% 105%, var(--auth-wave-secondary) 0%, transparent 46%),
+            linear-gradient(to right, var(--auth-grid-line) 1px, transparent 1px),
+            linear-gradient(to bottom, var(--auth-grid-line) 1px, transparent 1px),
+            linear-gradient(to right, var(--auth-grid-line) 1px, transparent 1px),
+            linear-gradient(to bottom, var(--auth-grid-line) 1px, transparent 1px);
 
         background-size:
             100% 100%,
@@ -115,11 +121,22 @@ $auth-page-bg: #060709;
         pointer-events: none;
 
         background-image:
-            radial-gradient(60% 100% at 50% 100%, rgba(37, 189, 232, 0.07) 0%, rgba(37, 189, 232, 0) 70%),
-            radial-gradient(45% 90%  at 28% 100%, rgba(140, 120, 240, 0.05) 0%, rgba(140, 120, 240, 0) 70%),
-            radial-gradient(45% 90%  at 72% 100%, rgba(138, 216, 188, 0.04) 0%, rgba(138, 216, 188, 0) 70%),
-            radial-gradient(130% 110% at 50% 45%, transparent 25%, rgba(0, 0, 0, 0.88) 100%);
+            radial-gradient(60% 100% at 50% 100%, var(--auth-wave-primary) 0%, transparent 70%),
+            radial-gradient(45% 90%  at 28% 100%, var(--auth-aurora-secondary) 0%, transparent 70%),
+            radial-gradient(45% 90%  at 72% 100%, var(--auth-wave-secondary) 0%, transparent 70%),
+            radial-gradient(130% 110% at 50% 45%, transparent 25%, var(--auth-vignette) 100%);
     }
+}
+
+html[data-theme='light'] .auth-page {
+    --auth-bg-start: #F1F4F2;
+    --auth-bg-end: #E2E9E7;
+    --auth-wave-primary: color-mix(in srgb, var(--color-primary, #2D7482) 11%, transparent);
+    --auth-wave-secondary: color-mix(in srgb, var(--color-purple, #6758AA) 8%, transparent);
+    --auth-aurora-primary: color-mix(in srgb, var(--color-primary, #2D7482) 7%, transparent);
+    --auth-aurora-secondary: color-mix(in srgb, var(--color-purple, #6758AA) 6%, transparent);
+    --auth-grid-line: color-mix(in srgb, var(--color-primary, #2D7482) 4%, transparent);
+    --auth-vignette: color-mix(in srgb, var(--color-bg-base, #E9EDEE) 9%, transparent);
 }
 
 

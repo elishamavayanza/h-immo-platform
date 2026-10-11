@@ -5,6 +5,12 @@ import { ApiError, type SessionUserResponse } from '../../../services/api/api.ty
 import { authService } from '../../features/auth/services/authService';
 import { tokenStorage } from '../../../services/storage/storage.service';
 import { isTokenExpired } from '../../../services/security/security.utils';
+import {
+    clearPendingLoginTheme,
+    readPendingLoginTheme,
+    saveUserPreferences,
+} from '../../services/userPreferences';
+import { settingsService } from '../../features/shared/account/settings/services/settingsService';
 
 interface AuthContextValue {
     user: SessionUserResponse | null;
@@ -78,6 +84,36 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setUser(null);
         setIsLoading(false);
     }), []);
+
+    useEffect(() => {
+        if (!user) return;
+        let cancelled = false;
+        void settingsService.getMySettings().then(async (settings) => {
+            // La réponse d'un compte précédent ne doit jamais repeindre une
+            // session ouverte ensuite par un autre utilisateur.
+            if (cancelled) return;
+
+            const pendingLoginTheme = readPendingLoginTheme();
+            if (!pendingLoginTheme) {
+                saveUserPreferences(settings);
+                return;
+            }
+
+            try {
+                const updatedSettings = await settingsService.updateMySettings({ theme: pendingLoginTheme });
+                if (!cancelled) saveUserPreferences(updatedSettings);
+            } catch {
+                // Le choix local reste actif si l'enregistrement côté compte échoue.
+                if (!cancelled) saveUserPreferences({ ...settings, theme: pendingLoginTheme });
+            } finally {
+                clearPendingLoginTheme();
+            }
+        }).catch(() => {
+            // Les préférences locales restent actives si l'API est indisponible.
+            clearPendingLoginTheme();
+        });
+        return () => { cancelled = true; };
+    }, [user?.uuid]);
 
     const login = useCallback(async (email: string, password: string) => {
         try {

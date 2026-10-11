@@ -73,11 +73,10 @@ export function SettingsPage() {
                         <div>
                             <strong>Thème</strong>
                             <p>Choisissez l'apparence de l'interface.</p>
-                            <small className="setting-row__note">Le choix du thème sera disponible prochainement.</small>
                         </div>
                         <Select
-                            disabled
                             value={settings.theme}
+                            onChange={handleSelectChange('theme')}
                             options={[
                                 { value: 'system', label: 'Système' },
                                 { value: 'light', label: 'Clair' },
@@ -85,6 +84,35 @@ export function SettingsPage() {
                             ]}
                         />
                     </div>
+                    <fieldset className="setting-palette">
+                        <legend>Couleur d’accent</legend>
+                        <p>Personnalisez les boutons, les liens et les contours de focus.</p>
+                        <div className="setting-palette__options">
+                            {([
+                                ['ocean', 'Océan'],
+                                ['violet', 'Violet'],
+                                ['sage', 'Sauge'],
+                                ['amber', 'Ambre'],
+                                ['coral', 'Corail'],
+                                ['slate', 'Ardoise'],
+                            ] as const).map(([palette, label]) => (
+                                <label className="setting-palette__option" key={palette}>
+                                    <input
+                                        type="radio"
+                                        name="accentPalette"
+                                        value={palette}
+                                        checked={settings.accentPalette === palette}
+                                        onChange={() => void apply('accentPalette', palette)}
+                                    />
+                                    <span className={`setting-palette__choice setting-palette__choice--${palette}`} aria-hidden="true">
+                                        <span className="setting-palette__swatch" />
+                                        <span>{settings.accentPalette === palette ? '✓' : ''}</span>
+                                    </span>
+                                    <span className="setting-palette__label">{label}</span>
+                                </label>
+                            ))}
+                        </div>
+                    </fieldset>
                     <div className="setting-row">
                         <div>
                             <strong>Langue</strong>

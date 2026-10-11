@@ -115,37 +115,37 @@
 .badge--primary {
     --badge-color: #{$color-primary};
     --badge-bg: #{$color-primary-light};
-    --badge-border: #{rgba(37, 189, 232, 0.35)};
+    --badge-border: color-mix(in srgb, var(--color-primary) 35%, transparent);
 }
 
 .badge--secondary {
     --badge-color: #{$color-purple};
     --badge-bg: #{$color-purple-light};
-    --badge-border: #{rgba(140, 120, 240, 0.35)};
+    --badge-border: color-mix(in srgb, var(--color-purple) 35%, transparent);
 }
 
 .badge--success {
     --badge-color: #{$color-success};
     --badge-bg: #{$color-success-light};
-    --badge-border: #{rgba(101, 214, 165, 0.35)};
+    --badge-border: color-mix(in srgb, var(--color-success) 35%, transparent);
 }
 
 .badge--warning {
     --badge-color: #{$color-warning};
     --badge-bg: #{$color-warning-light};
-    --badge-border: #{rgba(243, 201, 105, 0.35)};
+    --badge-border: color-mix(in srgb, var(--color-warning) 35%, transparent);
 }
 
 .badge--error {
     --badge-color: #{$color-danger};
     --badge-bg: #{$color-danger-light};
-    --badge-border: #{rgba(239, 91, 120, 0.35)};
+    --badge-border: color-mix(in srgb, var(--color-danger) 35%, transparent);
 }
 
 .badge--info {
     --badge-color: #{$color-info};
     --badge-bg: #{$color-info-light};
-    --badge-border: #{rgba(37, 189, 232, 0.35)};
+    --badge-border: color-mix(in srgb, var(--color-info) 35%, transparent);
 }
 
 

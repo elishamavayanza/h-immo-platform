@@ -13,6 +13,7 @@ export function useAccountSettings() {
         emailNotifications: true,
         locale: 'fr',
         theme: 'system',
+        accentPalette: 'ocean',
         dateFormat: 'DD/MM/YYYY',
         inAppNotifications: true,
         reducedMotion: false,
