@@ -122,6 +122,9 @@ final readonly class PaymentService
                 $this->paymentMapper->copyToEntity($request, $payment);
 
                 $this->entityManager->persist($payment);
+                // L'identifiant interne est nécessaire pour rattacher le journal
+                // d'audit au paiement, sans sortir de la transaction comptable.
+                $this->entityManager->flush();
 
                 // Log d'audit : création du paiement
                 $this->auditLogService->log(
@@ -144,8 +147,7 @@ final readonly class PaymentService
                     ],
                 );
 
-                // Le flush unique ici persiste le paiement ET met à jour le statut
-                // via refreshRentStatus appelé après.
+                // Le flush final de la transaction persiste aussi le statut recalculé.
                 $this->refreshRentStatus($lockedRent);
 
                 // Stocker pour le retour

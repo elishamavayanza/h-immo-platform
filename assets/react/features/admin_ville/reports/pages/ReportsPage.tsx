@@ -5,7 +5,6 @@ import { Button } from '../../../../components/UI/Button';
 import { Spinner } from '../../../../components/UI/Spinner';
 import { EmptyState } from '../../../../components/Data/EmptyState';
 import { DateRangePicker } from '../../../../components/Forms/DateRangePicker';
-import { CitySelect } from '../../../shared/components/CitySelect';
 import { NoAssignedCityState } from '../../../shared/components/NoAssignedCityState';
 import { canDo } from '../../../shared/permissions';
 import { useReports } from '../hooks/useReports';
@@ -16,10 +15,9 @@ import '../../../../../styles/pages/admin_ville/reports/_reports.scss';
 /**
  * Rapport ADMIN_VILLE — lecture seule.
  *
- * La ville est choisie parmi les villes réellement affectées (`CitySelect`) ;
- * le backend rejoue `checkCityAccess` + `VIEW_REPORT` à chaque requête. Aucune
- * écriture n'est proposée depuis cette page ; seul l'export PDF (endpoint
- * `format=pdf`) est exposé, et uniquement si le rôle y a droit.
+ * Le rapport est automatiquement rattaché à la première ville renvoyée par
+ * le périmètre backend. Aucun sélecteur n'est nécessaire dans l'espace de
+ * l'administrateur de ville ; l'API rejoue `checkCityAccess` à chaque requête.
  */
 export function ReportsPage() {
     const { organizationRole } = useOrganization();
@@ -29,7 +27,6 @@ export function ReportsPage() {
         error,
         reload,
         cityUuid,
-        setCityUuid,
         periodFrom,
         setPeriodFrom,
         periodTo,
@@ -85,21 +82,25 @@ export function ReportsPage() {
                     <h1>Rapports de la ville</h1>
                     <p>Occupation du patrimoine, impayés, dépenses et personnel de votre ville.</p>
                 </div>
-                <div className="reports-page__controls">
-                    <CitySelect id="reports-city" value={cityUuid} onChange={setCityUuid} />
+            </header>
+            <section className="reports-page__toolbar" aria-label="Filtres du rapport">
+                <div className="reports-page__date-filter">
                     <DateRangePicker
                         startDate={periodFrom}
                         endDate={periodTo}
+                        fullWidth
                         onChange={(range) => { setPeriodFrom(range.startDate); setPeriodTo(range.endDate); }}
                     />
-                    <span className="reports-page__period-label">Période : {data.periodCovered.replace(' to ', ' → ')}</span>
+                </div>
+                <div className="reports-page__toolbar-actions">
+                    <span className="reports-page__period-label">Période affichée : {data.periodCovered.replace(' to ', ' → ')}</span>
                     {canDo(organizationRole, 'export_report') && (
-                        <Button variant="outline" onClick={() => void handleExportPdf()} disabled={isExporting}>
+                        <Button variant="outline" onClick={() => void handleExportPdf()} disabled={isExporting} aria-busy={isExporting}>
                             {isExporting ? 'Export…' : 'Exporter en PDF'}
                         </Button>
                     )}
                 </div>
-            </header>
+            </section>
             {exportError && <p className="reports-empty" role="alert">{exportError}</p>}
             <ReportsOverview data={data} />
         </main>

@@ -87,14 +87,22 @@ export async function fetchDepenses(organizationUuid: string): Promise<DepensesD
         id: expense.id,
         date: expense.expenseDate,
         city: cities.get(expense.cityId)?.name ?? '—',
+        cityId: expense.cityId,
         categoryCode: expense.category,
         category: categoryLabel(expense.category),
         property: propertyLabel(expense, cities, parcels, buildings, units),
         parcelId: expense.parcelId ?? (expense.buildingId ? buildings.get(expense.buildingId)?.parcelId ?? null : expense.unitId ? buildings.get(units.get(expense.unitId)?.buildingId ?? '')?.parcelId ?? null : null),
         buildingId: expense.buildingId ?? (expense.unitId ? units.get(expense.unitId)?.buildingId ?? null : null),
+        unitId: expense.unitId,
+        workerId: expense.workerId,
         description: descriptionLabel(expense, workerById),
         amount: expense.amount,
         currency: expense.currency,
+        expenseDate: expense.expenseDate,
+        method: expense.method,
+        supplier: expense.supplier,
+        reference: expense.reference,
+        notes: expense.notes,
     }));
 
     const note = expenses.total > expenses.items.length

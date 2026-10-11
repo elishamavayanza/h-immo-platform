@@ -29,14 +29,17 @@ interface LoyersTableProps {
     onRecordPayment: (row: LoyerRow) => void;
     onMarkOverdue: (row: LoyerRow) => void;
     onUpdate: (row: LoyerRow) => void;
+    /** Lecture seule (espace PATRON) : masque toute action d'écriture. */
+    readOnly?: boolean;
 }
 
 /**
  * Table des échéances : actions Enregistrer un paiement, Marquer en retard, Modifier.
  * « Enregistrer un paiement » masqué si la ligne est PAID.
  * « Marquer en retard » masqué si déjà OVERDUE ou PAID.
+ * `readOnly` masque la colonne d'actions (le Patron consulte sans opérer).
  */
-export function LoyersTable({ rows, role, onRecordPayment, onMarkOverdue, onUpdate }: LoyersTableProps) {
+export function LoyersTable({ rows, role, onRecordPayment, onMarkOverdue, onUpdate, readOnly = false }: LoyersTableProps) {
     const columns: DataTableColumn<LoyerRow>[] = [
         { key: 'tenant', title: 'Locataire', sortable: true },
         { key: 'unitLabel', title: 'Bien / unité', sortable: true, render: (row) => row.unitLabel },
@@ -48,6 +51,8 @@ export function LoyersTable({ rows, role, onRecordPayment, onMarkOverdue, onUpda
             key: 'actions',
             title: 'Actions',
             render: (row) => {
+                if (readOnly) return '—';
+
                 const isPaid = row.status === 'paid';
                 const isOverdue = row.status === 'overdue';
                 const items: PopoverMenuItem[] = [

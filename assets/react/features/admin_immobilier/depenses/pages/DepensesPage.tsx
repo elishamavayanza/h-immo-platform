@@ -24,7 +24,7 @@ import type { DepenseRow } from '../types/depense.types';
 import type { OrganizationRole } from '../../../../../services/api/api.types';
 import '../../../../../styles/pages/admin_immobilier/depenses/_depenses.scss';
 
-export function DepensesPage() {
+export function DepensesPage({ readOnly = false }: { readOnly?: boolean } = {}) {
     const [searchParams] = useSearchParams();
     const parcelUuid = searchParams.get('parcelUuid');
     const buildingUuid = searchParams.get('buildingUuid');
@@ -83,19 +83,19 @@ export function DepensesPage() {
 
     const openEdit = (target: DepenseRow) => {
         setForm({
-            cityUuid: '',
+            cityUuid: target.cityId,
             category: target.categoryCode,
             amount: target.amount,
             currency: target.currency as 'USD' | 'CDF',
-            expenseDate: target.date,
-            method: '',
-            supplier: '',
-            reference: '',
-            notes: '',
-            parcelUuid: '',
-            buildingUuid: '',
-            unitUuid: '',
-            workerUuid: '',
+            expenseDate: target.expenseDate.slice(0, 10),
+            method: target.method ?? '',
+            supplier: target.supplier ?? '',
+            reference: target.reference ?? '',
+            notes: target.notes ?? '',
+            parcelUuid: target.parcelId ?? '',
+            buildingUuid: target.buildingId ?? '',
+            unitUuid: target.unitId ?? '',
+            workerUuid: target.workerId ?? '',
         });
         setFormErrors({});
         setEditTarget(target);
@@ -165,7 +165,7 @@ export function DepensesPage() {
         }
     };
 
-    let body = <DepensesTable rows={rows} role={organizationRole} onEdit={openEdit} onCancel={openCancel} />;
+    let body = <DepensesTable rows={rows} role={organizationRole} onEdit={openEdit} onCancel={openCancel} readOnly={readOnly} />;
     if (isLoading) {
         body = <EmptyState icon={<Spinner size="large" />} title="Chargement des dépenses…" description="Récupération des coûts de l’organisation." />;
     } else if (error) {
@@ -179,7 +179,7 @@ export function DepensesPage() {
 
     return <main className="organization-page organization-operational-page"><header className="organization-page__header"><div><span className="organization-page__eyebrow">SUIVI FINANCIER</span><h1>Dépenses</h1><p>Consultez les coûts liés à vos biens et à leur fonctionnement.</p></div></header>
         <OrganizationSummary items={[{ label: 'Dépenses affichées', value: <>{rows.length}</> }, { label: 'Villes concernées', value: <>{new Set(rows.map((row) => row.city)).size}</> }, { label: 'Catégories visibles', value: <>{new Set(rows.map((row) => row.category)).size}</> }]} />
-        <Card className="organization-table-card" padding="medium"><div className="organization-table-toolbar"><div><h2>Historique des dépenses</h2><p>{data?.note ?? 'Les montants sont affichés dans leur devise d’origine.'}</p></div><div className="organization-filters organization-filters--tenant"><SearchInput value={search} onSearch={setSearch} placeholder="Rechercher une dépense…" fullWidth /><Select aria-label="Filtrer par catégorie" value={category} onChange={(event) => setCategory(event.target.value)} options={[{ value: 'all', label: 'Toutes catégories' }, ...availableCategories.map(([value, label]) => ({ value, label }))]} />{canDo(organizationRole, 'create_expense') && <Button onClick={openCreate}>＋ Enregistrer une dépense</Button>}</div></div>{body}</Card>
+        <Card className="organization-table-card" padding="medium"><div className="organization-table-toolbar"><div><h2>Historique des dépenses</h2><p>{data?.note ?? 'Les montants sont affichés dans leur devise d’origine.'}</p></div><div className="organization-filters organization-filters--tenant"><SearchInput value={search} onSearch={setSearch} placeholder="Rechercher une dépense…" fullWidth /><Select aria-label="Filtrer par catégorie" value={category} onChange={(event) => setCategory(event.target.value)} options={[{ value: 'all', label: 'Toutes catégories' }, ...availableCategories.map(([value, label]) => ({ value, label }))]} />{!readOnly && canDo(organizationRole, 'create_expense') && <Button onClick={openCreate}>＋ Enregistrer une dépense</Button>}</div></div>{body}</Card>
         <ConfirmDialog
             isOpen={cancelTarget !== null}
             onClose={closeCancelModal}

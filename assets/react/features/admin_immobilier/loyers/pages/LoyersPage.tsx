@@ -36,7 +36,7 @@ const CURRENCY_OPTIONS = [
     { value: 'CDF', label: 'CDF' },
 ];
 
-export function LoyersPage() {
+export function LoyersPage({ readOnly = false }: { readOnly?: boolean } = {}) {
     const [searchParams] = useSearchParams();
     const parcelUuid = searchParams.get('parcelUuid');
     const buildingUuid = searchParams.get('buildingUuid');
@@ -162,7 +162,7 @@ export function LoyersPage() {
         await markOverdue(target.id);
     };
 
-    let body = <LoyersTable rows={rows} role={organizationRole} onRecordPayment={openPayment} onMarkOverdue={confirmMarkOverdue} onUpdate={openUpdate} />;
+    let body = <LoyersTable rows={rows} role={organizationRole} onRecordPayment={openPayment} onMarkOverdue={confirmMarkOverdue} onUpdate={openUpdate} readOnly={readOnly} />;
     if (isLoading) {
         body = <EmptyState icon={<Spinner size="large" />} title="Chargement des échéances…" description="Récupération des loyers de l’organisation." />;
     } else if (error) {

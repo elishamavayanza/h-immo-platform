@@ -64,6 +64,19 @@ export async function fetchPersonnel(organizationUuid: string): Promise<Personne
             buildingIds: [...new Set(workerAssignments.flatMap((assignment) => assignment.buildingId ? [assignment.buildingId] : []))],
             phone: worker.phone,
             email: worker.email,
+            latestAssignment: latest ? {
+                id: latest.id,
+                cityId: latest.cityId,
+                role: latest.role,
+                monthlySalary: latest.monthlySalary,
+                currency: latest.currency,
+                startDate: latest.startDate.slice(0, 10),
+                endDate: latest.endDate?.slice(0, 10) ?? null,
+                parcelId: latest.parcelId,
+                buildingId: latest.buildingId,
+                unitId: latest.unitId,
+                notes: latest.notes,
+            } : null,
         };
     });
 
@@ -140,6 +153,7 @@ export async function createAssignment(payload: CreateAssignmentPayload): Promis
 
 /** Payload pour modifier une affectation. */
 export interface UpdateAssignmentPayload {
+    cityUuid: string;
     role: string;
     monthlySalary: string;
     currency: 'USD' | 'CDF';

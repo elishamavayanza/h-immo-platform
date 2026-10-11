@@ -27,7 +27,7 @@ const CURRENCY_OPTIONS = [
     { value: 'CDF', label: 'CDF' },
 ];
 
-export function VitrinePage() {
+export function VitrinePage({ readOnly = false }: { readOnly?: boolean } = {}) {
     const { organizationRole } = useOrganization();
     const {
         data, rows, isLoading, error, reload,
@@ -97,7 +97,7 @@ export function VitrinePage() {
         setPhotoTarget(null);
     };
 
-    let body = <VitrineTable rows={rows} role={organizationRole} pendingId={pendingId} onTogglePublished={(row) => void togglePublished(row)} onEdit={openEdit} onAddPhoto={openPhotos} />;
+    let body = <VitrineTable rows={rows} role={organizationRole} pendingId={pendingId} onTogglePublished={(row) => void togglePublished(row)} onEdit={openEdit} onAddPhoto={openPhotos} readOnly={readOnly} />;
     if (isLoading) {
         body = <EmptyState icon={<Spinner size="large" />} title="Chargement des annonces…" description="Récupération des biens de l’organisation." />;
     } else if (error) {

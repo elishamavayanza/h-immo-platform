@@ -13,6 +13,7 @@ use App\Trait\FeedbackTrait;
 use Nelmio\ApiDocBundle\Attribute\Model;
 use OpenApi\Attributes as OA;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
+use Symfony\Component\HttpFoundation\File\UploadedFile;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\Routing\Attribute\Route;
@@ -307,8 +308,11 @@ final class MediaController extends AbstractController
     public function uploadParcelPhotos(string $uuid, Request $request): JsonResponse
     {
         $files = $request->files->get('files');
+        if ($files instanceof UploadedFile) {
+            $files = [$files];
+        }
 
-        if (!$files || !is_array($files)) {
+        if (!is_array($files) || $files === []) {
             return $this->json(
                 (new Feedback())->addError('files', 'Aucun fichier fourni.')->setErrorFlushDescription('Fichiers requis.')->setStatus(422)->autoInitFlush(),
                 422
@@ -420,8 +424,11 @@ final class MediaController extends AbstractController
     public function uploadBuildingPhotos(string $uuid, Request $request): JsonResponse
     {
         $files = $request->files->get('files');
+        if ($files instanceof UploadedFile) {
+            $files = [$files];
+        }
 
-        if (!$files || !is_array($files)) {
+        if (!is_array($files) || $files === []) {
             return $this->json(
                 (new Feedback())->addError('files', 'Aucun fichier fourni.')->setErrorFlushDescription('Fichiers requis.')->setStatus(422)->autoInitFlush(),
                 422
@@ -525,8 +532,7 @@ final class MediaController extends AbstractController
             );
         }
 
-        $this->mediaService->checkParcelAccess($parcel, SecurityAction::VIEW_PARCEL);
-
+        // `fetchParcelPhotos()` effectue le contrôle d'accès sur la parcelle.
         $photos = $this->mediaService->fetchParcelPhotos($parcel);
 
         return $this->json(
@@ -561,8 +567,7 @@ final class MediaController extends AbstractController
             );
         }
 
-        $this->mediaService->checkBuildingAccess($building, SecurityAction::VIEW_BUILDING);
-
+        // `fetchBuildingPhotos()` effectue le contrôle d'accès sur le bâtiment.
         $photos = $this->mediaService->fetchBuildingPhotos($building);
 
         return $this->json(

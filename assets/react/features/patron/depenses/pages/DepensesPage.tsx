@@ -1,8 +1,12 @@
-import { OrganizationSummary } from '../../../shared/components/OrganizationSummary';
-import { Card } from '../../../../components/UI/Card';
-import { SearchInput } from '../../../../components/Forms/SearchInput';
-import { Select } from '../../../../components/Forms/Select';
-import { useDepenses } from '../hooks/useDepenses';
-import { DepensesTable } from '../components/DepensesTable';
-import '../../../../../styles/pages/patron/depenses/_depenses.scss';
-export function DepensesPage() { const { rows, availableCategories, search, setSearch, category, setCategory } = useDepenses(); return <main className="organization-page organization-operational-page"><header className="organization-page__header"><div><span className="organization-page__eyebrow">SUIVI FINANCIER</span><h1>Dépenses</h1><p>Consultez les coûts liés à vos biens et à leur fonctionnement.</p></div></header><OrganizationSummary items={[{ label: 'Dépenses affichées', value: <>{rows.length}</> }, { label: 'À valider', value: <>{rows.filter((row) => row.status === 'À valider').length}</> }, { label: 'Catégories visibles', value: <>{new Set(rows.map((row) => row.category)).size}</> }]} /><Card className="organization-table-card" padding="medium"><div className="organization-table-toolbar"><div><h2>Historique des dépenses</h2><p>Maquette locale, montants à titre illustratif.</p></div><div className="organization-filters organization-filters--tenant"><SearchInput value={search} onSearch={setSearch} placeholder="Rechercher une dépense…" fullWidth /><Select aria-label="Filtrer par catégorie" value={category} onChange={(e) => setCategory(e.target.value)} options={[{ value: 'all', label: 'Toutes catégories' }, ...availableCategories.map((value) => ({ value, label: value }))]} /></div></div><DepensesTable rows={rows} /></Card></main>; }
+import { DepensesPage as AdminImmobilierDepensesPage } from '../../../admin_immobilier/depenses/pages/DepensesPage';
+
+/**
+ * Page Dépenses de l'espace PATRON.
+ *
+ * Réutilise l'écran ADMIN_IMMOBILIER `DepensesPage` avec `readOnly` : le
+ * Patron consulte les coûts par bien et par ville, sans enregistrer ni
+ * annuler de dépense (décision D-P2).
+ */
+export function DepensesPage() {
+    return <AdminImmobilierDepensesPage readOnly />;
+}

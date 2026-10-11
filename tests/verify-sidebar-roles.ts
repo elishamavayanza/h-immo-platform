@@ -106,11 +106,10 @@ const PLATFORM = resolveSidebar('super_admin' as PlatformRole, 'admin_ville' as 
 console.log('\n=== Structure du menu par rôle (menu plat) ===\n');
 
 // Menu attendu, ordre compris. « Tableau de bord » est toujours la première
-// entrée (écran de synthèse demandé par le cahier des charges), et
-// « Vitrine » est une feuille directe comme Dépenses.
+// entrée (écran de synthèse demandé par le cahier des charges).
 const EXPECTED_PATRON = ['dashboard', 'rapports', 'patrimoine', 'location-locataires', 'location-loyers', 'depenses', 'vitrine', 'administration'];
 const EXPECTED_ADMIN_IMMOBILIER = ['dashboard', 'rapports', 'patrimoine', 'location-locataires', 'location-loyers', 'depenses', 'vitrine', 'personnel'];
-const EXPECTED_ADMIN_VILLE = ['dashboard', 'rapports', 'patrimoine', 'location-locataires', 'location-loyers', 'depenses', 'vitrine'];
+const EXPECTED_ADMIN_VILLE = ['dashboard', 'rapports', 'patrimoine', 'location-locataires', 'location-loyers', 'depenses', 'operations'];
 
 check(
     `PATRON : menu exact de ${EXPECTED_PATRON.length} entrées (reçu ${PATRON.length})`,
@@ -181,9 +180,10 @@ check('ADMIN_IMMOBILIER voit l\'entrée Personnel', hasTopLevelItem(ADMIN_IMMOBI
 check('ADMIN_IMMOBILIER accède à /app/personnel/ouvriers (drill-down couvert)', isPathInMenu(ADMIN_IMMOBILIER, '/app/personnel/ouvriers'));
 check('ADMIN_IMMOBILIER accède à /app/personnel/affectations (drill-down couvert)', isPathInMenu(ADMIN_IMMOBILIER, '/app/personnel/affectations'));
 
-check('ADMIN_VILLE ne voit PAS l\'entrée Personnel (VIEW_WORKER seul)', !hasTopLevelItem(ADMIN_VILLE, 'personnel'));
-check('ADMIN_VILLE est refusé sur /app/personnel/ouvriers', !isPathInMenu(ADMIN_VILLE, '/app/personnel/ouvriers'));
-check('ADMIN_VILLE est refusé sur /app/personnel/affectations', !isPathInMenu(ADMIN_VILLE, '/app/personnel/affectations'));
+check('ADMIN_VILLE voit sa rubrique Opérations', hasTopLevelItem(ADMIN_VILLE, 'operations'));
+check('ADMIN_VILLE accède à ses affectations via /app/operations', isPathInMenu(ADMIN_VILLE, '/app/operations'));
+check('ADMIN_VILLE peut atteindre le drill-down des affectations', isPathInMenu(ADMIN_VILLE, '/app/operations/affectations'));
+check('ADMIN_VILLE ne voit pas la rubrique Personnel de l’ADMIN_IMMOBILIER', !isPathInMenu(ADMIN_VILLE, '/app/personnel'));
 
 check('PATRON ne voit PLUS l\'entrée Personnel (fusionnée dans Administration)', !hasTopLevelItem(PATRON, 'personnel'));
 check('Tous les rôles organisationnels voient Rapports', [PATRON, ADMIN_IMMOBILIER, ADMIN_VILLE].every(menu => hasTopLevelItem(menu, 'rapports')));
@@ -267,9 +267,9 @@ check(
     JSON.stringify(ids('/app/inexistant'))
 );
 check(
-    'Section hors rôle : /app/personnel/ouvriers n\'active rien pour ADMIN_VILLE',
-    JSON.stringify(ids('/app/personnel/ouvriers', ADMIN_VILLE)) === JSON.stringify([]),
-    JSON.stringify(ids('/app/personnel/ouvriers', ADMIN_VILLE))
+    'Opérations : /app/operations/affectations active l’entrée dédiée ADMIN_VILLE',
+    JSON.stringify(ids('/app/operations/affectations', ADMIN_VILLE)) === JSON.stringify(['operations']),
+    JSON.stringify(ids('/app/operations/affectations', ADMIN_VILLE))
 );
 check(
     'Deux entrées ne s\'allument jamais ensemble sur un préfixe ambigu',

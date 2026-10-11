@@ -308,6 +308,18 @@ $workerA1 = (new Worker())
     ->setPhone('+000')
     ->setEmail('ouvrier.a1.' . $suffix . '@test.local');
 $em->persist($workerA1);
+$workerA2 = (new Worker())
+    ->setOrganization($orgA)
+    ->setFullName('Ouvrier A2 ' . $suffix)
+    ->setPhone('+001')
+    ->setEmail('ouvrier.a2.' . $suffix . '@test.local');
+$em->persist($workerA2);
+$workerA3 = (new Worker())
+    ->setOrganization($orgA)
+    ->setFullName('Ouvrier A1 disponible ' . $suffix)
+    ->setPhone('+002')
+    ->setEmail('ouvrier.a1.disponible.' . $suffix . '@test.local');
+$em->persist($workerA3);
 
 $em->flush();
 
@@ -319,6 +331,24 @@ $assignmentA1 = (new WorkerAssignment())
     ->setCurrency(Currency::USD)
     ->setStartDate(new \DateTimeImmutable('now -20 days'));
 $em->persist($assignmentA1);
+$assignmentA2 = (new WorkerAssignment())
+    ->setWorker($workerA2)
+    ->setCity($cityA2)
+    ->setRole(WorkerRole::GARDIEN)
+    ->setMonthlySalary('150.00')
+    ->setCurrency(Currency::USD)
+    ->setStartDate(new \DateTimeImmutable('now -20 days'));
+$em->persist($assignmentA2);
+$historicalAssignmentA1 = (new WorkerAssignment())
+    ->setWorker($workerA3)
+    ->setCity($cityA1)
+    ->setParcel($chainA1['parcel'])
+    ->setRole(WorkerRole::AGENT_ENTRETIEN)
+    ->setMonthlySalary('120.00')
+    ->setCurrency(Currency::USD)
+    ->setStartDate(new \DateTimeImmutable('now -60 days'))
+    ->setEndDate(new \DateTimeImmutable('now -30 days'));
+$em->persist($historicalAssignmentA1);
 
 $makeExpense = static function (string $amount, Organization $org, City $city, User $author) use ($em): Expense {
     $expense = (new Expense())
@@ -352,6 +382,7 @@ $uuidParcelA2 = $chainA2['parcel']->getUuid()->toRfc4122();
 $uuidBuildingA1 = $chainA1['building']->getUuid()->toRfc4122();
 $uuidBuildingB1 = $chainB1['building']->getUuid()->toRfc4122();
 $uuidUnitA1 = $chainA1['unit']->getUuid()->toRfc4122();
+$uuidUnitB1 = $chainB1['unit']->getUuid()->toRfc4122();
 $uuidTenantLeaseA1 = $tenantLeaseA1->getUuid()->toRfc4122();
 $uuidTenantLeaseA2 = $tenantLeaseA2->getUuid()->toRfc4122();
 $uuidTenantNoLease = $tenantNoLease->getUuid()->toRfc4122();
@@ -359,6 +390,8 @@ $uuidTenantB = $tenantB->getUuid()->toRfc4122();
 $uuidExpenseA1 = $expenseA1->getUuid()->toRfc4122();
 $uuidExpenseA2 = $expenseA2->getUuid()->toRfc4122();
 $uuidWorkerA1 = $workerA1->getUuid()->toRfc4122();
+$uuidWorkerA2 = $workerA2->getUuid()->toRfc4122();
+$uuidWorkerA3 = $workerA3->getUuid()->toRfc4122();
 
 [$status, $payload] = $request('POST', '/api/auth/login', [
     'email' => 'admin.ville.' . $suffix . '@test.local',
@@ -374,12 +407,112 @@ if (!is_string($token)) {
     exit(1);
 }
 
+// Un seul fichier multipart peut arriver sous `files` comme UploadedFile
+// (et non comme tableau) dans FileBag : ce cas doit rester accepté.
+$imageContents = base64_decode('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+j3ioAAAAASUVORK5CYII=', true);
+$uploadedPaths = [];
+$tempUploadPaths = [];
+register_shutdown_function(static function () use (&$uploadedPaths, &$tempUploadPaths): void {
+    foreach ($uploadedPaths as $path) {
+        @unlink(dirname(__DIR__) . '/public/uploads/' . $path);
+    }
+    foreach ($tempUploadPaths as $path) @unlink($path);
+});
+$uploadSinglePhoto = static function (string $uri, string $field) use ($kernel, $token, $imageContents, &$tempUploadPaths): array {
+    $server = ['REQUEST_METHOD' => 'POST', 'REQUEST_URI' => $uri, 'HTTP_HOST' => 'localhost', 'HTTP_AUTHORIZATION' => 'Bearer ' . $token];
+    $imagePath = tempnam(sys_get_temp_dir(), 'admin-ville-photo-');
+    file_put_contents($imagePath, $imageContents);
+    $tempUploadPaths[] = $imagePath;
+    $file = new Symfony\Component\HttpFoundation\File\UploadedFile($imagePath, 'parcelle.png', 'image/png', UPLOAD_ERR_OK, true);
+    $req = Request::create($uri, 'POST', [], [], [$field => $file], $server);
+    $response = $kernel->handle($req);
+    $result = [$response->getStatusCode(), json_decode((string) $response->getContent(), true)];
+    $kernel->terminate($req, $response);
+
+    return $result;
+};
+$trackUploadedPaths = static function (array $payload) use (&$uploadedPaths): void {
+    foreach (($payload['data']['uploaded'] ?? []) as $file) {
+        if (is_string($file['path'] ?? null)) $uploadedPaths[] = $file['path'];
+    }
+    foreach (($payload['data'] ?? []) as $photo) {
+        if (!is_array($photo) || !is_string($photo['url'] ?? null)) continue;
+        $path = parse_url($photo['url'], PHP_URL_PATH);
+        if (is_string($path) && str_starts_with($path, '/uploads/')) $uploadedPaths[] = substr($path, strlen('/uploads/'));
+    }
+};
+
+section('Photos : upload multipart d’un fichier unique');
+[$status, $parcelPhotoPayload] = $uploadSinglePhoto('/api/v1/media/parcels/' . $uuidParcelA1 . '/photos', 'files');
+$trackUploadedPaths($parcelPhotoPayload ?? []);
+check('ADMIN_VILLE ajoute une photo unique à une parcelle de sa ville', $status === 200 && count($parcelPhotoPayload['data']['uploaded'] ?? []) === 1, 'obtenu ' . $status);
+[$status, $buildingPhotoPayload] = $uploadSinglePhoto('/api/v1/media/buildings/' . $uuidBuildingA1 . '/photos', 'files');
+$trackUploadedPaths($buildingPhotoPayload ?? []);
+check('ADMIN_VILLE ajoute une photo unique à un bâtiment de sa ville', $status === 200 && count($buildingPhotoPayload['data']['uploaded'] ?? []) === 1, 'obtenu ' . $status);
+[$status, $unitPhotoPayload] = $uploadSinglePhoto('/api/v1/units/' . $uuidUnitA1 . '/photos', 'file');
+$trackUploadedPaths($unitPhotoPayload ?? []);
+check('ADMIN_VILLE ajoute une photo à une unité de sa ville', $status === 201 && count($unitPhotoPayload['data'] ?? []) === 1, 'obtenu ' . $status);
+[$status, $unitPhotosPayload] = $request('GET', '/api/v1/units/' . $uuidUnitA1 . '/photos', null, $token);
+check('ADMIN_VILLE consulte les photos de son unité avec leur UUID de suppression', $status === 200 && is_string($unitPhotosPayload['data'][0]['uuid'] ?? null), 'obtenu ' . $status);
+[$status] = $request('GET', '/api/v1/units/' . $uuidUnitB1 . '/photos', null, $token);
+check('ADMIN_VILLE ne consulte pas les photos d’une unité hors ville', in_array($status, [403, 404], true), 'obtenu ' . $status);
+
 /** @return list<string> */
 $payloadIds = static function (array $payload): array {
     $items = $payload['data']['items'] ?? [];
 
     return is_array($items) ? array_values(array_map(static fn ($x) => $x['id'] ?? null, $items)) : [];
 };
+
+[$status, $workerList, $rawWorkers] = $request('GET', '/api/v1/workers?organizationId=' . $uuidOrgA, null, $token);
+$workerIds = $payloadIds($workerList);
+check(
+    'GET /api/v1/workers : travailleurs limités aux villes attribuées (A1 visible, A2 masqué)',
+    $status === 200 && in_array($uuidWorkerA1, $workerIds, true) && !in_array($uuidWorkerA2, $workerIds, true),
+    "obtenu {$status} | liste=" . implode(',', $workerIds) . ' | raw=' . substr($rawWorkers, 0, 350)
+);
+
+[$status, $createdAssignment, $rawCreatedAssignment] = $request('POST', '/api/v1/worker-assignments', [
+    'workerUuid' => $uuidWorkerA3,
+    'cityUuid' => $uuidCityA1,
+    'parcelUuid' => $uuidParcelA1,
+    'role' => WorkerRole::GARDIEN->value,
+    'monthlySalary' => '175.00',
+    'currency' => Currency::USD->value,
+    'startDate' => (new DateTimeImmutable('today'))->format('Y-m-d'),
+], $token);
+$createdAssignmentUuid = $createdAssignment['data']['id'] ?? null;
+check(
+    'ADMIN_VILLE crée une affectation pour un employé déjà autorisé dans sa ville',
+    $status === 200 && is_string($createdAssignmentUuid),
+    "obtenu {$status} : " . substr($rawCreatedAssignment, 0, 250)
+);
+
+if (is_string($createdAssignmentUuid)) {
+    [$status, $updatedAssignment, $rawUpdatedAssignment] = $request('PUT', '/api/v1/worker-assignments/' . $createdAssignmentUuid, [
+        'cityUuid' => $uuidCityA1,
+        'parcelUuid' => $uuidParcelA1,
+        'role' => WorkerRole::AGENT_ENTRETIEN->value,
+        'monthlySalary' => '185.00',
+        'currency' => Currency::USD->value,
+        'startDate' => (new DateTimeImmutable('today'))->format('Y-m-d'),
+        'notes' => 'Mise à jour de vérification',
+    ], $token);
+    check(
+        'ADMIN_VILLE modifie une affectation de sa ville (UUID BINARY(16))',
+        $status === 200 && ($updatedAssignment['data']['monthlySalary'] ?? null) === '185.00',
+        "obtenu {$status} : " . substr($rawUpdatedAssignment, 0, 250)
+    );
+
+    [$status, $endedAssignment, $rawEndedAssignment] = $request('POST', '/api/v1/worker-assignments/' . $createdAssignmentUuid . '/end', [
+        'endDate' => (new DateTimeImmutable('today'))->format('Y-m-d'),
+    ], $token);
+    check(
+        'ADMIN_VILLE termine une affectation de sa ville',
+        $status === 200 && str_contains((string) ($endedAssignment['flushDescription'] ?? ''), 'terminée'),
+        "obtenu {$status} : " . substr($rawEndedAssignment, 0, 250)
+    );
+}
 
 // ---------------------------------------------------------------------
 section('Patrimoine : borné aux villes attribuées (UserCity)');

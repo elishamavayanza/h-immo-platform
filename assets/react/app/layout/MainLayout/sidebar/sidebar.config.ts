@@ -24,8 +24,8 @@
 //   - ADMIN_IMMOBILIER : 8 entrées (sans Administration, AVEC Personnel :
 //                        le backend lui accorde VIEW/CREATE/UPDATE/DELETE
 //                        sur Worker et WorkerAssignment)
-//   - ADMIN_VILLE      : 7 entrées (sans Administration ni Personnel :
-//                        VIEW_WORKER seul ne justifie pas une entrée)
+//   - ADMIN_VILLE      : 7 entrées (sans Administration ; Opérations expose
+//                        les affectations de ville, seules modifiables)
 //   - SUPER_ADMIN      : 5 entrées, toutes au niveau plateforme
 //
 // Ce menu reflète la matrice `SecurityService::checkXxxAction()` : toute
@@ -171,6 +171,15 @@ const PERSONNEL: AppMenuItem = {
     path: '/app/personnel',
 };
 
+/** Entrée Opérations propre à ADMIN_VILLE, distincte de Personnel. */
+const ADMIN_VILLE_OPERATIONS: AppMenuItem = {
+    id: 'operations',
+    label: 'Opérations',
+    icon: 'hard-hat',
+    section: 'operations',
+    path: '/app/operations',
+};
+
 /**
  * Administration : une entrée. « Équipe » et « Villes assignées » se
  * gèrent depuis la fiche d'un membre de l'équipe (drill-down), pas au menu.
@@ -204,14 +213,14 @@ const RAPPORTS: AppMenuItem = {
  *   (le backend lui accorde CREATE/UPDATE/DELETE sur Worker, cf.
  *   `SecurityService::checkAdminImmobilierAction`). Seule l'Administration
  *   reste réservée au PATRON.
- * - `admin_ville` : opérations sans Personnel (`VIEW_WORKER` seul : une
- *   entrée dédiée laisserait croire à des droits d'écriture) et sans
- *   Administration.
+ * - `admin_ville` : Opérations donne accès aux affectations bornées aux
+ *   villes attribuées. Les fiches globales des travailleurs restent en
+ *   lecture seule et les actions correspondantes sont masquées par rôle.
  */
 export const ORGANIZATION_SIDEBAR: Record<OrganizationRole, SidebarMenu> = {
     patron: [DASHBOARD, RAPPORTS, PATRIMOINE, LOCATAIRES, LOYERS, DEPENSES, VITRINE, ADMINISTRATION],
     admin_immobilier: [DASHBOARD, RAPPORTS, PATRIMOINE, LOCATAIRES, LOYERS, DEPENSES, VITRINE, PERSONNEL],
-    admin_ville: [DASHBOARD, RAPPORTS, PATRIMOINE, LOCATAIRES, LOYERS, DEPENSES, VITRINE],
+    admin_ville: [DASHBOARD, RAPPORTS, PATRIMOINE, LOCATAIRES, LOYERS, DEPENSES, ADMIN_VILLE_OPERATIONS],
 };
 
 /** Menu SUPER_ADMIN : aucune entrée métier d'organisation. */

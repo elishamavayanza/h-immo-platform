@@ -4,11 +4,11 @@ import { ImageEditor } from '../../../../components/UI/ImageEditor/ImageEditor';
 import { Button } from '../../../../components/UI/Button';
 import { Icon } from '../../../../components/UI/Icon/Icon';
 import { Spinner } from '../../../../components/UI/Spinner';
-import { mediaHref } from '../services/mediaService';
 import { mediaService } from '../services/mediaService';
 import { useToast } from '../../../../app/layout/MainLayout/contexts/ToastContext';
 
 type PhotoGalleryMode = 'multiple' | 'single';
+interface PhotoItem { url: string; deleteId: string; }
 
 interface PhotoGalleryProps {
     /** ID de l'entité (parcelle, unité, bâtiment, etc.) */
@@ -32,7 +32,7 @@ export function PhotoGallery({ entityUuid, entityType, photos: initialPhotos, mo
     const [isUploading, setIsUploading] = useState(false);
     const [isDeleting, setIsDeleting] = useState<string | null>(null);
     const [isLoading, setIsLoading] = useState(false);
-    const [photos, setPhotos] = useState<string[]>(initialPhotos ?? []);
+    const [photos, setPhotos] = useState<PhotoItem[]>((initialPhotos ?? []).map((url) => ({ url, deleteId: url.split('/').pop() ?? url })));
 
     // Charger les photos au montage si non fournies
     useEffect(() => {
@@ -44,15 +44,15 @@ export function PhotoGallery({ entityUuid, entityType, photos: initialPhotos, mo
     const loadPhotos = async () => {
         setIsLoading(true);
         try {
-            let fetchedPhotos: string[] = [];
+            let fetchedPhotos: PhotoItem[] = [];
             if (entityType === 'parcel') {
-                fetchedPhotos = await mediaService.fetchParcelPhotos(entityUuid);
+                fetchedPhotos = (await mediaService.fetchParcelPhotos(entityUuid)).map((path) => ({ url: path, deleteId: path.split('/').pop() ?? path }));
             } else if (entityType === 'unit') {
-                fetchedPhotos = await mediaService.fetchUnitPhotos(entityUuid);
+                fetchedPhotos = (await mediaService.fetchUnitPhotos(entityUuid)).map((photo) => ({ url: photo.url, deleteId: photo.uuid }));
             } else {
-                fetchedPhotos = await mediaService.fetchBuildingPhotos(entityUuid);
+                fetchedPhotos = (await mediaService.fetchBuildingPhotos(entityUuid)).map((path) => ({ url: path, deleteId: path.split('/').pop() ?? path }));
             }
-            setPhotos(fetchedPhotos.map((p) => (p.startsWith('http') || p.startsWith('/') ? p : `/uploads/${p}`)));
+            setPhotos(fetchedPhotos.map((photo) => ({ ...photo, url: photo.url.startsWith('http') || photo.url.startsWith('/') ? photo.url : `/uploads/${photo.url}` })));
         } catch {
             // Silencieux : on affiche juste la grille vide
         } finally {
@@ -90,11 +90,13 @@ export function PhotoGallery({ entityUuid, entityType, photos: initialPhotos, mo
             // Pour le mode multiple, on upload directement tous les fichiers
             setIsUploading(true);
             try {
-                let result;
+                let result = 'Photo(s) ajoutée(s).';
                 if (entityType === 'parcel') {
                     result = await mediaService.uploadParcelPhotos(entityUuid, files);
                 } else if (entityType === 'unit') {
-                    result = await mediaService.uploadUnitPhoto(entityUuid, files[0]);
+                    for (const file of files.slice(0, maxPhotos - photos.length)) {
+                        result = await mediaService.uploadUnitPhoto(entityUuid, file);
+                    }
                 } else {
                     result = await mediaService.uploadBuildingPhotos(entityUuid, files);
                 }
@@ -132,17 +134,16 @@ export function PhotoGallery({ entityUuid, entityType, photos: initialPhotos, mo
         }
     };
 
-    const handleDelete = async (photoPath: string) => {
+    const handleDelete = async (photo: PhotoItem) => {
         if (!confirm('Retirer cette photo ?')) return;
-        const filename = photoPath.split('/').pop() ?? photoPath;
-        setIsDeleting(filename);
+        setIsDeleting(photo.deleteId);
         try {
             if (entityType === 'parcel') {
-                await mediaService.deleteParcelPhoto(entityUuid, filename);
+                await mediaService.deleteParcelPhoto(entityUuid, photo.deleteId);
             } else if (entityType === 'unit') {
-                await mediaService.deleteUnitPhoto(entityUuid, filename);
+                await mediaService.deleteUnitPhoto(entityUuid, photo.deleteId);
             } else {
-                await mediaService.deleteBuildingPhoto(entityUuid, filename);
+                await mediaService.deleteBuildingPhoto(entityUuid, photo.deleteId);
             }
             push('success', 'Photo retirée.');
             await loadPhotos();
@@ -155,7 +156,7 @@ export function PhotoGallery({ entityUuid, entityType, photos: initialPhotos, mo
     };
 
     const isSingleMode = mode === 'single';
-    const maxPhotos = isSingleMode ? 1 : 10;
+    const maxPhotos = entityType === 'unit' ? 12 : isSingleMode ? 1 : 10;
     const canAdd = photos.length < maxPhotos && !disabled;
 
     const handleFileClick = () => {
@@ -195,17 +196,17 @@ export function PhotoGallery({ entityUuid, entityType, photos: initialPhotos, mo
         <div className="photo-gallery">
             <div className="photo-gallery__grid">
                 {photos.map((photo, index) => (
-                    <div key={`${photo}-${index}`} className="photo-gallery__item">
+                    <div key={`${photo.deleteId}-${index}`} className="photo-gallery__item">
                         <div className="photo-gallery__preview">
-                            <img src={photo} alt={`Photo ${index + 1}`} />
+                            <img src={photo.url} alt={`Photo ${index + 1}`} />
                         </div>
                         <div className="photo-gallery__item-actions">
                             <Button
                                 type="button"
                                 variant="outline"
                                 size="small"
-                                onClick={() => setEditing(photo)}
-                                disabled={disabled || isUploading || isDeleting === photo}
+                                onClick={() => setEditing(photo.url)}
+                                disabled={disabled || isUploading || isDeleting === photo.deleteId}
                             >
                                 <Icon name="edit" size={14} />
                             </Button>
@@ -214,7 +215,7 @@ export function PhotoGallery({ entityUuid, entityType, photos: initialPhotos, mo
                                 variant="danger"
                                 size="small"
                                 onClick={() => handleDelete(photo)}
-                                disabled={disabled || isUploading || isDeleting === photo}
+                                disabled={disabled || isUploading || isDeleting === photo.deleteId}
                             >
                                 <Icon name="trash" size={14} />
                             </Button>
@@ -251,7 +252,7 @@ export function PhotoGallery({ entityUuid, entityType, photos: initialPhotos, mo
             <p className="photo-gallery__hint">
                 {isSingleMode
                     ? 'Une seule photo. Cliquez pour la remplacer.'
-                    : 'Jusqu\'à 10 photos.'}
+                    : `Jusqu'à ${maxPhotos} photos.`}
             </p>
         </div>
     );

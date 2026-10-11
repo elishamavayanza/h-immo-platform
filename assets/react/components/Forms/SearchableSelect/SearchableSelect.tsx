@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import '../../../../styles/components/Form/SearchableSelect.scss';
+import '../../../../styles/components/Form/_SearchableSelect.scss';
 
 export interface SearchableSelectOption {
     value: string | number;

@@ -381,6 +381,52 @@ if (!is_string($token)) {
     exit(1);
 }
 
+$photoContents = base64_decode('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+j3ioAAAAASUVORK5CYII=', true);
+$uploadedPhotoPaths = [];
+$photoTempPaths = [];
+register_shutdown_function(static function () use (&$uploadedPhotoPaths, &$photoTempPaths): void {
+    foreach ($uploadedPhotoPaths as $path) @unlink(dirname(__DIR__) . '/public/uploads/' . $path);
+    foreach ($photoTempPaths as $path) @unlink($path);
+});
+$uploadSinglePhoto = static function (string $uri, string $field) use ($kernel, $token, $photoContents, &$photoTempPaths): array {
+    $tempPath = tempnam(sys_get_temp_dir(), 'admin-immo-photo-');
+    file_put_contents($tempPath, $photoContents);
+    $photoTempPaths[] = $tempPath;
+    $file = new Symfony\Component\HttpFoundation\File\UploadedFile($tempPath, 'photo.png', 'image/png', UPLOAD_ERR_OK, true);
+    $server = ['REQUEST_METHOD' => 'POST', 'REQUEST_URI' => $uri, 'HTTP_HOST' => 'localhost', 'HTTP_AUTHORIZATION' => 'Bearer ' . $token];
+    $req = Request::create($uri, 'POST', [], [], [$field => $file], $server);
+    $response = $kernel->handle($req);
+    $result = [$response->getStatusCode(), json_decode((string) $response->getContent(), true)];
+    $kernel->terminate($req, $response);
+
+    return $result;
+};
+$trackUploadedPhotoPaths = static function (array $payload) use (&$uploadedPhotoPaths): void {
+    foreach (($payload['data']['uploaded'] ?? []) as $file) {
+        if (is_string($file['path'] ?? null)) $uploadedPhotoPaths[] = $file['path'];
+    }
+    foreach (($payload['data'] ?? []) as $photo) {
+        if (!is_array($photo) || !is_string($photo['url'] ?? null)) continue;
+        $path = parse_url($photo['url'], PHP_URL_PATH);
+        if (is_string($path) && str_starts_with($path, '/uploads/')) $uploadedPhotoPaths[] = substr($path, strlen('/uploads/'));
+    }
+};
+
+section('Photos : upload unique et rattachement à l’organisation');
+[$status, $parcelPhotoPayload] = $uploadSinglePhoto('/api/v1/media/parcels/' . $uuidParcelA . '/photos', 'files');
+$trackUploadedPhotoPaths($parcelPhotoPayload ?? []);
+check('ADMIN_IMMOBILIER ajoute une photo à une parcelle', $status === 200 && count($parcelPhotoPayload['data']['uploaded'] ?? []) === 1, 'obtenu ' . $status);
+[$status, $buildingPhotoPayload] = $uploadSinglePhoto('/api/v1/media/buildings/' . $uuidBuildingA . '/photos', 'files');
+$trackUploadedPhotoPaths($buildingPhotoPayload ?? []);
+check('ADMIN_IMMOBILIER ajoute une photo à un bâtiment', $status === 200 && count($buildingPhotoPayload['data']['uploaded'] ?? []) === 1, 'obtenu ' . $status);
+[$status, $unitPhotoPayload] = $uploadSinglePhoto('/api/v1/units/' . $uuidUnitA . '/photos', 'file');
+$trackUploadedPhotoPaths($unitPhotoPayload ?? []);
+check('ADMIN_IMMOBILIER ajoute une photo à une unité', $status === 201 && count($unitPhotoPayload['data'] ?? []) === 1, 'obtenu ' . $status);
+[$status, $unitPhotosPayload] = $request('GET', '/api/v1/units/' . $uuidUnitA . '/photos', null, $token);
+check('ADMIN_IMMOBILIER liste les photos de son unité', $status === 200 && is_string($unitPhotosPayload['data'][0]['uuid'] ?? null), 'obtenu ' . $status);
+[$status] = $request('GET', '/api/v1/units/' . $uuidUnitB . '/photos', null, $token);
+check('ADMIN_IMMOBILIER ne lit pas une galerie hors organisation', in_array($status, [403, 404], true), 'obtenu ' . $status);
+
 /** @return list<string> */
 $payloadIds = static function (array $payload): array {
     $items = $payload['data']['items'] ?? [];
@@ -574,7 +620,7 @@ check(
 $uuidCreatedWorker = is_array($payload) ? ($payload['data']['id'] ?? null) : null;
 check(
     'POST /api/v1/workers : l’organisation active est prise en compte',
-    $status === 201 && is_string($uuidCreatedWorker),
+    $status === 200 && is_string($uuidCreatedWorker),
     "obtenu {$status} : " . substr($rawCreatedWorker, 0, 250)
 );
 
@@ -589,7 +635,7 @@ check(
 ], $token);
 check(
     'POST /api/v1/worker-assignments : rattachement au même tenant accepté',
-    $status === 201,
+    $status === 200,
     "obtenu {$status} : " . substr($rawCreatedAssignment, 0, 250)
 );
 

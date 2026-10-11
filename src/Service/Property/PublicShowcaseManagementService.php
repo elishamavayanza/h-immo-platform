@@ -127,7 +127,19 @@ final readonly class PublicShowcaseManagementService
         return (new Feedback())
             ->setData($this->unitPhotoService->listForUnit($unit))
             ->setFlushDescription('Photo ajoutée à la galerie.')
-            ->setStatus(201)
+            ->autoInitFlush()
+            ->setStatus(201);
+    }
+
+    /** Lit la galerie après avoir vérifié le même périmètre que l'ajout. */
+    public function listPhotos(Unit $unit): Feedback
+    {
+        $this->security->checkUnitPublishAccess($unit, SecurityAction::PUBLISH_LISTING);
+
+        return (new Feedback())
+            ->setData($this->unitPhotoService->listForManagement($unit))
+            ->setFlushDescription('Photos de l’unité récupérées.')
+            ->setStatus(200)
             ->autoInitFlush();
     }
 

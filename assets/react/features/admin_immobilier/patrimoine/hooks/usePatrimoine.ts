@@ -42,7 +42,7 @@ import type { PatrimoineData } from '../types/patrimoine.types';
  * honnête qu'une pagination qui ferait croire à une liste complète.
  */
 export function usePatrimoine() {
-    const { currentOrganization } = useOrganization();
+    const { currentOrganization, organizationRole } = useOrganization();
     const { push } = useToast();
     const organizationUuid = currentOrganization?.uuid ?? null;
 
@@ -64,13 +64,13 @@ export function usePatrimoine() {
         setLoading(true);
         setError(null);
         try {
-            setData(await fetchPatrimoine(organizationUuid));
+            setData(await fetchPatrimoine(organizationUuid, organizationRole));
         } catch (cause) {
             setError(cause instanceof ApiError ? cause.message : 'Impossible de charger le patrimoine de l’organisation.');
         } finally {
             setLoading(false);
         }
-    }, [organizationUuid]);
+    }, [organizationUuid, organizationRole]);
 
     useEffect(() => { void reload(); }, [reload]);
 

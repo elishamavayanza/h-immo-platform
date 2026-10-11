@@ -25,8 +25,11 @@ import '../../../../../styles/pages/admin_immobilier/patrimoine/_patrimoine.scss
  * d'indicateurs, puis délègue chaque niveau à son onglet. Les onglets portent
  * leur propre état de formulaire ; la page ne détient que les handlers
  * d'écriture du hook.
+ *
+ * `readOnly` (espace PATRON) : les onglets n'exposent aucune écriture et le
+ * lien « Employés » (absent de l'espace Patron) est écarté.
  */
-export function PatrimoinePage() {
+export function PatrimoinePage({ readOnly = false }: { readOnly?: boolean } = {}) {
     const { organizationRole } = useOrganization();
     const location = useLocation();
     const navigate = useNavigate();
@@ -37,12 +40,13 @@ export function PatrimoinePage() {
     const selectedCityId = cityPart >= 0 ? pathParts[cityPart + 1] ?? null : null;
     const selectedParcelId = parcelPart >= 0 ? pathParts[parcelPart + 1] ?? null : null;
     const selectedBuildingId = buildingPart >= 0 ? pathParts[buildingPart + 1] ?? null : null;
+    const isCityAdmin = organizationRole === 'admin_ville';
     const activeTab = pathParts.includes('unites') || selectedBuildingId ? 'unites'
         : selectedParcelId ? 'batiments'
             : pathParts.includes('batiments') ? 'batiments'
                 : selectedCityId ? 'parcelles'
                     : pathParts.includes('parcelles') ? 'parcelles'
-                        : pathParts.includes('villes') ? 'villes' : 'overview';
+                        : pathParts.includes('villes') ? 'villes' : isCityAdmin ? 'parcelles' : 'overview';
     const goToLevel = (tab: string, cityId: string | null, parcelId: string | null, buildingId: string | null) => {
         const path = ['/app/patrimoine'];
         if (cityId) path.push('villes', encodeURIComponent(cityId));
@@ -114,17 +118,16 @@ export function PatrimoinePage() {
         goToLevel('unites', parcel?.cityId ?? selectedCityId, parcel?.id ?? selectedParcelId, id);
     };
 
-    return <main className="organization-page organization-operational-page"><header className="organization-page__header"><div><span className="organization-page__eyebrow">GESTION IMMOBILIÈRE</span><h1>Patrimoine</h1><p>Parcourez les biens de votre portefeuille et gérez chaque niveau : villes, parcelles, bâtiments et unités.</p></div></header>
-        <OrganizationSummary items={[{ label: 'Villes', value: <>{formatInteger(cities.length)}</> }, { label: 'Unités gérées', value: <>{formatInteger(data?.totalUnits ?? 0)}</> }, { label: 'Occupation globale', value: <>{formatPercent(data?.globalOccupancyRate ?? 0)}</> }]} />
+    return <main className="organization-page organization-operational-page"><header className="organization-page__header"><div><span className="organization-page__eyebrow">GESTION IMMOBILIÈRE</span><h1>{isCityAdmin ? 'Biens de ma ville' : 'Patrimoine'}</h1><p>{isCityAdmin ? 'Consultez et gérez les parcelles, bâtiments et unités de vos villes attribuées.' : 'Parcourez les biens de votre portefeuille et gérez chaque niveau : villes, parcelles, bâtiments et unités.'}</p></div></header>
+        <OrganizationSummary items={isCityAdmin ? [{ label: 'Parcelles', value: <>{formatInteger(parcels.length)}</> }, { label: 'Unités gérées', value: <>{formatInteger(data?.totalUnits ?? 0)}</> }, { label: 'Occupation', value: <>{formatPercent(data?.globalOccupancyRate ?? 0)}</> }] : [{ label: 'Villes', value: <>{formatInteger(cities.length)}</> }, { label: 'Unités gérées', value: <>{formatInteger(data?.totalUnits ?? 0)}</> }, { label: 'Occupation globale', value: <>{formatPercent(data?.globalOccupancyRate ?? 0)}</> }]} />
 
-        {(selectedCity || selectedParcel || selectedBuilding) && <nav className="patrimoine-breadcrumb" aria-label="Fil d’Ariane du patrimoine"><button type="button" onClick={() => goToLevel('villes', null, null, null)}>Toutes les villes</button>{selectedCity && <><span aria-hidden="true">/</span><button type="button" onClick={() => goToLevel('parcelles', selectedCity.id, null, null)}>{selectedCity.name}</button></>}{selectedParcel && <><span aria-hidden="true">/</span><button type="button" onClick={() => goToLevel('batiments', selectedCity?.id ?? selectedParcel.cityId, selectedParcel.id, null)}>{selectedParcel.name}</button></>}{selectedBuilding && <><span aria-hidden="true">/</span><button type="button" onClick={() => goToLevel('unites', selectedCity?.id ?? null, selectedParcel?.id ?? null, selectedBuilding.id)}>{selectedBuilding.name}</button></>}</nav>}
-        {(contextParcel || selectedBuilding) && <nav className="patrimoine-related" aria-label="Accès rapide aux informations associées"><strong>Accès rapide · {selectedBuilding?.name ?? contextParcel?.name}</strong>{canDo(organizationRole, 'view_tenant') && <Link to={`/app/location/locataires?parcelUuid=${encodeURIComponent(contextParcel?.id ?? '')}${selectedBuilding ? `&buildingUuid=${encodeURIComponent(selectedBuilding.id)}` : ''}`}>Locataires et contrats</Link>}{canDo(organizationRole, 'view_rent') && <Link to={`/app/location/loyers?parcelUuid=${encodeURIComponent(contextParcel?.id ?? '')}${selectedBuilding ? `&buildingUuid=${encodeURIComponent(selectedBuilding.id)}` : ''}`}>Loyers et paiements</Link>}{canDo(organizationRole, 'view_expense') && <Link to={`/app/depenses?parcelUuid=${encodeURIComponent(contextParcel?.id ?? '')}${selectedBuilding ? `&buildingUuid=${encodeURIComponent(selectedBuilding.id)}` : ''}`}>Dépenses</Link>}{/* L'ADMIN_VILLE n'a aucun écran Personnel (D-V3) : écarter le lien mort. */}{canDo(organizationRole, 'view_worker') && organizationRole !== 'admin_ville' && <Link to={`/app/personnel?parcelUuid=${encodeURIComponent(contextParcel?.id ?? '')}${selectedBuilding ? `&buildingUuid=${encodeURIComponent(selectedBuilding.id)}` : ''}`}>Employés</Link>}</nav>}
+        {(selectedCity || selectedParcel || selectedBuilding) && <nav className="patrimoine-breadcrumb" aria-label="Fil d’Ariane du patrimoine"><button type="button" onClick={() => goToLevel(isCityAdmin ? 'parcelles' : 'villes', null, null, null)}>{isCityAdmin ? 'Toutes les parcelles' : 'Toutes les villes'}</button>{selectedCity && <><span aria-hidden="true">/</span>{isCityAdmin ? <span>{selectedCity.name}</span> : <button type="button" onClick={() => goToLevel('parcelles', selectedCity.id, null, null)}>{selectedCity.name}</button>}</>}{selectedParcel && <><span aria-hidden="true">/</span><button type="button" onClick={() => goToLevel('batiments', selectedCity?.id ?? selectedParcel.cityId, selectedParcel.id, null)}>{selectedParcel.name}</button></>}{selectedBuilding && <><span aria-hidden="true">/</span><button type="button" onClick={() => goToLevel('unites', selectedCity?.id ?? null, selectedParcel?.id ?? null, selectedBuilding.id)}>{selectedBuilding.name}</button></>}</nav>}
+        {(contextParcel || selectedBuilding) && <nav className="patrimoine-related" aria-label="Accès rapide aux informations associées"><strong>Accès rapide · {selectedBuilding?.name ?? contextParcel?.name}</strong>{canDo(organizationRole, 'view_tenant') && <Link to={`/app/location/locataires?parcelUuid=${encodeURIComponent(contextParcel?.id ?? '')}${selectedBuilding ? `&buildingUuid=${encodeURIComponent(selectedBuilding.id)}` : ''}`}>Locataires et contrats</Link>}{canDo(organizationRole, 'view_rent') && <Link to={`/app/location/loyers?parcelUuid=${encodeURIComponent(contextParcel?.id ?? '')}${selectedBuilding ? `&buildingUuid=${encodeURIComponent(selectedBuilding.id)}` : ''}`}>Loyers et paiements</Link>}{canDo(organizationRole, 'view_expense') && <Link to={`/app/depenses?parcelUuid=${encodeURIComponent(contextParcel?.id ?? '')}${selectedBuilding ? `&buildingUuid=${encodeURIComponent(selectedBuilding.id)}` : ''}`}>Dépenses</Link>}{canDo(organizationRole, 'create_worker_assignment') && organizationRole !== 'patron' && <Link to={`${isCityAdmin ? '/app/operations' : '/app/personnel'}?parcelUuid=${encodeURIComponent(contextParcel?.id ?? '')}${selectedBuilding ? `&buildingUuid=${encodeURIComponent(selectedBuilding.id)}` : ''}`}>{isCityAdmin ? 'Affecter un employé' : 'Employés'}</Link>}</nav>}
 
         <Tabs
             key={activeTab}
             tabs={[
-                { id: 'overview', label: 'Vue d’ensemble' },
-                { id: 'villes', label: 'Villes' },
+                ...(!isCityAdmin ? [{ id: 'overview', label: 'Vue d’ensemble' }, { id: 'villes', label: 'Villes' }] : []),
                 { id: 'parcelles', label: 'Parcelles' },
                 { id: 'batiments', label: 'Bâtiments' },
                 { id: 'unites', label: 'Unités' },
@@ -132,19 +135,19 @@ export function PatrimoinePage() {
             defaultActiveTabId={activeTab}
             renderContent={(activeTabId) => {
                 if (activeTabId === 'villes') {
-                    return <VillesTab cities={cities} role={organizationRole} isLoading={isLoading} error={error} note={note} onReload={() => void reload()} onCreate={createCity} onCreateAdmin={createCityAdmin} onUpdate={updateCity} onSetStatus={setCityStatus} onDelete={deleteCity} onOpen={(id) => goToLevel('parcelles', id, null, null)} />;
+                    return <VillesTab cities={cities} role={organizationRole} isLoading={isLoading} error={error} note={note} onReload={() => void reload()} onCreate={createCity} onCreateAdmin={createCityAdmin} onUpdate={updateCity} onSetStatus={setCityStatus} onDelete={deleteCity} onOpen={(id) => goToLevel('parcelles', id, null, null)} readOnly={readOnly} />;
                 }
 
                 if (activeTabId === 'parcelles') {
-                    return <ParcellesTab parcels={parcels} cities={cities} role={organizationRole} isLoading={isLoading} error={error} note={note} onReload={() => void reload()} onCreate={createParcel} onUpdate={updateParcel} onDelete={deleteParcel} selectedCityId={selectedCityId} onCityFilter={(id) => goToLevel(id ? 'parcelles' : 'parcelles', id, null, null)} onOpen={(id) => { const parcel = parcels.find((item) => item.id === id); goToLevel('batiments', parcel?.cityId ?? selectedCityId, id, null); }} />;
+                    return <ParcellesTab parcels={parcels} cities={cities} role={organizationRole} isLoading={isLoading} error={error} note={note} onReload={() => void reload()} onCreate={createParcel} onUpdate={updateParcel} onDelete={deleteParcel} selectedCityId={selectedCityId} onCityFilter={(id) => goToLevel(id ? 'parcelles' : 'parcelles', id, null, null)} onOpen={(id) => { const parcel = parcels.find((item) => item.id === id); goToLevel('batiments', parcel?.cityId ?? selectedCityId, id, null); }} readOnly={readOnly} />;
                 }
 
                 if (activeTabId === 'batiments') {
-                    return <BatimentsTab buildings={buildings} parcels={parcels} cities={cities} role={organizationRole} isLoading={isLoading} error={error} note={note} onReload={() => void reload()} onCreate={createBuilding} onUpdate={updateBuilding} onDelete={deleteBuilding} selectedParcelId={selectedParcelId} onParcelFilter={openParcel} onOpen={(id) => openBuilding(id)} />;
+                    return <BatimentsTab buildings={buildings} parcels={parcels} cities={cities} role={organizationRole} isLoading={isLoading} error={error} note={note} onReload={() => void reload()} onCreate={createBuilding} onUpdate={updateBuilding} onDelete={deleteBuilding} selectedParcelId={selectedParcelId} onParcelFilter={openParcel} onOpen={(id) => openBuilding(id)} readOnly={readOnly} />;
                 }
 
                 if (activeTabId === 'unites') {
-                    return <UnitesTab units={units} buildings={buildings} role={organizationRole} isLoading={isLoading} error={error} note={note} onReload={() => void reload()} onCreate={createUnit} onUpdate={updateUnit} onDelete={deleteUnit} onPublish={publishUnit} selectedBuildingId={selectedBuildingId} onBuildingFilter={openBuilding} />;
+                    return <UnitesTab units={units} buildings={buildings} role={organizationRole} isLoading={isLoading} error={error} note={note} onReload={() => void reload()} onCreate={createUnit} onUpdate={updateUnit} onDelete={deleteUnit} onPublish={publishUnit} selectedBuildingId={selectedBuildingId} onBuildingFilter={openBuilding} readOnly={readOnly} />;
                 }
 
                 return (

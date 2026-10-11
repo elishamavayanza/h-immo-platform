@@ -4,6 +4,7 @@ import { useSearchParams } from 'react-router-dom';
 import { OrganizationSummary } from '../../../shared/components/OrganizationSummary';
 import { Card } from '../../../../components/UI/Card';
 import { Button } from '../../../../components/UI/Button';
+import { ConfirmDialog } from '../../../../components/UI/ConfirmDialog';
 import { Spinner } from '../../../../components/UI/Spinner';
 import { EmptyState } from '../../../../components/Data/EmptyState';
 import { SearchInput } from '../../../../components/Forms/SearchInput';
@@ -31,9 +32,16 @@ export function PersonnelPage() {
     const {
         data, rows: allRows, availableCities, isLoading, error, reload,
         search, setSearch, city, setCity,
-        createWorker, updateWorker, createAssignment,
+        createWorker, updateWorker, createAssignment, updateAssignment, endAssignment,
     } = usePersonnel();
-    const rows = allRows.filter((row) => (!parcelUuid || row.parcelIds.includes(parcelUuid)) && (!buildingUuid || row.buildingIds.includes(buildingUuid)));
+    // Depuis une parcelle, la liste devient celle des travailleurs déjà
+    // visibles dans la ville afin de pouvoir en affecter un à ce bien.
+    const isCityAssignmentContext = organizationRole === 'admin_ville' && Boolean(parcelUuid || buildingUuid);
+    const rows = isCityAssignmentContext
+        ? allRows
+        : allRows.filter((row) => (!parcelUuid || row.parcelIds.includes(parcelUuid)) && (!buildingUuid || row.buildingIds.includes(buildingUuid)));
+    const assignmentBuilding = data?.buildings.find((building) => building.id === buildingUuid);
+    const assignmentParcel = data?.parcels.find((parcel) => parcel.id === parcelUuid || parcel.id === assignmentBuilding?.parcelId);
 
     const [workerModalOpen, setWorkerModalOpen] = useState(false);
     const [editTarget, setEditTarget] = useState<PersonnelRow | null>(null);
@@ -58,6 +66,9 @@ export function PersonnelPage() {
 
     const [assignmentModalOpen, setAssignmentModalOpen] = useState(false);
     const [assignTarget, setAssignTarget] = useState<PersonnelRow | null>(null);
+    const [assignmentEditTarget, setAssignmentEditTarget] = useState<PersonnelRow['latestAssignment']>(null);
+    const [endTarget, setEndTarget] = useState<PersonnelRow | null>(null);
+    const [endingAssignment, setEndingAssignment] = useState(false);
     const [assignmentForm, setAssignmentForm] = useState({
         cityUuid: '',
         role: 'gardien',
@@ -148,17 +159,39 @@ export function PersonnelPage() {
 
     const openAssign = (target: PersonnelRow) => {
         setAssignTarget(target);
+        setAssignmentEditTarget(null);
         setAssignmentForm({
-            cityUuid: '',
+            cityUuid: assignmentParcel?.cityId ?? '',
             role: 'gardien',
             monthlySalary: '',
             currency: 'USD',
             startDate: new Date().toISOString().split('T')[0],
             endDate: '',
-            parcelUuid: '',
-            buildingUuid: '',
+            parcelUuid: assignmentBuilding ? '' : assignmentParcel?.id ?? '',
+            buildingUuid: assignmentBuilding?.id ?? '',
             unitUuid: '',
             notes: '',
+        });
+        setAssignmentFormErrors({});
+        setAssignmentModalOpen(true);
+    };
+
+    const openEditAssignment = (target: PersonnelRow) => {
+        const assignment = target.latestAssignment;
+        if (!assignment) return;
+        setAssignTarget(target);
+        setAssignmentEditTarget(assignment);
+        setAssignmentForm({
+            cityUuid: assignment.cityId,
+            role: assignment.role,
+            monthlySalary: assignment.monthlySalary,
+            currency: assignment.currency as 'USD' | 'CDF',
+            startDate: assignment.startDate,
+            endDate: assignment.endDate ?? '',
+            parcelUuid: assignment.parcelId ?? '',
+            buildingUuid: assignment.buildingId ?? '',
+            unitUuid: assignment.unitId ?? '',
+            notes: assignment.notes ?? '',
         });
         setAssignmentFormErrors({});
         setAssignmentModalOpen(true);
@@ -167,6 +200,7 @@ export function PersonnelPage() {
     const closeAssignmentModal = () => {
         setAssignmentModalOpen(false);
         setAssignTarget(null);
+        setAssignmentEditTarget(null);
     };
 
     const submitAssignment = async (event: FormEvent<HTMLFormElement>) => {
@@ -183,7 +217,6 @@ export function PersonnelPage() {
         }
 
         const payload = {
-            workerUuid: assignTarget.id,
             cityUuid: assignmentForm.cityUuid,
             role: assignmentForm.role,
             monthlySalary: assignmentForm.monthlySalary.trim(),
@@ -197,7 +230,11 @@ export function PersonnelPage() {
         };
 
         try {
-            await createAssignment(payload);
+            if (assignmentEditTarget) {
+                await updateAssignment(assignmentEditTarget.id, payload);
+            } else {
+                await createAssignment({ ...payload, workerUuid: assignTarget.id });
+            }
             closeAssignmentModal();
         } catch (cause) {
             setAssignmentFormErrors(fieldErrorMap(cause));
@@ -206,7 +243,21 @@ export function PersonnelPage() {
         }
     };
 
-    let body = <PersonnelTable rows={rows} role={organizationRole} onEdit={openEditWorker} onAssign={openAssign} />;
+    const confirmEndAssignment = async (): Promise<void> => {
+        const assignment = endTarget?.latestAssignment;
+        if (!assignment || endingAssignment) return;
+        setEndingAssignment(true);
+        try {
+            await endAssignment(assignment.id, new Date().toISOString().slice(0, 10));
+            setEndTarget(null);
+        } catch {
+            // Le hook affiche déjà le message d’erreur.
+        } finally {
+            setEndingAssignment(false);
+        }
+    };
+
+    let body = <PersonnelTable rows={rows} role={organizationRole} onEdit={openEditWorker} onAssign={openAssign} onEditAssignment={openEditAssignment} onEndAssignment={setEndTarget} />;
     if (isLoading) {
         body = <EmptyState icon={<Spinner size="large" />} title="Chargement du personnel…" description="Récupération des travailleurs de l’organisation." />;
     } else if (error) {
@@ -218,7 +269,7 @@ export function PersonnelPage() {
         />;
     }
 
-    return <main className="organization-page organization-operational-page"><header className="organization-page__header"><div><span className="organization-page__eyebrow">ÉQUIPE OPÉRATIONNELLE</span><h1>Personnel</h1><p>Consultez les ouvriers et leurs affectations sur vos biens.</p></div></header>
+    return <main className="organization-page organization-operational-page"><header className="organization-page__header"><div><span className="organization-page__eyebrow">ÉQUIPE OPÉRATIONNELLE</span><h1>{isCityAssignmentContext ? 'Affecter un employé' : 'Personnel'}</h1><p>{isCityAssignmentContext ? `Choisissez un employé autorisé pour l’affecter à ${assignmentBuilding?.name ?? assignmentParcel?.name ?? 'ce bien'}.` : 'Consultez les ouvriers et leurs affectations sur vos biens.'}</p></div></header>
         <OrganizationSummary items={[{ label: 'Membres affichés', value: <>{rows.length}</> }, { label: 'Affectations visibles', value: <>{rows.reduce((total, row) => total + row.assignments, 0)}</> }, { label: 'Villes couvertes', value: <>{new Set(rows.map((row) => row.city).filter((value) => value !== '—')).size}</> }]} />
         <Card className="organization-table-card" padding="medium"><div className="organization-table-toolbar"><div><h2>Équipe</h2><p>{data?.note ?? 'La fonction et la ville indiquées proviennent de la dernière affectation.'}</p></div><div className="organization-filters organization-filters--tenant"><SearchInput value={search} onSearch={setSearch} placeholder="Rechercher un membre…" fullWidth /><Select aria-label="Filtrer par ville" value={city} onChange={(event) => setCity(event.target.value)} options={[{ value: 'all', label: 'Toutes les villes' }, ...availableCities.map((value) => ({ value, label: value }))]} />{canDo(organizationRole, 'create_worker') && <Button onClick={openCreateWorker}>＋ Ajouter un ouvrier</Button>}</div></div>{body}</Card>
         <Modal
@@ -265,18 +316,27 @@ export function PersonnelPage() {
                 </>}
             </form>
         </Modal>
+        <ConfirmDialog
+            isOpen={endTarget !== null}
+            onClose={() => setEndTarget(null)}
+            onConfirm={() => void confirmEndAssignment()}
+            title="Terminer cette affectation ?"
+            message={`L’affectation de ${endTarget?.name ?? 'ce membre'} prendra fin aujourd’hui. Cette action met à jour son historique.`}
+            confirmLabel={endingAssignment ? 'Enregistrement…' : 'Terminer l’affectation'}
+            cancelLabel="Garder l’affectation"
+        />
         <Modal
             isOpen={assignmentModalOpen}
             onClose={closeAssignmentModal}
-            title={assignTarget ? `Nouvelle affectation pour « ${assignTarget.name} »` : 'Nouvelle affectation'}
+            title={assignTarget ? `${assignmentEditTarget ? 'Modifier l’affectation' : 'Nouvelle affectation'} pour « ${assignTarget.name} »` : 'Nouvelle affectation'}
             size="large"
-            footer={<ModalActions formId="assignment-form" onCancel={closeAssignmentModal} submitLabel="Créer l'affectation" loadingLabel="Création…" isLoading={submittingAssignment} />}
+            footer={<ModalActions formId="assignment-form" onCancel={closeAssignmentModal} submitLabel={assignmentEditTarget ? 'Enregistrer' : 'Créer l’affectation'} loadingLabel={assignmentEditTarget ? 'Enregistrement…' : 'Création…'} isLoading={submittingAssignment} />}
         >
             <form id="assignment-form" className="organization-management-form" onSubmit={submitAssignment}>
                 {Object.values(assignmentFormErrors).filter(Boolean).length > 0 && <p className="organization-form-error" role="alert">{Object.values(assignmentFormErrors).filter(Boolean).join(' · ')}</p>}
-                <FormField label="Ville" htmlFor="assign-city" required error={assignmentFormErrors.cityUuid}>
+                {isCityAssignmentContext && assignmentParcel ? <div className="organization-management-form__section"><h3>{data?.cities.find((city) => city.id === assignmentParcel.cityId)?.name ?? 'Ville attribuée'}</h3><p>La ville et le bien sont préremplis depuis le patrimoine sélectionné.</p></div> : <FormField label="Ville" htmlFor="assign-city" required error={assignmentFormErrors.cityUuid}>
                     <Select id="assign-city" value={assignmentForm.cityUuid} onChange={(event) => setAssignmentForm((current) => ({ ...current, cityUuid: event.target.value, parcelUuid: '', buildingUuid: '', unitUuid: '' }))} options={(data?.cities ?? []).map((city) => ({ value: city.id, label: city.name }))} placeholder="Sélectionner une ville" required />
-                </FormField>
+                </FormField>}
                 <FormField label="Fonction" htmlFor="assign-role" required error={assignmentFormErrors.role}>
                     <Select id="assign-role" value={assignmentForm.role} onChange={(event) => setAssignmentForm((current) => ({ ...current, role: event.target.value }))} options={ASSIGNMENT_ROLE_OPTIONS} />
                 </FormField>

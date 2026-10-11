@@ -14,18 +14,12 @@ import type { AdminVilleReportsData } from '../types';
 export function useReports() {
     const { cities, isLoading: citiesLoading, hasAssignedCities } = useAssignedCities();
 
-    const [cityUuid, setCityUuid] = useState('');
+    const cityUuid = cities[0]?.id ?? '';
     const [periodFrom, setPeriodFrom] = useState('');
     const [periodTo, setPeriodTo] = useState('');
     const [data, setData] = useState<AdminVilleReportsData | null>(null);
     const [isLoading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
-
-    // Ville par défaut : la première ville affectée (jamais devinée côté client
-    // en dehors du périmètre renvoyé par l'API).
-    useEffect(() => {
-        if (!cityUuid && cities.length > 0) setCityUuid(cities[0].id);
-    }, [cities, cityUuid]);
 
     const reload = useCallback(async () => {
         if (!cityUuid) {
@@ -60,7 +54,6 @@ export function useReports() {
         reload,
         cities,
         cityUuid,
-        setCityUuid,
         periodFrom,
         setPeriodFrom,
         periodTo,

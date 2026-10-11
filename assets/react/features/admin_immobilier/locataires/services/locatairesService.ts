@@ -47,6 +47,8 @@ export async function fetchLocataires(organizationUuid: string): Promise<Locatai
             sublabel: [tenant.email, tenant.phone].filter(Boolean).join(' · ') || '—',
             type: tenant.type === 'company' ? 'company' : 'individual',
             phone: tenant.phone,
+            email: tenant.email,
+            notes: tenant.notes,
             address: tenant.address ?? '—',
             unitReference: lease ? unitById.get(lease.unitId)?.reference ?? null : null,
             buildingId: lease ? unitById.get(lease.unitId)?.buildingId ?? null : null,

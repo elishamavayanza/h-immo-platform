@@ -1,1 +1,84 @@
-@use '../base';
+@use '../_base' as *;
+@use '../../../baseVariables/variables' as *;
+
+/* Grille 2 colonnes pour la carte organisation (nom/code, email/phone, etc.). */
+.patron-organization-form {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: $spacing-3;
+}
+
+.patron-organization-form__grid {
+    display: contents;
+}
+
+.patron-organization-form__actions {
+    grid-column: 1 / -1;
+    justify-self: end;
+    margin-top: $spacing-2;
+}
+
+/* Sélecteur de villes : liste de cases à cocher en colonnes. */
+.patron-city-picker {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    gap: $spacing-2;
+    margin-top: $spacing-1;
+}
+
+.patron-city-picker__empty {
+    grid-column: 1 / -1;
+    color: $color-text-muted;
+    font-size: $font-size-xs;
+}
+
+/* Modal d'affectation des villes pour un ADMIN_VILLE. */
+.patron-city-assignment {
+    &__add {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+        gap: $spacing-2;
+        align-items: end;
+    }
+
+    &__list {
+        display: grid;
+        gap: $spacing-1;
+        margin-top: $spacing-2;
+    }
+
+    &__list li {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: $spacing-2;
+        background: $color-bg-card-hover;
+        border-radius: $radius-md;
+        color: $color-text-primary;
+    }
+
+    &__list svg {
+        color: $color-text-secondary;
+    }
+}
+
+/* Responsive */
+@media (max-width: 760px) {
+    .patron-organization-form {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .patron-city-picker {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .patron-city-assignment__add {
+        grid-template-columns: minmax(0, 1fr);
+    }
+}
+
+@media (max-width: 600px) {
+    .patron-city-picker {
+        grid-template-columns: minmax(0, 1fr);
+    }
+}

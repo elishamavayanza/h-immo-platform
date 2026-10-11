@@ -57,6 +57,15 @@ final readonly class OrganizationResponse
 
         #[OA\Property(description: 'Horodatage de dernière mise à jour', format: 'date-time', example: '2026-02-01T10:15:00Z')]
         public \DateTimeImmutable $updatedAt,
+
+        #[OA\Property(description: 'Identifiant de la page publique (slug) de la vitrine', example: 'immo-plus', nullable: true)]
+        public ?string $slug,
+
+        #[OA\Property(description: 'Texte de présentation publique de l\'entreprise', nullable: true)]
+        public ?string $publicDescription,
+
+        #[OA\Property(description: 'La vitrine est-elle listée publiquement', example: true)]
+        public bool $isPubliclyListed,
     ) {
     }
 
@@ -75,6 +84,9 @@ final readonly class OrganizationResponse
             status: $organization->getStatus(),
             createdAt: $organization->getCreatedAt(),
             updatedAt: $organization->getUpdatedAt(),
+            slug: $organization->getSlug(),
+            publicDescription: $organization->getPublicDescription(),
+            isPubliclyListed: $organization->isPubliclyListed(),
         );
     }
 }

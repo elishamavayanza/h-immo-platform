@@ -91,9 +91,7 @@ export async function updateUnit(unitUuid: string, payload: UpdateUnitPayload): 
 export async function addUnitPhoto(unitUuid: string, file: File): Promise<string> {
     const formData = new FormData();
     formData.append('file', file);
-    const { data } = await apiClient.post<Feedback<unknown>>(`/v1/units/${unitUuid}/photos`, formData, {
-        headers: { 'Content-Type': 'multipart/form-data' },
-    });
+    const { data } = await apiClient.post<Feedback<unknown>>(`/v1/units/${unitUuid}/photos`, formData);
     return data.flushDescription ?? 'Photo ajoutée.';
 }
 

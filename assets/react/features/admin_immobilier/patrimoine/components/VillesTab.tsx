@@ -52,6 +52,8 @@ interface VillesTabProps {
     onSetStatus: (city: CityItem, status: CityPayload['status']) => Promise<void>;
     onDelete: (uuid: string) => Promise<void>;
     onOpen: (uuid: string) => void;
+    /** Lecture seule (espace PATRON) : masque toute action d'écriture. */
+    readOnly?: boolean;
 }
 
 /**
@@ -60,9 +62,9 @@ interface VillesTabProps {
  * L'onglet est une unité fonctionnelle autonome : il porte son propre état de
  * formulaire, sa modale et sa confirmation, et délègue toute écriture au hook
  * parent. Les boutons sont gatés par `canDo` (miroir de `SecurityService`) ;
- * l'API demeure l'autorité.
+ * l'API demeure l'autorité. `readOnly` masque les écritures (Patron).
  */
-export function VillesTab({ cities, role, isLoading, error, note, onReload, onCreate, onCreateAdmin, onUpdate, onSetStatus, onDelete, onOpen }: VillesTabProps) {
+export function VillesTab({ cities, role, isLoading, error, note, onReload, onCreate, onCreateAdmin, onUpdate, onSetStatus, onDelete, onOpen, readOnly = false }: VillesTabProps) {
     const [search, setSearch] = useState('');
     const [modalOpen, setModalOpen] = useState(false);
     const [editTarget, setEditTarget] = useState<CityItem | null>(null);
@@ -169,6 +171,8 @@ export function VillesTab({ cities, role, isLoading, error, note, onReload, onCr
             key: 'actions',
             title: 'Actions',
             render: (city) => {
+                if (readOnly) return '—';
+
                 const isActive = city.status === 'active';
                 const addCityAdmin = () => { setAdminCity(city); setAdminForm({ fullName: '', email: '', phone: '' }); setAdminErrors({}); };
                 const items: PopoverMenuItem[] = [
@@ -209,7 +213,7 @@ export function VillesTab({ cities, role, isLoading, error, note, onReload, onCr
                 <div className="organization-filters">
                     <SearchInput value={search} onSearch={setSearch} placeholder="Rechercher une ville…" fullWidth />
                     <span />
-                    {canDo(role, 'create_city') && <Button onClick={openCreate}>＋ Ajouter une ville</Button>}
+                    {!readOnly && canDo(role, 'create_city') && <Button onClick={openCreate}>＋ Ajouter une ville</Button>}
                 </div>
             </div>
             {body}

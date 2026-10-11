@@ -22,18 +22,20 @@ interface TeamTableProps {
     rows: TeamMember[];
     onEdit: (member: TeamMember) => void;
     onSuspend: (member: TeamMember) => void;
+    onReactivate: (member: TeamMember) => void;
+    onManageCities: (member: TeamMember) => void;
 }
 
 /**
  * Table des membres de l'équipe (espace PATRON), branchée sur l'API.
  *
- * Deux actions seulement : Modifier (fiche) et Suspendre (désactivation +
- * email). Pas de « Supprimer » : les comptes et leurs traces comptables sont
- * conservés, une réintégration passant par la modification/re-activation.
+ * Actions : Modifier (fiche), Gérer les villes (ADMIN_VILLE uniquement),
+ * Suspendre (désactivation + email) et Réactiver (compte désactivé). Pas de
+ * « Supprimer » : les comptes et leurs traces comptables sont conservés.
  * Suspendre est masqué sur le compte de l'appelant (auto-suspension refusée
- * en 422) et sur les comptes déjà désactivés.
+ * en 422) ; Réactiver n'apparaît que sur un compte désactivé.
  */
-export function TeamTable({ rows, onEdit, onSuspend }: TeamTableProps) {
+export function TeamTable({ rows, onEdit, onSuspend, onReactivate, onManageCities }: TeamTableProps) {
     const columns: DataTableColumn<TeamMember>[] = [
         {
             key: 'name',
@@ -50,8 +52,14 @@ export function TeamTable({ rows, onEdit, onSuspend }: TeamTableProps) {
             render: (member) => {
                 const items: PopoverMenuItem[] = [
                     { id: 'edit', label: 'Modifier', icon: <Icon name="edit" />, onClick: () => onEdit(member) },
+                    ...(member.role === 'admin_ville'
+                        ? [{ id: 'cities', label: 'Gérer les villes', icon: <Icon name="mapPin" />, onClick: () => onManageCities(member) }]
+                        : []),
                     ...(member.status === 'active' && !member.isSelf
                         ? [{ id: 'suspend', label: 'Suspendre', icon: <Icon name="power" />, danger: true, onClick: () => onSuspend(member) }]
+                        : []),
+                    ...(member.status === 'inactive'
+                        ? [{ id: 'reactivate', label: 'Réactiver', icon: <Icon name="check" />, onClick: () => onReactivate(member) }]
                         : []),
                 ];
 
