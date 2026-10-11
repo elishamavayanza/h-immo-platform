@@ -22,6 +22,8 @@ import { canDo } from '../../../shared/permissions';
 import { fieldErrorMap } from '../../../shared/actionErrors';
 import { ModalActions } from '../../../shared/components/ModalActions';
 import { PhotoGallery } from '../../../shared/media/components/PhotoGallery';
+import { PhotoViewer } from '../../../shared/media/components/PhotoViewer';
+import { ParcelMap } from './ParcelMap';
 import type { CityItem, ParcelItem } from '../../shared/types/reference.types';
 import type { ParcelPayload } from '../services/patrimoineService';
 
@@ -79,6 +81,8 @@ interface ParcellesTabProps {
     selectedCityId: string | null;
     onCityFilter: (uuid: string | null) => void;
     onOpen: (uuid: string) => void;
+    /** Lecture seule (espace PATRON) : masque toute action d'écriture. */
+    readOnly?: boolean;
 }
 
 /**
@@ -88,9 +92,9 @@ interface ParcellesTabProps {
  * changement de rattachement) : à la mise à jour, le champ ville est
  * désactivé mais renvoyé à l'identique pour satisfaire le contrat
  * `ParcelRequest`. Latitude/longitude forment une paire indivisible,
- * contrôlée côté client avant l'envoi.
+ * contrôlée côté client avant l'envoi. `readOnly` masque les écritures (Patron).
  */
-export function ParcellesTab({ parcels, cities, role, isLoading, error, note, onReload, onCreate, onUpdate, onDelete, selectedCityId, onCityFilter, onOpen }: ParcellesTabProps) {
+export function ParcellesTab({ parcels, cities, role, isLoading, error, note, onReload, onCreate, onUpdate, onDelete, selectedCityId, onCityFilter, onOpen, readOnly = false }: ParcellesTabProps) {
     const [search, setSearch] = useState('');
     const [modalOpen, setModalOpen] = useState(false);
     const [editTarget, setEditTarget] = useState<ParcelItem | null>(null);
@@ -102,6 +106,7 @@ export function ParcellesTab({ parcels, cities, role, isLoading, error, note, on
 
     const [photoModalOpen, setPhotoModalOpen] = useState(false);
     const [photoTarget, setPhotoTarget] = useState<ParcelItem | null>(null);
+    const [viewTarget, setViewTarget] = useState<ParcelItem | null>(null);
 
     const cityById = new Map(cities.map((city) => [city.id, city]));
     const cityOptions = cities.map((city) => ({ value: city.id, label: city.name }));
@@ -109,6 +114,10 @@ export function ParcellesTab({ parcels, cities, role, isLoading, error, note, on
     const filtered = parcels.filter((parcel) => {
         const query = search.trim().toLocaleLowerCase('fr');
         return (selectedCityId === null || parcel.cityId === selectedCityId) && (!query || [parcel.name, parcel.reference, parcel.address, cityById.get(parcel.cityId)?.name ?? ''].some((value) => value.toLocaleLowerCase('fr').includes(query)));
+    });
+    const mappedParcels = filtered.flatMap((parcel) => {
+        const coordinates = parcelCoordinates(parcel);
+        return coordinates ? [{ ...parcel, ...coordinates }] : [];
     });
 
     const openCreate = () => {
@@ -207,7 +216,7 @@ export function ParcellesTab({ parcels, cities, role, isLoading, error, note, on
             const hasAnyCoordinate = Boolean(parcel.latitude || parcel.longitude);
             const valid = parcelCoordinates(parcel);
             return hasAnyCoordinate
-                ? <button type="button" className="patrimoine-link" onClick={() => setMapTargetId(parcel.id)} aria-label={`${valid ? 'Afficher' : 'Vérifier les coordonnées de'} ${parcel.name} sur la carte`}>{valid ? '⌖ Voir la carte' : 'Coordonnées invalides'}</button>
+                ? valid ? <button type="button" className="patrimoine-link" onClick={() => setMapTargetId(parcel.id)} aria-label={`Afficher ${parcel.name} sur la carte`}>⌖ Voir la carte</button> : <span className="patrimoine-muted">Coordonnées invalides</span>
                 : <span className="patrimoine-muted">GPS absent</span>;
         } },
         {
@@ -215,13 +224,16 @@ export function ParcellesTab({ parcels, cities, role, isLoading, error, note, on
             title: 'Actions',
             render: (parcel) => {
                 const items: PopoverMenuItem[] = [
-                    ...(canDo(role, 'update_parcel')
+                    ...(canDo(role, 'view_parcel')
+                        ? [{ id: 'view-photos', label: 'Voir les photos', icon: <Icon name="camera" />, onClick: () => setViewTarget(parcel) }]
+                        : []),
+                    ...(!readOnly && canDo(role, 'update_parcel')
                         ? [{ id: 'edit', label: 'Modifier', icon: <Icon name="edit" />, onClick: () => openEdit(parcel) }]
                         : []),
-                    ...(canDo(role, 'create_parcel')
+                    ...(!readOnly && canDo(role, 'update_parcel')
                         ? [{ id: 'photos', label: 'Gérer les photos', icon: <Icon name="camera" />, onClick: () => openPhotos(parcel) }]
                         : []),
-                    ...(canDo(role, 'delete_parcel')
+                    ...(!readOnly && canDo(role, 'delete_parcel')
                         ? [{ id: 'delete', label: 'Supprimer', icon: <Icon name="trash" />, danger: true, onClick: () => setDeleteTarget(parcel) }]
                         : []),
                 ];
@@ -252,22 +264,19 @@ export function ParcellesTab({ parcels, cities, role, isLoading, error, note, on
                 <div className="organization-filters">
                     <SearchInput value={search} onSearch={setSearch} placeholder="Rechercher une parcelle…" fullWidth />
                     <Select aria-label="Filtrer par ville" value={selectedCityId ?? 'all'} onChange={(event) => onCityFilter(event.target.value === 'all' ? null : event.target.value)} options={[{ value: 'all', label: 'Toutes les villes' }, ...cities.map((city) => ({ value: city.id, label: city.name }))]} />
-                    {canDo(role, 'create_parcel') && <Button onClick={openCreate} disabled={cities.length === 0}>＋ Ajouter une parcelle</Button>}
+                    {!readOnly && canDo(role, 'create_parcel') && <Button onClick={openCreate} disabled={cities.length === 0}>＋ Ajouter une parcelle</Button>}
                 </div>
             </div>
             {selectedCityId && <div className="patrimoine-context"><span>Ville sélectionnée : <strong>{cityById.get(selectedCityId)?.name ?? 'Ville'}</strong></span><Button variant="outline" onClick={() => onCityFilter(null)}>Effacer le filtre</Button></div>}
-            {mapTargetId && (() => {
-                const parcel = parcels.find((item) => item.id === mapTargetId);
-                if (!parcel) return null;
-                const coordinates = parcelCoordinates(parcel);
-                return <section className="patrimoine-map" aria-label={`Carte de ${parcel.name}`}>
-                    <div className="patrimoine-map__header"><div><strong>{parcel.name}</strong><span>{parcel.address || 'Adresse non renseignée'}</span>{coordinates && <span>GPS : {coordinates.latitude}, {coordinates.longitude}</span>}</div><div>{coordinates && <a href={`https://www.openstreetmap.org/?mlat=${coordinates.latitude}&mlon=${coordinates.longitude}#map=17/${coordinates.latitude}/${coordinates.longitude}`} target="_blank" rel="noreferrer">Ouvrir dans OpenStreetMap ↗</a>}<Button variant="outline" onClick={() => setMapTargetId(null)}>Fermer</Button></div></div>
-                    {coordinates
-                        ? <iframe title={`Emplacement de ${parcel.name}`} src={`https://www.openstreetmap.org/export/embed.html?bbox=${coordinates.longitude - 0.01}%2C${coordinates.latitude - 0.01}%2C${coordinates.longitude + 0.01}%2C${coordinates.latitude + 0.01}&layer=mapnik&marker=${coordinates.latitude}%2C${coordinates.longitude}`} loading="lazy" referrerPolicy="no-referrer" />
-                        : <p className="patrimoine-map__empty">{parcel.latitude || parcel.longitude ? 'Les coordonnées enregistrées sont invalides. Modifiez la parcelle pour les corriger.' : 'Aucune coordonnée GPS n’est enregistrée pour cette parcelle.'}</p>}
-                </section>;
-            })()}
+            <div className="patrimoine-map-action">
+                <div><strong>Repérage GPS</strong><span>{mappedParcels.length} parcelle{mappedParcels.length === 1 ? '' : 's'} sur la carte{filtered.length > mappedParcels.length ? ` · ${filtered.length - mappedParcels.length} sans coordonnées valides` : ''}</span></div>
+                <Button variant="outline" onClick={() => setMapTargetId(mapTargetId ?? mappedParcels[0]?.id ?? null)} disabled={mappedParcels.length === 0}>⌖ Ouvrir la carte</Button>
+            </div>
             {body}
+
+            <Modal isOpen={mapTargetId !== null} onClose={() => setMapTargetId(null)} title="Carte des parcelles" size="large">
+                <ParcelMap parcels={mappedParcels} initialParcelId={mapTargetId} onClose={() => setMapTargetId(null)} />
+            </Modal>
 
             <Modal
                 isOpen={modalOpen || editTarget !== null}
@@ -333,6 +342,10 @@ export function ParcellesTab({ parcels, cities, role, isLoading, error, note, on
                     mode="multiple"
                     onChange={() => {}}
                 />
+            </Modal>
+
+            <Modal isOpen={viewTarget !== null} onClose={() => setViewTarget(null)} title={viewTarget ? `Photos — ${viewTarget.name}` : 'Photos de la parcelle'} size="large" footer={<Button variant="outline" onClick={() => setViewTarget(null)}>Fermer</Button>}>
+                {viewTarget && <PhotoViewer entityUuid={viewTarget.id} entityType="parcel" entityName={viewTarget.name} />}
             </Modal>
         </Card>
     );

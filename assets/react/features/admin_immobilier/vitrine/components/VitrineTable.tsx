@@ -16,6 +16,8 @@ interface VitrineTableProps {
     onEdit: (row: VitrineRow) => void;
     onAddPhoto: (row: VitrineRow) => void;
     pendingId: string | null;
+    /** Lecture seule (espace PATRON) : masque toute action d'écriture. */
+    readOnly?: boolean;
 }
 
 /**
@@ -25,8 +27,9 @@ interface VitrineTableProps {
  * par un bail actif ne peut pas être publiée : l'action est désactivée côté
  * UI, le backend refusant de toute façon en 422.
  * Actions : Publier/Retirer, Modifier description, Gérer les photos.
+ * `readOnly` masque la colonne d'actions (le Patron consulte sans opérer).
  */
-export function VitrineTable({ rows, role, onTogglePublished, onEdit, onAddPhoto, pendingId }: VitrineTableProps) {
+export function VitrineTable({ rows, role, onTogglePublished, onEdit, onAddPhoto, pendingId, readOnly = false }: VitrineTableProps) {
     const columns: DataTableColumn<VitrineRow>[] = [
         { key: 'title', title: 'Annonce', sortable: true },
         { key: 'city', title: 'Ville', sortable: true },
@@ -42,6 +45,8 @@ export function VitrineTable({ rows, role, onTogglePublished, onEdit, onAddPhoto
             key: 'actions',
             title: 'Actions',
             render: (row) => {
+                if (readOnly) return '—';
+
                 const canPublish = row.isPublished || !row.isOccupied;
                 const label = row.isPublished ? 'Dépublier' : 'Publier';
                 const items: PopoverMenuItem[] = [

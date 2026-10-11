@@ -21,6 +21,7 @@ import { canDo } from '../../../shared/permissions';
 import { fieldErrorMap } from '../../../shared/actionErrors';
 import { ModalActions } from '../../../shared/components/ModalActions';
 import { PhotoGallery } from '../../../shared/media/components/PhotoGallery';
+import { PhotoViewer } from '../../../shared/media/components/PhotoViewer';
 import type { BuildingItem, CityItem, ParcelItem } from '../../shared/types/reference.types';
 import type { BuildingPayload } from '../services/patrimoineService';
 
@@ -70,14 +71,16 @@ interface BatimentsTabProps {
     selectedParcelId: string | null;
     onParcelFilter: (uuid: string | null) => void;
     onOpen: (uuid: string) => void;
+    /** Lecture seule (espace PATRON) : masque toute action d'écriture. */
+    readOnly?: boolean;
 }
 
 /**
  * Onglet Bâtiments : CRUD du 3ᵉ niveau du patrimoine.
  * La parcelle est choisie à la création puis figée (rattachement non
- * modifiable côté backend).
+ * modifiable côté backend). `readOnly` masque les écritures (Patron).
  */
-export function BatimentsTab({ buildings, parcels, cities, role, isLoading, error, note, onReload, onCreate, onUpdate, onDelete, selectedParcelId, onParcelFilter, onOpen }: BatimentsTabProps) {
+export function BatimentsTab({ buildings, parcels, cities, role, isLoading, error, note, onReload, onCreate, onUpdate, onDelete, selectedParcelId, onParcelFilter, onOpen, readOnly = false }: BatimentsTabProps) {
     const [search, setSearch] = useState('');
     const [modalOpen, setModalOpen] = useState(false);
     const [editTarget, setEditTarget] = useState<BuildingItem | null>(null);
@@ -88,6 +91,7 @@ export function BatimentsTab({ buildings, parcels, cities, role, isLoading, erro
 
     const [photoModalOpen, setPhotoModalOpen] = useState(false);
     const [photoTarget, setPhotoTarget] = useState<BuildingItem | null>(null);
+    const [viewTarget, setViewTarget] = useState<BuildingItem | null>(null);
 
     const parcelById = new Map(parcels.map((parcel) => [parcel.id, parcel]));
     const cityById = new Map(cities.map((city) => [city.id, city]));
@@ -178,13 +182,16 @@ export function BatimentsTab({ buildings, parcels, cities, role, isLoading, erro
             title: 'Actions',
             render: (building) => {
                 const items: PopoverMenuItem[] = [
-                    ...(canDo(role, 'update_building')
+                    ...(canDo(role, 'view_building')
+                        ? [{ id: 'view-photos', label: 'Voir les photos', icon: <Icon name="camera" />, onClick: () => setViewTarget(building) }]
+                        : []),
+                    ...(!readOnly && canDo(role, 'update_building')
                         ? [{ id: 'edit', label: 'Modifier', icon: <Icon name="edit" />, onClick: () => openEdit(building) }]
                         : []),
-                    ...(canDo(role, 'update_building')
+                    ...(!readOnly && canDo(role, 'update_building')
                         ? [{ id: 'photos', label: 'Gérer les photos', icon: <Icon name="camera" />, onClick: () => openPhotos(building) }]
                         : []),
-                    ...(canDo(role, 'delete_building')
+                    ...(!readOnly && canDo(role, 'delete_building')
                         ? [{ id: 'delete', label: 'Supprimer', icon: <Icon name="trash" />, danger: true, onClick: () => setDeleteTarget(building) }]
                         : []),
                 ];
@@ -215,7 +222,7 @@ export function BatimentsTab({ buildings, parcels, cities, role, isLoading, erro
                 <div className="organization-filters">
                     <SearchInput value={search} onSearch={setSearch} placeholder="Rechercher un bâtiment…" fullWidth />
                     <Select aria-label="Filtrer par parcelle" value={selectedParcelId ?? 'all'} onChange={(event) => onParcelFilter(event.target.value === 'all' ? null : event.target.value)} options={[{ value: 'all', label: 'Toutes les parcelles' }, ...parcelOptions]} />
-                    {canDo(role, 'create_building') && <Button onClick={openCreate} disabled={parcels.length === 0}>＋ Ajouter un bâtiment</Button>}
+                    {!readOnly && canDo(role, 'create_building') && <Button onClick={openCreate} disabled={parcels.length === 0}>＋ Ajouter un bâtiment</Button>}
                 </div>
             </div>
             {selectedParcelId && <div className="patrimoine-context"><span>Parcelle sélectionnée : <strong>{parcelById.get(selectedParcelId)?.name ?? 'Parcelle'}</strong> · {cityById.get(parcelById.get(selectedParcelId)?.cityId ?? '')?.name ?? ''}</span><Button variant="outline" onClick={() => onParcelFilter(null)}>Effacer le filtre</Button></div>}
@@ -273,6 +280,10 @@ export function BatimentsTab({ buildings, parcels, cities, role, isLoading, erro
                     mode="multiple"
                     onChange={() => {}}
                 />
+            </Modal>
+
+            <Modal isOpen={viewTarget !== null} onClose={() => setViewTarget(null)} title={viewTarget ? `Photos — ${viewTarget.name}` : 'Photos du bâtiment'} size="large" footer={<Button variant="outline" onClick={() => setViewTarget(null)}>Fermer</Button>}>
+                {viewTarget && <PhotoViewer entityUuid={viewTarget.id} entityType="building" entityName={viewTarget.name} />}
             </Modal>
         </Card>
     );

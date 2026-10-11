@@ -10,11 +10,21 @@ import { canDo } from '../../../shared/permissions';
 import type { OrganizationRole } from '../../../../../services/api/api.types';
 import type { DepenseRow } from '../types/depense.types';
 
+interface DepensesTableProps {
+    rows: DepenseRow[];
+    role: OrganizationRole | null;
+    onEdit: (row: DepenseRow) => void;
+    onCancel: (row: DepenseRow) => void;
+    /** Lecture seule (espace PATRON) : masque toute action d'écriture. */
+    readOnly?: boolean;
+}
+
 /**
  * Table des dépenses : actions Modifier, Annuler (contre-écriture).
  * Pas de suppression définitive : l'historique comptable doit rester consultable.
+ * `readOnly` masque la colonne d'actions (le Patron consulte sans opérer).
  */
-export function DepensesTable({ rows, role, onEdit, onCancel }: { rows: DepenseRow[]; role: OrganizationRole | null; onEdit: (row: DepenseRow) => void; onCancel: (row: DepenseRow) => void }) {
+export function DepensesTable({ rows, role, onEdit, onCancel, readOnly = false }: DepensesTableProps) {
     const columns: DataTableColumn<DepenseRow>[] = [
         { key: 'date', title: 'Date', sortable: true, render: (row) => formatUserDate(row.date) },
         { key: 'category', title: 'Catégorie', sortable: true },
@@ -26,6 +36,8 @@ export function DepensesTable({ rows, role, onEdit, onCancel }: { rows: DepenseR
             key: 'actions',
             title: 'Actions',
             render: (row) => {
+                if (readOnly) return '—';
+
                 const items: PopoverMenuItem[] = [
                     ...(canDo(role, 'update_expense')
                         ? [{ id: 'edit', label: 'Modifier', icon: <Icon name="edit" />, onClick: () => onEdit(row) }]

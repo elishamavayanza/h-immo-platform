@@ -83,19 +83,19 @@ export const mediaService = {
 
     /**
      * `GET /api/v1/media/parcels/{uuid}/photos` — list parcel photos.
-     * Note: This endpoint needs to be implemented in the backend.
+     * Les photos sont retournées dans l'enveloppe standard `Feedback`.
      */
     async fetchParcelPhotos(uuid: string): Promise<string[]> {
-        const { data } = await apiClient.get<Feedback<string[]>>(`/v1/media/parcels/${uuid}/photos`);
-        return data.data ?? [];
+        const { data } = await apiClient.get<Feedback<{ photos: string[] }>>(`/v1/media/parcels/${uuid}/photos`);
+        return data.data?.photos ?? [];
     },
 
     /**
      * `GET /api/v1/units/{uuid}/photos` — list unit photos.
-     * Note: This endpoint needs to be implemented in the backend.
+     * Les photos sont retournées dans l'enveloppe standard `Feedback`.
      */
-    async fetchUnitPhotos(uuid: string): Promise<string[]> {
-        const { data } = await apiClient.get<Feedback<string[]>>(`/v1/units/${uuid}/photos`);
+    async fetchUnitPhotos(uuid: string): Promise<Array<{ uuid: string; url: string; position: number }>> {
+        const { data } = await apiClient.get<Feedback<Array<{ uuid: string; url: string; position: number }>>>(`/v1/units/${uuid}/photos`);
         return data.data ?? [];
     },
 
@@ -119,10 +119,10 @@ export const mediaService = {
 
     /**
      * `GET /api/v1/media/buildings/{uuid}/photos` — list building photos.
-     * Note: This endpoint needs to be implemented in the backend.
+     * Les photos sont retournées dans l'enveloppe standard `Feedback`.
      */
     async fetchBuildingPhotos(uuid: string): Promise<string[]> {
-        const { data } = await apiClient.get<Feedback<string[]>>(`/v1/media/buildings/${uuid}/photos`);
-        return data.data ?? [];
+        const { data } = await apiClient.get<Feedback<{ photos: string[] }>>(`/v1/media/buildings/${uuid}/photos`);
+        return data.data?.photos ?? [];
     },
 };

@@ -4,8 +4,9 @@ import { useToast } from '../../../../app/layout/MainLayout/contexts/ToastContex
 import { useAuth } from '../../../../app/providers/AuthProvider';
 import { useOrganization } from '../../../../app/providers/OrganizationProvider';
 import { ApiError } from '../../../../../services/api/api.types';
+import { fetchCities } from '../../../admin_immobilier/shared/services/referenceService';
 import { administrationService } from '../services/administrationService';
-import type { AdminApiUser, TeamMember } from '../types/administration.types';
+import type { AdminApiUser, AdminCityOption, TeamMember } from '../types/administration.types';
 
 function actionErrorMessage(cause: unknown): string {
     return cause instanceof ApiError ? cause.message : 'Une erreur inattendue est survenue. Réessayez.';
@@ -35,6 +36,7 @@ export function useAdministration() {
     const selfUuid = user?.uuid ?? null;
 
     const [members, setMembers] = useState<TeamMember[]>([]);
+    const [cities, setCities] = useState<AdminCityOption[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [search, setSearch] = useState('');
@@ -43,6 +45,7 @@ export function useAdministration() {
     const reload = useCallback(async () => {
         if (!organizationUuid) {
             setMembers([]);
+            setCities([]);
             setLoading(false);
 
             return;
@@ -50,8 +53,12 @@ export function useAdministration() {
         setLoading(true);
         setError(null);
         try {
-            const users = await administrationService.list(organizationUuid);
+            const [users, cityPage] = await Promise.all([
+                administrationService.list(organizationUuid),
+                fetchCities(organizationUuid),
+            ]);
             setMembers(users.map((user) => toMember(user, organizationUuid, selfUuid)));
+            setCities(cityPage.items.map((city) => ({ uuid: city.id, name: city.name })));
         } catch (cause) {
             setError(cause instanceof ApiError ? cause.message : 'Impossible de charger les membres de l’équipe.');
         } finally {
@@ -68,16 +75,26 @@ export function useAdministration() {
             && (role === 'all' || member.role === role);
     }), [members, search, role]);
 
-    /** `POST /v1/identity/organization-users/create-admin` — rôle fixé à ADMIN_IMMOBILIER. */
-    const createMember = async (input: { fullName: string; email: string; phone: string }): Promise<void> => {
+    /**
+     * `POST /v1/identity/organization-users/create-admin` — le PATRON choisit
+     * le rôle ; un ADMIN_VILLE exige au moins une ville (`cityUuids`).
+     */
+    const createMember = async (input: {
+        fullName: string;
+        email: string;
+        phone: string;
+        role: 'admin_immobilier' | 'admin_ville';
+        cityUuids?: string[];
+    }): Promise<void> => {
         if (!organizationUuid) return;
         try {
             const result = await administrationService.createAdmin({
                 organizationUuid,
-                role: 'admin_immobilier',
+                role: input.role,
                 email: input.email,
                 fullName: input.fullName,
                 phone: input.phone,
+                ...(input.role === 'admin_ville' ? { cityUuids: input.cityUuids ?? [] } : {}),
             });
             push('success', result.flushDescription ?? 'Le membre a été créé. Un email de configuration du mot de passe a été envoyé.');
             if (result.warnings.email) {
@@ -126,8 +143,33 @@ export function useAdministration() {
         }
     };
 
+    /**
+     * `PUT /v1/identity/users/{uuid}` avec `isActive: true` — réintègre un
+     * compte suspendu. Le backend exige un nom non vide : on reprend celui de
+     * la fiche courante (scindé prénom/nom).
+     */
+    const reactivateMember = async (id: string): Promise<void> => {
+        const current = members.find((member) => member.id === id);
+        if (!current) return;
+        const [firstName, ...rest] = current.name.trim().split(/\s+/);
+        try {
+            const result = await administrationService.reactivateMember(id, {
+                firstName: firstName || '-',
+                lastName: rest.join(' ') || '-',
+            });
+            if (organizationUuid) {
+                setMembers((list) => list.map((member) => member.id === id ? toMember(result.user, organizationUuid, selfUuid) : member));
+            }
+            push('success', result.flushDescription ?? 'Le compte a été réactivé.');
+        } catch (cause) {
+            push('error', actionErrorMessage(cause));
+            throw cause;
+        }
+    };
+
     return {
         members,
+        cities,
         rows,
         loading,
         error,
@@ -139,5 +181,6 @@ export function useAdministration() {
         createMember,
         updateMember,
         suspendMember,
+        reactivateMember,
     };
 }

@@ -77,6 +77,22 @@ final class WorkerRepository extends ServiceEntityRepository
             ->getResult();
     }
 
+    /** @param list<City> $cities */
+    public function findByCities(array $cities): array
+    {
+        if ($cities === []) {
+            return [];
+        }
+
+        return $this->createQueryBuilder('w')
+            ->innerJoin('w.assignments', 'wa')
+            ->andWhere('wa.city IN (:cities)')
+            ->setParameter('cities', $cities)
+            ->distinct()
+            ->getQuery()
+            ->getResult();
+    }
+
     public function findOneByNationalIdAndOrganization(string $nationalId, \App\Entity\Identity\Organization $organization): ?Worker
     {
         return $this->createQueryBuilder('w')

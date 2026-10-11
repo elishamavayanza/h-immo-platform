@@ -10,6 +10,7 @@ use App\Entity\Identity\Organization;
 use App\Entity\Identity\User;
 use App\Entity\Property\City;
 use App\Entity\Staff\Worker;
+use App\Enum\OrganizationRole;
 use App\Mapper\Staff\WorkerMapper;
 use App\Repository\Identity\OrganizationRepository;
 use App\Repository\Property\CityRepository;
@@ -230,7 +231,16 @@ final readonly class WorkerService
             if (!$this->securityService->canAccessOrganization($org, SecurityAction::VIEW_WORKER)) {
                 continue;
             }
-            $result = $this->workerRepository->findByOrganization($org);
+            if ($this->securityService->getOrganizationRole($this->securityService->getCurrentUser(), $org) === OrganizationRole::ADMIN_VILLE) {
+                // La liste ne doit révéler que les personnes rattachées aux
+                // villes UserCity autorisées ; un filtre d'affichage client
+                // laisserait fuiter les travailleurs des autres villes.
+                $result = $this->workerRepository->findByCities(
+                    $this->securityService->getAccessibleCitiesForOrganization($org)
+                );
+            } else {
+                $result = $this->workerRepository->findByOrganization($org);
+            }
             $total += count($result);
             $items = array_merge($items, $result);
         }

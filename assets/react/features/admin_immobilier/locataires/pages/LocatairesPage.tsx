@@ -42,19 +42,22 @@ interface TenantForm {
 const EMPTY_TENANT_FORM: TenantForm = { type: 'individual', firstName: '', lastName: '', companyName: '', phone: '', email: '', address: '', notes: '' };
 
 function tenantToForm(row: LocataireRow): TenantForm {
+    const nameParts = row.name.trim().split(/\s+/).filter(Boolean);
+    const firstName = row.type === 'individual' ? nameParts.shift() ?? '' : '';
+
     return {
         type: row.type,
-        firstName: '',
-        lastName: '',
-        companyName: '',
+        firstName,
+        lastName: row.type === 'individual' ? nameParts.join(' ') : '',
+        companyName: row.type === 'company' ? row.name : '',
         phone: row.phone ?? '',
-        email: row.sublabel.includes('@') ? row.sublabel.split(' · ')[0] : '',
+        email: row.email ?? '',
         address: row.address === '—' ? '' : row.address,
-        notes: '',
+        notes: row.notes ?? '',
     };
 }
 
-export function LocatairesPage() {
+export function LocatairesPage({ readOnly = false }: { readOnly?: boolean } = {}) {
     const [searchParams] = useSearchParams();
     const parcelUuid = searchParams.get('parcelUuid');
     const buildingUuid = searchParams.get('buildingUuid');
@@ -182,7 +185,7 @@ export function LocatairesPage() {
         }
     };
 
-    let body = <LocatairesTable rows={rows} role={organizationRole} onEdit={openEdit} onArchive={requestArchive} onNewLease={openNewLease} onActivateLease={setLeaseToActivate} />;
+    let body = <LocatairesTable rows={rows} role={organizationRole} onEdit={openEdit} onArchive={requestArchive} onNewLease={openNewLease} onActivateLease={setLeaseToActivate} readOnly={readOnly} />;
     if (isLoading) {
         body = <EmptyState icon={<Spinner size="large" />} title="Chargement des locataires…" description="Récupération des fiches et de leurs baux en cours." />;
     } else if (error) {
@@ -196,7 +199,7 @@ export function LocatairesPage() {
 
     return <main className="organization-page organization-operational-page"><header className="organization-page__header"><div><span className="organization-page__eyebrow">GESTION LOCATIVE</span><h1>Locataires</h1><p>Retrouvez les occupants, leurs baux et leur situation.</p></div></header>
         <OrganizationSummary items={[{ label: 'Locataires', value: <>{data?.total ?? 0}</> }, { label: 'Baux en cours', value: <>{data?.activeLeases ?? 0}</> }, { label: 'Personnes morales', value: <>{(data?.rows ?? []).filter((row) => row.type === 'company').length}</> }]} />
-        <Card className="organization-table-card" padding="medium"><div className="organization-table-toolbar"><div><h2>Liste des locataires</h2><p>{data?.note ?? 'La fin du bail affichée correspond au bail actif du locataire.'}</p></div><div className="organization-filters organization-filters--tenant"><SearchInput value={search} onSearch={setSearch} placeholder="Rechercher un locataire…" fullWidth /><Select aria-label="Filtrer par type" value={type} onChange={(event) => setType(event.target.value)} options={[{ value: 'all', label: 'Tous les types' }, { value: 'individual', label: 'Personnes physiques' }, { value: 'company', label: 'Personnes morales' }]} />{canDo(organizationRole, 'create_tenant') && <Button onClick={openCreate}>＋ Ajouter un locataire</Button>}</div></div>{body}</Card>
+        <Card className="organization-table-card" padding="medium"><div className="organization-table-toolbar"><div><h2>Liste des locataires</h2><p>{data?.note ?? 'La fin du bail affichée correspond au bail actif du locataire.'}</p></div><div className="organization-filters organization-filters--tenant"><SearchInput value={search} onSearch={setSearch} placeholder="Rechercher un locataire…" fullWidth /><Select aria-label="Filtrer par type" value={type} onChange={(event) => setType(event.target.value)} options={[{ value: 'all', label: 'Tous les types' }, { value: 'individual', label: 'Personnes physiques' }, { value: 'company', label: 'Personnes morales' }]} />{!readOnly && canDo(organizationRole, 'create_tenant') && <Button onClick={openCreate}>＋ Ajouter un locataire</Button>}</div></div>{body}</Card>
         <ConfirmDialog
             isOpen={pending !== null}
             onClose={cancelArchive}

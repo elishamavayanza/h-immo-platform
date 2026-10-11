@@ -108,6 +108,22 @@ final readonly class UnitPhotoService
         return $out;
     }
 
+    /** Galerie de gestion : l'UUID sert à supprimer la photo dans son unité. */
+    public function listForManagement(Unit $unit): array
+    {
+        $out = [];
+
+        foreach ($this->unitPhotoRepository->findForUnit($unit) as $photo) {
+            $out[] = [
+                'uuid' => $photo->getUuid()->toRfc4122(),
+                'url' => $this->fileUploadService->getPublicUrl($photo->getPath()),
+                'position' => $photo->getPosition(),
+            ];
+        }
+
+        return $out;
+    }
+
     public function countForUnit(Unit $unit): int
     {
         return $this->unitPhotoRepository->countForUnit($unit);

@@ -11,7 +11,7 @@ import type { PersonnelRow } from '../types/personnel.types';
  * Table des travailleurs : actions Modifier, Affecter.
  * Pas de suppression (aucune route DELETE côté backend).
  */
-export function PersonnelTable({ rows, role, onEdit, onAssign }: { rows: PersonnelRow[]; role: OrganizationRole | null; onEdit: (row: PersonnelRow) => void; onAssign: (row: PersonnelRow) => void }) {
+export function PersonnelTable({ rows, role, onEdit, onAssign, onEditAssignment, onEndAssignment }: { rows: PersonnelRow[]; role: OrganizationRole | null; onEdit: (row: PersonnelRow) => void; onAssign: (row: PersonnelRow) => void; onEditAssignment: (row: PersonnelRow) => void; onEndAssignment: (row: PersonnelRow) => void }) {
     const columns: DataTableColumn<PersonnelRow>[] = [
         { key: 'name', title: 'Membre du personnel', sortable: true, render: (row) => <div className="organization-property-name"><strong>{row.name}</strong><small>{row.email ?? row.phone}</small></div> },
         { key: 'role', title: 'Fonction', sortable: true, render: (row) => row.role },
@@ -28,6 +28,12 @@ export function PersonnelTable({ rows, role, onEdit, onAssign }: { rows: Personn
                         : []),
                     ...(canDo(role, 'create_worker_assignment')
                         ? [{ id: 'assign', label: 'Affecter', icon: <Icon name="mapPin" />, onClick: () => onAssign(row) }]
+                        : []),
+                    ...(row.latestAssignment && canDo(role, 'update_worker_assignment')
+                        ? [{ id: 'edit-assignment', label: 'Modifier l’affectation', icon: <Icon name="edit" />, onClick: () => onEditAssignment(row) }]
+                        : []),
+                    ...(row.latestAssignment && row.latestAssignment.endDate === null && canDo(role, 'delete_worker_assignment')
+                        ? [{ id: 'end-assignment', label: 'Terminer l’affectation', icon: <Icon name="archive" />, onClick: () => onEndAssignment(row) }]
                         : []),
                 ];
 

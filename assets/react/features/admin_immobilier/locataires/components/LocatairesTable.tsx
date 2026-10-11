@@ -25,13 +25,16 @@ interface LocatairesTableProps {
     onArchive: (row: LocataireRow) => void;
     onNewLease: (row: LocataireRow) => void;
     onActivateLease: (row: LocataireRow) => void;
+    /** Lecture seule (espace PATRON) : masque toute action d'écriture. */
+    readOnly?: boolean;
 }
 
 /**
  * Table des locataires : actions Modifier, Archiver, Nouveau bail.
  * Archiver = suppression logique (`ARCHIVE_TENANT`). Pas de suppression définitive.
+ * `readOnly` masque la colonne d'actions (le Patron consulte sans opérer).
  */
-export function LocatairesTable({ rows, role, onEdit, onArchive, onNewLease, onActivateLease }: LocatairesTableProps) {
+export function LocatairesTable({ rows, role, onEdit, onArchive, onNewLease, onActivateLease, readOnly = false }: LocatairesTableProps) {
     const columns: DataTableColumn<LocataireRow>[] = [
         {
             key: 'name',
@@ -47,6 +50,8 @@ export function LocatairesTable({ rows, role, onEdit, onArchive, onNewLease, onA
             key: 'actions',
             title: 'Actions',
             render: (row) => {
+                if (readOnly) return '—';
+
                 const items: PopoverMenuItem[] = [
                     ...(canDo(role, 'update_tenant')
                         ? [{ id: 'edit', label: 'Modifier', icon: <Icon name="edit" />, onClick: () => onEdit(row) }]

@@ -3,7 +3,6 @@ import { useNavigate } from 'react-router-dom';
 import { Spinner } from '../../../../components/UI/Spinner';
 import { EmptyState } from '../../../../components/Data/EmptyState';
 import { Button } from '../../../../components/UI/Button';
-import { CitySelect } from '../../../shared/components/CitySelect';
 import { NoAssignedCityState } from '../../../shared/components/NoAssignedCityState';
 import { useAdminVilleDashboard } from '../hooks/useAdminVilleDashboard';
 import { AdminVilleOverview } from '../components/AdminVilleOverview';
@@ -18,7 +17,7 @@ import '../../../../../styles/pages/admin_ville/dashboard/_dashboard.scss';
  */
 export function AdminVilleDashboardPage() {
     const navigate = useNavigate();
-    const { data, isLoading, error, reload, cityUuid, setCityUuid, citiesLoading, hasAssignedCities } = useAdminVilleDashboard();
+    const { data, isLoading, error, reload, citiesLoading, hasAssignedCities } = useAdminVilleDashboard();
 
     if (citiesLoading) {
         return <div className="main-layout__page-loading" aria-busy="true"><Spinner size="large" className="spinner--page" /><span>Chargement de votre périmètre…</span></div>;
@@ -48,16 +47,11 @@ export function AdminVilleDashboardPage() {
                     <h1>Tableau de bord</h1>
                     <p>Suivez l’activité immobilière et locative de {data.cityName}.</p>
                 </div>
-                <div className="organization-page__header-actions">
-                    <CitySelect id="dashboard-city" value={cityUuid} onChange={setCityUuid} />
-                </div>
             </header>
 
-            <nav className="organization-quick-actions" aria-label="Accès rapides">
-                <Button variant="outline" onClick={() => navigate('/app/location/loyers')}>Voir les impayés</Button>
-                <Button variant="outline" onClick={() => navigate('/app/patrimoine')}>Voir le patrimoine</Button>
-                <Button variant="outline" onClick={() => navigate('/app/location/locataires')}>Voir les locataires</Button>
-                <Button variant="outline" onClick={() => navigate('/app/rapports')}>Voir les rapports</Button>
+            <nav className="organization-quick-actions" aria-label="Actions principales">
+                <Button variant="outline" onClick={() => navigate('/app/location/loyers')}>Consulter les impayés</Button>
+                <Button variant="outline" onClick={() => navigate('/app/patrimoine')}>Gérer le patrimoine</Button>
             </nav>
 
             <AdminVilleOverview data={data} />

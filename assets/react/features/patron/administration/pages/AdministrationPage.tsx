@@ -7,6 +7,7 @@ import { Select } from '../../../../components/Forms/Select';
 import { Input } from '../../../../components/Forms/Input';
 import { FormField } from '../../../../components/Forms/FormField';
 import { Textarea } from '../../../../components/Forms/Textarea';
+import { Checkbox } from '../../../../components/Forms/Checkbox';
 import { Button } from '../../../../components/UI/Button';
 import { Modal } from '../../../../components/UI/Modal';
 import { Loading } from '../../../../components/UI/Loading';
@@ -15,6 +16,9 @@ import { EmptyState } from '../../../../components/Data/EmptyState';
 import { useOrganization } from '../../../../app/providers/OrganizationProvider';
 import { useAdministration } from '../hooks/useAdministration';
 import { TeamTable } from '../components/TeamTable';
+import { OrganizationProfileCard } from '../components/OrganizationProfileCard';
+import { CityAssignmentModal } from '../components/CityAssignmentModal';
+import { fieldErrorMap } from '../../../shared/actionErrors';
 import type { TeamMember } from '../types/administration.types';
 import '../../../../../styles/pages/patron/administration/_administration.scss';
 
@@ -25,21 +29,29 @@ const ROLE_OPTIONS = [
     { value: 'admin_ville', label: 'Admin ville' },
 ];
 
+const INVITE_ROLE_OPTIONS = [
+    { value: 'admin_immobilier', label: 'Admin immobilier' },
+    { value: 'admin_ville', label: 'Admin ville' },
+];
+
 /**
  * Administration : entrée unique du PATRON, branchée sur l'API.
  *
- * - Liste : tous les membres de l'organization active (`GET /v1/identity/users`
- *   filtré côté service sur `organizationUuid`).
- * - « Inviter un membre » crée un ADMIN_IMMOBILIER (`/organization-users/create-admin`) :
- *   le PATRON n'a que ce rôle à délégable côté UI.
- * - Actions : Modifier (fiche nom/téléphone via `PUT /users/{uuid}`) et
- *   Suspendre (désactivation + email via `POST /users/{uuid}/suspend`).
+ * - Organisation : coordonnées du tenant (`PUT /v1/identity/organizations/{uuid}`).
+ * - Équipe : membres de l'organization active (`GET /v1/identity/users` filtré
+ *   côté service sur `organizationUuid`).
+ * - « Inviter un membre » crée un ADMIN_IMMOBILIER ou un ADMIN_VILLE (ce
+ *   dernier avec au moins une ville) via `/organization-users/create-admin`.
+ * - Actions : Modifier (fiche), Gérer les villes (ADMIN_VILLE,
+ *   `/identity/user-cities`), Suspendre (désactivation + email) et Réactiver
+ *   (`PUT /users/{uuid}` `isActive: true`).
  *   Pas de suppression : les comptes et leurs traces sont conservés.
  */
 export function AdministrationPage() {
     const { currentOrganization } = useOrganization();
     const {
         members,
+        cities,
         rows,
         loading,
         error,
@@ -51,10 +63,12 @@ export function AdministrationPage() {
         createMember,
         updateMember,
         suspendMember,
+        reactivateMember,
     } = useAdministration();
 
     const [inviteOpen, setInviteOpen] = useState(false);
-    const [inviteForm, setInviteForm] = useState({ fullName: '', email: '', phone: '' });
+    const [inviteForm, setInviteForm] = useState<{ fullName: string; email: string; phone: string; role: 'admin_immobilier' | 'admin_ville'; cityUuids: string[] }>({ fullName: '', email: '', phone: '', role: 'admin_immobilier', cityUuids: [] });
+    const [inviteErrors, setInviteErrors] = useState<Record<string, string>>({});
     const [creating, setCreating] = useState(false);
 
     const [editTarget, setEditTarget] = useState<TeamMember | null>(null);
@@ -65,16 +79,41 @@ export function AdministrationPage() {
     const [suspendReason, setSuspendReason] = useState('');
     const [suspending, setSuspending] = useState(false);
 
+    const [citiesTarget, setCitiesTarget] = useState<TeamMember | null>(null);
+    const [reactivating, setReactivating] = useState<string | null>(null);
+
+    const closeInvite = () => {
+        setInviteOpen(false);
+        setInviteErrors({});
+    };
+
+    const toggleInviteCity = (cityUuid: string) => {
+        setInviteForm((current) => ({
+            ...current,
+            cityUuids: current.cityUuids.includes(cityUuid)
+                ? current.cityUuids.filter((id) => id !== cityUuid)
+                : [...current.cityUuids, cityUuid],
+        }));
+    };
+
     const submitInvite = async (event: FormEvent<HTMLFormElement>) => {
         event.preventDefault();
         if (creating) return;
         setCreating(true);
+        setInviteErrors({});
         try {
-            await createMember({ fullName: inviteForm.fullName.trim(), email: inviteForm.email.trim(), phone: inviteForm.phone.trim() });
-            setInviteOpen(false);
-            setInviteForm({ fullName: '', email: '', phone: '' });
-        } catch {
-            // Le toast d'échec est déjà émis par le hook.
+            await createMember({
+                fullName: inviteForm.fullName.trim(),
+                email: inviteForm.email.trim(),
+                phone: inviteForm.phone.trim(),
+                role: inviteForm.role,
+                cityUuids: inviteForm.cityUuids,
+            });
+            closeInvite();
+            setInviteForm({ fullName: '', email: '', phone: '', role: 'admin_immobilier', cityUuids: [] });
+        } catch (cause) {
+            const map = fieldErrorMap(cause);
+            if (Object.keys(map).length > 0) setInviteErrors(map);
         } finally {
             setCreating(false);
         }
@@ -118,15 +157,29 @@ export function AdministrationPage() {
         }
     };
 
+    const handleReactivate = async (member: TeamMember) => {
+        if (reactivating) return;
+        setReactivating(member.id);
+        try {
+            await reactivateMember(member.id);
+        } catch {
+            // Le toast d'échec est déjà émis par le hook.
+        } finally {
+            setReactivating(null);
+        }
+    };
+
     return (
         <main className="organization-page organization-operational-page">
             <header className="organization-page__header">
                 <div>
                     <span className="organization-page__eyebrow">ACCÈS ET ÉQUIPE</span>
                     <h1>Administration</h1>
-                    <p>Gérez l’équipe de {currentOrganization?.name ?? 'l’organisation'} : invitation d’administrateurs, modification et suspension des accès.</p>
+                    <p>Gérez l’organisation de {currentOrganization?.name ?? 'votre entreprise'} : coordonnées, invitation d’administrateurs, périmètres de villes et accès.</p>
                 </div>
             </header>
+
+            <OrganizationProfileCard />
 
             <OrganizationSummary items={[
                 { label: 'Membres de l’équipe', value: <>{members.length}</> },
@@ -138,7 +191,7 @@ export function AdministrationPage() {
                 <div className="organization-table-toolbar">
                     <div>
                         <h2>Équipe de l’organisation</h2>
-                        <p>L’invitation crée un administrateur immobilier ; modifier et suspendre s’appliquent à tous les membres.</p>
+                        <p>Invitez des administrateurs immobilier ou ville (avec leurs villes), puis modifiez, suspendez ou réactivez les accès.</p>
                     </div>
                     <div className="organization-filters organization-filters--tenant">
                         <SearchInput value={search} onSearch={setSearch} placeholder="Rechercher un membre…" fullWidth />
@@ -152,24 +205,49 @@ export function AdministrationPage() {
                 ) : error && members.length === 0 ? (
                     <ErrorState title="Impossible de charger l’équipe" message={error} onRetry={() => void reload()} />
                 ) : rows.length > 0 ? (
-                    <TeamTable rows={rows} onEdit={openEdit} onSuspend={openSuspend} />
+                    <TeamTable
+                        rows={rows}
+                        onEdit={openEdit}
+                        onSuspend={openSuspend}
+                        onReactivate={(member) => void handleReactivate(member)}
+                        onManageCities={setCitiesTarget}
+                    />
                 ) : (
                     <EmptyState title="Aucun membre" description="Aucun membre ne correspond à cette recherche ou à ces filtres." />
                 )}
             </Card>
 
-            <Modal isOpen={inviteOpen} onClose={() => setInviteOpen(false)} title="Inviter un membre" size="medium" footer={<><Button variant="outline" onClick={() => setInviteOpen(false)}>Annuler</Button><Button type="submit" form="invite-member-form" isLoading={creating}>{creating ? 'Invitation…' : 'Inviter le membre'}</Button></>}>
+            <Modal isOpen={inviteOpen} onClose={closeInvite} title="Inviter un membre" size="medium" footer={<><Button variant="outline" onClick={closeInvite}>Annuler</Button><Button type="submit" form="invite-member-form" isLoading={creating}>{creating ? 'Invitation…' : 'Inviter le membre'}</Button></>}>
                 <form id="invite-member-form" className="organization-management-form" onSubmit={submitInvite}>
-                    <p className="organization-management-form__hint">Ce membre sera créé avec le rôle <strong>Admin immobilier</strong>. Un email de configuration de mot de passe lui sera envoyé.</p>
-                    <FormField label="Nom complet" htmlFor="invite-full-name" required helpText="Nom et prénom de l’administrateur.">
+                    <p className="organization-management-form__hint">Un email de configuration de mot de passe sera envoyé au membre invité.</p>
+                    <FormField label="Rôle" htmlFor="invite-role" required error={inviteErrors.role}>
+                        <Select id="invite-role" value={inviteForm.role} onChange={(event) => setInviteForm((current) => ({ ...current, role: event.target.value as 'admin_immobilier' | 'admin_ville' }))} options={INVITE_ROLE_OPTIONS} />
+                    </FormField>
+                    <FormField label="Nom complet" htmlFor="invite-full-name" required error={inviteErrors.fullName}>
                         <Input id="invite-full-name" value={inviteForm.fullName} onChange={(event) => setInviteForm((current) => ({ ...current, fullName: event.target.value }))} placeholder="Ex. : Jean Dupont" required fullWidth maxLength={200} />
                     </FormField>
-                    <FormField label="Adresse e-mail" htmlFor="invite-email" required helpText="Ce sera son identifiant de connexion.">
+                    <FormField label="Adresse e-mail" htmlFor="invite-email" required helpText="Ce sera son identifiant de connexion." error={inviteErrors.email}>
                         <Input id="invite-email" type="email" value={inviteForm.email} onChange={(event) => setInviteForm((current) => ({ ...current, email: event.target.value }))} placeholder="admin@immo-rdc.cd" required fullWidth maxLength={180} />
                     </FormField>
-                    <FormField label="Téléphone" htmlFor="invite-phone" required>
+                    <FormField label="Téléphone" htmlFor="invite-phone" required error={inviteErrors.phone}>
                         <Input id="invite-phone" value={inviteForm.phone} onChange={(event) => setInviteForm((current) => ({ ...current, phone: event.target.value }))} placeholder="+243…" required fullWidth maxLength={30} />
                     </FormField>
+                    {inviteForm.role === 'admin_ville' && (
+                        <FormField label="Villes attribuées" error={inviteErrors.cityUuids} helpText="Au moins une ville : l’administrateur ville n’agit que dans son périmètre.">
+                            <div className="patron-city-picker">
+                                {cities.length === 0 ? (
+                                    <p className="patron-city-picker__empty">Aucune ville dans l’organisation.</p>
+                                ) : cities.map((city) => (
+                                    <Checkbox
+                                        key={city.uuid}
+                                        label={city.name}
+                                        checked={inviteForm.cityUuids.includes(city.uuid)}
+                                        onChange={() => toggleInviteCity(city.uuid)}
+                                    />
+                                ))}
+                            </div>
+                        </FormField>
+                    )}
                 </form>
             </Modal>
 
@@ -193,6 +271,8 @@ export function AdministrationPage() {
                     </FormField>
                 </form>
             </Modal>
+
+            <CityAssignmentModal member={citiesTarget} onClose={() => setCitiesTarget(null)} />
         </main>
     );
 }

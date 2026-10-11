@@ -23,6 +23,19 @@ export interface PersonnelRow {
     buildingIds: string[];
     phone: string;
     email: string | null;
+    latestAssignment: {
+        id: string;
+        cityId: string;
+        role: string;
+        monthlySalary: string;
+        currency: string;
+        startDate: string;
+        endDate: string | null;
+        parcelId: string | null;
+        buildingId: string | null;
+        unitId: string | null;
+        notes: string | null;
+    } | null;
 }
 
 export interface PersonnelData {

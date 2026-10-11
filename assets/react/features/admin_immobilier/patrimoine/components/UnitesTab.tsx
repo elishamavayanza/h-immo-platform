@@ -22,6 +22,7 @@ import { formatMoney } from '../../../../../utils/format.utils';
 import { canDo } from '../../../shared/permissions';
 import { fieldErrorMap } from '../../../shared/actionErrors';
 import { ModalActions } from '../../../shared/components/ModalActions';
+import { PhotoGallery } from '../../../shared/media/components/PhotoGallery';
 import type { BuildingItem, UnitItem } from '../../shared/types/reference.types';
 import type { UnitPayload } from '../services/patrimoineService';
 
@@ -88,14 +89,17 @@ interface UnitesTabProps {
     onPublish: (unit: UnitItem) => Promise<void>;
     selectedBuildingId: string | null;
     onBuildingFilter: (uuid: string | null) => void;
+    /** Lecture seule (espace PATRON) : masque toute action d'écriture. */
+    readOnly?: boolean;
 }
 
 /**
  * Onglet Unités : CRUD du niveau feuille + bascule de publication vitrine.
  * Le bâtiment est figé après création. « Publier / Retirer » suit l'état
  * courant (`isPublished`) ; une unité occupée est refusée par le backend (422).
+ * `readOnly` masque les écritures (Patron).
  */
-export function UnitesTab({ units, buildings, role, isLoading, error, note, onReload, onCreate, onUpdate, onDelete, onPublish, selectedBuildingId, onBuildingFilter }: UnitesTabProps) {
+export function UnitesTab({ units, buildings, role, isLoading, error, note, onReload, onCreate, onUpdate, onDelete, onPublish, selectedBuildingId, onBuildingFilter, readOnly = false }: UnitesTabProps) {
     const [search, setSearch] = useState('');
     const [modalOpen, setModalOpen] = useState(false);
     const [editTarget, setEditTarget] = useState<UnitItem | null>(null);
@@ -103,6 +107,7 @@ export function UnitesTab({ units, buildings, role, isLoading, error, note, onRe
     const [formErrors, setFormErrors] = useState<Record<string, string>>({});
     const [submitting, setSubmitting] = useState(false);
     const [deleteTarget, setDeleteTarget] = useState<UnitItem | null>(null);
+    const [photoTarget, setPhotoTarget] = useState<UnitItem | null>(null);
 
     const buildingById = new Map(buildings.map((building) => [building.id, building]));
     const buildingOptions = buildings.map((building) => ({ value: building.id, label: `${building.name} · ${building.reference}` }));
@@ -191,9 +196,14 @@ export function UnitesTab({ units, buildings, role, isLoading, error, note, onRe
             key: 'actions',
             title: 'Actions',
             render: (unit) => {
+                if (readOnly) return '—';
+
                 const items: PopoverMenuItem[] = [
                     ...(canDo(role, 'update_unit')
                         ? [{ id: 'edit', label: 'Modifier', icon: <Icon name="edit" />, onClick: () => openEdit(unit) }]
+                        : []),
+                    ...(!readOnly && canDo(role, 'publish_listing')
+                        ? [{ id: 'photos', label: 'Gérer les photos', icon: <Icon name="camera" />, onClick: () => setPhotoTarget(unit) }]
                         : []),
                     ...(canDo(role, 'publish_listing')
                         ? [{ id: 'publish', label: unit.isPublished ? 'Retirer de la vitrine' : 'Publier', icon: <Icon name="cloud" />, onClick: () => void onPublish(unit) }]
@@ -229,7 +239,7 @@ export function UnitesTab({ units, buildings, role, isLoading, error, note, onRe
                 <div className="organization-filters">
                     <SearchInput value={search} onSearch={setSearch} placeholder="Rechercher une unité…" fullWidth />
                     <Select aria-label="Filtrer par bâtiment" value={selectedBuildingId ?? 'all'} onChange={(event) => onBuildingFilter(event.target.value === 'all' ? null : event.target.value)} options={[{ value: 'all', label: 'Tous les bâtiments' }, ...buildingOptions]} />
-                    {canDo(role, 'create_unit') && <Button onClick={openCreate} disabled={buildings.length === 0}>＋ Ajouter une unité</Button>}
+                    {!readOnly && canDo(role, 'create_unit') && <Button onClick={openCreate} disabled={buildings.length === 0}>＋ Ajouter une unité</Button>}
                 </div>
             </div>
             {selectedBuildingId && <div className="patrimoine-context"><span>Bâtiment sélectionné : <strong>{buildingById.get(selectedBuildingId)?.name ?? 'Bâtiment'}</strong></span><Button variant="outline" onClick={() => onBuildingFilter(null)}>Effacer le filtre</Button></div>}
@@ -288,6 +298,10 @@ export function UnitesTab({ units, buildings, role, isLoading, error, note, onRe
                 confirmLabel="Supprimer"
                 cancelLabel="Annuler"
             />
+
+            <Modal isOpen={photoTarget !== null} onClose={() => setPhotoTarget(null)} title={photoTarget ? `Photos de « ${photoTarget.reference} »` : 'Photos de l’unité'} size="large" footer={<Button variant="outline" onClick={() => setPhotoTarget(null)}>Fermer</Button>}>
+                {photoTarget && <PhotoGallery entityUuid={photoTarget.id} entityType="unit" mode="multiple" onChange={() => {}} />}
+            </Modal>
         </Card>
     );
 }

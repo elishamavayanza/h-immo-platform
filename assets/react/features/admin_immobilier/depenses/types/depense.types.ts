@@ -28,6 +28,7 @@ export interface DepenseRow {
     date: string;
     /** Ville d'imputation. */
     city: string;
+    cityId: string;
     categoryCode: string;
     /** Libellé français de la catégorie. */
     category: string;
@@ -35,9 +36,16 @@ export interface DepenseRow {
     property: string;
     parcelId: string | null;
     buildingId: string | null;
+    unitId: string | null;
+    workerId: string | null;
     description: string;
     amount: string;
     currency: string;
+    expenseDate: string;
+    method: string | null;
+    supplier: string | null;
+    reference: string | null;
+    notes: string | null;
 }
 
 export interface DepensesData {

@@ -9,6 +9,7 @@ use App\Entity\Property\Parcel;
 use App\Entity\Property\Building;
 use App\Entity\Property\Unit;
 use App\Entity\Staff\WorkerAssignment;
+use App\Repository\UuidParameterTrait;
 use App\Service\System\DateTimeService;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\Persistence\ManagerRegistry;
@@ -21,6 +22,8 @@ use Symfony\Component\Uid\Uuid;
  */
 final class WorkerAssignmentRepository extends ServiceEntityRepository
 {
+    use UuidParameterTrait;
+
     public function __construct(ManagerRegistry $registry, private readonly DateTimeService $dateTime)
     {
         parent::__construct($registry, WorkerAssignment::class);
@@ -48,7 +51,7 @@ final class WorkerAssignmentRepository extends ServiceEntityRepository
     {
         return $this->createQueryBuilder('wa')
             ->andWhere('wa.uuid = :uuid')
-            ->setParameter('uuid', $uuid)
+            ->setParameter('uuid', $this->bindableUuid($uuid))
             ->getQuery()
             ->getOneOrNullResult();
     }
@@ -162,7 +165,7 @@ final class WorkerAssignmentRepository extends ServiceEntityRepository
 
         if ($exclude !== null) {
             $qb->andWhere('wa.uuid <> :excludeUuid')
-                ->setParameter('excludeUuid', $exclude->getUuid());
+                ->setParameter('excludeUuid', $this->bindableUuid($exclude->getUuid()));
         }
 
         return $qb->getQuery()->getResult();

@@ -14,6 +14,7 @@ import { UsersPage } from '../../features/super_admin/users/pages/UsersPage';
 import { AuditLogPage } from '../../features/super_admin/audit/pages/AuditLogPage';
 import { ReportsPage as SuperAdminReportsPage } from '../../features/super_admin/reports/pages/ReportsPage';
 import { OrganizationMenuPage } from './OrganizationMenuPage';
+import { OrganisationPage } from '../../features/patron/administration/pages/OrganisationPage';
 import { ProfilePage } from '../../features/shared/account/profile/pages/ProfilePage';
 import { SettingsPage } from '../../features/shared/account/settings/pages/SettingsPage';
 
@@ -87,7 +88,7 @@ export function AppRoutes() {
                 <Route element={<AppRouteGuard />}>
                     <Route index element={<AppLanding />} />
 
-                    {APP_ROUTES.map((route) => {
+{APP_ROUTES.map((route) => {
                         return (
                             <Route
                                 key={route.path}
@@ -100,16 +101,18 @@ export function AppRoutes() {
                                                 ? <OrganizationsPage />
                                                 : route.path === '/app/admin/utilisateurs'
                                                     ? <UsersPage />
-: route.path === '/app/admin/audit'
-                                                            ? <AuditLogPage />
-                                                            : route.path === '/app/admin/rapports'
-                                                                ? <SuperAdminReportsPage />
-                                                                : undefined
+                                                    : route.path === '/app/admin/audit'
+                                                        ? <AuditLogPage />
+                                                        : route.path === '/app/admin/rapports'
+                                                            ? <SuperAdminReportsPage />
+                                                            : undefined
                                         : <OrganizationMenuPage path={route.path} />
                                 }
                             />
                         );
                     })}
+
+                    <Route path="organisation" element={<OrganisationPage />} />
 
                     <Route
                         path={toRelativeAppPath(ACCESS_DENIED_PATH)}

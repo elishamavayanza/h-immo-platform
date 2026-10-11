@@ -16,6 +16,8 @@ export interface LocataireRow {
     sublabel: string;
     type: TenantKind;
     phone: string;
+    email: string | null;
+    notes: string | null;
     address: string;
     /** Référence de l'unité du bail en cours, `null` si aucun bail actif. */
     unitReference: string | null;

@@ -18,6 +18,9 @@ import { REFERENCE_LIMIT, fetchPropertyCatalog } from '../../shared/services/ref
 import type { BuildingItem, CityItem, ParcelItem, UnitItem } from '../../shared/types/reference.types';
 import { fetchAdminImmobilierReport } from '../../reports/services/reportsService';
 import type { AdminImmobilierReport, OccupancyItem } from '../../reports/types';
+import { fetchAdminVilleReport } from '../../../admin_ville/reports/services/reportsService';
+import type { AdminVilleReport } from '../../../admin_ville/reports/types';
+import type { OrganizationRole } from '../../../../../services/api/api.types';
 import type { PatrimoineData, PatrimoineRow } from '../types/patrimoine.types';
 
 /** Adresse/quarter d'une parcelle, avec repli sur sa référence. */
@@ -25,17 +28,38 @@ function parcelSublabel(parcel: { reference: string; address: string; quarter: s
     return [parcel.quarter, parcel.address].filter(Boolean).join(' · ') || parcel.reference;
 }
 
-export async function fetchPatrimoine(organizationUuid: string): Promise<PatrimoineData> {
-    const [catalog, report]: [Awaited<ReturnType<typeof fetchPropertyCatalog>>, AdminImmobilierReport] = await Promise.all([
-        fetchPropertyCatalog(organizationUuid),
-        fetchAdminImmobilierReport(organizationUuid),
-    ]);
+export async function fetchPatrimoine(organizationUuid: string, role: OrganizationRole | null): Promise<PatrimoineData> {
+    const catalog = await fetchPropertyCatalog(organizationUuid);
+    let occupancyByParcel: OccupancyItem[];
+    let occupancyByBuilding: OccupancyItem[];
+    let totalUnits: number;
+    let globalOccupancyRate: number;
+
+    if (role === 'admin_ville') {
+        // Le rapport organisationnel est réservé aux rôles qui gèrent
+        // l'ensemble du portefeuille. Un ADMIN_VILLE ne consulte que les
+        // rapports des villes que le catalogue backend lui a déjà attribuées.
+        const reports: AdminVilleReport[] = await Promise.all(
+            catalog.cities.items.map((city) => fetchAdminVilleReport(city.id)),
+        );
+        occupancyByParcel = reports.flatMap((report) => report.occupancyByParcel);
+        occupancyByBuilding = reports.flatMap((report) => report.occupancyByBuilding);
+        totalUnits = reports.reduce((total, report) => total + report.totalUnits, 0);
+        const occupiedUnits = occupancyByParcel.reduce((total, item) => total + item.occupiedUnits, 0);
+        globalOccupancyRate = totalUnits > 0 ? (occupiedUnits / totalUnits) * 100 : 0;
+    } else {
+        const report: AdminImmobilierReport = await fetchAdminImmobilierReport(organizationUuid);
+        occupancyByParcel = report.occupancyByParcel;
+        occupancyByBuilding = report.occupancyByBuilding;
+        totalUnits = report.totalUnits;
+        globalOccupancyRate = report.globalOccupancyRate;
+    }
 
     const cityById = new Map(catalog.cities.items.map((city) => [city.id, city.name]));
     const parcelById = new Map(catalog.parcels.items.map((parcel) => [parcel.id, parcel]));
 
     const occupancyByUuid = new Map<string, OccupancyItem>();
-    [...report.occupancyByParcel, ...report.occupancyByBuilding].forEach((item) => {
+    [...occupancyByParcel, ...occupancyByBuilding].forEach((item) => {
         if (item.levelUuid) occupancyByUuid.set(item.levelUuid, item);
     });
 
@@ -83,8 +107,8 @@ export async function fetchPatrimoine(organizationUuid: string): Promise<Patrimo
         buildings: catalog.buildings.items,
         units: catalog.units.items,
         availableCities: [...new Set(rows.map((row) => row.city))].filter((city) => city !== '—').sort(),
-        totalUnits: report.totalUnits,
-        globalOccupancyRate: report.globalOccupancyRate,
+        totalUnits,
+        globalOccupancyRate,
         note,
     };
 }
@@ -261,9 +285,7 @@ export async function publishUnit(uuid: string, isPublished: boolean): Promise<U
 export async function addParcelPhotos(parcelUuid: string, files: File[]): Promise<string> {
     const formData = new FormData();
     files.forEach((file) => formData.append('files', file));
-    const { data } = await apiClient.post<Feedback<unknown>>(`/v1/media/parcels/${parcelUuid}/photos`, formData, {
-        headers: { 'Content-Type': 'multipart/form-data' },
-    });
+    const { data } = await apiClient.post<Feedback<unknown>>(`/v1/media/parcels/${parcelUuid}/photos`, formData);
     return data.flushDescription ?? 'Photo(s) ajoutée(s).';
 }
 
@@ -277,9 +299,7 @@ export async function deleteParcelPhoto(parcelUuid: string, filename: string): P
 export async function addUnitPhoto(unitUuid: string, file: File): Promise<string> {
     const formData = new FormData();
     formData.append('file', file);
-    const { data } = await apiClient.post<Feedback<unknown>>(`/v1/units/${unitUuid}/photos`, formData, {
-        headers: { 'Content-Type': 'multipart/form-data' },
-    });
+    const { data } = await apiClient.post<Feedback<unknown>>(`/v1/units/${unitUuid}/photos`, formData);
     return data.flushDescription ?? 'Photo ajoutée.';
 }
 

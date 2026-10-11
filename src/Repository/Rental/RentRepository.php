@@ -276,8 +276,8 @@ class RentRepository extends ServiceEntityRepository
         return $this->createQueryBuilder('r')
             ->andWhere('r.id = :id')
             ->setParameter('id', $rent->getId())
-            ->setLockMode(\Doctrine\DBAL\LockMode::PESSIMISTIC_WRITE)
             ->getQuery()
+            ->setLockMode(\Doctrine\DBAL\LockMode::PESSIMISTIC_WRITE)
             ->getOneOrNullResult();
     }
 
