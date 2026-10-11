@@ -115,6 +115,8 @@ final readonly class ReportService
 
         if ($filter->includeCityBreakdown) {
             $response->occupancyByCity = $this->buildOccupancyByCity($cities);
+            $response->occupancyByParcel = $this->buildOccupancyByParcel($cityIds);
+            $response->occupancyByBuilding = $this->buildOccupancyByBuilding($cityIds);
             if ($filter->includeExpenses) {
                 $response->expensesByCity = $this->buildExpensesByCity($cityIds, $periodFrom, $periodTo);
             }

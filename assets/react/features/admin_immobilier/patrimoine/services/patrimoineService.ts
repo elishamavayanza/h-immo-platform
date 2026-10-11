@@ -20,6 +20,7 @@ import { fetchAdminImmobilierReport } from '../../reports/services/reportsServic
 import type { AdminImmobilierReport, OccupancyItem } from '../../reports/types';
 import { fetchAdminVilleReport } from '../../../admin_ville/reports/services/reportsService';
 import type { AdminVilleReport } from '../../../admin_ville/reports/types';
+import { fetchPatronReport } from '../../../patron/reports/services/reportsService';
 import type { OrganizationRole } from '../../../../../services/api/api.types';
 import type { PatrimoineData, PatrimoineRow } from '../types/patrimoine.types';
 
@@ -46,6 +47,13 @@ export async function fetchPatrimoine(organizationUuid: string, role: Organizati
         occupancyByBuilding = reports.flatMap((report) => report.occupancyByBuilding);
         totalUnits = reports.reduce((total, report) => total + report.totalUnits, 0);
         const occupiedUnits = occupancyByParcel.reduce((total, item) => total + item.occupiedUnits, 0);
+        globalOccupancyRate = totalUnits > 0 ? (occupiedUnits / totalUnits) * 100 : 0;
+    } else if (role === 'patron') {
+        const report = await fetchPatronReport(organizationUuid);
+        occupancyByParcel = report.occupancyByParcel;
+        occupancyByBuilding = report.occupancyByBuilding;
+        totalUnits = report.occupancyByCity.reduce((total, item) => total + item.totalUnits, 0);
+        const occupiedUnits = report.occupancyByCity.reduce((total, item) => total + item.occupiedUnits, 0);
         globalOccupancyRate = totalUnits > 0 ? (occupiedUnits / totalUnits) * 100 : 0;
     } else {
         const report: AdminImmobilierReport = await fetchAdminImmobilierReport(organizationUuid);

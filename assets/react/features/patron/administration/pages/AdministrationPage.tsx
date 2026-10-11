@@ -2,6 +2,7 @@ import { useState, type FormEvent } from 'react';
 
 import { OrganizationSummary } from '../../../shared/components/OrganizationSummary';
 import { Card } from '../../../../components/UI/Card';
+import { Tabs } from '../../../../components/Navigation/Tabs';
 import { SearchInput } from '../../../../components/Forms/SearchInput';
 import { Select } from '../../../../components/Forms/Select';
 import { Input } from '../../../../components/Forms/Input';
@@ -179,15 +180,24 @@ export function AdministrationPage() {
                 </div>
             </header>
 
-            <OrganizationProfileCard />
+            <Tabs
+                className="patron-administration-tabs"
+                variant="underline"
+                tabs={[
+                    { id: 'organization', label: 'Organisation' },
+                    { id: 'team', label: `Équipe (${members.length})` },
+                ]}
+                renderContent={(activeTabId) => activeTabId === 'organization' ? (
+                    <OrganizationProfileCard />
+                ) : (
+                    <>
+                        <OrganizationSummary items={[
+                            { label: 'Membres de l’équipe', value: <>{members.length}</> },
+                            { label: 'Administrateurs ville', value: <>{members.filter((member) => member.role === 'admin_ville').length}</> },
+                            { label: 'Comptes désactivés', value: <>{members.filter((member) => member.status === 'inactive').length}</> },
+                        ]} />
 
-            <OrganizationSummary items={[
-                { label: 'Membres de l’équipe', value: <>{members.length}</> },
-                { label: 'Administrateurs ville', value: <>{members.filter((member) => member.role === 'admin_ville').length}</> },
-                { label: 'Comptes désactivés', value: <>{members.filter((member) => member.status === 'inactive').length}</> },
-            ]} />
-
-            <Card className="organization-table-card" padding="medium">
+                        <Card className="organization-table-card" padding="medium">
                 <div className="organization-table-toolbar">
                     <div>
                         <h2>Équipe de l’organisation</h2>
@@ -215,7 +225,10 @@ export function AdministrationPage() {
                 ) : (
                     <EmptyState title="Aucun membre" description="Aucun membre ne correspond à cette recherche ou à ces filtres." />
                 )}
-            </Card>
+                        </Card>
+                    </>
+                )}
+            />
 
             <Modal isOpen={inviteOpen} onClose={closeInvite} title="Inviter un membre" size="medium" footer={<><Button variant="outline" onClick={closeInvite}>Annuler</Button><Button type="submit" form="invite-member-form" isLoading={creating}>{creating ? 'Invitation…' : 'Inviter le membre'}</Button></>}>
                 <form id="invite-member-form" className="organization-management-form" onSubmit={submitInvite}>

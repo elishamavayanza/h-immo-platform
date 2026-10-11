@@ -46,6 +46,12 @@ final class PatronReportResponse
         public array $occupancyByParcel = [],
 
         /**
+         * @var list<OccupancyItem>
+         */
+        #[OA\Property(type: 'array', items: new OA\Items(ref: OccupancyItem::class))]
+        public array $occupancyByBuilding = [],
+
+        /**
          * @var list<ArrearsItem>
          */
         #[OA\Property(type: 'array', items: new OA\Items(ref: ArrearsItem::class))]
