@@ -20,6 +20,9 @@ final class UserSettingsResponse
         #[OA\Property(description: 'Thème de l\'interface', example: 'dark', nullable: true)]
         public ?string $theme = null,
 
+        #[OA\Property(description: 'Palette de couleur d’accent', example: 'ocean', nullable: true)]
+        public ?string $accentPalette = null,
+
         #[OA\Property(description: 'Langue de l\'interface', example: 'fr', nullable: true)]
         public ?string $locale = null,
 
@@ -53,6 +56,9 @@ final class UserSettingsResponse
 
         return new self(
             theme: $settings['theme'] ?? 'system',
+            accentPalette: in_array($settings['accentPalette'] ?? null, ['ocean', 'violet', 'sage', 'amber', 'coral', 'slate'], true)
+                ? $settings['accentPalette']
+                : 'ocean',
             locale: $settings['locale'] ?? 'fr',
             dateFormat: $settings['dateFormat'] ?? 'DD/MM/YYYY',
             emailNotifications: $settings['emailNotifications'] ?? true,

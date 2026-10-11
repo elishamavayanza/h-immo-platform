@@ -25,7 +25,7 @@
     position: fixed;
     inset: 0;
     z-index: $z-modal;
-    background-color: rgba(0, 0, 0, 0.60);
+    background-color: var(--color-overlay, rgba(4, 9, 14, 0.66));
     backdrop-filter: blur(3px);
     animation: drawer-overlay-in $transition-fast both;
 }

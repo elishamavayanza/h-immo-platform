@@ -3,11 +3,232 @@
 @use './baseVariables/mixins' as *;
 @use './components' as *;
 
+// Tokens sémantiques partagés : les composants et pages gardent leurs styles
+// existants, tandis que ces valeurs CSS rendent la palette interchangeable.
+:root,
+html[data-theme='dark'] {
+    color-scheme: dark;
+    --color-bg-base: #181818;
+    --color-bg-primary: #181818;
+    --color-bg-content: #181818;
+    --color-bg-app: #1A1A1A;
+    --color-bg-sidebar: #151515;
+    --color-bg-topbar: #1D1D1D;
+    --color-bg-card: #222222;
+    --color-bg-card-hover: #292929;
+    --color-bg-elevated: #303030;
+    --color-bg-input: #1C1C1C;
+    --color-text-primary: #F0F0F0;
+    --color-text-secondary: #C4C4C4;
+    --color-text-muted: #A1A1A1;
+    --color-text-disabled: #808080;
+    --color-text-inverse: #171717;
+    --color-border: #333333;
+    --color-border-light: #414141;
+    --color-border-strong: #565656;
+    --color-primary: #66B5C9;
+    --color-primary-hover: #7AC2D3;
+    --color-primary-active: #4D9EB3;
+    --color-primary-light: rgba(102, 181, 201, .14);
+    --color-primary-soft: rgba(102, 181, 201, .22);
+    --color-sidebar-hover: rgba(102, 181, 201, .13);
+    --color-purple: #B0A4E8;
+    --color-purple-hover: #C0B7EE;
+    --color-purple-light: rgba(176, 164, 232, .15);
+    --color-mint: #91CBB7;
+    --color-mint-hover: #A5D7C5;
+    --color-mint-light: rgba(145, 203, 183, .15);
+    --color-pink: #D3A6D9;
+    --color-pink-hover: #DDB8E2;
+    --color-pink-light: rgba(211, 166, 217, .15);
+    --color-success: #83CBA8;
+    --color-success-hover: #9AD9B9;
+    --color-success-active: #6FB993;
+    --color-success-light: rgba(131, 203, 168, .15);
+    --color-warning: #E4C783;
+    --color-warning-light: rgba(228, 199, 131, .15);
+    --color-danger: #E49AA5;
+    --color-danger-hover: #EAAEB7;
+    --color-danger-active: #D5818E;
+    --color-danger-light: rgba(228, 154, 165, .15);
+    --color-info: #80BFD0;
+    --color-info-light: rgba(128, 191, 208, .15);
+    --color-overlay: rgba(4, 9, 14, .66);
+    --color-focus-ring: rgba(128, 191, 208, .34);
+    --color-success-ring: rgba(131, 203, 168, .30);
+    --color-danger-ring: rgba(228, 154, 165, .30);
+    --color-skeleton-highlight: rgba(255, 255, 255, .055);
+    --color-map-canvas: #292929;
+    --shadow-sm: 0 1px 2px rgba(0, 0, 0, .18);
+    --shadow-md: 0 4px 12px rgba(0, 0, 0, .24);
+    --shadow-lg: 0 12px 32px rgba(0, 0, 0, .32);
+}
+
+html[data-theme='light'] {
+    color-scheme: light;
+    --color-bg-base: #E9EDEE;
+    --color-bg-primary: #E9EDEE;
+    --color-bg-content: #E9EDEE;
+    --color-bg-app: #EDF1F1;
+    --color-bg-sidebar: #F1F4F3;
+    --color-bg-topbar: #E5EAEB;
+    --color-bg-card: #F0F3F1;
+    --color-bg-card-hover: #E6ECEB;
+    --color-bg-elevated: #F4F6F5;
+    --color-bg-input: #EEF2F1;
+    --color-text-primary: #29363C;
+    --color-text-secondary: #53636A;
+    --color-text-muted: #5D6F75;
+    --color-text-disabled: #849196;
+    --color-text-inverse: #F5F8F8;
+    --color-border: #D5DEDF;
+    --color-border-light: #C6D1D3;
+    --color-border-strong: #A8B8BB;
+    --color-primary: #2D7482;
+    --color-primary-hover: #276674;
+    --color-primary-active: #205864;
+    --color-primary-light: rgba(45, 116, 130, .10);
+    --color-primary-soft: rgba(45, 116, 130, .16);
+    --color-sidebar-hover: rgba(45, 116, 130, .09);
+    --color-purple: #6758AA;
+    --color-purple-hover: #584992;
+    --color-purple-light: rgba(103, 88, 170, .10);
+    --color-mint: #397B66;
+    --color-mint-hover: #2E6956;
+    --color-mint-light: rgba(57, 123, 102, .10);
+    --color-pink: #965B9C;
+    --color-pink-hover: #804C86;
+    --color-pink-light: rgba(150, 91, 156, .10);
+    --color-success: #2E7654;
+    --color-success-hover: #246547;
+    --color-success-active: #1E553B;
+    --color-success-light: rgba(46, 118, 84, .10);
+    --color-warning: #82621E;
+    --color-warning-light: rgba(130, 98, 30, .10);
+    --color-danger: #A94E5D;
+    --color-danger-hover: #923F4E;
+    --color-danger-active: #7D3442;
+    --color-danger-light: rgba(169, 78, 93, .10);
+    --color-info: #2D7482;
+    --color-info-light: rgba(45, 116, 130, .10);
+    --color-overlay: rgba(26, 39, 44, .42);
+    --color-focus-ring: rgba(52, 127, 142, .28);
+    --color-success-ring: rgba(46, 118, 84, .24);
+    --color-danger-ring: rgba(169, 78, 93, .24);
+    --color-skeleton-highlight: rgba(39, 58, 63, .055);
+    --color-map-canvas: #E9E5D8;
+    --shadow-sm: 0 1px 2px rgba(32, 48, 54, .06);
+    --shadow-md: 0 4px 12px rgba(32, 48, 54, .09);
+    --shadow-lg: 0 12px 32px rgba(32, 48, 54, .14);
+}
+
+html[data-theme='dark'][data-accent='violet'] {
+    --color-primary: #A99AE5;
+    --color-primary-hover: #B8ACEA;
+    --color-primary-active: #9786D7;
+    --color-primary-light: rgba(169, 154, 229, .16);
+    --color-primary-soft: rgba(169, 154, 229, .24);
+    --color-focus-ring: rgba(169, 154, 229, .36);
+    --color-sidebar-hover: rgba(169, 154, 229, .14);
+}
+
+html[data-theme='dark'][data-accent='sage'] {
+    --color-primary: #82C2A0;
+    --color-primary-hover: #96CEB0;
+    --color-primary-active: #6EB188;
+    --color-primary-light: rgba(130, 194, 160, .16);
+    --color-primary-soft: rgba(130, 194, 160, .24);
+    --color-focus-ring: rgba(130, 194, 160, .34);
+    --color-sidebar-hover: rgba(130, 194, 160, .14);
+}
+
+html[data-theme='dark'][data-accent='amber'] {
+    --color-primary: #E0B66F;
+    --color-primary-hover: #E8C581;
+    --color-primary-active: #D3A75F;
+    --color-primary-light: rgba(224, 182, 111, .16);
+    --color-primary-soft: rgba(224, 182, 111, .24);
+    --color-focus-ring: rgba(224, 182, 111, .34);
+    --color-sidebar-hover: rgba(224, 182, 111, .14);
+}
+
+html[data-theme='dark'][data-accent='coral'] {
+    --color-primary: #E59A92;
+    --color-primary-hover: #EBAFA7;
+    --color-primary-active: #D9867E;
+    --color-primary-light: rgba(229, 154, 146, .16);
+    --color-primary-soft: rgba(229, 154, 146, .24);
+    --color-focus-ring: rgba(229, 154, 146, .34);
+    --color-sidebar-hover: rgba(229, 154, 146, .14);
+}
+
+html[data-theme='dark'][data-accent='slate'] {
+    --color-primary: #9AADC4;
+    --color-primary-hover: #B7C5D5;
+    --color-primary-active: #849BB6;
+    --color-primary-light: rgba(154, 173, 196, .16);
+    --color-primary-soft: rgba(154, 173, 196, .24);
+    --color-focus-ring: rgba(154, 173, 196, .34);
+    --color-sidebar-hover: rgba(154, 173, 196, .14);
+}
+
+html[data-theme='light'][data-accent='violet'] {
+    --color-primary: #5B5296;
+    --color-primary-hover: #504783;
+    --color-primary-active: #453C72;
+    --color-primary-light: rgba(91, 82, 150, .10);
+    --color-primary-soft: rgba(91, 82, 150, .16);
+    --color-focus-ring: rgba(91, 82, 150, .28);
+    --color-sidebar-hover: rgba(91, 82, 150, .09);
+}
+
+html[data-theme='light'][data-accent='sage'] {
+    --color-primary: #2D7257;
+    --color-primary-hover: #255F49;
+    --color-primary-active: #1E4F3D;
+    --color-primary-light: rgba(45, 114, 87, .10);
+    --color-primary-soft: rgba(45, 114, 87, .16);
+    --color-focus-ring: rgba(45, 114, 87, .28);
+    --color-sidebar-hover: rgba(45, 114, 87, .09);
+}
+
+html[data-theme='light'][data-accent='amber'] {
+    --color-primary: #845B1D;
+    --color-primary-hover: #734C16;
+    --color-primary-active: #614012;
+    --color-primary-light: rgba(132, 91, 29, .10);
+    --color-primary-soft: rgba(132, 91, 29, .16);
+    --color-focus-ring: rgba(132, 91, 29, .28);
+    --color-sidebar-hover: rgba(132, 91, 29, .09);
+}
+
+html[data-theme='light'][data-accent='coral'] {
+    --color-primary: #A34F52;
+    --color-primary-hover: #8D4145;
+    --color-primary-active: #78383C;
+    --color-primary-light: rgba(163, 79, 82, .10);
+    --color-primary-soft: rgba(163, 79, 82, .16);
+    --color-focus-ring: rgba(163, 79, 82, .28);
+    --color-sidebar-hover: rgba(163, 79, 82, .09);
+}
+
+html[data-theme='light'][data-accent='slate'] {
+    --color-primary: #516B89;
+    --color-primary-hover: #445B77;
+    --color-primary-active: #394E68;
+    --color-primary-light: rgba(81, 107, 137, .10);
+    --color-primary-soft: rgba(81, 107, 137, .16);
+    --color-focus-ring: rgba(81, 107, 137, .28);
+    --color-sidebar-hover: rgba(81, 107, 137, .09);
+}
+
 html {
     min-height: 100%;
     font-size: 16px;
     scroll-behavior: smooth;
 }
+
+html[data-theme='light'] body { color-scheme: light; }
 
 body {
     min-height: 100vh;

@@ -41,12 +41,12 @@
 
     &:focus-within .input-field--error {
         border-color: $color-danger;
-        box-shadow: 0 0 0 3px rgba(239, 91, 120, 0.30);
+        box-shadow: 0 0 0 3px var(--color-danger-ring, rgba(228, 154, 165, 0.30));
     }
 
     &:focus-within .input-field--success {
         border-color: $color-success;
-        box-shadow: 0 0 0 3px rgba(101, 214, 165, 0.30);
+        box-shadow: 0 0 0 3px var(--color-success-ring, rgba(131, 203, 168, 0.30));
     }
 }
 
@@ -221,7 +221,7 @@
     &:focus,
     &:focus-visible {
         border-color: $color-danger;
-        box-shadow: 0 0 0 3px rgba(239, 91, 120, 0.30);
+        box-shadow: 0 0 0 3px var(--color-danger-ring, rgba(228, 154, 165, 0.30));
     }
 }
 
@@ -236,7 +236,7 @@
     &:focus,
     &:focus-visible {
         border-color: $color-success;
-        box-shadow: 0 0 0 3px rgba(101, 214, 165, 0.30);
+        box-shadow: 0 0 0 3px var(--color-success-ring, rgba(131, 203, 168, 0.30));
     }
 }
 

@@ -4,8 +4,7 @@
 // ------------------------------------------------------------
 // Rôle :
 //   Centralise toutes les variables globales du Design System.
-//   Palette dérivée de l'image de référence « Synerque »
-//   (dashboard dark moderne).
+//   Tokens sémantiques reliés aux palettes clair et sombre de l'application.
 //
 // Utilisation :
 //   @use 'styles/variables' as *;
@@ -18,20 +17,19 @@
 // ============================================================
 // COULEURS DE FOND
 // ============================================================
-// Palette dérivée de la couleur de base #0A0B0D extraite de
-// l'image. Chaque niveau d'élévation augmente légèrement en
-// luminosité pour créer une hiérarchie visuelle naturelle
-// en Dark Theme.
+// Le thème sombre utilise des anthracites neutres avec une élévation douce.
 // ============================================================
 
-$color-bg-base:         #0A0B0D; // Couleur de base (extraite de l'image)
-$color-bg-primary:      #000000; // Noir absolu (rare, arrière-plans profonds)
-$color-bg-app:          #0A0B0D; // Fond principal de l'application
-$color-bg-sidebar:      #0A0B0D; // Fond de la sidebar (fusionne avec l'app)
-$color-bg-card:         #15171A; // Fond des cartes / panneaux
-$color-bg-card-hover:   #1A1C1F; // Fond des cartes au survol
-$color-bg-elevated:     #202326; // Surfaces élevées (modales, dropdowns)
-$color-bg-input:        #101214; // Fond des champs de saisie
+$color-bg-base:         var(--color-bg-base, #181818);
+$color-bg-primary:      var(--color-bg-primary, #181818);
+$color-bg-content:      var(--color-bg-content, #181818);
+$color-bg-app:          var(--color-bg-app, #1A1A1A);
+$color-bg-topbar:       var(--color-bg-topbar, #1D1D1D);
+$color-bg-sidebar:      var(--color-bg-sidebar, #151515);
+$color-bg-card:         var(--color-bg-card, #222222);
+$color-bg-card-hover:   var(--color-bg-card-hover, #292929);
+$color-bg-elevated:     var(--color-bg-elevated, #303030);
+$color-bg-input:        var(--color-bg-input, #1C1C1C);
 
 
 // ============================================================
@@ -41,11 +39,11 @@ $color-bg-input:        #101214; // Fond des champs de saisie
 // du titre « Synerque » vers des gris de plus en plus discrets.
 // ============================================================
 
-$color-text-primary:    #F5F5F5; // Texte principal (blanc doux)
-$color-text-secondary:  #A5A8AD; // Texte secondaire (labels, aides)
-$color-text-muted:      #6B7077; // Métadonnées, dates, compteurs
-$color-text-disabled:   #45484C; // Texte désactivé
-$color-text-inverse:    #0A0B0D; // Texte sur fond clair (accent)
+$color-text-primary:    var(--color-text-primary, #F0F0F0);
+$color-text-secondary:  var(--color-text-secondary, #C4C4C4);
+$color-text-muted:      var(--color-text-muted, #A1A1A1);
+$color-text-disabled:   var(--color-text-disabled, #808080);
+$color-text-inverse:    var(--color-text-inverse, #171717);
 
 
 // ============================================================
@@ -56,9 +54,9 @@ $color-text-inverse:    #0A0B0D; // Texte sur fond clair (accent)
 // bordure à peine visible.
 // ============================================================
 
-$color-border:          #262A2E; // Bordure par défaut
-$color-border-light:    #34383C; // Bordure plus claire (hover)
-$color-border-strong:   #45484C; // Bordure mise en avant (focus actif)
+$color-border:          var(--color-border, #333333);
+$color-border-light:    var(--color-border-light, #414141);
+$color-border-strong:   var(--color-border-strong, #565656);
 
 
 // ============================================================
@@ -71,11 +69,11 @@ $color-border-strong:   #45484C; // Bordure mise en avant (focus actif)
 //   - les liens actifs.
 // ============================================================
 
-$color-primary:         #25BDE8;                  // Accent principal
-$color-primary-hover:   #42C7EC;                  // Accent au survol
-$color-primary-active:  #1AA6CC;                  // Accent pressé
-$color-primary-light:   rgba(37, 189, 232, 0.12); // Fond léger primaire
-$color-primary-soft:    rgba(37, 189, 232, 0.20); // Fond plus marqué
+$color-primary:         var(--color-primary, #66B5C9);
+$color-primary-hover:   var(--color-primary-hover, #7AC2D3);
+$color-primary-active:  var(--color-primary-active, #4D9EB3);
+$color-primary-light:   var(--color-primary-light, rgba(102, 181, 201, 0.14));
+$color-primary-soft:    var(--color-primary-soft, rgba(102, 181, 201, 0.22));
 
 
 // ============================================================
@@ -86,17 +84,17 @@ $color-primary-soft:    rgba(37, 189, 232, 0.20); // Fond plus marqué
 // visuellement les éléments (tags, badges, graphiques).
 // ============================================================
 
-$color-purple:          #8C78F0;
-$color-purple-hover:    #9E8CF3;
-$color-purple-light:    rgba(140, 120, 240, 0.14);
+$color-purple:          var(--color-purple, #B0A4E8);
+$color-purple-hover:    var(--color-purple-hover, #C0B7EE);
+$color-purple-light:    var(--color-purple-light, rgba(176, 164, 232, 0.15));
 
-$color-mint:            #8AD8BC;
-$color-mint-hover:      #9DE0C8;
-$color-mint-light:      rgba(138, 216, 188, 0.14);
+$color-mint:            var(--color-mint, #91CBB7);
+$color-mint-hover:      var(--color-mint-hover, #A5D7C5);
+$color-mint-light:      var(--color-mint-light, rgba(145, 203, 183, 0.15));
 
-$color-pink:            #DFA0E8;
-$color-pink-hover:      #E7B4EE;
-$color-pink-light:      rgba(223, 160, 232, 0.14);
+$color-pink:            var(--color-pink, #D3A6D9);
+$color-pink-hover:      var(--color-pink-hover, #DDB8E2);
+$color-pink-light:      var(--color-pink-light, rgba(211, 166, 217, 0.15));
 
 
 // ============================================================
@@ -107,19 +105,19 @@ $color-pink-light:      rgba(223, 160, 232, 0.14);
 // les accents et lisibles sur fond sombre.
 // ============================================================
 
-$color-success:         #65D6A5;
-$color-success-light:   rgba(101, 214, 165, 0.14);
+$color-success:         var(--color-success, #83CBA8);
+$color-success-light:   var(--color-success-light, rgba(131, 203, 168, 0.15));
 
-$color-warning:         #F3C969;
-$color-warning-light:   rgba(243, 201, 105, 0.14);
+$color-warning:         var(--color-warning, #E4C783);
+$color-warning-light:   var(--color-warning-light, rgba(228, 199, 131, 0.15));
 
-$color-danger:          #EF5B78;
-$color-danger-hover:    #D64B68;
-$color-danger-active:   #C33E5A;
-$color-danger-light:    rgba(239, 91, 120, 0.14);
+$color-danger:          var(--color-danger, #E49AA5);
+$color-danger-hover:    var(--color-danger-hover, #EAAEB7);
+$color-danger-active:   var(--color-danger-active, #D5818E);
+$color-danger-light:    var(--color-danger-light, rgba(228, 154, 165, 0.15));
 
-$color-info:            #25BDE8;
-$color-info-light:      rgba(37, 189, 232, 0.14);
+$color-info:            var(--color-info, #80BFD0);
+$color-info-light:      var(--color-info-light, rgba(128, 191, 208, 0.15));
 
 
 // ============================================================
@@ -218,10 +216,10 @@ $radius-full:           9999px;
 // surfaces élevées (dropdowns, modales).
 // ============================================================
 
-$shadow-sm:             0 1px 2px rgba(0, 0, 0, 0.40);
-$shadow-md:             0 4px 12px rgba(0, 0, 0, 0.45);
-$shadow-lg:             0 12px 32px rgba(0, 0, 0, 0.55);
-$shadow-focus:          0 0 0 3px rgba(37, 189, 232, 0.30);
+$shadow-sm:             var(--shadow-sm, 0 1px 2px rgba(0, 0, 0, 0.40));
+$shadow-md:             var(--shadow-md, 0 4px 12px rgba(0, 0, 0, 0.45));
+$shadow-lg:             var(--shadow-lg, 0 12px 32px rgba(0, 0, 0, 0.55));
+$shadow-focus:          0 0 0 3px var(--color-focus-ring, rgba(128, 191, 208, 0.34));
 
 
 // ============================================================

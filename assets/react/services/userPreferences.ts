@@ -1,12 +1,80 @@
 import type { UserSettings } from '../features/shared/account/settings/types/settings.types';
 
 const STORAGE_KEY = 'h-immo:user-settings';
+const PENDING_LOGIN_THEME_KEY = 'h-immo:pending-login-theme';
+
+export type ThemePreference = 'system' | 'light' | 'dark';
+export type AccentPalette = 'ocean' | 'violet' | 'sage' | 'amber' | 'coral' | 'slate';
+
+/** Enregistre et applique un choix de thème local avant l'authentification. */
+export function setThemePreference(theme: Exclude<ThemePreference, 'system'>): void {
+    if (typeof window === 'undefined') return;
+
+    const settings = readUserPreferences();
+    window.localStorage.setItem(STORAGE_KEY, JSON.stringify({ ...settings, theme }));
+    window.localStorage.setItem(PENDING_LOGIN_THEME_KEY, theme);
+    applyTheme(theme);
+}
+
+export function readPendingLoginTheme(): Exclude<ThemePreference, 'system'> | null {
+    if (typeof window === 'undefined') return null;
+    const theme = window.localStorage.getItem(PENDING_LOGIN_THEME_KEY);
+    return theme === 'light' || theme === 'dark' ? theme : null;
+}
+
+export function clearPendingLoginTheme(): void {
+    if (typeof window !== 'undefined') window.localStorage.removeItem(PENDING_LOGIN_THEME_KEY);
+}
+
+export function resolveAccentPalette(value: unknown): AccentPalette {
+    return value === 'violet' || value === 'sage' || value === 'amber' || value === 'coral' || value === 'slate'
+        ? value
+        : 'ocean';
+}
+
+export function resolveTheme(preference: ThemePreference, systemPrefersLight: boolean): 'light' | 'dark' {
+    if (preference === 'light' || preference === 'dark') return preference;
+    return systemPrefersLight ? 'light' : 'dark';
+}
+
+function applyTheme(preference: unknown): void {
+    if (typeof document === 'undefined') return;
+    const validPreference: ThemePreference = preference === 'light' || preference === 'dark' ? preference : 'system';
+    const media = window.matchMedia('(prefers-color-scheme: light)');
+    document.documentElement.dataset.theme = resolveTheme(validPreference, media.matches);
+    document.documentElement.style.colorScheme = resolveTheme(validPreference, media.matches);
+}
+
+function applyAccentPalette(palette: unknown): void {
+    if (typeof document === 'undefined') return;
+    document.documentElement.dataset.accent = resolveAccentPalette(palette);
+}
+
+/** Applique les préférences locales avant le premier rendu React pour éviter un flash de thème. */
+export function initializeUserPreferences(): void {
+    const settings = readUserPreferences();
+    applyTheme(settings.theme);
+    applyAccentPalette(settings.accentPalette);
+    if (typeof document !== 'undefined') {
+        if (typeof settings.compactTables === 'boolean') document.documentElement.dataset.compactTables = String(settings.compactTables);
+        if (typeof settings.reducedMotion === 'boolean') document.documentElement.dataset.reducedMotion = String(settings.reducedMotion);
+    }
+}
+
+if (typeof window !== 'undefined') {
+    window.matchMedia('(prefers-color-scheme: light)').addEventListener('change', () => {
+        const preference = readUserPreferences().theme;
+        if (preference === 'system' || !preference) applyTheme('system');
+    });
+}
 
 export function saveUserPreferences(settings: UserSettings): void {
     if (typeof window === 'undefined') return;
     window.localStorage.setItem(STORAGE_KEY, JSON.stringify(settings));
     document.documentElement.dataset.compactTables = String(settings.compactTables);
     document.documentElement.dataset.reducedMotion = String(settings.reducedMotion);
+    applyTheme(settings.theme);
+    applyAccentPalette(settings.accentPalette);
 }
 
 export function readUserPreferences(): Partial<UserSettings> {

@@ -22,6 +22,10 @@ final class UserSettingsRequest
         #[Assert\Choice(choices: ['light', 'dark', 'system'], groups: ['update'])]
         public ?string $theme = null,
 
+        #[OA\Property(description: 'Palette de couleur d’accent', example: 'ocean', nullable: true)]
+        #[Assert\Choice(choices: ['ocean', 'violet', 'sage', 'amber', 'coral', 'slate'], groups: ['update'])]
+        public ?string $accentPalette = null,
+
         #[OA\Property(description: 'Langue de l\'interface', example: 'fr', nullable: true)]
         #[Assert\Choice(choices: ['fr', 'en'], groups: ['update'])]
         public ?string $locale = null,

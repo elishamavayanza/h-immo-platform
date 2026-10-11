@@ -52,10 +52,6 @@
 .sidebar--light {
     background-color: $color-bg-card;
     border-right-color: $color-border-light;
-
-    .sidebar__item:hover {
-        background-color: $color-bg-elevated;
-    }
 }
 
 
@@ -240,7 +236,7 @@
 .sidebar__group-section {
     margin-bottom: $spacing-4;
     padding-bottom: $spacing-1;
-    border-bottom: 1px solid rgba($color-border, 0.72);
+    border-bottom: 1px solid color-mix(in srgb, $color-border 72%, transparent);
 
     &:last-child {
         margin-bottom: 0;
@@ -292,16 +288,16 @@
         color $transition-fast;
 
     &:hover:not(.sidebar__item--disabled) {
-        background-color: $color-bg-card-hover;
-        color: $color-text-primary;
+        background-color: var(--color-sidebar-hover, $color-primary-light);
+        color: var(--color-primary, #{$color-primary});
     }
 
     @include focus-ring;
 }
 
 .sidebar__item--active {
-    color: $color-primary;
-    background-color: $color-primary-light;
+    color: var(--color-primary, #{$color-primary});
+    background-color: var(--color-primary-light, #{$color-primary-light});
 
     // Barre verticale à gauche
     &::before {
@@ -311,13 +307,13 @@
         top: 20%;
         bottom: 20%;
         width: 3px;
-        background-color: $color-primary;
+        background-color: var(--color-primary, #{$color-primary});
         border-radius: 0 $radius-full $radius-full 0;
     }
 
     &:hover {
-        background-color: $color-primary-soft;
-        color: $color-primary-hover;
+        background-color: var(--color-primary-soft, #{$color-primary-soft});
+        color: var(--color-primary-hover, #{$color-primary-hover});
     }
 }
 
@@ -453,21 +449,21 @@
         color $transition-fast;
 
     &:hover {
-        background-color: $color-bg-card-hover;
-        color: $color-text-primary;
+        background-color: var(--color-sidebar-hover, $color-primary-light);
+        color: var(--color-primary, #{$color-primary});
     }
 
     @include focus-ring;
 }
 
 .sidebar__subitem--active {
-    color: $color-primary;
-    background-color: $color-primary-light;
+    color: var(--color-primary, #{$color-primary});
+    background-color: var(--color-primary-light, #{$color-primary-light});
     font-weight: $font-weight-semibold;
 
     &:hover {
-        color: $color-primary-hover;
-        background-color: $color-primary-soft;
+        color: var(--color-primary-hover, #{$color-primary-hover});
+        background-color: var(--color-primary-soft, #{$color-primary-soft});
     }
 }
 

@@ -229,7 +229,7 @@ body.right-sidebar-resizing {
 .right-sidebar__backdrop {
     position: fixed;
     inset: 0;
-    background-color: rgba(0, 0, 0, 0.55);
+    background-color: var(--color-overlay, rgba(4, 9, 14, 0.66));
     backdrop-filter: blur(2px);
     z-index: $z-modal-backdrop;
     animation: right-sidebar-backdrop-fade $transition-fast both;
@@ -254,7 +254,7 @@ body.right-sidebar-resizing {
     width: 42px;
     height: 48px;
     padding: 0;
-    background-color: rgba($color-primary, .78);
+    background-color: color-mix(in srgb, $color-primary 78%, transparent);
     color: $color-text-inverse;
     border: 1px solid rgba(255, 255, 255, .18);
     border-right: 0;
@@ -272,7 +272,7 @@ body.right-sidebar-resizing {
         transform $transition-fast;
 
     &:hover {
-        background-color: rgba($color-primary-hover, .94);
+        background-color: color-mix(in srgb, $color-primary-hover 94%, transparent);
         opacity: 1;
         transform: translateY(-50%) translateX(-2px);
     }

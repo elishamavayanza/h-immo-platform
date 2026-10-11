@@ -53,6 +53,20 @@ async function resolveMembership(uuid: string): Promise<SessionOrganizationMembe
     return data.data;
 }
 
+async function resolveFirstAvailableMembership(
+    memberships: SessionOrganizationMembership[],
+): Promise<SessionOrganizationMembership | null> {
+    for (const membership of memberships) {
+        try {
+            return await resolveMembership(membership.uuid);
+        } catch {
+            // L'appartenance a pu être révoquée depuis le dernier chargement de session.
+        }
+    }
+
+    return null;
+}
+
 function likelyRevoked(error: unknown): boolean {
     return error instanceof ApiError && (error.status === 403 || error.status === 404);
 }
@@ -64,19 +78,16 @@ export function OrganizationProvider({ children }: { children: ReactNode }) {
     const [organizationRole, setOrganizationRole] = useState<OrganizationRole | null>(null);
     const [platformRole, setPlatformRole] = useState<PlatformRole | null>(null);
     const [isLoading, setIsLoading] = useState(true);
+    const [resolvedUserUuid, setResolvedUserUuid] = useState<string | null>(null);
 
     const fallbackToFirstValid = useCallback(async (): Promise<void> => {
-        for (const membership of user?.organizations ?? []) {
-            try {
-                const resolved = await resolveMembership(membership.uuid);
-                setCurrentOrganization(resolved);
-                setOrganizationRole(resolved.role);
-                localStorage.setItem(ACTIVE_ORGANIZATION_KEY, resolved.uuid);
+        const resolved = await resolveFirstAvailableMembership(user?.organizations ?? []);
+        if (resolved) {
+            setCurrentOrganization(resolved);
+            setOrganizationRole(resolved.role);
+            localStorage.setItem(ACTIVE_ORGANIZATION_KEY, resolved.uuid);
 
-                return;
-            } catch {
-                // Appartenance révoquée côté serveur : on essaie la suivante.
-            }
+            return;
         }
 
         localStorage.removeItem(ACTIVE_ORGANIZATION_KEY);
@@ -90,22 +101,28 @@ export function OrganizationProvider({ children }: { children: ReactNode }) {
     useEffect(() => {
         if (isAuthLoading) return;
 
+        let cancelled = false;
+
         if (!isAuthenticated || !user) {
             setCurrentOrganization(null);
             setOrganizationRole(null);
             setPlatformRole(null);
+            setResolvedUserUuid(null);
             setIsLoading(false);
 
-            return;
+            return () => { cancelled = true; };
         }
+
+        setIsLoading(true);
 
         if (user.platformRole === 'super_admin') {
             setPlatformRole('super_admin');
             setCurrentOrganization(null);
             setOrganizationRole(null);
+            setResolvedUserUuid(user.uuid);
             setIsLoading(false);
 
-            return;
+            return () => { cancelled = true; };
         }
 
         const memberships = user.organizations;
@@ -113,9 +130,10 @@ export function OrganizationProvider({ children }: { children: ReactNode }) {
             setCurrentOrganization(null);
             setOrganizationRole(null);
             setPlatformRole(null);
+            setResolvedUserUuid(user.uuid);
             setIsLoading(false);
 
-            return;
+            return () => { cancelled = true; };
         }
 
         const persisted = localStorage.getItem(ACTIVE_ORGANIZATION_KEY);
@@ -126,17 +144,35 @@ export function OrganizationProvider({ children }: { children: ReactNode }) {
         void (async () => {
             try {
                 const resolved = await resolveMembership(target);
+                if (cancelled) return;
                 setCurrentOrganization(resolved);
                 setOrganizationRole(resolved.role);
                 setPlatformRole(null);
                 localStorage.setItem(ACTIVE_ORGANIZATION_KEY, resolved.uuid);
             } catch {
-                await fallbackToFirstValid();
+                const fallback = await resolveFirstAvailableMembership(memberships);
+                if (cancelled) return;
+                if (fallback) {
+                    setCurrentOrganization(fallback);
+                    setOrganizationRole(fallback.role);
+                    setPlatformRole(null);
+                    localStorage.setItem(ACTIVE_ORGANIZATION_KEY, fallback.uuid);
+                } else {
+                    localStorage.removeItem(ACTIVE_ORGANIZATION_KEY);
+                    setCurrentOrganization(null);
+                    setOrganizationRole(null);
+                    setPlatformRole(null);
+                }
             } finally {
-                setIsLoading(false);
+                if (!cancelled) {
+                    setResolvedUserUuid(user.uuid);
+                    setIsLoading(false);
+                }
             }
         })();
-    }, [isAuthLoading, isAuthenticated, user, fallbackToFirstValid]);
+
+        return () => { cancelled = true; };
+    }, [isAuthLoading, isAuthenticated, user]);
 
     // Bascule dans le menu d'une autre organization : on conserve l'état
     // courant tant que la nouvelle adhésion n'est pas confirmée par l'API.
@@ -156,13 +192,15 @@ export function OrganizationProvider({ children }: { children: ReactNode }) {
         }
     }, [user, fallbackToFirstValid]);
 
+    const isUserResolutionPending = isAuthenticated && user !== null && resolvedUserUuid !== user.uuid;
+
     const value = useMemo<OrganizationContextValue>(() => ({
         currentOrganization,
         organizationRole,
         platformRole,
-        isLoading,
+        isLoading: isLoading || isUserResolutionPending,
         switchOrganization,
-    }), [currentOrganization, organizationRole, platformRole, isLoading, switchOrganization]);
+    }), [currentOrganization, organizationRole, platformRole, isLoading, isUserResolutionPending, switchOrganization]);
 
     return <OrganizationContext.Provider value={value}>{children}</OrganizationContext.Provider>;
 }

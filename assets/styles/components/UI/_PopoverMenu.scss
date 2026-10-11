@@ -163,7 +163,7 @@
     }
 
     &:active:not(:disabled) {
-        background-color: rgba(239, 91, 120, 0.22);
+        background-color: color-mix(in srgb, $color-danger 22%, transparent);
     }
 }
 
