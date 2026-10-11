@@ -153,8 +153,10 @@
     overflow-y: auto;
     background-color: $color-bg-content;
 
-    @include responsive(mobile) {
-        padding: $spacing-3;
+    @media (max-width: #{$breakpoint-tablet - 1px}) {
+        // Réserve l’espace du bouton hamburger fixe : sans cette marge,
+        // le titre et le libellé de section se retrouvent sous le menu.
+        padding: 64px $spacing-3 $spacing-3;
     }
 }
 
