@@ -34,7 +34,7 @@ final readonly class ExpenseRequest
             format: 'uuid',
             example: 'f81d4fae-7dec-11d0-a765-00a0c91e6bf6'
         )]
-        #[Assert\NotBlank(groups: ['create', 'update'])]
+        #[Assert\NotBlank(groups: ['create'])]
         #[Assert\Uuid(groups: ['create', 'update'])]
         public ?string $cityUuid = null,
 
@@ -80,14 +80,14 @@ final readonly class ExpenseRequest
             example: 'maintenance',
             enum: ExpenseCategory::class
         )]
-        #[Assert\NotBlank(groups: ['create', 'update'])]
+        #[Assert\NotBlank(groups: ['create'])]
         public ?string $category = null,
 
         #[OA\Property(
             description: 'Montant de la dépense (strictement positif)',
             example: '1250.00'
         )]
-        #[Assert\NotBlank(groups: ['create', 'update'])]
+        #[Assert\NotBlank(groups: ['create'])]
         #[Assert\Regex(pattern: '/^\d{1,10}(\.\d{1,2})?$/', groups: ['create', 'update'], message: 'Le montant doit être un nombre positif avec au plus 2 décimales.')]
         public ?string $amount = null,
 
@@ -97,7 +97,7 @@ final readonly class ExpenseRequest
             example: 'USD',
             enum: Currency::class
         )]
-        #[Assert\NotBlank(groups: ['create', 'update'])]
+        #[Assert\NotBlank(groups: ['create'])]
         public ?Currency $currency = null,
 
         #[OA\Property(
@@ -128,7 +128,7 @@ final readonly class ExpenseRequest
             format: 'date',
             example: '2026-03-15'
         )]
-        #[Assert\NotBlank(groups: ['create', 'update'])]
+        #[Assert\NotBlank(groups: ['create'])]
         public ?\DateTimeImmutable $expenseDate = null,
 
         #[OA\Property(

@@ -116,8 +116,8 @@ export async function createWorker(payload: CreateWorkerPayload): Promise<Worker
 
 /** Payload pour modifier un travailleur. */
 export interface UpdateWorkerPayload {
-    fullName: string;
-    phone: string;
+    fullName?: string;
+    phone?: string;
     email?: string;
     nationalId?: string;
     address?: string;
@@ -153,11 +153,11 @@ export async function createAssignment(payload: CreateAssignmentPayload): Promis
 
 /** Payload pour modifier une affectation. */
 export interface UpdateAssignmentPayload {
-    cityUuid: string;
-    role: string;
-    monthlySalary: string;
-    currency: 'USD' | 'CDF';
-    startDate: string;
+    cityUuid?: string;
+    role?: string;
+    monthlySalary?: string;
+    currency?: 'USD' | 'CDF';
+    startDate?: string;
     endDate?: string;
     parcelUuid?: string;
     buildingUuid?: string;

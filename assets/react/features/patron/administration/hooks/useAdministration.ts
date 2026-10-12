@@ -4,6 +4,7 @@ import { useToast } from '../../../../app/layout/MainLayout/contexts/ToastContex
 import { useAuth } from '../../../../app/providers/AuthProvider';
 import { useOrganization } from '../../../../app/providers/OrganizationProvider';
 import { ApiError } from '../../../../../services/api/api.types';
+import { changedFields } from '../../../shared/changedFields';
 import { fetchCities } from '../../../admin_immobilier/shared/services/referenceService';
 import { administrationService } from '../services/administrationService';
 import type { AdminApiUser, AdminCityOption, TeamMember } from '../types/administration.types';
@@ -108,14 +109,23 @@ export function useAdministration() {
     };
 
     /** `PUT /v1/identity/users/{uuid}` — le backend attend firstName/lastName séparés. */
-    const updateMember = async (id: string, input: { fullName: string; phone: string }): Promise<void> => {
-        const [firstName, ...rest] = input.fullName.trim().split(/\s+/);
+    const updateMember = async (id: string, input: { fullName?: string; phone?: string }): Promise<void> => {
+        const member = members.find((entry) => entry.id === id);
+        if (!member) return;
+        const changes = changedFields({ fullName: input.fullName?.trim(), phone: input.phone?.trim() }, {
+            fullName: member.name.trim(),
+            phone: member.phone?.trim() ?? '',
+        });
+        if (Object.keys(changes).length === 0) return;
+        const payload: Parameters<typeof administrationService.updateMember>[1] = {};
+        if (changes.fullName !== undefined) {
+            const [firstName, ...rest] = changes.fullName.split(/\s+/);
+            payload.firstName = firstName || '-';
+            payload.lastName = rest.join(' ') || '-';
+        }
+        if (changes.phone !== undefined) payload.phone = changes.phone;
         try {
-            const result = await administrationService.updateMember(id, {
-                firstName: firstName || '-',
-                lastName: rest.join(' ') || '-',
-                phone: input.phone,
-            });
+            const result = await administrationService.updateMember(id, payload);
             if (organizationUuid) {
                 setMembers((current) => current.map((member) => member.id === id ? toMember(result.user, organizationUuid, selfUuid) : member));
             }

@@ -47,6 +47,7 @@ export function useAccountSettings() {
 
     const update = useCallback(async (key: keyof UserSettings, value: unknown) => {
         const previousValue = settingsRef.current[key];
+        if (Object.is(previousValue, value)) return true;
         const revision = (revisions.current.get(key) ?? 0) + 1;
         revisions.current.set(key, revision);
         commitSettings({ ...settingsRef.current, [key]: value });

@@ -20,6 +20,7 @@ import type { OrganizationRole } from '../../../../../services/api/api.types';
 import { canDo } from '../../../shared/permissions';
 import { fieldErrorMap } from '../../../shared/actionErrors';
 import { ModalActions } from '../../../shared/components/ModalActions';
+import { changedFields } from '../../../shared/changedFields';
 import type { CityPayload } from '../services/patrimoineService';
 import type { CityItem } from '../../shared/types/reference.types';
 
@@ -48,7 +49,7 @@ interface VillesTabProps {
     onReload: () => void;
     onCreate: (payload: CityPayload) => Promise<void>;
     onCreateAdmin: (cityUuid: string, payload: { fullName: string; email: string; phone: string }) => Promise<void>;
-    onUpdate: (uuid: string, payload: CityPayload) => Promise<void>;
+    onUpdate: (uuid: string, payload: Partial<CityPayload>) => Promise<void>;
     onSetStatus: (city: CityItem, status: CityPayload['status']) => Promise<void>;
     onDelete: (uuid: string) => Promise<void>;
     onOpen: (uuid: string) => void;
@@ -113,7 +114,16 @@ export function VillesTab({ cities, role, isLoading, error, note, onReload, onCr
         };
         try {
             if (editTarget) {
-                await onUpdate(editTarget.id, payload);
+                const initial = cityToForm(editTarget);
+                const initialPayload: CityPayload = {
+                    name: initial.name.trim(),
+                    code: initial.code.trim(),
+                    province: initial.province.trim() || null,
+                    country: initial.country.trim() || null,
+                    status: initial.status === 'inactive' ? 'inactive' : 'active',
+                };
+                const changes = changedFields(payload, initialPayload);
+                if (Object.keys(changes).length > 0) await onUpdate(editTarget.id, changes);
             } else {
                 await onCreate(payload);
             }

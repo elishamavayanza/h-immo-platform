@@ -17,22 +17,30 @@ final class TenantMapper
             $tenant->setType($request->type);
         }
 
-        // Assemblage du nom complet si c'est une personne physique
-        if ($request->type === TenantType::INDIVIDUAL) {
-            $fullName = trim(sprintf('%s %s', $request->firstName ?? '', $request->lastName ?? ''));
-            $tenant->setFullName($fullName !== '' ? $fullName : null);
-            $tenant->setCompanyName(null);
-        } else {
-            $tenant->setCompanyName($request->companyName);
-            $tenant->setFullName(null);
+        // Les deux parties du nom sont envoyées ensemble lorsqu'elles changent.
+        if ($request->type !== null) {
+            if ($request->type === TenantType::INDIVIDUAL) {
+                $fullName = trim(sprintf('%s %s', $request->firstName ?? '', $request->lastName ?? ''));
+                $tenant->setFullName($fullName !== '' ? $fullName : null);
+                $tenant->setCompanyName(null);
+            } else {
+                $tenant->setCompanyName($request->companyName);
+                $tenant->setFullName(null);
+            }
         }
 
         if ($request->phone !== null) {
             $tenant->setPhone($request->phone);
         }
-        $tenant->setEmail($request->email);
-        $tenant->setAddress($request->address);
-        $tenant->setNotes($request->notes);
+        if ($request->email !== null) {
+            $tenant->setEmail($request->email !== '' ? $request->email : null);
+        }
+        if ($request->address !== null) {
+            $tenant->setAddress($request->address !== '' ? $request->address : null);
+        }
+        if ($request->notes !== null) {
+            $tenant->setNotes($request->notes !== '' ? $request->notes : null);
+        }
 
         return $tenant;
     }

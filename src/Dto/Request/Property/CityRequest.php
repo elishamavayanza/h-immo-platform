@@ -36,7 +36,7 @@ final readonly class CityRequest
             example: 'Goma',
             maxLength: 100
         )]
-        #[Assert\NotBlank(groups: ['create', 'update'])]
+        #[Assert\NotBlank(groups: ['create'])]
         #[Assert\Length(max: 100, groups: ['create', 'update'])]
         public ?string $name = null,
 
@@ -73,7 +73,7 @@ final readonly class CityRequest
             example: 'active',
             enum: CityStatus::class
         )]
-        public CityStatus $status = CityStatus::ACTIVE,
+        public ?CityStatus $status = null,
     ) {
     }
 }

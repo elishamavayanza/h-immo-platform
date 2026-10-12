@@ -45,7 +45,7 @@ final readonly class BuildingRequest
             example: 'Bâtiment Principal A',
             maxLength: 150
         )]
-        #[Assert\NotBlank(groups: ['create', 'update'])]
+        #[Assert\NotBlank(groups: ['create'])]
         #[Assert\Length(max: 150, groups: ['create', 'update'])]
         public ?string $name = null,
 
@@ -55,7 +55,7 @@ final readonly class BuildingRequest
             example: 'apartment',
             enum: BuildingType::class
         )]
-        #[Assert\NotBlank(groups: ['create', 'update'])]
+        #[Assert\NotBlank(groups: ['create'])]
         public ?BuildingType $type = null,
 
         #[OA\Property(

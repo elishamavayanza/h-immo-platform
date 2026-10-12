@@ -17,6 +17,7 @@ import { useOrganization } from '../../../../app/providers/OrganizationProvider'
 import { usePersonnel } from '../hooks/usePersonnel';
 import { PersonnelTable } from '../components/PersonnelTable';
 import { fieldErrorMap } from '../../../shared/actionErrors';
+import { changedFields } from '../../../shared/changedFields';
 import { ModalActions } from '../../../shared/components/ModalActions';
 import { WORKER_ROLE_OPTIONS, CURRENCY_OPTIONS, ASSIGNMENT_ROLE_OPTIONS } from '../services/personnelService';
 import type { PersonnelRow } from '../types/personnel.types';
@@ -133,7 +134,15 @@ export function PersonnelPage() {
 
         try {
             if (editTarget) {
-                await updateWorker(editTarget.id, payload);
+                const changes = changedFields(payload, {
+                    fullName: editTarget.name.trim(),
+                    phone: editTarget.phone?.trim() ?? '',
+                    email: undefined,
+                    nationalId: undefined,
+                    address: undefined,
+                    notes: undefined,
+                });
+                if (Object.keys(changes).length > 0) await updateWorker(editTarget.id, changes);
             } else {
                 const worker = await createWorker({ ...payload, organizationUuid: currentOrganization!.uuid });
                 await createAssignment({
@@ -231,7 +240,19 @@ export function PersonnelPage() {
 
         try {
             if (assignmentEditTarget) {
-                await updateAssignment(assignmentEditTarget.id, payload);
+                const changes = changedFields(payload, {
+                    cityUuid: assignmentEditTarget.cityId,
+                    role: assignmentEditTarget.role,
+                    monthlySalary: assignmentEditTarget.monthlySalary,
+                    currency: assignmentEditTarget.currency as 'USD' | 'CDF',
+                    startDate: assignmentEditTarget.startDate,
+                    endDate: assignmentEditTarget.endDate ?? undefined,
+                    parcelUuid: assignmentEditTarget.parcelId ?? undefined,
+                    buildingUuid: assignmentEditTarget.buildingId ?? undefined,
+                    unitUuid: assignmentEditTarget.unitId ?? undefined,
+                    notes: assignmentEditTarget.notes ?? undefined,
+                });
+                if (Object.keys(changes).length > 0) await updateAssignment(assignmentEditTarget.id, changes);
             } else {
                 await createAssignment({ ...payload, workerUuid: assignTarget.id });
             }

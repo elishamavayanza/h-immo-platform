@@ -150,7 +150,7 @@ export async function createCity(organizationUuid: string, payload: CityPayload)
 }
 
 /** `PUT /api/v1/property/cities/{uuid}` — 200. */
-export async function updateCity(uuid: string, payload: CityPayload): Promise<CityItem> {
+export async function updateCity(uuid: string, payload: Partial<CityPayload>): Promise<CityItem> {
     const { data } = await apiClient.put<Feedback<CityItem>>(`/v1/property/cities/${uuid}`, payload);
 
     return data.data;
@@ -206,7 +206,7 @@ export async function createParcel(payload: ParcelPayload): Promise<ParcelItem> 
 }
 
 /** `PUT /api/v1/parcels/{uuid}` — 200. */
-export async function updateParcel(uuid: string, payload: ParcelPayload): Promise<ParcelItem> {
+export async function updateParcel(uuid: string, payload: Partial<ParcelPayload>): Promise<ParcelItem> {
     const { data } = await apiClient.put<Feedback<ParcelItem>>(`/v1/parcels/${uuid}`, payload);
 
     return data.data;
@@ -235,7 +235,7 @@ export async function createBuilding(payload: BuildingPayload): Promise<Building
 }
 
 /** `PUT /api/v1/property/buildings/{uuid}` — 200. */
-export async function updateBuilding(uuid: string, payload: BuildingPayload): Promise<BuildingItem> {
+export async function updateBuilding(uuid: string, payload: Partial<BuildingPayload>): Promise<BuildingItem> {
     const { data } = await apiClient.put<Feedback<BuildingItem>>(`/v1/property/buildings/${uuid}`, payload);
 
     return data.data;
@@ -269,7 +269,7 @@ export async function createUnit(payload: UnitPayload): Promise<UnitItem> {
 }
 
 /** `PUT /api/v1/units/{uuid}` — 200. */
-export async function updateUnit(uuid: string, payload: UnitPayload): Promise<UnitItem> {
+export async function updateUnit(uuid: string, payload: Partial<UnitPayload>): Promise<UnitItem> {
     const { data } = await apiClient.put<Feedback<UnitItem>>(`/v1/units/${uuid}`, payload);
 
     return data.data;

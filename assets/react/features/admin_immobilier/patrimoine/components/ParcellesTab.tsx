@@ -21,6 +21,7 @@ import { formatInteger } from '../../../../../utils/format.utils';
 import { canDo } from '../../../shared/permissions';
 import { fieldErrorMap } from '../../../shared/actionErrors';
 import { ModalActions } from '../../../shared/components/ModalActions';
+import { changedFields } from '../../../shared/changedFields';
 import { PhotoGallery } from '../../../shared/media/components/PhotoGallery';
 import { PhotoViewer } from '../../../shared/media/components/PhotoViewer';
 import { ParcelMap } from './ParcelMap';
@@ -67,7 +68,7 @@ interface ParcellesTabProps {
     note?: string | null;
     onReload: () => void;
     onCreate: (payload: ParcelPayload) => Promise<void>;
-    onUpdate: (uuid: string, payload: ParcelPayload) => Promise<void>;
+    onUpdate: (uuid: string, payload: Partial<ParcelPayload>) => Promise<void>;
     onDelete: (uuid: string) => Promise<void>;
     selectedCityId: string | null;
     onCityFilter: (uuid: string | null) => void;
@@ -174,7 +175,24 @@ export function ParcellesTab({ parcels, cities, role, isLoading, error, note, on
         };
         try {
             if (editTarget) {
-                await onUpdate(editTarget.id, payload);
+                const initial = {
+                    cityUuid: editTarget.cityId,
+                    reference: editTarget.reference,
+                    name: editTarget.name,
+                    address: editTarget.address,
+                    area: editTarget.area,
+                    titleNumber: editTarget.titleNumber,
+                    quarter: editTarget.quarter,
+                    latitude: editTarget.latitude,
+                    longitude: editTarget.longitude,
+                    description: editTarget.description,
+                };
+                const changes = changedFields(payload, initial);
+                if (payload.latitude !== initial.latitude || payload.longitude !== initial.longitude) {
+                    changes.latitude = payload.latitude;
+                    changes.longitude = payload.longitude;
+                }
+                if (Object.keys(changes).length > 0) await onUpdate(editTarget.id, changes);
             } else {
                 await onCreate(payload);
             }
