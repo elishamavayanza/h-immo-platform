@@ -114,6 +114,8 @@ export async function fetchPatrimoine(organizationUuid: string, role: Organizati
         parcels: catalog.parcels.items,
         buildings: catalog.buildings.items,
         units: catalog.units.items,
+        occupancyByParcel,
+        occupancyByBuilding,
         availableCities: [...new Set(rows.map((row) => row.city))].filter((city) => city !== '—').sort(),
         totalUnits,
         globalOccupancyRate,

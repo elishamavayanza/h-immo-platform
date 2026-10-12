@@ -121,10 +121,64 @@
    reste réservée aux grandes sections de l'application. */
 .patrimoine-layout { display: flex; align-items: stretch; min-width: 0; min-height: 100%; }
 .patrimoine-layout__main { flex: 1; min-width: 0; }
-.patrimoine-level { min-width: 0; }
+.patrimoine-level { min-width: 0; animation: patrimoine-level-enter 180ms ease-out both; }
+@keyframes patrimoine-level-enter {
+  from { opacity: 0; transform: translateY(5px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* Vues de niveau : carte de synthèse du bien, puis grille d'éléments enfants. */
+.patrimoine-summary { margin-bottom: $spacing-4; }
+.patrimoine-summary .card__body { display: grid; gap: $spacing-4; }
+.patrimoine-summary__head { display: flex; flex-wrap: wrap; align-items: flex-start; justify-content: space-between; gap: $spacing-3; }
+.patrimoine-summary__identity { display: grid; gap: $spacing-1; min-width: 0; }
+.patrimoine-summary__eyebrow { color: $color-text-muted; font-size: $font-size-xs; font-weight: $font-weight-semibold; letter-spacing: .08em; text-transform: uppercase; }
+.patrimoine-summary__title-row { display: flex; flex-wrap: wrap; align-items: center; gap: $spacing-2; }
+.patrimoine-summary__title-row h2 { margin: 0; color: $color-text-primary; font-size: $font-size-lg; }
+.patrimoine-summary__badges { display: inline-flex; flex-wrap: wrap; gap: $spacing-2; }
+.patrimoine-summary__subtitle { margin: 0; color: $color-text-muted; font-size: $font-size-sm; }
+.patrimoine-summary__actions { display: flex; flex-wrap: wrap; gap: $spacing-2; }
+.patrimoine-summary__fields { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 190px), 1fr)); gap: $spacing-2 $spacing-4; margin: 0; }
+.patrimoine-summary__field { display: grid; gap: 2px; min-width: 0; }
+.patrimoine-summary__field dt { color: $color-text-muted; font-size: $font-size-xs; }
+.patrimoine-summary__field dd { margin: 0; color: $color-text-primary; font-weight: $font-weight-medium; overflow-wrap: anywhere; }
+.patrimoine-summary__hint { margin: 0; padding: $spacing-2 $spacing-3; border-radius: $radius-md; color: $color-text-secondary; background: $color-bg-card-hover; font-size: $font-size-sm; }
+
+.patrimoine-children { display: grid; gap: $spacing-3; margin: 0 0 $spacing-4; }
+.patrimoine-children__heading { display: grid; gap: 2px; }
+.patrimoine-children__heading h2 { margin: 0; color: $color-text-primary; font-size: $font-size-md; }
+.patrimoine-children__heading p { margin: 0; color: $color-text-muted; font-size: $font-size-sm; }
+.patrimoine-children__list { display: grid; gap: 0; margin: 0; padding: 0; overflow: hidden; border: 1px solid $color-border; border-radius: $radius-md; background: $color-bg-card; list-style: none; }
+.patrimoine-children__list > li + li { border-top: 1px solid $color-border; }
+.patrimoine-child { display: flex; align-items: center; gap: $spacing-3; min-width: 0; min-height: 56px; padding: $spacing-2 $spacing-3; color: $color-text-primary; text-decoration: none; transition: background-color $transition-fast; }
+a.patrimoine-child:hover { background: $color-bg-card-hover; }
+a.patrimoine-child:focus-visible { position: relative; z-index: 1; outline: 2px solid $color-primary; outline-offset: -2px; }
+.patrimoine-child__identity { display: grid; flex: 1 1 180px; gap: 2px; min-width: 120px; }
+.patrimoine-child__identity strong { color: $color-text-primary; overflow-wrap: anywhere; }
+.patrimoine-child__identity small { color: $color-text-muted; }
+.patrimoine-child__meta { display: flex; flex: 0 1 auto; flex-wrap: wrap; justify-content: flex-end; gap: $spacing-2 $spacing-4; margin: 0; }
+.patrimoine-child__meta > div { display: grid; gap: 1px; min-width: 76px; }
+.patrimoine-child__meta dt { color: $color-text-muted; font-size: $font-size-xs; }
+.patrimoine-child__meta dd { margin: 0; color: $color-text-primary; font-size: $font-size-sm; overflow-wrap: anywhere; }
+.patrimoine-child__arrow { flex: 0 0 auto; color: $color-text-muted; font-size: $font-size-xl; }
+@media (prefers-reduced-motion: reduce) { .patrimoine-child { transition: none; } }
+@media (max-width: 640px) {
+  .patrimoine-summary__head { flex-direction: column; }
+  .patrimoine-summary__actions { width: 100%; }
+  .patrimoine-summary__actions .btn { flex: 1 1 auto; }
+  .patrimoine-child { align-items: flex-start; flex-wrap: wrap; }
+  .patrimoine-child__meta { flex: 1 1 100%; justify-content: flex-start; padding-left: 0; }
+  .patrimoine-child__arrow { margin-left: auto; }
+}
+
 .patrimoine-nav { padding: $spacing-1 0; }
 .patrimoine-nav__list { display: grid; gap: 2px; margin: 0; padding: 0; list-style: none; }
 .patrimoine-nav__list--nested { margin-left: 8px; padding-left: 8px; border-left: 1px solid $color-border; }
+.patrimoine-nav__list--nested { animation: patrimoine-branch-enter 140ms ease-out both; transform-origin: top; }
+@keyframes patrimoine-branch-enter {
+  from { opacity: 0; transform: translateY(-3px); }
+  to { opacity: 1; transform: translateY(0); }
+}
 .patrimoine-nav__node { min-width: 0; }
 .patrimoine-nav__row { display: flex; align-items: center; min-width: 0; gap: 2px; }
 .patrimoine-nav__disclosure,
@@ -149,12 +203,26 @@
 .patrimoine-nav__popover { z-index: $z-modal; width: min(320px, calc(100vw - 24px)); max-height: min(75vh, 680px); overflow: hidden; border: 1px solid $color-border; border-radius: $radius-lg; background: $color-bg-sidebar; box-shadow: $shadow-lg; }
 .patrimoine-nav__popover-title { padding: $spacing-3 $spacing-4; border-bottom: 1px solid $color-border; color: $color-text-primary; font-weight: $font-weight-semibold; }
 .patrimoine-nav__popover-content { max-height: calc(min(75vh, 680px) - 48px); padding: $spacing-2; overflow: auto; }
-.right-sidebar__collapsed-content { align-items: center; }
+.right-sidebar__collapsed-content { align-items: center; padding: $spacing-2 0; }
+.patrimoine-nav-rail__button { width: 40px; height: 40px; }
 /* En grand écran le panneau suit la hauteur du contenu plutôt que 100% du
    parent : scopé au desktop pour ne pas écraser la hauteur du tiroir compact. */
 @media (min-width: #{$breakpoint-desktop}) {
+  /* Étend le panneau jusqu'aux bords de la fenêtre : le padding global du
+     contenu reste appliqué au centre, mais ne crée plus de marge autour du rail. */
+  .patrimoine-layout {
+    width: calc(100% + #{$spacing-4});
+    min-height: calc(100% + #{$spacing-4} + #{$spacing-4});
+    margin: -$spacing-4 (-$spacing-4) (-$spacing-4) 0;
+  }
+  .patrimoine-layout__main {
+    padding-top: calc(#{$spacing-5} + #{$spacing-4});
+    padding-bottom: calc(#{$spacing-8} + #{$spacing-4});
+  }
   .patrimoine-layout > .right-sidebar { height: auto; min-height: 100%; }
 }
 @media (prefers-reduced-motion: reduce) {
+  .patrimoine-level,
+  .patrimoine-nav__list--nested { animation: none; }
   .patrimoine-nav__item { transition: none; }
 }

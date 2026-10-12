@@ -18,7 +18,6 @@ import { SIDEBAR_ICON_MAP } from './sidebar/sidebar.icons';
 import './MainLayout.scss';
 import { Sidebar, SidebarProps } from '../../../components/Navigation/Sidebar';
 import { Loading } from '../../../components/UI/Loading';
-import { Spinner } from '../../../components/UI/Spinner';
 import { useIsPortrait } from '../../../hooks/useIsPortrait';
 import { useIsMobile } from '../../../hooks/useIsMobile';
 import { mediaHref } from '../../../features/shared/media/services/mediaService';
@@ -255,7 +254,7 @@ return (
                     }
                 />
 
-                <main className="main-layout__content">
+                <main className={`main-layout__content${isPageTransitionLoading ? ' main-layout__content--transitioning' : ''}`} aria-busy={isPageTransitionLoading}>
                     {/* Pas de garde de rôle ici : c'est `AppRouteGuard`, posé sur
                         les routes `/app` dans `AppRoutes.tsx`, qui décide. Un
                         `RequireRole` enveloppait autrefois ce `<Outlet />`, mais
@@ -266,12 +265,8 @@ return (
                         `/app/access-denied`) ni le 403 d'une page réservée à un
                         autre rôle. Le chargement des rôles est déjà traité
                         *avant* ce point par le `Loading` ci-dessus. */}
-                    {isPageTransitionLoading ? (
-                        <div className="main-layout__page-loading" aria-busy="true">
-                            <Spinner size="large" className="spinner--page" />
-                            <span>Chargement de la page…</span>
-                        </div>
-                    ) : <Outlet />}
+                    <Outlet />
+                    {isPageTransitionLoading && <div className="main-layout__route-transition" aria-hidden="true" />}
                 </main>
             </div>
         </div>

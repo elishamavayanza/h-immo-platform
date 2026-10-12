@@ -22,18 +22,9 @@ import { fieldErrorMap } from '../../../shared/actionErrors';
 import { ModalActions } from '../../../shared/components/ModalActions';
 import { PhotoGallery } from '../../../shared/media/components/PhotoGallery';
 import { PhotoViewer } from '../../../shared/media/components/PhotoViewer';
+import { BUILDING_TYPE_LABELS, BUILDING_TYPE_OPTIONS } from './patrimoineView';
 import type { BuildingItem, CityItem, ParcelItem } from '../../shared/types/reference.types';
 import type { BuildingPayload } from '../services/patrimoineService';
-
-const BUILDING_TYPE_OPTIONS = [
-    { value: 'apartment', label: 'Immeuble à appartements' },
-    { value: 'commercial', label: 'Commercial' },
-    { value: 'office', label: 'Bureaux' },
-    { value: 'restaurant', label: 'Restaurant' },
-    { value: 'mixed', label: 'Mixte' },
-];
-
-const BUILDING_TYPE_LABELS: Record<string, string> = Object.fromEntries(BUILDING_TYPE_OPTIONS.map((option) => [option.value, option.label]));
 
 interface BuildingForm {
     parcelUuid: string;

@@ -24,6 +24,7 @@ import { ModalActions } from '../../../shared/components/ModalActions';
 import { PhotoGallery } from '../../../shared/media/components/PhotoGallery';
 import { PhotoViewer } from '../../../shared/media/components/PhotoViewer';
 import { ParcelMap } from './ParcelMap';
+import { parcelCoordinates } from './patrimoineView';
 import type { CityItem, ParcelItem } from '../../shared/types/reference.types';
 import type { ParcelPayload } from '../services/patrimoineService';
 
@@ -41,16 +42,6 @@ interface ParcelForm {
 }
 
 const EMPTY_PARCEL_FORM: ParcelForm = { cityUuid: '', reference: '', name: '', address: '', area: '', titleNumber: '', quarter: '', latitude: '', longitude: '', description: '' };
-
-function parcelCoordinates(parcel: ParcelItem): { latitude: number; longitude: number } | null {
-    if (!parcel.latitude || !parcel.longitude) return null;
-    const latitude = Number(parcel.latitude);
-    const longitude = Number(parcel.longitude);
-    return Number.isFinite(latitude) && Number.isFinite(longitude)
-        && latitude >= -90 && latitude <= 90 && longitude >= -180 && longitude <= 180
-        ? { latitude, longitude }
-        : null;
-}
 
 function parcelToForm(parcel: ParcelItem): ParcelForm {
     return {
