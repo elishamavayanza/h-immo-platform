@@ -328,17 +328,17 @@ body.right-sidebar-resizing {
 .right-sidebar__mobile-trigger {
     @include flex-center;
     position: fixed;
-    top: 50%;
-    right: 0;
-    transform: translateY(-50%);
-    width: 42px;
+    top: auto;
+    right: 16px;
+    bottom: calc(16px + env(safe-area-inset-bottom, 0px));
+    transform: none;
+    width: 48px;
     height: 48px;
     padding: 0;
     background-color: color-mix(in srgb, $color-primary 78%, transparent);
     color: $color-text-inverse;
     border: 1px solid rgba(255, 255, 255, .18);
-    border-right: 0;
-    border-radius: $radius-md 0 0 $radius-md;
+    border-radius: $radius-full;
     font-family: $font-family-base;
     font-size: $font-size-xs;
     font-weight: $font-weight-semibold;
@@ -354,11 +354,11 @@ body.right-sidebar-resizing {
     &:hover {
         background-color: color-mix(in srgb, $color-primary-hover 94%, transparent);
         opacity: 1;
-        transform: translateY(-50%) translateX(-2px);
+        transform: translateY(-2px);
     }
 
     &:active {
-        transform: translateY(-50%) translateX(0);
+        transform: none;
     }
 
     &:focus-visible {
@@ -371,6 +371,42 @@ body.right-sidebar-resizing {
         display: block;
         width: 18px;
         height: 18px;
+    }
+}
+
+// Sur téléphone, les deux commandes globales restent dans la bande réservée
+// au-dessus du contenu (hamburger à gauche, explorateur à droite).
+@media (max-width: #{$breakpoint-tablet - 1px}) {
+    .right-sidebar__mobile-trigger {
+        top: calc(16px + env(safe-area-inset-top, 0px));
+        bottom: auto;
+        width: 40px;
+        height: 40px;
+        padding: 0;
+        border: 2px solid color-mix(in srgb, #{$color-primary} 48%, transparent);
+        border-radius: $radius-full;
+        color: $color-primary;
+        background-color: transparent;
+        box-shadow: none;
+        opacity: 1;
+
+        &:hover {
+            border-color: color-mix(in srgb, #{$color-primary} 68%, transparent);
+            background-color: color-mix(in srgb, #{$color-primary} 10%, transparent);
+            transform: none;
+        }
+
+        svg {
+            width: 20px;
+            height: 20px;
+        }
+    }
+}
+
+@media (max-width: #{$breakpoint-desktop - 1px}) and (orientation: portrait) {
+    .right-sidebar__mobile-trigger {
+        top: calc(16px + env(safe-area-inset-top, 0px));
+        bottom: auto;
     }
 }
 
@@ -418,6 +454,6 @@ body.right-sidebar-resizing {
     }
 
     .right-sidebar__mobile-trigger:hover {
-        transform: translateY(-50%);
+        transform: none;
     }
 }

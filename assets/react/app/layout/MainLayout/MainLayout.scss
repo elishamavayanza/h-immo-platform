@@ -140,6 +140,45 @@
     }
 }
 
+// Dock partagé des panneaux droits. Sa largeur est pilotée par le composant
+// RightSidebar ; placé à côté du contenu scrollable, il reste au bord droit
+// de l'écran comme le sidebar gauche.
+.main-layout__right-dock {
+    flex: 0 0 0;
+    width: 0;
+    min-width: 0;
+    height: 100%;
+    overflow: visible;
+    transition: width 0.3s ease, flex-basis 0.3s ease;
+}
+
+@media (min-width: #{$breakpoint-desktop}) {
+    .main-layout__right-dock > .right-sidebar {
+        position: relative;
+        inset: auto;
+        height: 100%;
+        min-height: 0;
+        max-width: none;
+        z-index: auto;
+        box-shadow: none;
+    }
+}
+
+@media (max-width: #{$breakpoint-desktop - 1px}) {
+    .main-layout__right-dock {
+        flex-basis: 0;
+        width: 0;
+    }
+
+    // Le bouton de réouverture du panneau est fixé au bas de l’écran : garder
+    // une marge de défilement évite qu’il masque la dernière action d’une page.
+    @media (min-width: #{$breakpoint-tablet}) {
+        .main-layout__content:has(+ .main-layout__right-dock > .right-sidebar) {
+            padding-bottom: calc(5rem + env(safe-area-inset-bottom, 0px));
+        }
+    }
+}
+
 
 // ============================================================
 // CONTENU PRINCIPAL
