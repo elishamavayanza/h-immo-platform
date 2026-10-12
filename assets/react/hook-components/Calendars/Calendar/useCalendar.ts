@@ -178,10 +178,15 @@ export function useCalendar({
     const selectDate = useCallback(
         (date: Date) => {
             if (onDateSelect && !isDateDisabled(date)) {
+                if (!isSameMonth(date, currentMonth)) {
+                    const month = new Date(date.getFullYear(), date.getMonth(), 1);
+                    setCurrentMonth(month);
+                    onMonthChange?.(month.getMonth(), month.getFullYear());
+                }
                 onDateSelect(date);
             }
         },
-        [onDateSelect, isDateDisabled]
+        [onDateSelect, isDateDisabled, currentMonth, onMonthChange]
     );
 
     const classes = useMemo(() => {

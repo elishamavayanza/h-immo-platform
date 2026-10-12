@@ -319,6 +319,13 @@ final readonly class PaymentService
 
         $filter ??= new \App\Dto\Request\Rental\PaymentFilterDto();
 
+        if ($filter->from !== null && $filter->to !== null && $filter->from > $filter->to) {
+            return $feedback
+                ->setErrorFlushDescription('La date de fin doit être égale ou postérieure à la date de début.')
+                ->setStatus(422)
+                ->autoInitFlush();
+        }
+
         // Récupérer les organisations et villes accessibles
         $organizations = $this->securityService->getCurrentUserOrganizations();
         $organizationIds = array_map(fn($o) => $o->getId(), $organizations);
@@ -377,7 +384,9 @@ final readonly class PaymentService
             page: $filter->page,
             limit: $filter->limit,
             sortBy: $filter->sortBy,
-            sortOrder: $filter->sortOrder
+            sortOrder: $filter->sortOrder,
+            from: $filter->from,
+            to: $filter->to,
         );
 
         // Appliquer le contrôle d'accès par paiement

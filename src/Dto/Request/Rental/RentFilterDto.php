@@ -42,6 +42,12 @@ final readonly class RentFilterDto
         #[Assert\Choice(choices: ['pending', 'partially_paid', 'paid', 'overdue'])]
         public ?string $status = null,
 
+        #[OA\Property(description: 'Date d’échéance minimale incluse (YYYY-MM-DD)', format: 'date', nullable: true)]
+        public ?\DateTimeImmutable $from = null,
+
+        #[OA\Property(description: 'Date d’échéance maximale incluse (YYYY-MM-DD)', format: 'date', nullable: true)]
+        public ?\DateTimeImmutable $to = null,
+
         #[OA\Property(description: 'Numéro de page', default: 1)]
         #[Assert\Positive]
         public int $page = 1,

@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from 'react';
+import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react';
 import { useSearchParams } from 'react-router-dom';
 
 import { OrganizationSummary } from '../../../shared/components/OrganizationSummary';
@@ -13,6 +13,7 @@ import { Input } from '../../../../components/Forms/Input';
 import { Textarea } from '../../../../components/Forms/Textarea';
 import { FormField } from '../../../../components/Forms/FormField';
 import { Modal } from '../../../../components/UI/Modal';
+import { RightSidebar } from '../../../../components/Navigation/RightSidebar';
 import { useOrganization } from '../../../../app/providers/OrganizationProvider';
 import { useLoyers } from '../hooks/useLoyers';
 import { LoyersTable } from '../components/LoyersTable';
@@ -20,6 +21,7 @@ import { fieldErrorMap } from '../../../shared/actionErrors';
 import { ModalActions } from '../../../shared/components/ModalActions';
 import { canDo } from '../../../shared/permissions';
 import type { LoyerRow } from '../types/loyer.types';
+import { ActivityCalendar, activityDateKey, type ActivityCalendarEvent } from '../../../shared/components/ActivityCalendar';
 import type { OrganizationRole } from '../../../../../services/api/api.types';
 import '../../../../../styles/pages/admin_immobilier/loyers/_loyers.scss';
 
@@ -42,11 +44,47 @@ export function LoyersPage({ readOnly = false }: { readOnly?: boolean } = {}) {
     const buildingUuid = searchParams.get('buildingUuid');
     const { organizationRole } = useOrganization();
     const {
-        data, rows: allRows, isLoading, error, reload,
+        data, rows: allRows, isLoading, error, reload, loadPeriod,
         search, setSearch, status, setStatus,
         recordPayment, markOverdue, updateRent,
     } = useLoyers();
-    const rows = allRows.filter((row) => (!parcelUuid || row.parcelId === parcelUuid) && (!buildingUuid || row.buildingId === buildingUuid));
+    const [calendarData, setCalendarData] = useState<Awaited<ReturnType<typeof loadPeriod>>>(null);
+    const [selectedDate, setSelectedDate] = useState<string | null>(null);
+    const monthRequest = useRef(0);
+
+    const loadCalendarMonth = useCallback(async (month: number, year: number) => {
+        const requestId = ++monthRequest.current;
+        setCalendarData(null);
+        const start = new Date(year, month, 1);
+        const end = new Date(year, month + 1, 0);
+        const toKey = (date: Date) => `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+        try {
+            const period = await loadPeriod(toKey(start), toKey(end));
+            if (requestId === monthRequest.current) setCalendarData(period);
+        } catch {
+            if (requestId === monthRequest.current) setCalendarData(null);
+        }
+    }, [loadPeriod]);
+
+    useEffect(() => {
+        const today = new Date();
+        void loadCalendarMonth(today.getMonth(), today.getFullYear());
+        return () => { monthRequest.current += 1; };
+    }, [loadCalendarMonth]);
+
+    const propertyRows = (source: LoyerRow[]) => source.filter((row) => (!parcelUuid || row.parcelId === parcelUuid) && (!buildingUuid || row.buildingId === buildingUuid));
+    const recentRows = propertyRows(allRows);
+    const monthRents = propertyRows(calendarData?.rents.rows ?? allRows).filter((row) => status === 'all' || row.status === status);
+    const monthSearch = search.trim().toLocaleLowerCase('fr');
+    const filteredMonthRents = monthRents.filter((row) => !monthSearch || [row.tenant, row.unitLabel, row.periodLabel].some((value) => value.toLocaleLowerCase('fr').includes(monthSearch)));
+    const paymentEvents = calendarData?.payments ?? [];
+    const selectedRows = selectedDate
+        ? filteredMonthRents.filter((row) => activityDateKey(row.dueDate) === selectedDate || paymentEvents.some((payment) => payment.rentId === row.id && activityDateKey(payment.paymentDate) === selectedDate))
+        : recentRows;
+    const calendarEvents: ActivityCalendarEvent[] = [
+        ...filteredMonthRents.map((row) => ({ date: row.dueDate, title: `Échéance · ${row.tenant}`, detail: `${row.amount} ${row.currency} · ${row.status === 'overdue' ? 'En retard' : row.status}`, tone: row.status === 'overdue' ? 'error' as const : 'info' as const })),
+        ...paymentEvents.map((payment) => ({ date: payment.paymentDate, title: payment.isReversal ? 'Contre-écriture de paiement' : 'Paiement de loyer', detail: `${payment.amount} ${payment.currency}`, tone: payment.isReversal ? 'warning' as const : 'success' as const })),
+    ];
 
     const [paymentModalOpen, setPaymentModalOpen] = useState(false);
     const [paymentTarget, setPaymentTarget] = useState<LoyerRow | null>(null);
@@ -162,21 +200,22 @@ export function LoyersPage({ readOnly = false }: { readOnly?: boolean } = {}) {
         await markOverdue(target.id);
     };
 
-    let body = <LoyersTable rows={rows} role={organizationRole} onRecordPayment={openPayment} onMarkOverdue={confirmMarkOverdue} onUpdate={openUpdate} readOnly={readOnly} />;
+    let body = <LoyersTable rows={selectedRows} role={organizationRole} onRecordPayment={openPayment} onMarkOverdue={confirmMarkOverdue} onUpdate={openUpdate} readOnly={readOnly} />;
     if (isLoading) {
         body = <EmptyState icon={<Spinner size="large" />} title="Chargement des échéances…" description="Récupération des loyers de l’organisation." />;
     } else if (error) {
         body = <EmptyState title="Échéances indisponibles" description={error} action={<Button onClick={() => void reload()}>Réessayer</Button>} />;
-    } else if (rows.length === 0) {
+    } else if (selectedRows.length === 0) {
         body = <EmptyState
-            title="Aucune échéance à afficher"
+            title={selectedDate ? 'Aucune échéance ou paiement ce jour-là' : 'Aucune échéance à afficher'}
             description={data && data.rows.length > 0 ? 'Aucune échéance ne correspond à la recherche.' : 'Aucune échéance ne correspond au statut sélectionné.'}
         />;
     }
 
-    return <main className="organization-page organization-operational-page"><header className="organization-page__header"><div><span className="organization-page__eyebrow">SUIVI FINANCIER</span><h1>Loyers</h1><p>Suivez les échéances, paiements et retards de votre portefeuille.</p></div></header>
-        <OrganizationSummary items={[{ label: 'Échéances listées', value: <>{rows.length}</> }, { label: 'Payées', value: <>{rows.filter((row) => row.status === 'paid').length}</> }, { label: 'En retard', value: <>{rows.filter((row) => row.status === 'overdue').length}</> }]} />
-        <Card className="organization-table-card" padding="medium"><div className="organization-table-toolbar"><div><h2>Échéances récentes</h2><p>{data?.note ?? 'Les montants sont affichés dans leur devise d’origine.'}</p></div><div className="organization-filters organization-filters--tenant"><SearchInput value={search} onSearch={setSearch} placeholder="Rechercher une échéance…" fullWidth /><Select aria-label="Filtrer par statut" value={status} onChange={(event) => setStatus(event.target.value)} options={[{ value: 'all', label: 'Tous les statuts' }, { value: 'pending', label: 'En attente' }, { value: 'partially_paid', label: 'Partiel' }, { value: 'paid', label: 'Payé' }, { value: 'overdue', label: 'En retard' }]} /></div></div>{body}</Card>
+    return <>
+    <main className="organization-page organization-operational-page"><header className="organization-page__header"><div><span className="organization-page__eyebrow">SUIVI FINANCIER</span><h1>Loyers</h1><p>Suivez les échéances, paiements et retards de votre portefeuille.</p></div></header>
+        <OrganizationSummary items={[{ label: 'Échéances listées', value: <>{selectedRows.length}</> }, { label: 'Payées', value: <>{selectedRows.filter((row) => row.status === 'paid').length}</> }, { label: 'En retard', value: <>{selectedRows.filter((row) => row.status === 'overdue').length}</> }]} />
+        <Card className="organization-table-card" padding="medium"><div className="organization-table-toolbar"><div><h2>{selectedDate ? `Échéances du ${selectedDate}` : 'Échéances récentes'}</h2><p>{selectedDate ? `${selectedRows.length} échéance(s) liée(s) à cette date.` : data?.note ?? 'Les montants sont affichés dans leur devise d’origine.'}</p></div><div className="organization-filters organization-filters--tenant"><SearchInput value={search} onSearch={setSearch} placeholder="Rechercher une échéance…" fullWidth /><Select aria-label="Filtrer par statut" value={status} onChange={(event) => setStatus(event.target.value)} options={[{ value: 'all', label: 'Tous les statuts' }, { value: 'pending', label: 'En attente' }, { value: 'partially_paid', label: 'Partiel' }, { value: 'paid', label: 'Payé' }, { value: 'overdue', label: 'En retard' }]} /></div></div>{body}</Card>
         <Modal
             isOpen={paymentModalOpen}
             onClose={closePaymentModal}
@@ -228,5 +267,18 @@ export function LoyersPage({ readOnly = false }: { readOnly?: boolean } = {}) {
                 </FormField>
             </form>
         </Modal>
-    </main>;
+    </main>
+    <RightSidebar title="Calendrier des loyers" size="medium" variant="dark" collapsible>
+        <ActivityCalendar
+            events={calendarEvents}
+            label="Calendrier des loyers et paiements"
+            selectedDate={selectedDate}
+            onSelectDate={setSelectedDate}
+            onClearDate={() => setSelectedDate(null)}
+            onMonthChange={(month, year) => { setSelectedDate(null); void loadCalendarMonth(month, year); }}
+            description={calendarData === null ? 'Chargement des loyers et encaissements du mois…' : calendarData.paymentsUnavailable ? 'Les paiements ne sont pas disponibles ; les marqueurs affichent les échéances de loyer.' : calendarData.rents.note ?? (calendarData.payments.length >= 100 ? 'Historique mensuel plafonné à 100 résultats.' : 'Les marqueurs indiquent les échéances de loyer et les paiements reçus. Sélectionnez une date pour afficher les opérations correspondantes.')}
+            emptyMessage="Aucune échéance ni paiement connu pour cette journée."
+        />
+    </RightSidebar>
+    </>;
 }

@@ -1,5 +1,6 @@
 @use '../base';
 @use '../../../baseVariables/variables' as *;
+@use '../../../baseVariables/mixins' as *;
 
 .patrimoine-link {
   padding: 0;
@@ -221,6 +222,24 @@ a.patrimoine-child:focus-visible { position: relative; z-index: 1; outline: 2px 
 .patrimoine-nav__popover { z-index: $z-modal; width: min(320px, calc(100vw - 24px)); max-height: min(75vh, 680px); overflow: hidden; border: 1px solid $color-border; border-radius: $radius-lg; background: $color-bg-sidebar; box-shadow: $shadow-lg; }
 .patrimoine-nav__popover-title { padding: $spacing-3 $spacing-4; border-bottom: 1px solid $color-border; color: $color-text-primary; font-weight: $font-weight-semibold; }
 .patrimoine-nav__popover-content { max-height: calc(min(75vh, 680px) - 48px); padding: $spacing-2; overflow: auto; }
+.patrimoine-layout__nav .right-sidebar__content { display: flex; flex-direction: column; overflow: hidden; }
+.patrimoine-rightbar-split { display: flex; flex: 1 1 auto; flex-direction: column; min-width: 0; min-height: 0; }
+.patrimoine-rightbar-split__panel { min-width: 0; min-height: 0; overflow-x: hidden; overflow-y: auto; @include scrollbar; }
+.patrimoine-rightbar-section { min-width: 0; }
+.patrimoine-rightbar-section > h2 { margin: 0 0 $spacing-2; color: $color-text-primary; font-size: $font-size-sm; font-weight: $font-weight-semibold; }
+.patrimoine-rightbar-section--activity { margin-top: 0; padding-top: 0; border-top: 0; }
+.patrimoine-rightbar-split__controls { position: relative; display: flex; flex: 0 0 22px; align-items: center; justify-content: center; min-height: 22px; margin: 0 calc(-1 * #{$spacing-1}); }
+.patrimoine-rightbar-split__handle { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; width: 100%; border: 0; cursor: row-resize; touch-action: none; }
+.patrimoine-rightbar-split__handle::before { position: absolute; right: 0; left: 0; height: 1px; background: $color-border; content: ''; }
+.patrimoine-rightbar-split__handle span { z-index: 1; width: 36px; height: 4px; border-radius: 999px; background: $color-border-strong; transition: background-color $transition-fast, width $transition-fast; }
+.patrimoine-rightbar-split__handle:hover span,
+.patrimoine-rightbar-split__handle:focus-visible span { width: 48px; background: $color-primary; }
+.patrimoine-rightbar-split__handle:focus-visible { outline: 2px solid $color-primary; outline-offset: -2px; }
+.patrimoine-rightbar-split__swap { z-index: 2; display: grid; width: 24px; height: 20px; place-items: center; padding: 0; border: 1px solid $color-border; border-radius: $radius-sm; color: $color-text-muted; background: $color-bg-sidebar; font-size: $font-size-xs; cursor: pointer; }
+.patrimoine-rightbar-split__swap:hover { color: $color-primary; border-color: $color-primary; }
+.patrimoine-rightbar-split__swap:focus-visible { outline: 2px solid $color-primary; outline-offset: 2px; }
+.patrimoine-calendar-rail__popover { width: min(360px, calc(100vw - 76px)); max-height: min(82vh, 720px); }
+.patrimoine-calendar-rail__popover .patrimoine-nav__popover-content { max-height: calc(min(82vh, 720px) - 48px); }
 .right-sidebar__collapsed-content { align-items: center; padding: $spacing-2 0; }
 .patrimoine-nav-rail__button { width: 40px; height: 40px; }
 @media (prefers-reduced-motion: reduce) {

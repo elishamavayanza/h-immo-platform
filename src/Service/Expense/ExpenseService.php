@@ -325,9 +325,18 @@ final readonly class ExpenseService
         ?int $page = 1,
         ?int $limit = 20,
         ?string $sortBy = 'expenseDate',
-        ?string $sortOrder = 'DESC'
+        ?string $sortOrder = 'DESC',
+        ?\DateTimeImmutable $from = null,
+        ?\DateTimeImmutable $to = null,
     ): Feedback {
         $feedback = new Feedback();
+
+        if ($from !== null && $to !== null && $from > $to) {
+            return $feedback
+                ->setErrorFlushDescription('La date de fin doit être égale ou postérieure à la date de début.')
+                ->setStatus(422)
+                ->autoInitFlush();
+        }
 
         // Périmètre serveur, jamais déduit du client : les dépenses des
         // organisations de l'appelant, restreintes aux villes auxquelles il a
@@ -384,7 +393,9 @@ final readonly class ExpenseService
             page: $page,
             limit: $limit,
             sortBy: $sortBy,
-            sortOrder: $sortOrder
+            sortOrder: $sortOrder,
+            periodFrom: $from,
+            periodTo: $to,
         );
 
         $items = array_map(

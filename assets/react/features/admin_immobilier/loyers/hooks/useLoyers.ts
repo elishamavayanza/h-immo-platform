@@ -3,7 +3,9 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useToast } from '../../../../app/layout/MainLayout/contexts/ToastContext';
 import { useOrganization } from '../../../../app/providers/OrganizationProvider';
 import { ApiError } from '../../../../../services/api/api.types';
+import { canDo } from '../../../shared/permissions';
 import {
+    fetchLoyerPaymentActivities,
     fetchLoyers,
     markRentOverdue,
     recordPayment,
@@ -39,8 +41,9 @@ const runAction = async (push: ReturnType<typeof useToast>['push'], successMessa
  * reste locale sur le jeu chargé.
  */
 export function useLoyers() {
-    const { currentOrganization } = useOrganization();
+    const { currentOrganization, organizationRole } = useOrganization();
     const organizationUuid = currentOrganization?.uuid ?? null;
+    const canViewPayments = canDo(organizationRole, 'view_payment');
     const { push } = useToast();
 
     const [data, setData] = useState<LoyersData | null>(null);
@@ -67,6 +70,24 @@ export function useLoyers() {
             setLoading(false);
         }
     }, [organizationUuid, status]);
+
+    const loadPeriod = useCallback(async (from: string, to: string) => {
+        if (!organizationUuid) return null;
+        const start = new Date(`${from}T00:00:00`);
+        const end = new Date(`${to}T23:59:59.999`);
+        const [rents, paymentPage] = await Promise.all([
+            fetchLoyers(organizationUuid, 'all', from, to),
+            canViewPayments
+                ? fetchLoyerPaymentActivities(organizationUuid, start.toISOString(), end.toISOString()).catch(() => null)
+                : Promise.resolve(null),
+        ]);
+        return {
+            rents,
+            payments: paymentPage?.items ?? [],
+            paymentsTotal: paymentPage?.total ?? 0,
+            paymentsUnavailable: canViewPayments && paymentPage === null,
+        };
+    }, [organizationUuid, canViewPayments]);
 
     useEffect(() => { void reload(); }, [reload]);
 
@@ -98,6 +119,7 @@ export function useLoyers() {
         isLoading,
         error,
         reload,
+        loadPeriod,
         search,
         setSearch,
         status,

@@ -92,7 +92,9 @@ class PaymentRepository extends ServiceEntityRepository
         int $limit = 20,
         ?string $search = null,
         ?string $sortBy = 'paymentDate',
-        ?string $sortOrder = 'DESC'
+        ?string $sortOrder = 'DESC',
+        ?\DateTimeImmutable $from = null,
+        ?\DateTimeImmutable $to = null
     ): array {
         // Whitelist des champs de tri
         $allowedSortFields = ['paymentDate', 'amount', 'reference', 'receiptNumber', 'createdAt'];
@@ -121,6 +123,16 @@ class PaymentRepository extends ServiceEntityRepository
         if ($search !== null && $search !== '') {
             $qb->andWhere('p.reference LIKE :search OR p.receiptNumber LIKE :search')
                 ->setParameter('search', '%' . $search . '%');
+        }
+
+        if ($from !== null) {
+            $qb->andWhere('p.paymentDate >= :from')
+                ->setParameter('from', $from);
+        }
+
+        if ($to !== null) {
+            $qb->andWhere('p.paymentDate <= :to')
+                ->setParameter('to', $to);
         }
 
         return $this->fetchPaginated($qb, $page, $limit);

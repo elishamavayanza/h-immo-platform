@@ -31,9 +31,9 @@ function periodLabel(period: string): string {
     return label.charAt(0).toUpperCase() + label.slice(1);
 }
 
-export async function fetchLoyers(organizationUuid: string, status: string): Promise<LoyersData> {
+export async function fetchLoyers(organizationUuid: string, status: string, from?: string, to?: string): Promise<LoyersData> {
     const [rents, leases, tenants, units, buildings, parcels] = await Promise.all([
-        fetchRents(organizationUuid, status),
+        fetchRents(organizationUuid, status, from, to),
         fetchLeases(organizationUuid),
         fetchTenants(organizationUuid),
         fetchUnits(organizationUuid),
@@ -97,6 +97,33 @@ export interface RecordPaymentPayload {
 /** `POST /api/v1/payments` — enregistrer un paiement. */
 export async function recordPayment(payload: RecordPaymentPayload): Promise<unknown> {
     const { data } = await apiClient.post<Feedback<unknown>>('/v1/payments', payload);
+    return data.data;
+}
+
+export interface LoyerPaymentActivity {
+    id: string;
+    rentId: string;
+    amount: string;
+    currency: string;
+    paymentDate: string;
+    isReversal: boolean;
+    isReversed: boolean;
+}
+
+export interface LoyerPaymentActivityPage {
+    items: LoyerPaymentActivity[];
+    total: number;
+}
+
+/** Paiements du mois, bornés au tenant actif et à la fenêtre demandée. */
+export async function fetchLoyerPaymentActivities(
+    organizationUuid: string,
+    from: string,
+    to: string,
+): Promise<LoyerPaymentActivityPage> {
+    const { data } = await apiClient.get<Feedback<LoyerPaymentActivityPage>>('/v1/payments', {
+        params: { organizationId: organizationUuid, from, to, limit: REFERENCE_LIMIT, sortBy: 'paymentDate', sortOrder: 'ASC' },
+    });
     return data.data;
 }
 

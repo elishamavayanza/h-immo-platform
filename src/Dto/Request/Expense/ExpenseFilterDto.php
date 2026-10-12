@@ -24,6 +24,12 @@ final readonly class ExpenseFilterDto
         #[OA\Property(description: 'Filtrer par villes (UUIDs)', type: 'array', items: new OA\Items(type: 'string', format: 'uuid'))]
         public ?array $cityIds = null,
 
+        #[OA\Property(description: 'Date minimale incluse (YYYY-MM-DD)', format: 'date', nullable: true)]
+        public ?\DateTimeImmutable $from = null,
+
+        #[OA\Property(description: 'Date maximale incluse (YYYY-MM-DD)', format: 'date', nullable: true)]
+        public ?\DateTimeImmutable $to = null,
+
         #[OA\Property(description: 'Numéro de page', default: 1)]
         #[Assert\Positive]
         public int $page = 1,

@@ -88,9 +88,11 @@ export function fetchLeasesByUnit(organizationId: string, unitId: string): Promi
  * `paid`, `overdue`) : un filtre est préférable à un tri client, `overdue`
  * n'étant jamais persisté.
  */
-export function fetchRents(organizationId: string, status?: string): Promise<ListPage<RentItem>> {
+export function fetchRents(organizationId: string, status?: string, from?: string, to?: string): Promise<ListPage<RentItem>> {
     return getList<RentItem>('/v1/rents', organizationId, {
         ...(status && status !== 'all' ? { status } : {}),
+        ...(from ? { from } : {}),
+        ...(to ? { to } : {}),
         sortBy: 'dueDate',
         sortOrder: 'DESC',
     });
@@ -141,11 +143,15 @@ export function tenantLabel(tenant: TenantItem): string {
  * appliqué côté serveur à partir des organisations et villes accessibles de
  * l'appelant. Passer un `organizationId` inconnu du DTO serait inopérant.
  */
-export function fetchExpenses(): Promise<ListPage<ExpenseItem>> {
+export function fetchExpenses(from?: string, to?: string, cityIds?: string[]): Promise<ListPage<ExpenseItem>> {
+    if (cityIds && cityIds.length === 0) return Promise.resolve({ items: [], total: 0, page: 1, pages: 0 });
+    const params = new URLSearchParams({ limit: String(REFERENCE_LIMIT), sortBy: 'expenseDate', sortOrder: 'DESC' });
+    if (from) params.set('from', from);
+    if (to) params.set('to', to);
+    cityIds?.forEach((cityId) => params.append('cityIds[]', cityId));
+
     return apiClient
-        .get<Feedback<ListPage<ExpenseItem>>>('/v1/expenses', {
-            params: { limit: REFERENCE_LIMIT, sortBy: 'expenseDate', sortOrder: 'DESC' },
-        })
+        .get<Feedback<ListPage<ExpenseItem>>>(`/v1/expenses?${params.toString()}`)
         .then((response) => response.data.data);
 }
 

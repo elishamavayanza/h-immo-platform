@@ -28,6 +28,8 @@
     @include scrollbar;
     width: 100%;
     max-width: 420px;
+    min-width: 0;
+    box-sizing: border-box;
     user-select: none;
     color: $color-text-primary;
 
@@ -135,7 +137,7 @@
 
 .calendar__weekdays {
     display: grid;
-    grid-template-columns: repeat(7, 1fr);
+    grid-template-columns: repeat(7, minmax(0, 1fr));
     gap: $spacing-1;
     margin-bottom: $spacing-2;
 }
@@ -148,6 +150,7 @@
     color: $color-text-muted;
     text-transform: uppercase;
     letter-spacing: 0.04em;
+    min-width: 0;
 }
 
 
@@ -161,7 +164,8 @@
 
 .calendar__grid {
     display: grid;
-    grid-template-columns: repeat(7, 1fr);
+    grid-template-columns: repeat(7, minmax(0, 1fr));
+    min-width: 0;
     gap: $spacing-1;
 }
 
@@ -174,6 +178,8 @@
     @include flex-center;
     @include focus-ring;
     position: relative;
+    width: 100%;
+    min-width: 0;
     flex-direction: column;
     gap: 2px;
     aspect-ratio: 1 / 1;
@@ -354,6 +360,68 @@
 .calendar__marker--error {
     background-color: $color-danger;
 }
+
+.activity-calendar__description,
+.activity-calendar__empty {
+    margin: 0 0 $spacing-3;
+    color: $color-text-muted;
+    font-size: $font-size-sm;
+    line-height: 1.5;
+}
+
+.activity-calendar__calendar {
+    padding: $spacing-2;
+    border: 1px solid $color-border;
+    border-radius: $radius-lg;
+    background: $color-bg-card;
+}
+
+.activity-calendar__calendar .calendar__header {
+    display: grid;
+    grid-template-columns: 32px minmax(0, 1fr) 32px;
+    margin-bottom: $spacing-2;
+    padding-bottom: $spacing-2;
+}
+
+.activity-calendar__calendar .calendar__today {
+    grid-column: 1 / -1;
+    justify-self: end;
+}
+
+.activity-calendar__results {
+    margin-top: $spacing-3;
+    padding: $spacing-3;
+    border: 1px solid $color-border;
+    border-radius: $radius-md;
+    background: $color-bg-card;
+}
+
+.activity-calendar__results-heading,
+.activity-calendar__results-heading > div {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: $spacing-2;
+}
+
+.activity-calendar__results-heading > div {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.activity-calendar__results-heading strong { color: $color-text-primary; font-size: $font-size-sm; }
+.activity-calendar__results-heading span { color: $color-text-muted; font-size: $font-size-xs; }
+.activity-calendar__results-heading button { padding: $spacing-1; border: 0; color: $color-primary; background: transparent; font: inherit; font-size: $font-size-xs; cursor: pointer; }
+.activity-calendar__event-list { display: grid; gap: $spacing-2; margin: $spacing-3 0 0; padding: 0; list-style: none; }
+.activity-calendar__event-list li { display: flex; align-items: flex-start; gap: $spacing-2; color: $color-text-primary; font-size: $font-size-sm; }
+.activity-calendar__event-list li > span:last-child { display: grid; gap: 2px; min-width: 0; overflow-wrap: anywhere; }
+.activity-calendar__event-list small { color: $color-text-muted; font-size: $font-size-xs; }
+.activity-calendar__event-dot { width: 8px; height: 8px; flex: 0 0 8px; margin-top: 5px; border-radius: 50%; background: $color-info; }
+.activity-calendar__event-dot--success { background: $color-success; }
+.activity-calendar__event-dot--warning { background: $color-warning; }
+.activity-calendar__event-dot--error { background: $color-danger; }
+.activity-calendar__more { padding-left: 16px; color: $color-text-muted !important; font-size: $font-size-xs !important; }
 
 // Les marqueurs restent visibles même sur un jour sélectionné
 .calendar__day--selected .calendar__marker {
