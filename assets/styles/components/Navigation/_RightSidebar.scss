@@ -41,6 +41,35 @@
     }
 }
 
+// ============================================================
+// DESKTOP FIXED — le panneau droit reste visible sans scroller
+// ============================================================
+// Sur grand écran, on fixe le panneau en haut à droite de la fenêtre.
+// Il sort du flux flex pour ne pas s'étirer avec le contenu principal.
+// La largeur est gérée inline par le composant (sidebarStyle).
+@media (min-width: #{$breakpoint-desktop}) {
+    .right-sidebar {
+        position: fixed;
+        top: 0;
+        right: 0;
+        height: 100vh;
+        height: 100dvh;
+        z-index: $z-fixed;
+        // On retire flex-shrink et height:100% du flux flex
+        flex-shrink: 0;
+        flex-basis: auto;
+        // L'ombre marque la séparation visuelle avec le contenu
+        box-shadow: $shadow-lg;
+    }
+
+    // État compact : le tiroir mobile a sa propre règle plus bas
+    .right-sidebar--fully-collapsed {
+        // En collapsed, le panneau fixe reste à droite avec sa largeur réduite
+        // (gérée par sidebarStyle). Pas de transform sur desktop.
+        transform: none;
+    }
+}
+
 
 // ============================================================
 // VARIANTES

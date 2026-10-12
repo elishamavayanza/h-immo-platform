@@ -230,6 +230,23 @@ export function RightSidebar({
         updateWidthDOM(isFullyCollapsed ? effectiveCollapsedWidth : width);
     }, [isFullyCollapsed, width, effectiveCollapsedWidth, updateWidthDOM]);
 
+    // Expose la largeur courante via variable CSS pour que le contenu principal
+    // puisse réserver l'espace nécessaire (padding-right) et ne pas passer
+    // sous le panneau fixe. Uniquement en mode desktop (non compact).
+    useEffect(() => {
+        if (isCompact) {
+            document.documentElement.style.removeProperty('--right-sidebar-width');
+        } else {
+            const currentWidth = isFullyCollapsed ? effectiveCollapsedWidth : width;
+            document.documentElement.style.setProperty('--right-sidebar-width', `${currentWidth}px`);
+        }
+        return () => {
+            if (!isCompact) {
+                document.documentElement.style.removeProperty('--right-sidebar-width');
+            }
+        };
+    }, [isCompact, isFullyCollapsed, width, effectiveCollapsedWidth]);
+
     // Fermeture au clavier (mode tiroir) : Échap referme le panneau.
     // On ignore la touche lorsqu'une boîte de dialogue modale est ouverte, pour
     // ne pas lui voler son propre Échap ; sinon on capte l'événement afin que
