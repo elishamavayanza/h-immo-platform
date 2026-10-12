@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Entity\Identity;
 
 use App\Entity\Shared\SoftDeletableEntity;
+use App\Enum\Currency;
 use App\Enum\OrganizationStatus;
 use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
@@ -114,6 +115,22 @@ class Organization extends SoftDeletableEntity
      */
     #[ORM\Column(type: Types::STRING, enumType: OrganizationStatus::class)]
     private OrganizationStatus $status = OrganizationStatus::ACTIVE;
+
+    /** Devise de référence pour les rapports et synthèses financières. */
+    #[ORM\Column(type: Types::STRING, length: 3, enumType: Currency::class, options: ['default' => 'CDF'])]
+    private Currency $currency = Currency::CDF;
+
+    public function getCurrency(): Currency
+    {
+        return $this->currency;
+    }
+
+    public function setCurrency(Currency $currency): static
+    {
+        $this->currency = $currency;
+
+        return $this;
+    }
 
     public function getName(): string
     {

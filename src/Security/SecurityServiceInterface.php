@@ -178,6 +178,9 @@ interface SecurityServiceInterface
         SecurityAction $action
     ): void;
 
+    /** @throws AccessDeniedException */
+    public function checkCityExchangeRateAccess(City $city): void;
+
     public function canAccessCity(
         City $city,
         SecurityAction $action = SecurityAction::VIEW

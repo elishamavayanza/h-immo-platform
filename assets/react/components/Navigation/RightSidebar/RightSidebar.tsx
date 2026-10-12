@@ -37,6 +37,8 @@ export interface RightSidebarProps extends UseRightSidebarProps {
     onResize?: (width: number) => void;
     closeThreshold?: number;
     collapsedWidth?: number;
+    /** Referme le tiroir compact lorsqu’un lien ou un élément de menu est choisi. */
+    closeOnSelect?: boolean;
 }
 
 export function RightSidebar({
@@ -56,6 +58,7 @@ export function RightSidebar({
                                  onResize,
                                  closeThreshold = 60,
                                  collapsedWidth = 35,
+                                 closeOnSelect = false,
                              }: RightSidebarProps) {
     const [rightDock, setRightDock] = useState<HTMLElement | null>(null);
 
@@ -389,7 +392,10 @@ export function RightSidebar({
                                 <CloseIcon />
                             </button>
                         )}
-                        <div className="right-sidebar__content">{children}</div>
+                        <div className="right-sidebar__content" onClick={(event) => {
+                            if (!closeOnSelect || !isCompact || !(event.target instanceof Element)) return;
+                            if (event.target.closest('a, [role="menuitem"]')) handleToggle();
+                        }}>{children}</div>
                         {footer && <div className="right-sidebar__footer">{footer}</div>}
                     </>
                 )}

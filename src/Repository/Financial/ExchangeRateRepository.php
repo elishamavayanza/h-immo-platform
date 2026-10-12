@@ -78,6 +78,78 @@ final class ExchangeRateRepository extends ServiceEntityRepository
         return $qb->getQuery()->getOneOrNullResult();
     }
 
+    public function findCurrentForScope(Currency $baseCurrency, Currency $quoteCurrency, string $scopeKey): ?ExchangeRate
+    {
+        return $this->createQueryBuilder('er')
+            ->andWhere('er.scopeKey = :scope')
+            ->andWhere('er.baseCurrency = :base')
+            ->andWhere('er.quoteCurrency = :quote')
+            ->andWhere('er.effectiveTo IS NULL')
+            ->setParameter('scope', $scopeKey)
+            ->setParameter('base', $baseCurrency)
+            ->setParameter('quote', $quoteCurrency)
+            ->orderBy('er.effectiveFrom', 'DESC')
+            ->setMaxResults(1)
+            ->getQuery()
+            ->getOneOrNullResult();
+    }
+
+    /** Taux applicable avec repli ville → organisation → plateforme. */
+    public function findApplicableRate(
+        Currency $baseCurrency,
+        Currency $quoteCurrency,
+        \DateTimeImmutable $date,
+        ?int $organizationId,
+        ?int $cityId,
+        bool $allowCityRate,
+    ): ?ExchangeRate {
+        if ($allowCityRate && $cityId !== null) {
+            $rate = $this->findRateAtScope($baseCurrency, $quoteCurrency, $date, $organizationId, $cityId);
+            if ($rate !== null) return $rate;
+        }
+
+        if ($organizationId !== null) {
+            $rate = $this->findRateAtScope($baseCurrency, $quoteCurrency, $date, $organizationId, null);
+            if ($rate !== null) return $rate;
+        }
+
+        return $this->findRateAtScope($baseCurrency, $quoteCurrency, $date, null, null);
+    }
+
+    /** Taux applicable dans un périmètre précis, sans repli implicite. */
+    public function findRateInScope(Currency $baseCurrency, Currency $quoteCurrency, \DateTimeImmutable $date, ?int $organizationId, ?int $cityId): ?ExchangeRate
+    {
+        return $this->findRateAtScope($baseCurrency, $quoteCurrency, $date, $organizationId, $cityId);
+    }
+
+    private function findRateAtScope(
+        Currency $baseCurrency,
+        Currency $quoteCurrency,
+        \DateTimeImmutable $date,
+        ?int $organizationId,
+        ?int $cityId,
+    ): ?ExchangeRate {
+        $qb = $this->createQueryBuilder('er')
+            ->andWhere('er.baseCurrency = :base')
+            ->andWhere('er.quoteCurrency = :quote')
+            ->andWhere('er.effectiveFrom <= :date')
+            ->andWhere('(er.effectiveTo IS NULL OR er.effectiveTo > :date)')
+            ->setParameter('base', $baseCurrency)
+            ->setParameter('quote', $quoteCurrency)
+            ->setParameter('date', $date)
+            ->orderBy('er.effectiveFrom', 'DESC')
+            ->setMaxResults(1);
+
+        $organizationId === null
+            ? $qb->andWhere('er.organization IS NULL')
+            : $qb->andWhere('IDENTITY(er.organization) = :organizationId')->setParameter('organizationId', $organizationId);
+        $cityId === null
+            ? $qb->andWhere('er.city IS NULL')
+            : $qb->andWhere('IDENTITY(er.city) = :cityId')->setParameter('cityId', $cityId);
+
+        return $qb->getQuery()->getOneOrNullResult();
+    }
+
     public function findOneByUuid(Uuid $uuid): ?ExchangeRate
     {
         return $this->createQueryBuilder('er')

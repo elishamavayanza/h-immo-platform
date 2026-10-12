@@ -40,6 +40,7 @@ use App\Repository\Expense\ExpenseRepository;
 use App\Enum\Currency;
 use App\Repository\Financial\ExchangeRateRepository;
 use App\Repository\Identity\OrganizationRepository;
+use App\Repository\Identity\OrganizationUserRepository;
 use App\Repository\Identity\UserRepository;
 use App\Repository\Property\BuildingRepository;
 use App\Repository\Property\CityRepository;
@@ -84,6 +85,7 @@ final readonly class ReportService
         private SecurityServiceInterface $securityService,
         private DateTimeService $dateTime,
         private ExchangeRateRepository $exchangeRateRepository,
+        private OrganizationUserRepository $organizationUserRepository,
     ) {
     }
 
@@ -715,56 +717,28 @@ final readonly class ReportService
             $periodTo
         );
 
-        // Agréger par clé "période|devise" pour ne pas mélanger les devises
-        $byPeriodCurrency = [];
-
-        foreach ($expenseResults as $row) {
-            $currencyKey = $row['currency'] instanceof \BackedEnum ? $row['currency']->value : (string) $row['currency'];
-            $key = $row['period'] . '|' . $currencyKey;
-            if (!isset($byPeriodCurrency[$key])) {
-                $byPeriodCurrency[$key] = [
-                    'period' => $row['period'],
-                    'currency' => $currencyKey,
-                    'revenues' => '0.00',
-                    'expenses' => '0.00',
-                    'expected' => '0.00',
-                ];
+        // Les synthèses financières de l'organisation suivent sa devise de
+        // référence ; les enregistrements comptables gardent leur devise.
+        $referenceCurrency = $this->getReferenceCurrency($organizationId, $cityIds);
+        $byPeriod = [];
+        foreach ([[$expenseResults, 'expenses'], [$revenueResults, 'revenues'], [$expectedResults, 'expected']] as [$rows, $field]) {
+            foreach ($rows as $row) {
+                $period = (string) $row['period'];
+                $byPeriod[$period] ??= ['period' => $period, 'revenues' => '0.00', 'expenses' => '0.00', 'expected' => '0.00'];
+                $currencyCode = $row['currency'] instanceof \BackedEnum ? $row['currency']->value : (string) $row['currency'];
+                $amount = $this->convertToReferenceCurrency(
+                    (string) $row['total'],
+                    Currency::from($currencyCode),
+                    $referenceCurrency,
+                    $this->periodStart($period, $periodFrom),
+                    isset($row['cityId']) ? (int) $row['cityId'] : null,
+                );
+                $byPeriod[$period][$field] = bcadd($byPeriod[$period][$field], $amount, 2);
             }
-            $byPeriodCurrency[$key]['expenses'] = bcadd($byPeriodCurrency[$key]['expenses'], $row['total'], 2);
-        }
-
-        foreach ($revenueResults as $row) {
-            $currencyKey = $row['currency'] instanceof \BackedEnum ? $row['currency']->value : (string) $row['currency'];
-            $key = $row['period'] . '|' . $currencyKey;
-            if (!isset($byPeriodCurrency[$key])) {
-                $byPeriodCurrency[$key] = [
-                    'period' => $row['period'],
-                    'currency' => $currencyKey,
-                    'revenues' => '0.00',
-                    'expenses' => '0.00',
-                    'expected' => '0.00',
-                ];
-            }
-            $byPeriodCurrency[$key]['revenues'] = bcadd($byPeriodCurrency[$key]['revenues'], $row['total'], 2);
-        }
-
-        foreach ($expectedResults as $row) {
-            $currencyKey = $row['currency'] instanceof \BackedEnum ? $row['currency']->value : (string) $row['currency'];
-            $key = $row['period'] . '|' . $currencyKey;
-            if (!isset($byPeriodCurrency[$key])) {
-                $byPeriodCurrency[$key] = [
-                    'period' => $row['period'],
-                    'currency' => $currencyKey,
-                    'revenues' => '0.00',
-                    'expenses' => '0.00',
-                    'expected' => '0.00',
-                ];
-            }
-            $byPeriodCurrency[$key]['expected'] = bcadd($byPeriodCurrency[$key]['expected'], $row['total'], 2);
         }
 
         $items = [];
-        foreach ($byPeriodCurrency as $data) {
+        foreach ($byPeriod as $data) {
             $net = bcsub($data['revenues'], $data['expenses'], 2);
             $items[] = new FinancialSummaryItem(
                 period: $data['period'],
@@ -772,7 +746,7 @@ final readonly class ReportService
                 expenses: $data['expenses'],
                 expected: $data['expected'],
                 netResult: $net,
-                currency: \App\Enum\Currency::from($data['currency']),
+                currency: $referenceCurrency,
             );
         }
 
@@ -1027,6 +1001,8 @@ final readonly class ReportService
         );
 
         $items = [];
+        $referenceCurrency = $this->getReferenceCurrency($organizationId, $cityIds);
+        $totalsByCategory = [];
         foreach ($results as $row) {
             // `e.category` est mappée sur l'enum `ExpenseCategory` : Doctrine
             // la rend comme telle, alors que le DTO attend une chaîne (il
@@ -1036,14 +1012,18 @@ final readonly class ReportService
             $category = $row['category'] instanceof \BackedEnum
                 ? (string) $row['category']->value
                 : (string) $row['category'];
-
+            $currencyCode = $row['currency'] instanceof \BackedEnum ? $row['currency']->value : (string) $row['currency'];
+            $amount = $this->convertToReferenceCurrency((string) $row['total'], Currency::from($currencyCode), $referenceCurrency, $this->periodStart($row['period'] ?? null, $periodFrom), isset($row['cityId']) ? (int) $row['cityId'] : null);
+            $totalsByCategory[$category] = bcadd($totalsByCategory[$category] ?? '0.00', $amount, 2);
+        }
+        foreach ($totalsByCategory as $category => $amount) {
             $items[] = new ExpenseSummaryItem(
                 category: $category,
                 level: 'organization',
                 levelLabel: 'Organisation',
                 count: 0, // Would need separate count query
-                totalAmount: $row['total'],
-                currency: $row['currency'],
+                totalAmount: $amount,
+                currency: $referenceCurrency,
             );
         }
 
@@ -1068,15 +1048,24 @@ final readonly class ReportService
         $results = $this->expenseRepository->sumByCity($cityIds, $periodFrom, $periodTo);
 
         $items = [];
+        $referenceCurrency = $this->getReferenceCurrency(null, $cityIds);
+        $totalsByCity = [];
         foreach ($results as $row) {
+            $currencyCode = $row['currency'] instanceof \BackedEnum ? $row['currency']->value : (string) $row['currency'];
+            $amount = $this->convertToReferenceCurrency((string) $row['total'], Currency::from($currencyCode), $referenceCurrency, $this->periodStart($row['period'] ?? null, $periodFrom), isset($row['cityId']) ? (int) $row['cityId'] : null);
+            $uuid = (string) $row['cityUuid'];
+            $totalsByCity[$uuid] ??= ['cityUuid' => $uuid, 'cityName' => (string) $row['cityName'], 'amount' => '0.00'];
+            $totalsByCity[$uuid]['amount'] = bcadd($totalsByCity[$uuid]['amount'], $amount, 2);
+        }
+        foreach ($totalsByCity as $city) {
             $items[] = new ExpenseSummaryItem(
                 category: 'ALL',
                 level: 'city',
-                levelUuid: (string) $row['cityUuid'],
-                levelLabel: $row['cityName'],
+                levelUuid: $city['cityUuid'],
+                levelLabel: $city['cityName'],
                 count: 0,
-                totalAmount: $row['total'],
-                currency: $row['currency'],
+                totalAmount: $city['amount'],
+                currency: $referenceCurrency,
             );
         }
 
@@ -1127,16 +1116,19 @@ final readonly class ReportService
      * Utilise le taux de change historique applicable à la date de l'opération.
      * Si pas de taux trouvé, retourne le montant original (fallback).
      */
-    private function convertToReferenceCurrency(string $amount, Currency $fromCurrency, Currency $toCurrency, \DateTimeImmutable $date): string
+    private function convertToReferenceCurrency(string $amount, Currency $fromCurrency, Currency $toCurrency, \DateTimeImmutable $date, ?int $cityId = null): string
     {
         if ($fromCurrency === $toCurrency) {
             return $amount;
         }
 
-        $rate = $this->exchangeRateRepository->findRateForDate($fromCurrency, $toCurrency, $date);
+        $city = $cityId === null ? null : $this->cityRepository->find($cityId);
+        $organizationId = $city?->getOrganization()->getId();
+        $cityOverrideAllowed = $city !== null && $this->organizationUserRepository->hasCityExchangeRateManagerForCity($city);
+        $rate = $this->exchangeRateRepository->findApplicableRate($fromCurrency, $toCurrency, $date, $organizationId, $cityId, $cityOverrideAllowed);
         if ($rate === null) {
             // Fallback : essayer le taux inverse
-            $inverseRate = $this->exchangeRateRepository->findInverseRateForDate($fromCurrency, $toCurrency, $date);
+            $inverseRate = $this->exchangeRateRepository->findApplicableRate($toCurrency, $fromCurrency, $date, $organizationId, $cityId, $cityOverrideAllowed);
             if ($inverseRate !== null) {
                 return bcdiv($amount, $inverseRate->getRate(), 2);
             }
@@ -1157,6 +1149,15 @@ final readonly class ReportService
         return \App\Enum\Currency::from($currencyCode);
     }
 
+    private function periodStart(?string $period, \DateTimeImmutable $fallback): \DateTimeImmutable
+    {
+        if ($period === null || preg_match('/^\d{4}-\d{2}$/', $period) !== 1) {
+            return $fallback;
+        }
+
+        return $this->dateTime->parseDate($period . '-01') ?? $fallback;
+    }
+
     private function sumRevenues(?int $organizationId, array $cityIds, \DateTimeImmutable $from, \DateTimeImmutable $to): string
     {
         $results = $this->paymentRepository->getFinancialSummary(
@@ -1170,7 +1171,7 @@ final readonly class ReportService
         $total = '0.00';
         foreach ($results as $row) {
             $currency = $row['currency'] instanceof \BackedEnum ? $row['currency']->value : (string) $row['currency'];
-            $converted = $this->convertToReferenceCurrency($row['total'], \App\Enum\Currency::from($currency), $referenceCurrency, $from);
+            $converted = $this->convertToReferenceCurrency($row['total'], \App\Enum\Currency::from($currency), $referenceCurrency, $this->periodStart($row['period'] ?? null, $from), isset($row['cityId']) ? (int) $row['cityId'] : null);
             $total = bcadd($total, $converted, 2);
         }
         return $total;
@@ -1178,7 +1179,7 @@ final readonly class ReportService
 
     private function sumExpenses(?int $organizationId, array $cityIds, \DateTimeImmutable $from, \DateTimeImmutable $to): string
     {
-        $results = $this->expenseRepository->sumByCategory(
+        $results = $this->expenseRepository->getFinancialSummary(
             $organizationId ? [$organizationId] : null,
             $cityIds ?: null,
             $from,
@@ -1189,7 +1190,7 @@ final readonly class ReportService
         $total = '0.00';
         foreach ($results as $row) {
             $currency = $row['currency'] instanceof \BackedEnum ? $row['currency']->value : (string) $row['currency'];
-            $converted = $this->convertToReferenceCurrency($row['total'], \App\Enum\Currency::from($currency), $referenceCurrency, $from);
+            $converted = $this->convertToReferenceCurrency($row['total'], \App\Enum\Currency::from($currency), $referenceCurrency, $this->periodStart($row['period'] ?? null, $from), isset($row['cityId']) ? (int) $row['cityId'] : null);
             $total = bcadd($total, $converted, 2);
         }
         return $total;
@@ -1211,7 +1212,9 @@ final readonly class ReportService
                     $due = $rent->getAmount();
                     $paid = $this->paymentRepository->sumAmountByRent($rent);
                     $arrears = bcsub($due, $paid, 2);
-                    $converted = $this->convertToReferenceCurrency($arrears, $rent->getCurrency(), $referenceCurrency, $asOfDate);
+                    $unit = $lease->getUnit();
+                    $cityId = $unit->getBuilding()->getParcel()->getCity()->getId();
+                    $converted = $this->convertToReferenceCurrency($arrears, $rent->getCurrency(), $referenceCurrency, $this->dateTime->parseDate($rent->getPeriod()->format('Y-m-d')) ?? $asOfDate, $cityId);
                     $total = bcadd($total, $converted, 2);
                 }
             }
@@ -1278,6 +1281,27 @@ final readonly class ReportService
 
     private function getMainCurrency(?int $organizationId, array $cityIds): string
     {
+        if ($organizationId !== null) {
+            $organization = $this->organizationRepository->find($organizationId);
+            if ($organization instanceof Organization) {
+                return $organization->getCurrency()->value;
+            }
+        } elseif ($cityIds !== []) {
+            $city = $this->cityRepository->find($cityIds[0]);
+            if ($city instanceof City) {
+                $organization = $city->getOrganization();
+                $allBelongToOrganization = true;
+                foreach ($cityIds as $cityId) {
+                    $candidate = $this->cityRepository->find($cityId);
+                    if (!$candidate instanceof City || $candidate->getOrganization()->getId() !== $organization->getId()) {
+                        $allBelongToOrganization = false;
+                        break;
+                    }
+                }
+                if ($allBelongToOrganization) return $organization->getCurrency()->value;
+            }
+        }
+
         // Compter les devises utilisées dans les paiements et dépenses du périmètre
         $currencyCounts = [];
 
@@ -1360,7 +1384,7 @@ final readonly class ReportService
         $total = '0.00';
         foreach ($results as $row) {
             $currency = $row['currency'] instanceof \BackedEnum ? $row['currency']->value : (string) $row['currency'];
-            $converted = $this->convertToReferenceCurrency($row['total'], \App\Enum\Currency::from($currency), $referenceCurrency, $from);
+            $converted = $this->convertToReferenceCurrency($row['total'], \App\Enum\Currency::from($currency), $referenceCurrency, $this->periodStart($row['period'] ?? null, $from), isset($row['cityId']) ? (int) $row['cityId'] : null);
             $total = bcadd($total, $converted, 2);
         }
         return $total;

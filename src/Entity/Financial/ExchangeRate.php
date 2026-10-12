@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace App\Entity\Financial;
 
 use App\Entity\Identity\User;
+use App\Entity\Identity\Organization;
+use App\Entity\Property\City;
 use App\Entity\Shared\CreatedOnlyEntity;
 use App\Enum\Currency;
 use Doctrine\DBAL\Types\Types;
@@ -23,10 +25,22 @@ use Doctrine\ORM\Mapping as ORM;
  */
 #[ORM\Entity]
 #[ORM\Table(name: 'exchange_rate')]
-#[ORM\UniqueConstraint(name: 'uniq_exchange_rate_pair_from', columns: ['base_currency', 'quote_currency', 'effective_from'])]
+#[ORM\UniqueConstraint(name: 'uniq_exchange_rate_scope_from', columns: ['scope_key', 'base_currency', 'quote_currency', 'effective_from'])]
 #[ORM\Index(name: 'idx_exchange_rate_lookup', columns: ['base_currency', 'quote_currency', 'effective_from'])]
 final class ExchangeRate extends CreatedOnlyEntity
 {
+    /** Portée stable utilisée pour garantir l'unicité malgré les NULL SQL. */
+    #[ORM\Column(name: 'scope_key', type: Types::STRING, length: 60, options: ['default' => 'platform'])]
+    private string $scopeKey;
+
+    #[ORM\ManyToOne(targetEntity: Organization::class)]
+    #[ORM\JoinColumn(name: 'organization_id', referencedColumnName: 'id', nullable: true)]
+    private ?Organization $organization;
+
+    #[ORM\ManyToOne(targetEntity: City::class)]
+    #[ORM\JoinColumn(name: 'city_id', referencedColumnName: 'id', nullable: true)]
+    private ?City $city;
+
     /**
      * Devise de base (ex: USD).
      */
@@ -71,7 +85,9 @@ final class ExchangeRate extends CreatedOnlyEntity
         string $rate,
         \DateTimeImmutable $effectiveFrom,
         User $createdBy,
-        ?\DateTimeImmutable $effectiveTo = null
+        ?\DateTimeImmutable $effectiveTo = null,
+        ?Organization $organization = null,
+        ?City $city = null,
     ) {
         if ($baseCurrency === $quoteCurrency) {
             throw new \InvalidArgumentException('La devise de base et la devise cotée doivent être différentes.');
@@ -79,7 +95,18 @@ final class ExchangeRate extends CreatedOnlyEntity
         if (bccomp($rate, '0', 8) <= 0) {
             throw new \InvalidArgumentException('Le taux de change doit être strictement positif.');
         }
+        if ($city !== null && ($organization === null || $city->getOrganization()->getId() !== $organization->getId())) {
+            throw new \InvalidArgumentException('La ville doit appartenir à l’organisation du taux.');
+        }
 
+        // Initialise l'identifiant public UUID et la date de création hérités.
+        parent::__construct();
+
+        $this->organization = $organization;
+        $this->city = $city;
+        $this->scopeKey = $city !== null
+            ? 'city:' . $city->getUuid()->toRfc4122()
+            : ($organization !== null ? 'organization:' . $organization->getUuid()->toRfc4122() : 'platform');
         $this->baseCurrency = $baseCurrency;
         $this->quoteCurrency = $quoteCurrency;
         $this->rate = $rate;
@@ -91,6 +118,21 @@ final class ExchangeRate extends CreatedOnlyEntity
     public function getBaseCurrency(): Currency
     {
         return $this->baseCurrency;
+    }
+
+    public function getScopeKey(): string
+    {
+        return $this->scopeKey;
+    }
+
+    public function getOrganization(): ?Organization
+    {
+        return $this->organization;
+    }
+
+    public function getCity(): ?City
+    {
+        return $this->city;
     }
 
     public function getQuoteCurrency(): Currency
