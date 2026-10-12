@@ -72,6 +72,17 @@ export function fetchLeases(organizationId: string): Promise<ListPage<LeaseItem>
 }
 
 /**
+ * Baux d'une seule unité, filtrés côté serveur (`LeaseFilterDto.unitId`).
+ *
+ * C'est le seul filtre patrimonial serveur disponible pour les baux : il
+ * évite de charger les baux de toute l'organisation pour n'en garder qu'un,
+ * et le backend applique toujours le périmètre `UserCity` / organisation.
+ */
+export function fetchLeasesByUnit(organizationId: string, unitId: string): Promise<ListPage<LeaseItem>> {
+    return getList<LeaseItem>('/v1/leases', organizationId, { unitId, sortBy: 'startDate', sortOrder: 'DESC' });
+}
+
+/**
  * Échéances de loyer, `dueDate` DESC (les plus récentes d'abord).
  * `status` est le statut calculé backend (`pending`, `partially_paid`,
  * `paid`, `overdue`) : un filtre est préférable à un tri client, `overdue`
@@ -83,6 +94,27 @@ export function fetchRents(organizationId: string, status?: string): Promise<Lis
         sortBy: 'dueDate',
         sortOrder: 'DESC',
     });
+}
+
+/**
+ * Échéances d'un bail précis, filtrées côté serveur (`RentFilterDto.leaseUuid`).
+ * Charger les échéances de l'unité revient donc à charger celles de son bail,
+ * sans rapatrier les loyers de toute l'organisation.
+ */
+export function fetchRentsByLease(organizationId: string, leaseUuid: string): Promise<ListPage<RentItem>> {
+    return getList<RentItem>('/v1/rents', organizationId, { leaseUuid, sortBy: 'dueDate', sortOrder: 'DESC' });
+}
+
+/**
+ * Locataire par UUID public (`GET /api/v1/tenants/{uuid}`).
+ *
+ * Évite de charger toute la liste des locataires pour n'afficher qu'un nom :
+ * le backend vérifie l'appartenance à l'organisation et le périmètre ville.
+ */
+export async function fetchTenantByUuid(tenantUuid: string): Promise<TenantItem> {
+    const { data } = await apiClient.get<Feedback<TenantItem>>(`/v1/tenants/${tenantUuid}`);
+
+    return data.data;
 }
 
 /** Catalogue patrimonial des 4 niveaux, chargé en une seule volée parallèle. */

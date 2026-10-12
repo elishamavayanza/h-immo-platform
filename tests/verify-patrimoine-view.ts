@@ -22,18 +22,27 @@ import {
     buildingsOfParcel,
     buildingTypeLabel,
     cityOccupancy,
+    formatPeriod,
+    formatShortDate,
+    leaseStatusLabel,
+    nextUnpaidRent,
     occupancyIndex,
     parcelCoordinates,
     parcelOccupancy,
     parcelsOfCity,
+    pickActiveLease,
+    relatedModuleUrl,
+    rentStatusLabel,
     summarizeOccupancy,
+    summarizeRents,
     unitCount,
     unitsOfBuilding,
     unitTypeLabel,
 } from '../assets/react/features/admin_immobilier/patrimoine/components/patrimoineView.ts';
+import { buildPatrimoinePath, resolvePatrimoineSelection } from '../assets/react/features/admin_immobilier/patrimoine/components/patrimoineRouting.ts';
 import type { PatrimoineData } from '../assets/react/features/admin_immobilier/patrimoine/types/patrimoine.types.ts';
 import type { OccupancyItem } from '../assets/react/features/admin_immobilier/reports/types/index.ts';
-import type { BuildingItem, CityItem, ParcelItem, UnitItem } from '../assets/react/features/admin_immobilier/shared/types/reference.types.ts';
+import type { BuildingItem, CityItem, LeaseItem, ParcelItem, RentItem, UnitItem } from '../assets/react/features/admin_immobilier/shared/types/reference.types.ts';
 
 let checks = 0;
 const failures: string[] = [];
@@ -116,6 +125,66 @@ check('summarizeOccupancy([]) : taux 0 (pas de division par zéro)', empty.occup
 const mixed = summarizeOccupancy([occ('parcel', 'p1', 2, 1, 1, 50), occ('parcel', 'p2', 2, 2, 0, 100)]);
 check('summarizeOccupancy totalise unités et occupées', mixed.totalUnits === 4 && mixed.occupiedUnits === 3);
 check('summarizeOccupancy : taux = 3/4 = 75 %', mixed.occupancyRate === 75);
+
+console.log('\n=== Liens filtrés vers les modules liés ===\n');
+check('relatedModuleUrl sans contexte -> chemin seul', relatedModuleUrl('/app/depenses', null, null) === '/app/depenses');
+check('relatedModuleUrl(parcelle) -> parcelUuid', relatedModuleUrl('/app/location/loyers', 'p1', null) === '/app/location/loyers?parcelUuid=p1');
+check('relatedModuleUrl(bâtiment sans parcelle) -> buildingUuid', relatedModuleUrl('/app/depenses', null, 'b1') === '/app/depenses?buildingUuid=b1');
+check('relatedModuleUrl(parcelle+bâtiment) -> les deux, dans l’ordre', relatedModuleUrl('/app/depenses', 'p1', 'b1') === '/app/depenses?parcelUuid=p1&buildingUuid=b1');
+
+const lease = (id: string, unitId: string, status: string): LeaseItem => ({
+    id, organizationId: 'org', tenantId: `t-${id}`, unitId, reference: `BAIL-${id}`,
+    startDate: '2026-01-01T00:00:00Z', endDate: null, depositAmount: null, monthlyRent: '300.00',
+    exchangeRate: null, referenceCurrency: null, currency: 'USD', status,
+    terminationDate: null, terminationReason: null, notes: null, terms: null,
+    createdAt: '2026-01-01T00:00:00Z', updatedAt: '2026-01-01T00:00:00Z',
+});
+const rent = (id: string, dueDate: string, status: string, isOverdue: boolean): RentItem => ({
+    id, leaseId: 'l1', period: dueDate, dueDate, amount: '300.00', currency: 'USD',
+    exchangeRate: null, originalAmount: null, originalCurrency: null, status, isOverdue,
+    createdAt: dueDate, updatedAt: dueDate,
+});
+
+console.log('\n=== Routage : niveau unité et construction d’URL ===\n');
+const fullPath = '/app/patrimoine/villes/c1/parcelles/p1/batiments/b1/unites/u1';
+const fullSelection = resolvePatrimoineSelection(fullPath, false);
+check('resolve(unites/u1) : niveau unites', fullSelection.level === 'unites');
+check('resolve(unites/u1) : unitId capté', fullSelection.unitId === 'u1');
+check('resolve(unites/u1) : contexte complet', fullSelection.cityId === 'c1' && fullSelection.parcelId === 'p1' && fullSelection.buildingId === 'b1');
+check('resolve(batiments/b1/unites) : niveau unites sans unité', resolvePatrimoineSelection('/app/patrimoine/villes/c1/parcelles/p1/batiments/b1/unites', false).unitId === null);
+check('resolve(villes/c1) : niveau parcelles', resolvePatrimoineSelection('/app/patrimoine/villes/c1', false).level === 'parcelles');
+check('resolve(racine, admin ville) : parcelles', resolvePatrimoineSelection('/app/patrimoine', true).level === 'parcelles');
+check('resolve(racine, admin immo) : overview', resolvePatrimoineSelection('/app/patrimoine', false).level === 'overview');
+
+check('build(unites + unitId) : chemin unité complet', buildPatrimoinePath('unites', { cityId: 'c1', parcelId: 'p1', buildingId: 'b1', unitId: 'u1' }) === fullPath);
+check('build(unites sans unitId) : chemin bâtiment', buildPatrimoinePath('unites', { cityId: 'c1', parcelId: 'p1', buildingId: 'b1' }) === '/app/patrimoine/villes/c1/parcelles/p1/batiments/b1/unites');
+check('build(overview) : racine', buildPatrimoinePath('overview', { cityId: null, parcelId: null, buildingId: null }) === '/app/patrimoine');
+check('aller-retour build -> resolve conserve l’unité', resolvePatrimoineSelection(buildPatrimoinePath('unites', { cityId: 'c1', parcelId: 'p1', buildingId: 'b1', unitId: 'u1' }), false).unitId === 'u1');
+check('resolve(build(unites sans unité)).unitId reste null', resolvePatrimoineSelection(buildPatrimoinePath('unites', { cityId: 'c1', parcelId: 'p1', buildingId: 'b1' }), false).unitId === null);
+
+console.log('\n=== Location : bail actif, échéances, libellés ===\n');
+check('pickActiveLease retient le bail actif', pickActiveLease([lease('l0', 'u1', 'expired'), lease('l1', 'u1', 'active')])?.id === 'l1');
+check('pickActiveLease sans actif -> null', pickActiveLease([lease('l0', 'u1', 'expired')]) === null);
+check('pickActiveLease([]) -> null', pickActiveLease([]) === null);
+
+const rents = [rent('r1', '2026-01-05T00:00:00Z', 'paid', false), rent('r2', '2026-02-05T00:00:00Z', 'pending', true), rent('r3', '2026-03-05T00:00:00Z', 'partially_paid', false)];
+const summary = summarizeRents(rents);
+check('summarizeRents : total', summary.total === 3);
+check('summarizeRents : payées', summary.paid === 1);
+check('summarizeRents : en retard (isOverdue)', summary.overdue === 1);
+check('summarizeRents : en attente', summary.unpaid === 1);
+check('nextUnpaidRent : la plus ancienne non soldée', nextUnpaidRent(rents)?.id === 'r2');
+check('nextUnpaidRent(tout payé) -> null', nextUnpaidRent([rent('r1', '2026-01-05T00:00:00Z', 'paid', false)]) === null);
+
+check('leaseStatusLabel(active) -> Actif', leaseStatusLabel('active') === 'Actif');
+check('leaseStatusLabel(inconnu) -> passthrough', leaseStatusLabel('weird') === 'weird');
+check('rentStatusLabel(partially_paid) -> libellé français', rentStatusLabel('partially_paid') === 'Partiellement payé');
+check('formatShortDate(null) -> tiret', formatShortDate(null) === '—');
+check('formatShortDate(invalide) -> tiret', formatShortDate('pas-une-date') === '—');
+check('formatPeriod(null) -> tiret', formatPeriod(null) === '—');
+check('formatShortDate(2026-03-05 midi) contient l’année', formatShortDate('2026-03-05T12:00:00Z').includes('2026'));
+check('formatShortDate(minuit UTC) reste le 05 mars 2026 (pas de décalage)', formatShortDate('2026-03-05T00:00:00Z') === '05 mars 2026');
+check('formatPeriod(1er mars UTC) -> mars 2026', formatPeriod('2026-03-01T00:00:00Z') === 'mars 2026');
 
 console.log('\n' + '-'.repeat(60) + '\n');
 
