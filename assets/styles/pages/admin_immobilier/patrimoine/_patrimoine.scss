@@ -115,3 +115,46 @@
   .photo-viewer__preview-toolbar > button:first-child { flex: 1 1 100%; }
   .photo-viewer__preview > img { max-height: 55vh; }
 }
+
+/* Navigation verticale du patrimoine : panneau droit intégré en grand écran,
+   tiroir (voile + fermeture clavier) en compact. La barre latérale gauche
+   reste réservée aux grandes sections de l'application. */
+.patrimoine-layout { display: flex; align-items: stretch; min-width: 0; min-height: 100%; }
+.patrimoine-layout__main { flex: 1; min-width: 0; }
+.patrimoine-level { min-width: 0; }
+.patrimoine-nav { padding: $spacing-1 0; }
+.patrimoine-nav__list { display: grid; gap: 2px; margin: 0; padding: 0; list-style: none; }
+.patrimoine-nav__list--nested { margin-left: 8px; padding-left: 8px; border-left: 1px solid $color-border; }
+.patrimoine-nav__node { min-width: 0; }
+.patrimoine-nav__row { display: flex; align-items: center; min-width: 0; gap: 2px; }
+.patrimoine-nav__disclosure,
+.patrimoine-nav__disclosure-placeholder { display: grid; flex: 0 0 20px; width: 20px; height: 34px; place-items: center; padding: 0; border: 0; border-radius: $radius-sm; color: $color-text-muted; background: transparent; font-size: $font-size-lg; cursor: pointer; }
+.patrimoine-nav__disclosure:hover { color: $color-text-primary; background: $color-bg-card-hover; }
+.patrimoine-nav__disclosure:focus-visible { outline: 2px solid $color-primary; outline-offset: 1px; }
+.patrimoine-nav__item { display: flex; flex: 1; align-items: center; min-width: 0; min-height: 38px; gap: $spacing-2; padding: $spacing-2 $spacing-2; border: 1px solid transparent; border-radius: $radius-md; color: $color-text-secondary; background: transparent; font-size: $font-size-sm; font-weight: $font-weight-medium; text-decoration: none; overflow-wrap: anywhere; transition: color $transition-fast, background-color $transition-fast, border-color $transition-fast; }
+.patrimoine-nav__item:hover { color: $color-text-primary; background: $color-bg-card-hover; }
+.patrimoine-nav__item:focus-visible { outline: 2px solid $color-primary; outline-offset: 2px; }
+.patrimoine-nav__icon { display: inline-flex; flex: 0 0 18px; align-items: center; justify-content: center; color: $color-text-muted; }
+.patrimoine-nav__icon svg { width: 17px; height: 17px; }
+.patrimoine-nav__label { min-width: 0; overflow-wrap: anywhere; }
+.patrimoine-nav__row--active .patrimoine-nav__item,
+.patrimoine-nav__row--active .patrimoine-nav__item:hover { color: $color-primary; background: $color-primary-light; border-color: color-mix(in srgb, #{$color-primary} 38%, transparent); font-weight: $font-weight-semibold; }
+.patrimoine-nav__row--active .patrimoine-nav__icon { color: currentColor; }
+.patrimoine-nav-rail { display: flex; flex-direction: column; align-items: center; gap: $spacing-2; width: 100%; }
+.patrimoine-nav-rail__button { display: grid; width: 44px; height: 44px; place-items: center; padding: 0; border: 1px solid transparent; border-radius: $radius-md; color: $color-text-secondary; background: transparent; cursor: pointer; }
+.patrimoine-nav-rail__button:hover { color: $color-text-primary; background: $color-bg-card-hover; }
+.patrimoine-nav-rail__button.is-active { color: $color-primary; background: $color-primary-light; border-color: color-mix(in srgb, #{$color-primary} 38%, transparent); }
+.patrimoine-nav-rail__button:focus-visible { outline: 2px solid $color-primary; outline-offset: 2px; }
+.patrimoine-nav-rail__button svg { width: 21px; height: 21px; }
+.patrimoine-nav__popover { z-index: $z-modal; width: min(320px, calc(100vw - 24px)); max-height: min(75vh, 680px); overflow: hidden; border: 1px solid $color-border; border-radius: $radius-lg; background: $color-bg-sidebar; box-shadow: $shadow-lg; }
+.patrimoine-nav__popover-title { padding: $spacing-3 $spacing-4; border-bottom: 1px solid $color-border; color: $color-text-primary; font-weight: $font-weight-semibold; }
+.patrimoine-nav__popover-content { max-height: calc(min(75vh, 680px) - 48px); padding: $spacing-2; overflow: auto; }
+.right-sidebar__collapsed-content { align-items: center; }
+/* En grand écran le panneau suit la hauteur du contenu plutôt que 100% du
+   parent : scopé au desktop pour ne pas écraser la hauteur du tiroir compact. */
+@media (min-width: #{$breakpoint-desktop}) {
+  .patrimoine-layout > .right-sidebar { height: auto; min-height: 100%; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .patrimoine-nav__item { transition: none; }
+}
