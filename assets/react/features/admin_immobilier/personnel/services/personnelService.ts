@@ -38,17 +38,41 @@ export async function fetchPersonnel(organizationUuid: string): Promise<Personne
         fetchUnits(organizationUuid),
     ]);
 
-    const cityById = new Map(cities.items.map((city) => [city.id, city]));
+    // L'endpoint des affectations applique le périmètre d'accès du compte,
+    // qui peut couvrir plusieurs organisations. Cette page est liée à
+    // l'organisation active : ne rattacher que les affectations de ses
+    // travailleurs et des biens présents dans son catalogue accessible.
+    const organizationWorkers = workers.items.filter((worker) => worker.organizationId === organizationUuid);
+    const workerIds = new Set(organizationWorkers.map((worker) => worker.id));
+    const cityIds = new Set(cities.items.map((city) => city.id));
+    const parcelById = new Map(parcels.items.map((parcel) => [parcel.id, parcel]));
     const buildingById = new Map(buildings.items.map((building) => [building.id, building]));
+    const unitById = new Map(units.items.map((unit) => [unit.id, unit]));
+    const scopedAssignments = assignments.items.filter((assignment) => {
+        if (!workerIds.has(assignment.workerId) || !cityIds.has(assignment.cityId)) return false;
 
-    const assignmentsByWorker = new Map<string, typeof assignments.items>();
-    for (const assignment of assignments.items) {
+        const parcel = assignment.parcelId ? parcelById.get(assignment.parcelId) : undefined;
+        const building = assignment.buildingId ? buildingById.get(assignment.buildingId) : undefined;
+        const unit = assignment.unitId ? unitById.get(assignment.unitId) : undefined;
+        const assignedParcelId = parcel?.id ?? building?.parcelId ?? (unit ? buildingById.get(unit.buildingId)?.parcelId : undefined);
+
+        if (assignment.parcelId && !parcel) return false;
+        if (assignment.buildingId && !building) return false;
+        if (assignment.unitId && !unit) return false;
+        if (assignedParcelId && parcelById.get(assignedParcelId)?.cityId !== assignment.cityId) return false;
+
+        return true;
+    });
+
+    const cityById = new Map(cities.items.map((city) => [city.id, city]));
+    const assignmentsByWorker = new Map<string, typeof scopedAssignments>();
+    for (const assignment of scopedAssignments) {
         const current = assignmentsByWorker.get(assignment.workerId) ?? [];
         current.push(assignment);
         assignmentsByWorker.set(assignment.workerId, current);
     }
 
-    const rows: PersonnelRow[] = workers.items.map((worker) => {
+    const rows: PersonnelRow[] = organizationWorkers.map((worker) => {
         const workerAssignments = assignmentsByWorker.get(worker.id) ?? [];
         const latest = workerAssignments[0];
 
