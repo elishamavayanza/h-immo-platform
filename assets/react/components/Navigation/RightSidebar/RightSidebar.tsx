@@ -1,4 +1,5 @@
-import React, { useState, useRef, useCallback, useEffect } from 'react';
+import React, { useState, useRef, useCallback, useEffect, useLayoutEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { useRightSidebar, UseRightSidebarProps } from '../../../hook-components/Navigation/RightSidebar';
 import { useIsCompact } from '../../../hooks/useIsCompact.ts';
 import { MEDIA_QUERIES } from '../../../services/device';
@@ -56,6 +57,12 @@ export function RightSidebar({
                                  closeThreshold = 60,
                                  collapsedWidth = 35,
                              }: RightSidebarProps) {
+    const [rightDock, setRightDock] = useState<HTMLElement | null>(null);
+
+    useLayoutEffect(() => {
+        setRightDock(document.getElementById('main-layout__right-dock'));
+    }, []);
+
     const isCompact = useIsCompact();
     const isPortrait = useMediaQuery(MEDIA_QUERIES.portrait);
     const initialCollapsed = defaultCollapsed ?? isCompact;
@@ -125,7 +132,11 @@ export function RightSidebar({
         if (asideRef.current) {
             asideRef.current.style.width = `${newWidth}px`;
         }
-    }, []);
+        if (rightDock && !isCompact) {
+            rightDock.style.width = `${newWidth}px`;
+            rightDock.style.flexBasis = `${newWidth}px`;
+        }
+    }, [isCompact, rightDock]);
 
     const handlePointerMove = useCallback((e: PointerEvent) => {
         if (!isDraggingRef.current) return;
@@ -230,22 +241,22 @@ export function RightSidebar({
         updateWidthDOM(isFullyCollapsed ? effectiveCollapsedWidth : width);
     }, [isFullyCollapsed, width, effectiveCollapsedWidth, updateWidthDOM]);
 
-    // Expose la largeur courante via variable CSS pour que le contenu principal
-    // puisse réserver l'espace nécessaire (padding-right) et ne pas passer
-    // sous le panneau fixe. Uniquement en mode desktop (non compact).
-    useEffect(() => {
-        if (isCompact) {
-            document.documentElement.style.removeProperty('--right-sidebar-width');
-        } else {
-            const currentWidth = isFullyCollapsed ? effectiveCollapsedWidth : width;
-            document.documentElement.style.setProperty('--right-sidebar-width', `${currentWidth}px`);
-        }
-        return () => {
-            if (!isCompact) {
-                document.documentElement.style.removeProperty('--right-sidebar-width');
-            }
-        };
-    }, [isCompact, isFullyCollapsed, width, effectiveCollapsedWidth]);
+    // Le MainLayout réserve directement la largeur du dock au contenu central.
+    // Cette mesure vit sur le dock partagé, pas sur document ou dans la page.
+    useLayoutEffect(() => {
+        if (!rightDock) return;
+        const dockWidth = isCompact
+            ? 0
+            : isFullyCollapsed ? effectiveCollapsedWidth : width;
+        rightDock.style.width = `${dockWidth}px`;
+        rightDock.style.flexBasis = `${dockWidth}px`;
+    }, [rightDock, isCompact, isFullyCollapsed, width, effectiveCollapsedWidth]);
+
+    useEffect(() => () => {
+        if (!rightDock) return;
+        rightDock.style.width = '0px';
+        rightDock.style.flexBasis = '0px';
+    }, [rightDock]);
 
     // Fermeture au clavier (mode tiroir) : Échap referme le panneau.
     // On ignore la touche lorsqu'une boîte de dialogue modale est ouverte, pour
@@ -283,7 +294,7 @@ export function RightSidebar({
         wasOpenRef.current = !isFullyCollapsed;
     }, [isCompact, isFullyCollapsed]);
 
-    return (
+    const sidebar = (
         <>
             {/* Backdrop : tap à l'extérieur → ferme le drawer */}
             {isCompact && !isFullyCollapsed && (
@@ -307,8 +318,9 @@ export function RightSidebar({
                     onBlur={cancelRailTooltip}
                     aria-label={`Ouvrir ${title || 'le panneau'}`}
                 >
-                    <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2">
-                        <polyline points="9 18 15 12 9 6" />
+                    <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                        <rect x="3" y="3" width="18" height="18" rx="2" />
+                        <path d="M15 3v18M10 15l-3-3 3-3" />
                     </svg>
                 </button>
             )}
@@ -385,4 +397,9 @@ export function RightSidebar({
             </aside>
         </>
     );
+
+    // Dans le back-office, le panneau est rendu dans le dock du MainLayout,
+    // hors du conteneur qui défile. Le composant garde un rendu autonome quand
+    // il est utilisé en dehors de cette coquille.
+    return rightDock ? createPortal(sidebar, rightDock) : sidebar;
 }

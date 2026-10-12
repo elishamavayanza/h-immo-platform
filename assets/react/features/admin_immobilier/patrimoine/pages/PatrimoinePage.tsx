@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
 import { OrganizationSummary } from '../../../shared/components/OrganizationSummary';
 import { Card } from '../../../../components/UI/Card';
@@ -84,6 +84,15 @@ export function PatrimoinePage({ readOnly = false }: { readOnly?: boolean } = {}
     const isCityAdmin = organizationRole === 'admin_ville';
     const selection = resolvePatrimoineSelection(location.pathname, isCityAdmin);
     const { level: activeLevel, cityId: selectedCityId, parcelId: selectedParcelId, buildingId: selectedBuildingId, unitId: selectedUnitId } = selection;
+
+    useEffect(() => {
+        const content = document.querySelector<HTMLElement>('.main-layout__content');
+        content?.scrollTo({ top: 0, behavior: 'instant' });
+        const breadcrumb = content?.querySelector<HTMLElement>('.patrimoine-breadcrumb');
+        if (breadcrumb && window.matchMedia('(max-width: 640px)').matches) {
+            breadcrumb.scrollLeft = breadcrumb.scrollWidth;
+        }
+    }, [location.pathname]);
 
     const [photoParcel, setPhotoParcel] = useState<ParcelItem | null>(null);
 

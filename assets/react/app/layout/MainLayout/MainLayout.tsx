@@ -268,6 +268,10 @@ return (
                     <Outlet />
                     {isPageTransitionLoading && <div className="main-layout__route-transition" aria-hidden="true" />}
                 </main>
+
+                {/* Zone globale réservée au panneau droit. Les pages peuvent y
+                    monter leur RightSidebar sans le lier au conteneur scrollable. */}
+                <div id="main-layout__right-dock" className="main-layout__right-dock" />
             </div>
         </div>
     );

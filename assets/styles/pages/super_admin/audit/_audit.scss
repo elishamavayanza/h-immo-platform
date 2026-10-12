@@ -2,8 +2,7 @@
 @use '../../../baseVariables/variables' as *;
 
 .sa-audit-layout { display:flex; align-items:stretch; min-height:100%; }
-.sa-audit-page { flex:1; min-width:0; padding-right: var(--right-sidebar-width, 0); }
-.sa-audit-layout > .right-sidebar { height:auto; min-height:100%; }
+.sa-audit-page { flex:1; min-width:0; }
 .sa-audit-filters { grid-template-columns: minmax(220px, 300px) minmax(160px, 190px); }
 .audit-uuid { display:inline-block; max-width:170px; overflow:hidden; text-overflow:ellipsis; vertical-align:middle; font-family:monospace; font-size:$font-size-xs; }
 .audit-detail { display:flex; flex-direction:column; gap:$spacing-3; }

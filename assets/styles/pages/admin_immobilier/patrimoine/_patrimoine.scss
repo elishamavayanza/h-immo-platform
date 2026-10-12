@@ -14,7 +14,7 @@
 .patrimoine-link:hover { text-decoration: underline; }
 .patrimoine-link:focus-visible { outline: 2px solid currentColor; outline-offset: 3px; border-radius: 2px; }
 .patrimoine-muted { color: $color-text-muted; }
-.patrimoine-breadcrumb { display: flex; flex-wrap: wrap; align-items: center; gap: .55rem; margin: 1rem 0; color: $color-text-muted; font-size: .9rem; }
+.patrimoine-breadcrumb { display: flex; flex-wrap: wrap; align-items: center; gap: .55rem; min-width: 0; margin: 1rem 0; color: $color-text-muted; font-size: .9rem; }
 .patrimoine-breadcrumb button { border: 0; padding: .2rem; background: transparent; color: $color-primary; font: inherit; cursor: pointer; }
 .patrimoine-breadcrumb button:hover { text-decoration: underline; }
 .patrimoine-context { display: flex; justify-content: space-between; align-items: center; gap: 1rem; margin: 0 0 1rem; padding: .75rem 1rem; border: 1px solid $color-border; border-radius: .75rem; color: $color-text-primary; background: $color-bg-card-hover; }
@@ -90,7 +90,19 @@
   .organization-table-card .datatable,
   .organization-table-card .datatable__wrapper { width: 100%; max-width: 100%; min-width: 0; }
 }
-@media (max-width: 640px) {
+@media (max-width: #{$breakpoint-tablet - 1px}) {
+  .patrimoine-breadcrumb {
+    flex-wrap: nowrap;
+    margin: .75rem 0;
+    padding: 0 0 .35rem;
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    scrollbar-width: none;
+    -webkit-overflow-scrolling: touch;
+  }
+  .patrimoine-breadcrumb::-webkit-scrollbar { display: none; }
+  .patrimoine-breadcrumb > * { flex: 0 0 auto; white-space: nowrap; }
+  .patrimoine-breadcrumb button { min-height: 36px; }
   .patrimoine-context, .patrimoine-map-action, .patrimoine-related, .parcel-map__toolbar { align-items: flex-start; flex-direction: column; }
   .parcel-map__controls { justify-content: flex-start; }
   .parcel-map__canvas { height: 40vh; min-height: 250px; }
@@ -116,11 +128,10 @@
   .photo-viewer__preview > img { max-height: 55vh; }
 }
 
-/* Navigation verticale du patrimoine : panneau droit intégré en grand écran,
-   tiroir (voile + fermeture clavier) en compact. La barre latérale gauche
-   reste réservée aux grandes sections de l'application. */
+/* Navigation verticale du patrimoine : le contenu du panneau est fourni au
+   dock global de MainLayout ; la barre latérale gauche garde les sections app. */
 .patrimoine-layout { display: flex; align-items: stretch; min-width: 0; min-height: 100%; }
-.patrimoine-layout__main { flex: 1; min-width: 0; padding-right: var(--right-sidebar-width, 0); }
+.patrimoine-layout__main { flex: 1 1 auto; min-width: 0; }
 .patrimoine-level { min-width: 0; animation: patrimoine-level-enter 180ms ease-out both; }
 @keyframes patrimoine-level-enter {
   from { opacity: 0; transform: translateY(5px); }
@@ -162,13 +173,20 @@ a.patrimoine-child:focus-visible { position: relative; z-index: 1; outline: 2px 
 .patrimoine-child__meta dd { margin: 0; color: $color-text-primary; font-size: $font-size-sm; overflow-wrap: anywhere; }
 .patrimoine-child__arrow { flex: 0 0 auto; color: $color-text-muted; font-size: $font-size-xl; }
 @media (prefers-reduced-motion: reduce) { .patrimoine-child { transition: none; } }
-@media (max-width: 640px) {
+@media (max-width: #{$breakpoint-tablet - 1px}) {
   .patrimoine-summary__head { flex-direction: column; }
   .patrimoine-summary__actions { width: 100%; }
-  .patrimoine-summary__actions .btn { flex: 1 1 auto; }
+  .patrimoine-summary__actions .btn { flex: 1 1 100%; min-height: 44px; }
+  .patrimoine-summary__fields { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: $spacing-3 $spacing-2; }
+  .patrimoine-summary__field dd { font-size: $font-size-sm; }
   .patrimoine-child { align-items: flex-start; flex-wrap: wrap; }
   .patrimoine-child__meta { flex: 1 1 100%; justify-content: flex-start; padding-left: 0; }
   .patrimoine-child__arrow { margin-left: auto; }
+}
+
+@media (max-width: 380px) {
+  .patrimoine-summary__fields { grid-template-columns: minmax(0, 1fr); }
+  .patrimoine-child__meta > div { min-width: min(76px, 100%); }
 }
 
 .patrimoine-nav { padding: $spacing-1 0; }
@@ -205,22 +223,6 @@ a.patrimoine-child:focus-visible { position: relative; z-index: 1; outline: 2px 
 .patrimoine-nav__popover-content { max-height: calc(min(75vh, 680px) - 48px); padding: $spacing-2; overflow: auto; }
 .right-sidebar__collapsed-content { align-items: center; padding: $spacing-2 0; }
 .patrimoine-nav-rail__button { width: 40px; height: 40px; }
-/* En grand écran le panneau suit la hauteur du contenu plutôt que 100% du
-   parent : scopé au desktop pour ne pas écraser la hauteur du tiroir compact. */
-@media (min-width: #{$breakpoint-desktop}) {
-  /* Étend le panneau jusqu'aux bords de la fenêtre : le padding global du
-     contenu reste appliqué au centre, mais ne crée plus de marge autour du rail. */
-  .patrimoine-layout {
-    width: calc(100% + #{$spacing-4});
-    min-height: calc(100% + #{$spacing-4} + #{$spacing-4});
-    margin: -$spacing-4 (-$spacing-4) (-$spacing-4) 0;
-  }
-  .patrimoine-layout__main {
-    padding-top: calc(#{$spacing-5} + #{$spacing-4});
-    padding-bottom: calc(#{$spacing-8} + #{$spacing-4});
-  }
-  .patrimoine-layout > .right-sidebar { height: auto; min-height: 100%; }
-}
 @media (prefers-reduced-motion: reduce) {
   .patrimoine-level,
   .patrimoine-nav__list--nested { animation: none; }
