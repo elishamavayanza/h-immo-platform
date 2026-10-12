@@ -60,6 +60,24 @@ class PaymentRepository extends ServiceEntityRepository
     }
 
     /**
+     * Recharge un paiement en verrou pessimiste (SELECT ... FOR UPDATE).
+     *
+     * Sert à sérialiser deux annulations concurrentes du même paiement : la
+     * contrainte d'unicité sur `reversal_of_id` reste la garantie ultime, mais
+     * le verrou évite de créer la contre-écriture avant de constater que
+     * l'originale a déjà été annulée.
+     */
+    public function lockForUpdate(Payment $payment): ?Payment
+    {
+        return $this->createQueryBuilder('p')
+            ->andWhere('p.id = :id')
+            ->setParameter('id', $payment->getId())
+            ->getQuery()
+            ->setLockMode(\Doctrine\DBAL\LockMode::PESSIMISTIC_WRITE)
+            ->getOneOrNullResult();
+    }
+
+    /**
      * Liste paginée des paiements selon les organisations et villes autorisées.
      *
      * @param list<int>|null $organizationIds

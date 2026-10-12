@@ -103,6 +103,29 @@ class Payment extends TimestampedEntity
     #[ORM\Column(type: Types::TEXT, nullable: true)]
     private ?string $notes = null;
 
+    /**
+     * Écriture annulée par ce paiement, lorsqu'il s'agit d'une contre-écriture.
+     *
+     * Une contre-écriture porte un montant NÉGATIF égal à l'opposé de
+     * l'original ; tous les agrégats (`SUM(amount)`) restent donc justes sans
+     * avoir à filtrer les annulations. La relation est UNIQUE : une écriture ne
+     * peut être annulée qu'une seule fois, y compris sous annulations
+     * concurrentes (la contrainte d'unicité fait foi).
+     */
+    #[ORM\OneToOne(targetEntity: self::class, inversedBy: 'reversal')]
+    #[ORM\JoinColumn(name: 'reversal_of_id', referencedColumnName: 'id', nullable: true, onDelete: 'RESTRICT')]
+    private ?self $reversalOf = null;
+
+    /**
+     * Contre-écriture qui annule ce paiement, s'il a été annulé.
+     *
+     * Côté inverse de `reversalOf`, non propriétaire de la relation : il ne
+     * sert qu'à savoir si un paiement est déjà annulé (`isReversed()`) sans
+     * requête supplémentaire explicite.
+     */
+    #[ORM\OneToOne(targetEntity: self::class, mappedBy: 'reversalOf')]
+    private ?self $reversal = null;
+
     public function getRent(): Rent
     {
         return $this->rent;
@@ -245,5 +268,45 @@ class Payment extends TimestampedEntity
         $this->notes = $notes;
 
         return $this;
+    }
+
+    /**
+     * Écriture d'origine annulée par ce paiement (null si ce n'est pas une
+     * contre-écriture).
+     */
+    public function getReversalOf(): ?self
+    {
+        return $this->reversalOf;
+    }
+
+    public function setReversalOf(?self $reversalOf): static
+    {
+        $this->reversalOf = $reversalOf;
+
+        return $this;
+    }
+
+    /**
+     * Contre-écriture qui annule ce paiement (null s'il n'est pas annulé).
+     */
+    public function getReversal(): ?self
+    {
+        return $this->reversal;
+    }
+
+    /**
+     * Ce paiement est-il une contre-écriture (annulation d'un autre paiement) ?
+     */
+    public function isReversal(): bool
+    {
+        return $this->reversalOf !== null;
+    }
+
+    /**
+     * Ce paiement a-t-il déjà été annulé par une contre-écriture ?
+     */
+    public function isReversed(): bool
+    {
+        return $this->reversal !== null;
     }
 }

@@ -402,9 +402,15 @@ final readonly class PaymentService
     /**
      * Annule un paiement par contre-écriture.
      *
-     * Crée un paiement négatif (via correction) pour annuler l'effet du paiement
-     * original, puis recalcule le statut de l'échéance. Le paiement original
-     * n'est PAS supprimé (traçabilité complète).
+     * Crée un paiement de montant NÉGATIF (`-montant`), relié à l'original par
+     * `reversalOf`. Tous les agrégats (`SUM(amount)`) restent ainsi justes sans
+     * avoir à filtrer les annulations : la contre-écriture se SOUSTRAIT au lieu
+     * de s'additionner. Le paiement original n'est ni supprimé ni modifié
+     * (comptabilité à écritures immuables).
+     *
+     * Une écriture ne peut être annulée qu'une seule fois : le contrôle est
+     * doublé par la contrainte d'unicité sur `reversal_of_id`, qui tranche
+     * même en cas d'annulations concurrentes (verrou pessimiste + 409).
      */
     public function cancelPayment(string $uuid, string $reason, User $currentUser): Feedback
     {
@@ -415,103 +421,155 @@ final readonly class PaymentService
         } catch (\InvalidArgumentException) {
             return $feedback
                 ->setErrorFlushDescription('Identifiant de paiement invalide.')
-                ->setStatus(400)
-                ->autoInitFlush();
+                ->autoInitFlush()
+                ->setStatus(400);
         }
 
         $payment = $this->paymentRepository->findOneByUuid($parsed);
         if ($payment === null) {
             return $feedback
                 ->setErrorFlushDescription('Paiement introuvable.')
-                ->setStatus(404)
-                ->autoInitFlush();
+                ->autoInitFlush()
+                ->setStatus(404);
         }
 
         $this->securityService->checkPaymentAccess($payment, SecurityAction::CANCEL_PAYMENT);
 
-        $rent = $payment->getRent();
+        // Toute la mutation comptable est atomique et verrouillée : deux
+        // annulations simultanées du même paiement ne peuvent pas créer deux
+        // contre-écritures.
+        $success = $this->entityManager->wrapInTransaction(
+            function () use ($payment, $reason, $currentUser, $feedback): bool {
+                $locked = $this->paymentRepository->lockForUpdate($payment);
+                if ($locked === null) {
+                    $feedback
+                        ->setErrorFlushDescription('Le paiement a été modifié ou supprimé par un autre processus.')
+                        ->setStatus(409);
 
-        // Vérifier que l'annulation ne ferait pas passer le total payé sous zéro
-        $currentPaid = $this->paymentRepository->sumAmountByRent($rent);
-        $cancelAmount = $payment->getAmount();
-        $newPaid = bcsub($currentPaid, $cancelAmount, 2);
+                    return false;
+                }
 
-        if (bccomp($newPaid, '0.00', 2) < 0) {
-            return $feedback
-                ->addError('amount', 'L\'annulation ferait passer le total payé en négatif.')
-                ->setFlushDescriptionWithError('Annulation impossible : montant total payé deviendrait négatif.')
-                ->setStatus(409)
-                ->autoInitFlush();
-        }
+                // Une contre-écriture n'est pas annulable, et une écriture déjà
+                // annulée ne l'est pas deux fois (la contrainte UNIQUE sur
+                // `reversal_of_id` garantit l'invariant au niveau base).
+                if ($locked->isReversal()) {
+                    $feedback
+                        ->addError('amount', 'Cette écriture est déjà une contre-écriture et ne peut être annulée.')
+                        ->setFlushDescriptionWithError('Annulation impossible : cette écriture est une contre-écriture.')
+                        ->setStatus(409);
 
-        // Créer la contre-écriture (paiement de correction)
-        $correction = new Payment();
-        $correction->setRent($rent);
-        $correction->setCreatedBy($currentUser);
-        $correction->setAmount($cancelAmount);
-        $correction->setCurrency($payment->getCurrency());
-        $correction->setPaymentDate($this->dateTime->now());
-        $correction->setMethod($payment->getMethod());
-        $correction->setReference('ANNUL-' . $payment->getReference());
-        $correction->setReceiptNumber($payment->getReceiptNumber());
-        $correction->setNotes("Annulation du paiement {$payment->getReference()} : {$reason}");
+                    return false;
+                }
+                if ($locked->isReversed()) {
+                    $feedback
+                        ->addError('amount', 'Ce paiement a déjà été annulé.')
+                        ->setFlushDescriptionWithError('Annulation impossible : ce paiement est déjà annulé.')
+                        ->setStatus(409);
 
-        $this->entityManager->persist($correction);
+                    return false;
+                }
 
-        // Log d'audit : annulation du paiement
-        $this->auditLogService->log(
-            action: 'CANCEL_PAYMENT',
-            entityType: Payment::class,
-            entityId: $payment->getId(),
-            organization: $rent->getLease()->getOrganization(),
-            user: $currentUser,
-            oldValues: [
-                'amount' => $payment->getAmount(),
-                'currency' => $payment->getCurrency()->value,
-                'exchangeRate' => $payment->getExchangeRate(),
-                'originalAmount' => $payment->getOriginalAmount(),
-                'originalCurrency' => $payment->getOriginalCurrency()?->value,
-                'reference' => $payment->getReference(),
-            ],
-            newValues: [
-                'amount' => $correction->getAmount(),
-                'currency' => $correction->getCurrency()->value,
-                'reference' => $correction->getReference(),
-                'notes' => $correction->getNotes(),
-            ],
+                $rent = $locked->getRent();
+
+                // Garde-fou : l'annulation ne doit pas faire passer le total payé
+                // sous zéro. Avec une contre-écriture négative, c'est désormais
+                // une sécurité et non plus un cas normal.
+                $currentPaid = $this->paymentRepository->sumAmountByRent($rent);
+                $cancelAmount = $locked->getAmount();
+                $newPaid = bcsub($currentPaid, $cancelAmount, 2);
+
+                if (bccomp($newPaid, '0.00', 2) < 0) {
+                    $feedback
+                        ->addError('amount', 'L\'annulation ferait passer le total payé en négatif.')
+                        ->setFlushDescriptionWithError('Annulation impossible : montant total payé deviendrait négatif.')
+                        ->setStatus(409);
+
+                    return false;
+                }
+
+                // Contre-écriture : montant négatif, relié à l'original. On ne
+                // recopie PAS `receiptNumber` (un numéro de reçu ne peut désigner
+                // deux écritures).
+                $correction = new Payment();
+                $correction->setRent($rent);
+                $correction->setCreatedBy($currentUser);
+                $correction->setAmount(bcmul($cancelAmount, '-1', 2));
+                $correction->setCurrency($locked->getCurrency());
+                $correction->setPaymentDate($this->dateTime->now());
+                $correction->setMethod($locked->getMethod());
+                $correction->setReference(substr('ANNUL-' . ($locked->getReference() ?? $locked->getUuid()->toRfc4122()), 0, 100));
+                $correction->setReversalOf($locked);
+                $correction->setNotes("Annulation du paiement {$locked->getReference()} : {$reason}");
+
+                $this->entityManager->persist($correction);
+                $this->entityManager->flush();
+
+                // Log d'audit : annulation du paiement
+                $this->auditLogService->log(
+                    action: 'CANCEL_PAYMENT',
+                    entityType: Payment::class,
+                    entityId: $locked->getId(),
+                    organization: $rent->getLease()->getOrganization(),
+                    user: $currentUser,
+                    oldValues: [
+                        'amount' => $locked->getAmount(),
+                        'currency' => $locked->getCurrency()->value,
+                        'exchangeRate' => $locked->getExchangeRate(),
+                        'originalAmount' => $locked->getOriginalAmount(),
+                        'originalCurrency' => $locked->getOriginalCurrency()?->value,
+                        'reference' => $locked->getReference(),
+                    ],
+                    newValues: [
+                        'amount' => $correction->getAmount(),
+                        'currency' => $correction->getCurrency()->value,
+                        'reference' => $correction->getReference(),
+                        'notes' => $correction->getNotes(),
+                        'reversalOfUuid' => $locked->getUuid()->toRfc4122(),
+                    ],
+                );
+
+                // Recalcul du statut d'échéance : il peut désormais DESCENDRE
+                // (PAID -> PARTIALLY_PAID -> PENDING) puisque la somme payée
+                // diminue réellement.
+                $this->refreshRentStatus($rent);
+                $this->entityManager->flush();
+
+                $feedback->setData($this->paymentMapper->toResponse($correction));
+
+                return true;
+            }
         );
 
-        $this->refreshRentStatus($rent);
-        $this->entityManager->flush();
+        if (!$success) {
+            // Tous les échecs de la transaction sont des conflits métier (409).
+            if (!$feedback->hasErrors()) {
+                $feedback->setErrorFlushDescription('Annulation impossible : conflit comptable (annulation concurrente ou donnée modifiée).');
+            }
+
+            return $feedback->autoInitFlush()->setStatus(409);
+        }
 
         return $feedback
-            ->setData($this->paymentMapper->toResponse($correction))
             ->setFlushDescription('Le paiement a été annulé par contre-écriture.')
-            ->setStatus(201)
-            ->autoInitFlush();
+            ->autoInitFlush()
+            ->setStatus(201);
     }
 
     /**
-     * Recalcule le statut de l'échéance à partir des paiements enregistrés.
+     * Recalcule le statut de l'échéance à partir des paiements réellement
+     * enregistrés.
      *
-     * Utilise bcmath pour des comparaisons décimales exactes (scale 2)
-     * afin d'éviter qu'un centime d'arrondi fasse basculer l'échéance
-     * en « soldée » à tort.
+     * Le statut peut MONTER comme DESCENDRE : une contre-écriture négative
+     * diminue la somme payée, donc une échéance PAID peut redevenir
+     * PARTIALLY_PAID ou PENDING après annulation. La règle historique « le
+     * statut ne descend jamais » masquait précisément le bug d'annulation.
      *
-     * Le statut ne descend JAMAIS : un loyer PAID reste PAID même si on
-     * annule un paiement (la correction créera une nouvelle échéance si besoin).
-     * Ici on ne fait que monter : PENDING -> PARTIALLY_PAID -> PAID.
-     * OVERDUE est géré par Rent::syncStatus selon la date.
+     * OVERDUE n'est jamais persisté : il est dérivé à la lecture par
+     * `Rent::getComputedStatus()` selon la date. `Rent::syncStatus()` ne pose
+     * donc que PENDING / PARTIALLY_PAID / PAID.
      */
     private function refreshRentStatus(Rent $rent): void
     {
-        // On ne fait PAS descendre le statut : une fois PAID, reste PAID
-        // (l'annulation crée une contre-écriture, pas une suppression).
-        $currentStatus = $rent->getStatus();
-        if ($currentStatus === RentStatus::PAID) {
-            return;
-        }
-
         $rent->syncStatus($this->paymentRepository->sumAmountByRent($rent));
         // flush géré par l'appelant (dans la transaction)
     }

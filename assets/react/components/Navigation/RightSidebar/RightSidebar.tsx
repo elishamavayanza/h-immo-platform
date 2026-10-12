@@ -3,6 +3,7 @@ import { useRightSidebar, UseRightSidebarProps } from '../../../hook-components/
 import { useIsCompact } from '../../../hooks/useIsCompact.ts';
 import { MEDIA_QUERIES } from '../../../services/device';
 import { useMediaQuery } from '../../../hooks/useMediaQuery';
+import { SidebarItemTooltip } from '../Sidebar/SidebarItemTooltip.tsx';
 
 const CollapseIcon = () => (
     <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2">
@@ -96,6 +97,29 @@ export function RightSidebar({
     useEffect(() => {
         isFullyCollapsedRef.current = isFullyCollapsed;
     }, [isFullyCollapsed]);
+
+    // Bulle du nom du panneau au survol de la bande repliée : on réutilise la
+    // bulle du sidebar (`SidebarItemTooltip`) plutôt que l'infobulle native
+    // (`title`), non stylable. Comme le rail est à droite, la bulle s'ouvre
+    // vers la gauche. Montée après un court délai, une seule à la fois.
+    const [railTooltip, setRailTooltip] = useState<{ anchor: HTMLElement; label: string } | null>(null);
+    const railTooltipTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const cancelRailTooltip = useCallback(() => {
+        if (railTooltipTimer.current !== null) {
+            clearTimeout(railTooltipTimer.current);
+            railTooltipTimer.current = null;
+        }
+        setRailTooltip(null);
+    }, []);
+    const scheduleRailTooltip = useCallback((anchor: HTMLElement, label: string) => {
+        if (label === '') return;
+        cancelRailTooltip();
+        railTooltipTimer.current = setTimeout(() => setRailTooltip({ anchor, label }), 250);
+    }, [cancelRailTooltip]);
+    useEffect(() => cancelRailTooltip, [cancelRailTooltip]);
+    useEffect(() => {
+        if (!isFullyCollapsed) cancelRailTooltip();
+    }, [isFullyCollapsed, cancelRailTooltip]);
 
     const updateWidthDOM = useCallback((newWidth: number) => {
         if (asideRef.current) {
@@ -260,8 +284,11 @@ export function RightSidebar({
                     type="button"
                     className="right-sidebar__mobile-trigger"
                     onClick={handleToggle}
+                    onMouseEnter={(event) => scheduleRailTooltip(event.currentTarget, `Ouvrir ${title || 'le panneau'}`)}
+                    onMouseLeave={cancelRailTooltip}
+                    onFocus={(event) => scheduleRailTooltip(event.currentTarget, `Ouvrir ${title || 'le panneau'}`)}
+                    onBlur={cancelRailTooltip}
                     aria-label={`Ouvrir ${title || 'le panneau'}`}
-                    title={`Ouvrir ${title || 'le panneau'}`}
                 >
                     <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2">
                         <polyline points="9 18 15 12 9 6" />
@@ -283,7 +310,10 @@ export function RightSidebar({
                             onClick={() => {
                                 if (!isDraggingRef.current) handleToggle();
                             }}
-                            title="Cliquer pour ouvrir ou glisser vers la gauche"
+                            onMouseEnter={(event) => scheduleRailTooltip(event.currentTarget, 'Cliquer pour ouvrir ou glisser vers la gauche')}
+                            onMouseLeave={cancelRailTooltip}
+                            onFocus={(event) => scheduleRailTooltip(event.currentTarget, 'Cliquer pour ouvrir ou glisser vers la gauche')}
+                            onBlur={cancelRailTooltip}
                         >
                             <span className="right-sidebar__collapsed-text">{title || ''}</span>
                         </div>}
@@ -299,8 +329,11 @@ export function RightSidebar({
                                     }
                                     handleToggle();
                                 }}
+                                onMouseEnter={(event) => scheduleRailTooltip(event.currentTarget, 'Cliquer pour ouvrir ou glisser pour ajuster la largeur')}
+                                onMouseLeave={cancelRailTooltip}
+                                onFocus={(event) => scheduleRailTooltip(event.currentTarget, 'Cliquer pour ouvrir ou glisser pour ajuster la largeur')}
+                                onBlur={cancelRailTooltip}
                                 aria-label={`Ouvrir ${title || 'le panneau'}`}
-                                title="Cliquer pour ouvrir ou glisser pour ajuster la largeur"
                             >
                                 <ExpandIcon />
                             </button>
@@ -331,6 +364,7 @@ export function RightSidebar({
                         {footer && <div className="right-sidebar__footer">{footer}</div>}
                     </>
                 )}
+                {railTooltip !== null && <SidebarItemTooltip anchorEl={railTooltip.anchor} label={railTooltip.label} placement="left" />}
             </aside>
         </>
     );

@@ -191,6 +191,28 @@ class Expense extends TimestampedEntity
     #[ORM\Column(type: Types::TEXT, nullable: true)]
     private ?string $notes = null;
 
+    /**
+     * Dépense annulée par cette écriture, lorsqu'il s'agit d'une contre-écriture.
+     *
+     * Une contre-écriture porte un montant NÉGATIF égal à l'opposé de
+     * l'originale ; tous les agrégats (`SUM(amount)`) restent donc justes sans
+     * avoir à filtrer les annulations. La relation est UNIQUE : une dépense ne
+     * peut être annulée qu'une seule fois, y compris sous annulations
+     * concurrentes (la contrainte d'unicité fait foi).
+     */
+    #[ORM\OneToOne(targetEntity: self::class, inversedBy: 'reversal')]
+    #[ORM\JoinColumn(name: 'reversal_of_id', referencedColumnName: 'id', nullable: true, onDelete: 'RESTRICT')]
+    private ?self $reversalOf = null;
+
+    /**
+     * Contre-écriture qui annule cette dépense, si elle a été annulée.
+     *
+     * Côté inverse de `reversalOf`, non propriétaire de la relation : il ne
+     * sert qu'à savoir si une dépense est déjà annulée (`isReversed()`).
+     */
+    #[ORM\OneToOne(targetEntity: self::class, mappedBy: 'reversalOf')]
+    private ?self $reversal = null;
+
     public function getOrganization(): Organization
     {
         return $this->organization;
@@ -441,5 +463,45 @@ class Expense extends TimestampedEntity
         $this->notes = $notes;
 
         return $this;
+    }
+
+    /**
+     * Dépense d'origine annulée par cette écriture (null si ce n'est pas une
+     * contre-écriture).
+     */
+    public function getReversalOf(): ?self
+    {
+        return $this->reversalOf;
+    }
+
+    public function setReversalOf(?self $reversalOf): static
+    {
+        $this->reversalOf = $reversalOf;
+
+        return $this;
+    }
+
+    /**
+     * Contre-écriture qui annule cette dépense (null si elle n'est pas annulée).
+     */
+    public function getReversal(): ?self
+    {
+        return $this->reversal;
+    }
+
+    /**
+     * Cette dépense est-elle une contre-écriture (annulation d'une autre) ?
+     */
+    public function isReversal(): bool
+    {
+        return $this->reversalOf !== null;
+    }
+
+    /**
+     * Cette dépense a-t-elle déjà été annulée par une contre-écriture ?
+     */
+    public function isReversed(): bool
+    {
+        return $this->reversal !== null;
     }
 }

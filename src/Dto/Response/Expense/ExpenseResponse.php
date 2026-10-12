@@ -88,6 +88,15 @@ final readonly class ExpenseResponse
         #[OA\Property(description: 'Notes', nullable: true, example: 'Taxe foncière annuelle')]
         public ?string $notes,
 
+        #[OA\Property(description: 'UUID de la dépense annulée par cette écriture (null si ce n\'est pas une contre-écriture)', format: 'uuid', nullable: true)]
+        public ?string $reversalOfUuid,
+
+        #[OA\Property(description: 'Indique si cette écriture est une contre-écriture (montant négatif)', example: false)]
+        public bool $isReversal,
+
+        #[OA\Property(description: 'Indique si cette dépense a déjà été annulée par une contre-écriture', example: false)]
+        public bool $isReversed,
+
         #[OA\Property(description: 'Horodatage de création', format: 'date-time', example: '2026-03-15T10:30:00Z')]
         public \DateTimeImmutable $createdAt,
 
@@ -121,6 +130,9 @@ final readonly class ExpenseResponse
             reference: $expense->getReference(),
             receiptNumber: $expense->getReceiptNumber(),
             notes: $expense->getNotes(),
+            reversalOfUuid: $expense->getReversalOf() !== null ? (string) $expense->getReversalOf()->getUuid() : null,
+            isReversal: $expense->isReversal(),
+            isReversed: $expense->isReversed(),
             createdAt: $expense->getCreatedAt(),
             updatedAt: $expense->getUpdatedAt(),
         );

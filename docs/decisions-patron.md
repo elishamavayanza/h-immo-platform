@@ -106,6 +106,23 @@ vide en envoyant `""`.
   (`resolveReportOrganization()` → 400/404/403). Aucune correction d'office ;
   signalé ici.
 
+## P0 — Contre-écritures d'annulation (Paiement / Dépense)
+
+**Constat.** `SecurityAction::MARK_RENT_OVERDUE` est référencée dans la matrice
+PATRON mais n'est **implémentée nulle part**. L'entité `Rent` documente que
+`OVERDUE` est un **état dérivé à la lecture**, jamais persisté.
+
+**Décision : `OVERDUE` reste un état dérivé, jamais persisté.**
+
+- L'action `MARK_RENT_OVERDUE` est **dormante** (réservée à un usage futur).
+- `Rent::syncStatus()` ne pose que `PENDING` / `PARTIALLY_PAID` / `PAID`.
+- L'endpoint `GET /api/v1/rents/overdue` filtre dynamiquement.
+- L'annulation d'un paiement (contre-écriture négative) fait redescendre la
+  somme payée → une échéance `PAID` peut redevenir `PARTIALLY_PAID` ou
+  `PENDING` et réapparaître dans les impayés si sa date est passée.
+- La règle historique « le statut ne descend jamais » est **supprimée** (elle
+  masquait précisément le bug d'annulation).
+
 ## En-tête des pages Patron
 
 Les pages Patron « lecture » réutilisent la page ADMIN_IMMOBILIER correspondante

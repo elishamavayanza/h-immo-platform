@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Link } from 'react-router-dom';
 import { useFloatingPosition } from '../../../../hook-components/UI/PopoverMenu';
+import { SidebarItemTooltip } from '../../../../components/Navigation/Sidebar';
 import type { BuildingItem, CityItem, ParcelItem, UnitItem } from '../../shared/types/reference.types';
 import { buildPatrimoinePath, resolvePatrimoineSelection } from './patrimoineRouting';
 import type { PatrimoineLevel, PatrimoineSelection } from './patrimoineRouting';
@@ -83,6 +84,25 @@ export function PatrimoineNav(props: PatrimoineNavProps) {
         offset: 8,
         isOpen: isPopoverOpen,
     });
+
+    // Bulle du nom des boutons du rail replié : même composant que le sidebar
+    // (`SidebarItemTooltip`), pour remplacer l'infobulle native non stylable.
+    // Un seul tooltip à la fois, monté après un court délai pour ne pas
+    // surgir au simple passage du curseur.
+    const [railTooltip, setRailTooltip] = useState<{ anchor: HTMLElement; label: string } | null>(null);
+    const railTooltipTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const cancelRailTooltip = useCallback(() => {
+        if (railTooltipTimer.current !== null) {
+            clearTimeout(railTooltipTimer.current);
+            railTooltipTimer.current = null;
+        }
+        setRailTooltip(null);
+    }, []);
+    const scheduleRailTooltip = useCallback((anchor: HTMLElement, label: string) => {
+        cancelRailTooltip();
+        railTooltipTimer.current = setTimeout(() => setRailTooltip({ anchor, label }), 250);
+    }, [cancelRailTooltip]);
+    useEffect(() => cancelRailTooltip, [cancelRailTooltip]);
     const activeChain = new Set([
         ...(selection.cityId ? [`city:${selection.cityId}`] : []),
         ...(selection.parcelId ? [`parcel:${selection.parcelId}`] : []),
@@ -163,13 +183,23 @@ export function PatrimoineNav(props: PatrimoineNavProps) {
             document.body,
         ) : null;
         return <div className="patrimoine-nav-rail">
-            {!props.isCityAdmin && <Link className={`patrimoine-nav-rail__button${selection.level === 'overview' ? ' is-active' : ''}`} to="/app/patrimoine" aria-label="Vue d’ensemble" title="Vue d’ensemble">
+            {!props.isCityAdmin && <Link className={`patrimoine-nav-rail__button${selection.level === 'overview' ? ' is-active' : ''}`} to="/app/patrimoine" aria-label="Vue d’ensemble"
+                    onMouseEnter={(event) => scheduleRailTooltip(event.currentTarget, 'Vue d’ensemble')}
+                    onMouseLeave={cancelRailTooltip}
+                    onFocus={(event) => scheduleRailTooltip(event.currentTarget, 'Vue d’ensemble')}
+                    onBlur={cancelRailTooltip}>
                 {levelIcon('overview')}
             </Link>}
             <button ref={anchorRef} type="button" className={`patrimoine-nav-rail__button${selection.level !== 'overview' ? ' is-active' : ''}`}
-                    aria-label="Ouvrir la navigation du patrimoine" aria-haspopup="true" aria-expanded={isPopoverOpen} onClick={() => setPopoverOpen((open) => !open)} title="Patrimoine">
+                    aria-label="Ouvrir la navigation du patrimoine" aria-haspopup="true" aria-expanded={isPopoverOpen}
+                    onClick={() => { setPopoverOpen((open) => !open); cancelRailTooltip(); }}
+                    onMouseEnter={(event) => scheduleRailTooltip(event.currentTarget, 'Patrimoine')}
+                    onMouseLeave={cancelRailTooltip}
+                    onFocus={(event) => scheduleRailTooltip(event.currentTarget, 'Patrimoine')}
+                    onBlur={cancelRailTooltip}>
                 {levelIcon('villes')}
             </button>
+            {railTooltip !== null && <SidebarItemTooltip anchorEl={railTooltip.anchor} label={railTooltip.label} placement="left" />}
             {popover}
         </div>;
     }
