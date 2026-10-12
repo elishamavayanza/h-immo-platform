@@ -191,10 +191,14 @@ class PaymentRepository extends ServiceEntityRepository
         ?\DateTimeImmutable $periodTo = null
     ): array {
         $qb = $this->createQueryBuilder('p')
-            ->select('DATE_FORMAT(p.paymentDate, \'%Y-%m\') as period, SUM(p.amount) as total, p.currency')
+            ->select('DATE_FORMAT(p.paymentDate, \'%Y-%m\') as period, SUM(p.amount) as total, p.currency, c.id as cityId')
             ->innerJoin('p.rent', 'r')
             ->innerJoin('r.lease', 'l')
-            ->groupBy('period, p.currency')
+            ->innerJoin('l.unit', 'u')
+            ->innerJoin('u.building', 'b')
+            ->innerJoin('b.parcel', 'par')
+            ->innerJoin('par.city', 'c')
+            ->groupBy('period, p.currency, c.id')
             ->orderBy('period', 'ASC');
 
         if ($organizationIds !== null && !empty($organizationIds)) {
@@ -203,11 +207,7 @@ class PaymentRepository extends ServiceEntityRepository
         }
 
         if ($cityIds !== null && !empty($cityIds)) {
-            $qb->innerJoin('l.unit', 'u')
-                ->innerJoin('u.building', 'b')
-                ->innerJoin('b.parcel', 'par')
-                ->innerJoin('par.city', 'c')
-                ->andWhere('c.id IN (:cities)')
+            $qb->andWhere('c.id IN (:cities)')
                 ->setParameter('cities', $cityIds);
         }
 

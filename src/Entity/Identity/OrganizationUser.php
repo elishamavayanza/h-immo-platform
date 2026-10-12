@@ -47,6 +47,10 @@ class OrganizationUser extends TimestampedEntity
     #[ORM\Column(type: Types::STRING, enumType: OrganizationRole::class)]
     private OrganizationRole $role;
 
+    /** Autorisation explicite d’administrer le taux de change de ses villes. */
+    #[ORM\Column(name: 'can_manage_city_exchange_rate', type: Types::BOOLEAN, options: ['default' => false])]
+    private bool $canManageCityExchangeRate = false;
+
     public function getOrganization(): Organization
     {
         return $this->organization;
@@ -79,6 +83,21 @@ class OrganizationUser extends TimestampedEntity
     public function setRole(OrganizationRole $role): static
     {
         $this->role = $role;
+        if ($role !== OrganizationRole::ADMIN_VILLE) {
+            $this->canManageCityExchangeRate = false;
+        }
+
+        return $this;
+    }
+
+    public function canManageCityExchangeRate(): bool
+    {
+        return $this->canManageCityExchangeRate && $this->role === OrganizationRole::ADMIN_VILLE;
+    }
+
+    public function setCanManageCityExchangeRate(bool $canManageCityExchangeRate): static
+    {
+        $this->canManageCityExchangeRate = $this->role === OrganizationRole::ADMIN_VILLE && $canManageCityExchangeRate;
 
         return $this;
     }

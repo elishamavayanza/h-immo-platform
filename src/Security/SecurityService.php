@@ -496,6 +496,21 @@ final class SecurityService implements SecurityServiceInterface
         }
     }
 
+    /** Taux de ville modifiable uniquement par un ADMIN_VILLE explicitement autorisé. */
+    public function checkCityExchangeRateAccess(City $city): void
+    {
+        $this->checkCityAccess($city, SecurityAction::VIEW_CITY);
+        $user = $this->getCurrentUser();
+        $membership = $this->organizationUserRepository->findOneByOrganizationAndUser($city->getOrganization(), $user);
+
+        if ($membership === null
+            || $membership->getRole() !== OrganizationRole::ADMIN_VILLE
+            || !$membership->canManageCityExchangeRate()
+        ) {
+            throw new AccessDeniedException('La modification du taux de cette ville ne vous est pas accordée.');
+        }
+    }
+
     public function isCityAllowed(User $user, City $city): bool
     {
         return $this->userCityRepository->existsForUserAndCity($user, $city);
@@ -1091,6 +1106,7 @@ final class SecurityService implements SecurityServiceInterface
             SecurityAction::VIEW,
             SecurityAction::VIEW_ORGANIZATION,
             SecurityAction::CREATE_CITY_ADMIN,
+            SecurityAction::MANAGE_EXCHANGE_RATE,
 
             SecurityAction::VIEW_CITY, SecurityAction::CREATE_CITY, SecurityAction::UPDATE_CITY,
             SecurityAction::DELETE_CITY, SecurityAction::ACTIVATE_CITY, SecurityAction::DEACTIVATE_CITY,

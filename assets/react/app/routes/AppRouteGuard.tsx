@@ -54,6 +54,14 @@ export function AppRouteGuard({ children }: AppRouteGuardProps) {
     const navigate = useNavigate();
     const landingPath = defaultPathFor(platformRole, organizationRole);
     const routeContent = children ?? <Outlet />;
+    const deniedRoute = findAppRoute(location.pathname);
+    const roleLabel = organizationRole === 'admin_ville'
+        ? 'Administrateur de ville'
+        : organizationRole === 'admin_immobilier'
+            ? 'Administrateur immobilier'
+            : organizationRole === 'patron'
+                ? 'Patron'
+                : null;
 
     // 1. Points d'entrée du back-office, hors menu.
     if (location.pathname === APP_ROOT || location.pathname === ACCESS_DENIED_PATH) {
@@ -66,15 +74,24 @@ export function AppRouteGuard({ children }: AppRouteGuardProps) {
     }
 
     // 3. Feille existante mais hors périmètre du rôle → 403.
-    if (findAppRoute(location.pathname) !== undefined) {
+    if (deniedRoute !== undefined) {
+        const title = platformRole === 'super_admin'
+            ? 'Page réservée à une organisation'
+            : 'Accès non inclus dans votre rôle';
+        const message = platformRole === 'super_admin'
+            ? `Vous êtes connecté à l’espace Super Administrateur. « ${deniedRoute.label} » appartient à l’espace de gestion d’une organisation. Pour y accéder, utilisez un compte ayant le rôle Patron, Administrateur immobilier ou Administrateur de ville dans cette organisation.`
+            : roleLabel
+                ? `Le rôle ${roleLabel} ne permet pas d’ouvrir « ${deniedRoute.label} ». Si vous pensez qu’il s’agit d’une erreur, demandez à l’administrateur de vérifier votre rôle dans l’organisation active.`
+                : `Aucun rôle d’organisation actif ne permet d’ouvrir « ${deniedRoute.label} ». Sélectionnez une organisation avec un accès autorisé.`;
+
         return (
             <ErrorState
                 status={403}
                 codeLabel="Forbidden"
                 kind="forbidden"
                 tone="danger"
-                title="Accès refusé"
-                message="Cette page n’est pas disponible pour votre rôle. Si vous pensez qu’il s’agit d’une erreur, contactez votre administrateur."
+                title={title}
+                message={message}
                 onBack={() => navigate(-1)}
                 onHome={() => navigate(landingPath)}
             />

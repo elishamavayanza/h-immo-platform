@@ -2,12 +2,14 @@ import React from 'react';
 import {useCalendar, UseCalendarProps} from "../../../hook-components/Calendars/Calendar";
 
 const WEEKDAYS = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim'];
+const COMPACT_WEEKDAYS = ['Lu', 'Ma', 'Me', 'Je', 'Ve', 'Sa', 'Di'];
+const FULL_WEEKDAYS = ['Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi', 'Dimanche'];
 const MONTHS = [
     'Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin',
     'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre',
 ];
 
-export interface CalendarProps extends UseCalendarProps {}
+export interface CalendarProps extends UseCalendarProps { weekdayFormat?: 'short' | 'compact' }
 
 export function Calendar({
                              selectedDate,
@@ -20,6 +22,7 @@ export function Calendar({
                              initialMonth,
                              onMonthChange,
                              className,
+                             weekdayFormat = 'short',
                          }: CalendarProps) {
     const {
         classes,
@@ -75,9 +78,9 @@ export function Calendar({
             </div>
 
             <div className="calendar__weekdays">
-                {WEEKDAYS.map((day) => (
-                    <div key={day} className="calendar__weekday">
-                        {(day)}
+                {WEEKDAYS.map((day, index) => (
+                    <div key={day} className="calendar__weekday" aria-label={FULL_WEEKDAYS[index]} title={FULL_WEEKDAYS[index]}>
+                        {weekdayFormat === 'compact' ? COMPACT_WEEKDAYS[index] : day}
                     </div>
                 ))}
             </div>

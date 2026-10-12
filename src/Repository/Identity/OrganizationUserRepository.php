@@ -11,6 +11,7 @@ use App\Enum\OrganizationRole;
 use App\Repository\UuidParameterTrait;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\Persistence\ManagerRegistry;
+use Symfony\Component\Uid\Uuid;
 
 /**
  * OrganizationUserRepository
@@ -66,6 +67,49 @@ class OrganizationUserRepository extends ServiceEntityRepository
             ->setParameter('user', $user)
             ->getQuery()
             ->getOneOrNullResult();
+    }
+
+    public function findOneByUuidAndOrganization(string $uuid, Organization $organization): ?OrganizationUser
+    {
+        return $this->createQueryBuilder('ou')
+            ->andWhere('ou.uuid = :uuid')
+            ->andWhere('ou.organization = :organization')
+            ->setParameter('uuid', $this->bindableUuid(Uuid::fromString($uuid)))
+            ->setParameter('organization', $organization)
+            ->getQuery()
+            ->getOneOrNullResult();
+    }
+
+    /** @return list<OrganizationUser> */
+    public function findByOrganizationAndRole(Organization $organization, OrganizationRole $role): array
+    {
+        return $this->createQueryBuilder('ou')
+            ->innerJoin('ou.user', 'u')
+            ->addSelect('u')
+            ->andWhere('ou.organization = :organization')
+            ->andWhere('ou.role = :role')
+            ->andWhere('u.deletedAt IS NULL')
+            ->setParameter('organization', $organization)
+            ->setParameter('role', $role)
+            ->orderBy('u.fullName', 'ASC')
+            ->getQuery()
+            ->getResult();
+    }
+
+    public function hasCityExchangeRateManagerForCity(\App\Entity\Property\City $city): bool
+    {
+        return (int) $this->createQueryBuilder('ou')
+            ->select('COUNT(ou.id)')
+            ->innerJoin('ou.user', 'u')
+            ->innerJoin(\App\Entity\Identity\UserCity::class, 'uc', 'WITH', 'uc.user = u AND uc.city = :city')
+            ->andWhere('ou.organization = :organization')
+            ->andWhere('ou.role = :role')
+            ->andWhere('ou.canManageCityExchangeRate = true')
+            ->andWhere('u.deletedAt IS NULL')
+            ->setParameter('city', $city)
+            ->setParameter('organization', $city->getOrganization())
+            ->setParameter('role', OrganizationRole::ADMIN_VILLE)
+            ->getQuery()->getSingleScalarResult() > 0;
     }
 
     /**

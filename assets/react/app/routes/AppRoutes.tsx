@@ -129,6 +129,7 @@ export function AppRoutes() {
             <Route element={<MainLayout />}>
                 <Route path="/profile" element={<ProfilePage />} />
                 <Route path="/settings" element={<SettingsPage />} />
+                <Route path="/settings/organisation" element={<SettingsPage />} />
             </Route>
 
             <Route path="*" element={<Navigate to={APP_ROOT} replace />} />

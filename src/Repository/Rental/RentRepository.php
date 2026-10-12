@@ -311,12 +311,16 @@ class RentRepository extends ServiceEntityRepository
         ?\DateTimeImmutable $periodTo = null
     ): array {
         $qb = $this->createQueryBuilder('r')
-            ->select('DATE_FORMAT(r.period, \'%Y-%m\') as period, SUM(r.amount) as total, r.currency')
+            ->select('DATE_FORMAT(r.period, \'%Y-%m\') as period, SUM(r.amount) as total, r.currency, c.id as cityId')
             ->innerJoin('r.lease', 'l')
+            ->innerJoin('l.unit', 'u')
+            ->innerJoin('u.building', 'b')
+            ->innerJoin('b.parcel', 'par')
+            ->innerJoin('par.city', 'c')
             ->andWhere('l.status = :activeStatus')
             ->andWhere('l.deletedAt IS NULL')
             ->setParameter('activeStatus', \App\Enum\LeaseStatus::ACTIVE)
-            ->groupBy('period, r.currency')
+            ->groupBy('period, r.currency, c.id')
             ->orderBy('period', 'ASC');
 
         if ($organizationIds !== null && !empty($organizationIds)) {
@@ -325,11 +329,7 @@ class RentRepository extends ServiceEntityRepository
         }
 
         if ($cityIds !== null && !empty($cityIds)) {
-            $qb->innerJoin('l.unit', 'u')
-                ->innerJoin('u.building', 'b')
-                ->innerJoin('b.parcel', 'par')
-                ->innerJoin('par.city', 'c')
-                ->andWhere('c.id IN (:cities)')
+            $qb->andWhere('c.id IN (:cities)')
                 ->setParameter('cities', $cityIds);
         }
 

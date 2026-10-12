@@ -37,6 +37,9 @@ final readonly class OrganizationUserResponse
         #[OA\Property(description: 'Rôle attribué dans l\'organisation', type: 'string', example: 'admin_immobilier', enum: OrganizationRole::class)]
         public OrganizationRole $role,
 
+        #[OA\Property(description: 'Autorisation de modifier le taux de change des villes attribuées')]
+        public bool $canManageCityExchangeRate,
+
         #[OA\Property(description: 'Horodatage de création de l\'association', format: 'date-time', example: '2026-01-20T11:00:00Z')]
         public \DateTimeImmutable $createdAt,
     ) {
@@ -49,6 +52,7 @@ final readonly class OrganizationUserResponse
             organizationId: (string) $organizationUser->getOrganization()->getUuid(),
             userId: (string) $organizationUser->getUser()->getUuid(),
             role: $organizationUser->getRole(),
+            canManageCityExchangeRate: $organizationUser->canManageCityExchangeRate(),
             createdAt: $organizationUser->getCreatedAt(),
         );
     }

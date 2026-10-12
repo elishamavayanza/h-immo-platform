@@ -10,6 +10,7 @@ use App\Entity\Property\Building;
 use App\Entity\Property\Unit;
 use App\Entity\Staff\Worker;
 use App\Entity\Expense\Expense;
+use App\Enum\Currency;
 use App\Enum\ExpenseCategory;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\ORM\QueryBuilder;
@@ -219,8 +220,9 @@ final class ExpenseRepository extends ServiceEntityRepository
         ?\DateTimeImmutable $periodTo = null
     ): array {
         $qb = $this->createQueryBuilder('e')
-            ->select('e.category, SUM(e.amount) as total, e.currency')
-            ->groupBy('e.category, e.currency');
+            ->select('e.category, DATE_FORMAT(e.expenseDate, \'%Y-%m\') as period, SUM(e.amount) as total, e.currency, c.id as cityId')
+            ->innerJoin('e.city', 'c')
+            ->groupBy('e.category, period, e.currency, c.id');
 
         if ($organizationIds !== null && !empty($organizationIds)) {
             $qb->andWhere('e.organization IN (:orgs)')
@@ -261,7 +263,7 @@ final class ExpenseRepository extends ServiceEntityRepository
      *
      * @param list<int> $cityIds
      *
-     * @return list<array{city: City, cityName: string, total: string, currency: string}>
+     * @return list<array{cityUuid: string, cityName: string, cityId: int, period: string, total: string, currency: Currency|string}>
      */
     public function sumByCity(
         array $cityIds,
@@ -278,9 +280,9 @@ final class ExpenseRepository extends ServiceEntityRepository
         // résolu contre la classe racine, qui n'a pas de champ `uuid`. Le
         // champ doit être lu par l'alias du join, `c.uuid`.
         $qb = $this->createQueryBuilder('e')
-            ->select('c.uuid as cityUuid, c.name as cityName, SUM(e.amount) as total, e.currency')
+            ->select('c.uuid as cityUuid, c.name as cityName, c.id as cityId, DATE_FORMAT(e.expenseDate, \'%Y-%m\') as period, SUM(e.amount) as total, e.currency')
             ->innerJoin('e.city', 'c')
-            ->groupBy('c.uuid, c.name, e.currency')
+            ->groupBy('c.uuid, c.name, c.id, period, e.currency')
             ->andWhere('e.city IN (:cities)')
             ->setParameter('cities', $cityIds);
 
@@ -307,8 +309,9 @@ final class ExpenseRepository extends ServiceEntityRepository
         ?\DateTimeImmutable $periodTo = null
     ): array {
         $qb = $this->createQueryBuilder('e')
-            ->select('DATE_FORMAT(e.expenseDate, \'%Y-%m\') as period, SUM(e.amount) as total, e.currency')
-            ->groupBy('period, e.currency')
+            ->select('DATE_FORMAT(e.expenseDate, \'%Y-%m\') as period, SUM(e.amount) as total, e.currency, c.id as cityId')
+            ->innerJoin('e.city', 'c')
+            ->groupBy('period, e.currency, c.id')
             ->orderBy('period', 'ASC');
 
         if ($organizationIds !== null && !empty($organizationIds)) {
