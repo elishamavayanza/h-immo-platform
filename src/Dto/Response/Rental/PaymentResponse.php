@@ -60,6 +60,15 @@ final readonly class PaymentResponse
         #[OA\Property(description: 'Remarques complémentaires', example: 'Versement effectué via Airtel Money', nullable: true)]
         public ?string $notes,
 
+        #[OA\Property(description: 'UUID du paiement annulé par cette écriture (null si ce n\'est pas une contre-écriture)', format: 'uuid', nullable: true)]
+        public ?string $reversalOfUuid,
+
+        #[OA\Property(description: 'Indique si cette écriture est une contre-écriture (montant négatif)', example: false)]
+        public bool $isReversal,
+
+        #[OA\Property(description: 'Indique si ce paiement a déjà été annulé par une contre-écriture', example: false)]
+        public bool $isReversed,
+
         #[OA\Property(description: 'Horodatage de création de la saisie', format: 'date-time', example: '2026-03-02T10:16:00Z')]
         public \DateTimeImmutable $createdAt,
     ) {
@@ -81,6 +90,9 @@ final readonly class PaymentResponse
             reference: $payment->getReference(),
             receiptNumber: $payment->getReceiptNumber(),
             notes: $payment->getNotes(),
+            reversalOfUuid: $payment->getReversalOf() !== null ? (string) $payment->getReversalOf()->getUuid() : null,
+            isReversal: $payment->isReversal(),
+            isReversed: $payment->isReversed(),
             createdAt: $payment->getCreatedAt(),
         );
     }

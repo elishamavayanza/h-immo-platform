@@ -57,3 +57,34 @@ a été comparée champ à champ à `SecurityService::checkAdminVilleAction()`
 (`src/Security/SecurityService.php`) : **aucune divergence**. Le front expose
 exactement ce que le backend autorise. Aucune correction nécessaire ; les
 boutons s'affichent via `canDo('admin_ville', action)`.
+
+## P0 — Contre-écritures d'annulation (Paiement / Dépense)
+
+**Constat.** `SecurityAction::MARK_RENT_OVERDUE` (l.84 de
+`SecurityAction.php`) est référencée dans `SecurityService::checkAdminVilleAction()`
+(l.1161) et `checkAdminImmobilierAction()` (l.1110), mais n'est **implémentée
+nulle part** : aucun contrôleur, service ni événement ne pose le statut
+`OVERDUE` sur un `Rent`. L'entité `Rent` (l.206-289) documente explicitement
+que `OVERDUE` est un **état dérivé à la lecture** (via `getComputedStatus()`
+selon la date d'échéance et la somme payée), jamais persisté.
+
+**Décision : `OVERDUE` reste un état dérivé, jamais persisté.**
+
+- `MARK_RENT_OVERDUE` est une action **dormante** (réservée à un usage futur
+  éventuel, sans implémentation actuelle).
+- `Rent::syncStatus()` (appelé par `PaymentService::refreshRentStatus()` et
+  `RentService`) ne pose que `PENDING` / `PARTIALLY_PAID` / `PAID`.
+- L'endpoint `GET /api/v1/rents/overdue` filtre dynamiquement les échéances
+  impayées dont la date d'échéance est dépassée.
+- L'annulation d'un paiement (contre-écriture négative) fait redescendre la
+  somme payée, donc une échéance `PAID` peut redevenir `PARTIALLY_PAID` ou
+  `PENDING` et, si sa date est passée, réapparaître dans la liste des impayés.
+  Cela est cohérent avec le modèle dérivé.
+- L'action `MARK_RENT_OVERDUE` est conservée dans l'enum et la matrice pour
+  l'ADMIN_VILLE (droit de lecture sur les impayés) mais n'a pas de contrôle
+  d'écriture associé.
+
+Cette décision garantit que les sommes et statuts restent cohérents sans
+introduire de colonne persistante `OVERDUE` supplémentaire, et que la règle
+historique « le statut ne descend jamais » est **supprimée** (elle masquait
+précisément le bug d'annulation).

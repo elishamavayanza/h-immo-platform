@@ -59,6 +59,24 @@ final class ExpenseRepository extends ServiceEntityRepository
     }
 
     /**
+     * Recharge une dépense en verrou pessimiste (SELECT ... FOR UPDATE).
+     *
+     * Sert à sérialiser deux annulations concurrentes de la même dépense : la
+     * contrainte d'unicité sur `reversal_of_id` reste la garantie ultime, mais
+     * le verrou évite de créer la contre-écriture avant de constater que
+     * l'originale a déjà été annulée.
+     */
+    public function lockForUpdate(Expense $expense): ?Expense
+    {
+        return $this->createQueryBuilder('e')
+            ->andWhere('e.id = :id')
+            ->setParameter('id', $expense->getId())
+            ->getQuery()
+            ->setLockMode(\Doctrine\DBAL\LockMode::PESSIMISTIC_WRITE)
+            ->getOneOrNullResult();
+    }
+
+    /**
      * Trouve les dépenses selon les filtres donnés.
      */
     public function findByFilters(

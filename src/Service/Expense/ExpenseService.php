@@ -402,10 +402,15 @@ final readonly class ExpenseService
     /**
      * Annule une dépense par contre-écriture (traçabilité audit).
      *
-     * Crée une dépense de correction avec la MÊME catégorie que l'originale
-     * (pour préserver les agrégats par catégorie), même montant, même devise,
-     * même taux de change. Le montant n'est PAS négatif (DECIMAL unsigned),
-     * l'annulation est tracée par l'action CANCEL_EXPENSE et les notes.
+     * Crée une dépense de correction de montant NÉGATIF (`-montant`), reliée à
+     * l'originale par `reversalOf`. Tous les agrégats (`SUM(amount)`) restent
+     * ainsi justes sans avoir à filtrer les annulations : la contre-écriture se
+     * SOUSTRAIT au lieu de s'additionner. La même catégorie et la même devise
+     * sont conservées pour préserver les regroupements par catégorie / devise.
+     *
+     * Une dépense ne peut être annulée qu'une seule fois : le contrôle est
+     * doublé par la contrainte d'unicité sur `reversal_of_id`, qui tranche même
+     * en cas d'annulations concurrentes (verrou pessimiste + 409).
      *
      * L'entité Expense n'est PAS supprimable (pas de soft delete).
      */
@@ -415,66 +420,118 @@ final readonly class ExpenseService
 
         $expense = $this->findExpense($uuid, $feedback);
         if ($expense === null) {
-            return $feedback->autoInitFlush();
+            // Préserve le 400 (UUID invalide) ou 404 (introuvable) posé par
+            // findExpense, qu'autoInitFlush écraserait en 422.
+            $status = $feedback->getStatus();
+
+            return $feedback->autoInitFlush()->setStatus($status);
         }
 
         $this->securityService->checkExpenseAccess($expense, SecurityAction::DELETE_EXPENSE);
 
-        // Créer la contre-écriture (même catégorie, même devise, même taux)
-        $cancellation = new Expense();
-        $cancellation->setOrganization($expense->getOrganization());
-        $cancellation->setCity($expense->getCity());
-        $cancellation->setCreatedBy($currentUser);
-        $cancellation->setCategory($expense->getCategory()); // MÊME catégorie
-        $cancellation->setAmount($expense->getAmount());
-        $cancellation->setCurrency($expense->getCurrency());
-        $cancellation->setExchangeRate($expense->getExchangeRate());
-        $cancellation->setOriginalAmount($expense->getOriginalAmount());
-        $cancellation->setOriginalCurrency($expense->getOriginalCurrency());
-        $cancellation->setExpenseDate($this->dateTime->now());
-        $cancellation->setReference('ANNUL-' . $expense->getReference());
-        $cancellation->setNotes("Annulation de la dépense {$expense->getReference()} (catégorie: {$expense->getCategory()->value}) : {$reason}");
+        // Mutation comptable atomique et verrouillée : deux annulations
+        // simultanées de la même dépense ne créent qu'une contre-écriture.
+        $success = $this->entityManager->wrapInTransaction(
+            function () use ($expense, $reason, $currentUser, $feedback): bool {
+                $locked = $this->expenseRepository->lockForUpdate($expense);
+                if ($locked === null) {
+                    $feedback
+                        ->setErrorFlushDescription('La dépense a été modifiée ou supprimée par un autre processus.')
+                        ->setStatus(409);
 
-        // Copier la cible et le worker si présents
-        $cancellation->setParcel($expense->getParcel());
-        $cancellation->setBuilding($expense->getBuilding());
-        $cancellation->setUnit($expense->getUnit());
-        $cancellation->setWorker($expense->getWorker());
+                    return false;
+                }
 
-        $this->entityManager->persist($cancellation);
-        $this->entityManager->flush();
+                if ($locked->isReversal()) {
+                    $feedback
+                        ->addError('amount', 'Cette écriture est déjà une contre-écriture et ne peut être annulée.')
+                        ->setFlushDescriptionWithError('Annulation impossible : cette écriture est une contre-écriture.')
+                        ->setStatus(409);
 
-        // Log d'audit : annulation de la dépense
-        $this->auditLogService->log(
-            action: 'CANCEL_EXPENSE',
-            entityType: Expense::class,
-            entityId: $expense->getId(),
-            organization: $expense->getOrganization(),
-            user: $currentUser,
-            oldValues: [
-                'category' => $expense->getCategory()->value,
-                'amount' => $expense->getAmount(),
-                'currency' => $expense->getCurrency()->value,
-                'exchangeRate' => $expense->getExchangeRate(),
-                'originalAmount' => $expense->getOriginalAmount(),
-                'originalCurrency' => $expense->getOriginalCurrency()?->value,
-                'reference' => $expense->getReference(),
-            ],
-            newValues: [
-                'category' => $cancellation->getCategory()->value, // même catégorie
-                'amount' => $cancellation->getAmount(),
-                'currency' => $cancellation->getCurrency()->value,
-                'exchangeRate' => $cancellation->getExchangeRate(),
-                'reference' => $cancellation->getReference(),
-                'notes' => $cancellation->getNotes(),
-            ],
+                    return false;
+                }
+                if ($locked->isReversed()) {
+                    $feedback
+                        ->addError('amount', 'Cette dépense a déjà été annulée.')
+                        ->setFlushDescriptionWithError('Annulation impossible : cette dépense est déjà annulée.')
+                        ->setStatus(409);
+
+                    return false;
+                }
+
+                // Contre-écriture : même catégorie, même devise, même taux,
+                // montant négatif, reliée à l'originale. On ne recopie PAS le
+                // numéro de pièce justificative (il désigne une seule écriture).
+                $cancellation = new Expense();
+                $cancellation->setOrganization($locked->getOrganization());
+                $cancellation->setCity($locked->getCity());
+                $cancellation->setCreatedBy($currentUser);
+                $cancellation->setCategory($locked->getCategory());
+                $cancellation->setAmount(bcmul($locked->getAmount(), '-1', 2));
+                $cancellation->setCurrency($locked->getCurrency());
+                $cancellation->setExchangeRate($locked->getExchangeRate());
+                $cancellation->setOriginalAmount($locked->getOriginalAmount());
+                $cancellation->setOriginalCurrency($locked->getOriginalCurrency());
+                $cancellation->setExpenseDate($this->dateTime->now());
+                $cancellation->setReference(substr('ANNUL-' . ($locked->getReference() ?? $locked->getUuid()->toRfc4122()), 0, 100));
+                $cancellation->setReversalOf($locked);
+                $cancellation->setNotes("Annulation de la dépense {$locked->getReference()} (catégorie: {$locked->getCategory()->value}) : {$reason}");
+
+                // Copier la cible et le worker si présents (pour que les
+                // agrégats par immeuble/unité/travailleur restent équilibrés).
+                $cancellation->setParcel($locked->getParcel());
+                $cancellation->setBuilding($locked->getBuilding());
+                $cancellation->setUnit($locked->getUnit());
+                $cancellation->setWorker($locked->getWorker());
+
+                $this->entityManager->persist($cancellation);
+                $this->entityManager->flush();
+
+                // Log d'audit : annulation de la dépense
+                $this->auditLogService->log(
+                    action: 'CANCEL_EXPENSE',
+                    entityType: Expense::class,
+                    entityId: $locked->getId(),
+                    organization: $locked->getOrganization(),
+                    user: $currentUser,
+                    oldValues: [
+                        'category' => $locked->getCategory()->value,
+                        'amount' => $locked->getAmount(),
+                        'currency' => $locked->getCurrency()->value,
+                        'exchangeRate' => $locked->getExchangeRate(),
+                        'originalAmount' => $locked->getOriginalAmount(),
+                        'originalCurrency' => $locked->getOriginalCurrency()?->value,
+                        'reference' => $locked->getReference(),
+                    ],
+                    newValues: [
+                        'category' => $cancellation->getCategory()->value,
+                        'amount' => $cancellation->getAmount(),
+                        'currency' => $cancellation->getCurrency()->value,
+                        'exchangeRate' => $cancellation->getExchangeRate(),
+                        'reference' => $cancellation->getReference(),
+                        'notes' => $cancellation->getNotes(),
+                        'reversalOfUuid' => $locked->getUuid()->toRfc4122(),
+                    ],
+                );
+
+                $feedback->setData($this->expenseMapper->toResponse($cancellation));
+
+                return true;
+            }
         );
 
+        if (!$success) {
+            if (!$feedback->hasErrors()) {
+                $feedback->setErrorFlushDescription('Annulation impossible : conflit comptable (annulation concurrente ou donnée modifiée).');
+            }
+
+            return $feedback->autoInitFlush()->setStatus(409);
+        }
+
         return $feedback
-            ->setData($this->expenseMapper->toResponse($cancellation))
             ->setFlushDescription('La dépense a été annulée par contre-écriture.')
-            ->setStatus(201)
-            ->autoInitFlush();
+            ->autoInitFlush()
+            ->setStatus(201);
     }
 
     /**

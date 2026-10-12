@@ -11,7 +11,7 @@ use Doctrine\Migrations\AbstractMigration;
  * Ajout de la colonne `photos` (JSON) à la table `building`
  * pour stocker les noms des fichiers photos du bâtiment.
  */
-final class Version20261010120000 extends AbstractMigration
+final class Version20261010120000BuildingPhotosJson extends AbstractMigration
 {
     public function getDescription(): string
     {
