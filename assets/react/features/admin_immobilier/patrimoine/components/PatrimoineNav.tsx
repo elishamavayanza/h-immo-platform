@@ -3,18 +3,13 @@ import { createPortal } from 'react-dom';
 import { Link } from 'react-router-dom';
 import { useFloatingPosition } from '../../../../hook-components/UI/PopoverMenu';
 import type { BuildingItem, CityItem, ParcelItem, UnitItem } from '../../shared/types/reference.types';
+import { buildPatrimoinePath, resolvePatrimoineSelection } from './patrimoineRouting';
+import type { PatrimoineLevel, PatrimoineSelection } from './patrimoineRouting';
 
-export type PatrimoineLevel = 'overview' | 'villes' | 'parcelles' | 'batiments' | 'unites';
-
-export interface PatrimoineContext {
-    cityId: string | null;
-    parcelId: string | null;
-    buildingId: string | null;
-}
-
-export interface PatrimoineSelection extends PatrimoineContext {
-    level: PatrimoineLevel;
-}
+// Ré-export : le routage est isolé dans `patrimoineRouting`, mais les appelants
+// (PatrimoinePage) continuent de l'importer depuis ce module.
+export { buildPatrimoinePath, resolvePatrimoineSelection };
+export type { PatrimoineLevel, PatrimoineContext, PatrimoineSelection } from './patrimoineRouting';
 
 export interface PatrimoineNavNode {
     id: string;
@@ -22,40 +17,6 @@ export interface PatrimoineNavNode {
     level: PatrimoineLevel;
     to: string;
     children?: PatrimoineNavNode[];
-}
-
-export function resolvePatrimoineSelection(pathname: string, isCityAdmin: boolean): PatrimoineSelection {
-    const parts = pathname.split('/').filter(Boolean);
-    const valueAfter = (segment: string) => {
-        const index = parts.indexOf(segment);
-        return index >= 0 ? parts[index + 1] ?? null : null;
-    };
-    const cityId = valueAfter('villes');
-    const parcelId = valueAfter('parcelles');
-    const buildingId = valueAfter('batiments');
-    const level: PatrimoineLevel = parts.includes('unites') || buildingId
-        ? 'unites'
-        : parcelId || parts.includes('batiments')
-            ? 'batiments'
-            : cityId
-                ? 'parcelles'
-                : parts.includes('parcelles')
-                    ? 'parcelles'
-                    : parts.includes('villes')
-                        ? 'villes'
-                        : isCityAdmin ? 'parcelles' : 'overview';
-
-    return { level, cityId, parcelId, buildingId };
-}
-
-export function buildPatrimoinePath(level: PatrimoineLevel, context: PatrimoineContext): string {
-    const segments = ['/app/patrimoine'];
-    if (context.cityId) segments.push('villes', encodeURIComponent(context.cityId));
-    if (context.parcelId) segments.push('parcelles', encodeURIComponent(context.parcelId));
-    if (context.buildingId) segments.push('batiments', encodeURIComponent(context.buildingId));
-    if (level === 'unites') segments.push('unites');
-    if (segments.length === 1 && level !== 'overview') segments.push(level);
-    return segments.join('/');
 }
 
 interface PatrimoineNavProps {
@@ -98,7 +59,7 @@ function buildTree({ isCityAdmin, selection, cities, parcels, buildings, units }
                                 id: `unit:${unit.id}`,
                                 label: unit.reference || unit.type,
                                 level: 'unites' as const,
-                                to: buildPatrimoinePath('unites', { cityId: city.id, parcelId: parcel.id, buildingId: building.id }),
+                                to: buildPatrimoinePath('unites', { cityId: city.id, parcelId: parcel.id, buildingId: building.id, unitId: unit.id }),
                             })),
                         };
                     }),
@@ -126,6 +87,7 @@ export function PatrimoineNav(props: PatrimoineNavProps) {
         ...(selection.cityId ? [`city:${selection.cityId}`] : []),
         ...(selection.parcelId ? [`parcel:${selection.parcelId}`] : []),
         ...(selection.buildingId ? [`building:${selection.buildingId}`] : []),
+        ...(selection.unitId ? [`unit:${selection.unitId}`] : []),
     ]);
 
     const renderNodes = (nodes: PatrimoineNavNode[], depth = 0) => (
@@ -135,7 +97,8 @@ export function PatrimoineNav(props: PatrimoineNavProps) {
                     ? selection.level === 'overview'
                     : node.id === `city:${selection.cityId}` && selection.level === 'parcelles'
                         || node.id === `parcel:${selection.parcelId}` && selection.level === 'batiments'
-                        || node.id === `building:${selection.buildingId}` && selection.level === 'unites';
+                        || node.id === `building:${selection.buildingId}` && selection.level === 'unites' && selection.unitId === null
+                        || node.id === `unit:${selection.unitId}` && selection.unitId !== null;
                 const hasChildren = Boolean(node.children?.length);
                 const expanded = hasChildren && (userExpanded.has(node.id) || (activeChain.has(node.id) && !userCollapsed.has(node.id)));
                 return (

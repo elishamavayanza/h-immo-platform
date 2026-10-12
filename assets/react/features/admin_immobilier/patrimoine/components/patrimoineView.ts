@@ -1,4 +1,4 @@
-import type { BuildingItem, CityItem, ParcelItem, UnitItem } from '../../shared/types/reference.types';
+import type { BuildingItem, CityItem, LeaseItem, ParcelItem, RentItem, UnitItem } from '../../shared/types/reference.types';
 import type { OccupancyItem } from '../../reports/types';
 import type { PatrimoineData } from '../types/patrimoine.types';
 
@@ -156,4 +156,103 @@ export function cityOccupancy(data: PatrimoineData | null, cityId: string | null
  */
 export function unitCount(occupancy: OccupancyItem | null, units: UnitItem[]): number {
     return occupancy ? occupancy.totalUnits : units.length;
+}
+
+/**
+ * URL d'un module métier filtré sur un contexte de patrimoine.
+ *
+ * Les pages Dépenses, Loyers, Locataires et Personnel ne lisent que
+ * `parcelUuid` et `buildingUuid` en query string ; tout autre paramètre serait
+ * ignoré en silence. La fonction ne construit donc qu'une URL, jamais un filtre
+ * serveur : c'est l'appelé qui reste autoritaire sur le périmètre.
+ */
+export function relatedModuleUrl(path: string, parcelId: string | null, buildingId: string | null): string {
+    const params = new URLSearchParams();
+    if (parcelId) params.set('parcelUuid', parcelId);
+    if (buildingId) params.set('buildingUuid', buildingId);
+    const query = params.toString();
+    return query ? `${path}?${query}` : path;
+}
+
+export const LEASE_STATUS_LABELS: Record<string, string> = {
+    draft: 'Brouillon',
+    active: 'Actif',
+    expired: 'Expiré',
+    terminated: 'Résilié',
+    cancelled: 'Annulé',
+};
+
+export function leaseStatusLabel(status: string): string {
+    return LEASE_STATUS_LABELS[status] ?? status;
+}
+
+export const RENT_STATUS_LABELS: Record<string, string> = {
+    pending: 'En attente',
+    partially_paid: 'Partiellement payé',
+    paid: 'Payé',
+    overdue: 'En retard',
+};
+
+export function rentStatusLabel(status: string): string {
+    return RENT_STATUS_LABELS[status] ?? status;
+}
+
+/** Bail actif d'une unité (« le », il ne peut y en avoir qu'un), sinon `null`. */
+export function pickActiveLease(leases: LeaseItem[]): LeaseItem | null {
+    return leases.find((lease) => lease.status === 'active') ?? null;
+}
+
+export interface RentStatusSummary {
+    total: number;
+    paid: number;
+    unpaid: number;
+    overdue: number;
+}
+
+/** Décompte des échéances par état, tel que fourni par le backend (aucun recalcul de montant). */
+export function summarizeRents(rents: RentItem[]): RentStatusSummary {
+    return rents.reduce<RentStatusSummary>((summary, rent) => {
+        summary.total += 1;
+        if (rent.status === 'paid') summary.paid += 1;
+        else if (rent.isOverdue) summary.overdue += 1;
+        else summary.unpaid += 1;
+        return summary;
+    }, { total: 0, paid: 0, unpaid: 0, overdue: 0 });
+}
+
+/**
+ * Échéance non soldée la plus proche (date d'échéance croissante).
+ * `null` si toutes les échéances chargées sont payées — on ne déduit pas
+ * « à jour » d'autre chose que des lignes réellement reçues.
+ */
+export function nextUnpaidRent(rents: RentItem[]): RentItem | null {
+    return rents
+        .filter((rent) => rent.status !== 'paid')
+        .slice()
+        .sort((a, b) => a.dueDate.localeCompare(b.dueDate))[0] ?? null;
+}
+
+/**
+ * Rendu des dates API en **UTC**.
+ *
+ * Les colonnes `DATE`/`DATE_IMMUTABLE` sont sérialisées à minuit UTC : les
+ * formater dans le fuseau local d'un utilisateur à l'ouest de Greenwich
+ * décale le jour (voire le mois) d'une unité. On formate donc en UTC, comme
+ * `loyersService` le fait déjà pour les périodes d'échéance.
+ */
+const SHORT_DATE_FORMATTER = new Intl.DateTimeFormat('fr-FR', { day: '2-digit', month: 'long', year: 'numeric', timeZone: 'UTC' });
+const PERIOD_FORMATTER = new Intl.DateTimeFormat('fr-FR', { month: 'long', year: 'numeric', timeZone: 'UTC' });
+
+/** Date ISO → libellé court français (ex. « 05 mars 2026 ») ; `—` si absente/invalide. */
+export function formatShortDate(value: string | null | undefined): string {
+    if (!value) return '—';
+    const date = new Date(value);
+    return Number.isNaN(date.getTime()) ? '—' : SHORT_DATE_FORMATTER.format(date);
+}
+
+/** Période d'une échéance → « mars 2026 » ; `—` si absente/invalide. */
+export function formatPeriod(value: string | null | undefined): string {
+    if (!value) return '—';
+    const date = new Date(value);
+    return Number.isNaN(date.getTime()) ? '—' : PERIOD_FORMATTER.format(date);
 }
