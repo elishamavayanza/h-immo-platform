@@ -30,6 +30,7 @@
 .parcel-map__style button { padding: .4rem .55rem; border: 0; border-radius: .4rem; color: $color-text-secondary; background: transparent; cursor: pointer; }
 .parcel-map__style button[aria-pressed="true"] { color: $color-text-primary; background: $color-bg-card-hover; }
 .parcel-map__canvas { position: relative; height: min(55vh, 480px); min-height: 280px; overflow: hidden; border: 1px solid $color-border; border-radius: .75rem; background: var(--color-map-canvas, #e9e5d8); cursor: grab; touch-action: none; }
+.parcel-map__canvas:focus-visible { outline: 3px solid $color-primary; outline-offset: 2px; }
 .parcel-map__canvas:active { cursor: grabbing; }
 .parcel-map__tile { position: absolute; width: 256px; height: 256px; max-width: none; user-select: none; pointer-events: none; }
 .parcel-map__marker { position: absolute; z-index: 2; display: grid; width: 30px; height: 30px; place-items: center; transform: translate(-50%, -50%); border: 2px solid #fff; border-radius: 50%; color: #fff; background: #d54836; box-shadow: 0 2px 7px #15212b70; font-size: .72rem; font-weight: 750; cursor: pointer; }
