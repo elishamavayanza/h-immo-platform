@@ -91,7 +91,9 @@
     @include scrollbar;
     display: flex;
     flex-direction: column;
-    z-index: $z-dropdown + 10;
+    // Le menu est rendu dans `document.body` : il doit passer au-dessus du
+    // voile de modal (z-index $z-modal), sinon il reste cliquable mais caché.
+    z-index: $z-modal + 10;
     overflow-y: auto;
     overscroll-behavior: contain;
     -webkit-overflow-scrolling: touch;
