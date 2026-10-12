@@ -70,12 +70,15 @@ function descriptionLabel(expense: ExpenseItem, workers: Map<string, WorkerItem>
         || '—';
 }
 
-export async function fetchDepenses(organizationUuid: string): Promise<DepensesData> {
-    const [expenses, catalog, workers] = await Promise.all([
-        fetchExpenses(),
+export async function fetchDepenses(organizationUuid: string, from?: string, to?: string): Promise<DepensesData> {
+    const [catalog, workers] = await Promise.all([
         fetchPropertyCatalog(organizationUuid),
         fetchWorkers(organizationUuid),
     ]);
+    // Les dépenses sont filtrées par ville côté API. Fournir les UUID du
+    // catalogue actif borne aussi la vue au tenant sélectionné ; le backend
+    // recoupe ces UUID avec les villes réellement autorisées à l'utilisateur.
+    const expenses = await fetchExpenses(from, to, catalog.cities.items.map((city) => city.id));
 
     const cities = new Map(catalog.cities.items.map((city) => [city.id, city]));
     const parcels = new Map(catalog.parcels.items.map((parcel) => [parcel.id, parcel]));

@@ -68,6 +68,11 @@ export function useDepenses() {
         }
     }, [organizationUuid]);
 
+    const loadPeriod = useCallback((from: string, to: string) => {
+        if (!organizationUuid) return Promise.resolve(null);
+        return fetchDepenses(organizationUuid, from, to);
+    }, [organizationUuid]);
+
     useEffect(() => { void reload(); }, [reload]);
 
     const createExpenseAction = useCallback(async (payload: CreateExpensePayload): Promise<void> => {
@@ -105,6 +110,7 @@ export function useDepenses() {
         isLoading,
         error,
         reload,
+        loadPeriod,
         search,
         setSearch,
         category,

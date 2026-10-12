@@ -97,6 +97,8 @@ export function Calendar({
                             day.isRangeEnd ? 'calendar__day--range-end' : ''
                         } ${day.markers.length > 0 ? 'calendar__day--has-events' : ''}`}
                         onClick={() => !day.isDisabled && selectDate(day.date)}
+                        aria-label={`${day.date.toLocaleDateString('fr-FR', { dateStyle: 'full' })}${day.markers.length > 0 ? `, ${day.markers.length} activité${day.markers.length > 1 ? 's' : ''}` : ''}`}
+                        aria-pressed={day.isSelected}
                         disabled={day.isDisabled}
                     >
                         <span className="calendar__day-number">{day.date.getDate()}</span>

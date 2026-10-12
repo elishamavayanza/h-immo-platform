@@ -165,7 +165,9 @@ class RentRepository extends ServiceEntityRepository
         int $page = 1,
         int $limit = 20,
         ?string $sortBy = 'dueDate',
-        ?string $sortOrder = 'ASC'
+        ?string $sortOrder = 'ASC',
+        ?\DateTimeImmutable $from = null,
+        ?\DateTimeImmutable $to = null
     ): array {
         $allowedSortFields = ['dueDate', 'period', 'amount', 'createdAt'];
         $sortBy = in_array($sortBy, $allowedSortFields, true) ? $sortBy : 'dueDate';
@@ -195,6 +197,16 @@ class RentRepository extends ServiceEntityRepository
         if ($lease !== null) {
             $qb->andWhere('r.lease = :lease')
                 ->setParameter('lease', $lease);
+        }
+
+        if ($from !== null) {
+            $qb->andWhere('r.dueDate >= :periodFrom')
+                ->setParameter('periodFrom', $from);
+        }
+
+        if ($to !== null) {
+            $qb->andWhere('r.dueDate <= :periodTo')
+                ->setParameter('periodTo', $to);
         }
 
         if ($status !== null && $status !== '') {

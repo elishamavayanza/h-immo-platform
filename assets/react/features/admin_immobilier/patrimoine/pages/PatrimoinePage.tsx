@@ -1,4 +1,5 @@
-import { useEffect, useState } from 'react';
+import { Fragment, useCallback, useEffect, useRef, useState, type KeyboardEvent as ReactKeyboardEvent, type PointerEvent as ReactPointerEvent } from 'react';
+import { createPortal } from 'react-dom';
 
 import { OrganizationSummary } from '../../../shared/components/OrganizationSummary';
 import { Card } from '../../../../components/UI/Card';
@@ -27,6 +28,12 @@ import { PatrimoineNav, buildPatrimoinePath, resolvePatrimoineSelection, type Pa
 import { PatrimoineSummaryCard } from '../components/PatrimoineSummaryCard';
 import { PatrimoineChildList, type PatrimoineChildItem } from '../components/PatrimoineChildList';
 import { Tabs } from '../../../../components/Navigation/Tabs';
+import { ActivityCalendar, type ActivityCalendarEvent } from '../../../shared/components/ActivityCalendar';
+import { auditService } from '../../../super_admin/audit/services/auditService';
+import type { AuditEntry } from '../../../super_admin/audit/types/audit.types';
+import { fetchExpenses, fetchRents } from '../../shared/services/referenceService';
+import { fetchLoyerPaymentActivities } from '../../loyers/services/loyersService';
+import { useFloatingPosition } from '../../../../hook-components/UI/PopoverMenu';
 import {
     buildingIndex,
     buildingOccupancy,
@@ -78,7 +85,7 @@ function squareMeters(value: string): string {
  * et le lien « Employés » (absent de l'espace Patron) est écarté.
  */
 export function PatrimoinePage({ readOnly = false }: { readOnly?: boolean } = {}) {
-    const { organizationRole } = useOrganization();
+    const { organizationRole, currentOrganization } = useOrganization();
     const location = useLocation();
     const navigate = useNavigate();
     const isCityAdmin = organizationRole === 'admin_ville';
@@ -95,6 +102,45 @@ export function PatrimoinePage({ readOnly = false }: { readOnly?: boolean } = {}
     }, [location.pathname]);
 
     const [photoParcel, setPhotoParcel] = useState<ParcelItem | null>(null);
+    const canViewAudit = organizationRole === 'patron' || organizationRole === 'admin_immobilier';
+    const [activityMonth, setActivityMonth] = useState(() => new Date());
+    const [activityDate, setActivityDate] = useState<string | null>(null);
+    const [activityEvents, setActivityEvents] = useState<ActivityCalendarEvent[]>([]);
+    const [activityNote, setActivityNote] = useState<string | null>(null);
+    const auditRequest = useRef(0);
+    const splitRef = useRef<HTMLDivElement>(null);
+    const resizingSplit = useRef(false);
+    const splitPreference = 'h-immo:patrimoine-rightbar-split';
+    const [splitSettings, setSplitSettings] = useState(() => {
+        try {
+            const saved = JSON.parse(localStorage.getItem(splitPreference) ?? '{}') as { ratio?: number; activityFirst?: boolean };
+            return {
+                ratio: typeof saved.ratio === 'number' ? Math.min(80, Math.max(20, saved.ratio)) : 55,
+                activityFirst: saved.activityFirst === true,
+            };
+        } catch {
+            return { ratio: 55, activityFirst: false };
+        }
+    });
+
+    useEffect(() => {
+        try { localStorage.setItem(splitPreference, JSON.stringify(splitSettings)); } catch { /* stockage indisponible : les réglages restent actifs pour cette visite */ }
+    }, [splitSettings]);
+
+    const resizeSplit = (event: ReactPointerEvent<HTMLDivElement>) => {
+        if (!resizingSplit.current || !splitRef.current) return;
+        const bounds = splitRef.current.getBoundingClientRect();
+        if (bounds.height <= 0) return;
+        const ratio = ((event.clientY - bounds.top) / bounds.height) * 100;
+        setSplitSettings((current) => ({ ...current, ratio: Math.min(80, Math.max(20, ratio)) }));
+    };
+
+    const handleSplitKeyDown = (event: ReactKeyboardEvent<HTMLDivElement>) => {
+        if (event.key !== 'ArrowUp' && event.key !== 'ArrowDown') return;
+        event.preventDefault();
+        const delta = event.key === 'ArrowUp' ? -5 : 5;
+        setSplitSettings((current) => ({ ...current, ratio: Math.min(80, Math.max(20, current.ratio + delta)) }));
+    };
 
     const goToLevel = (level: PatrimoineLevel, cityId: string | null, parcelId: string | null, buildingId: string | null) => {
         navigate(buildPatrimoinePath(level, { cityId, parcelId, buildingId }));
@@ -131,6 +177,90 @@ export function PatrimoinePage({ readOnly = false }: { readOnly?: boolean } = {}
         deleteUnit,
         publishUnit,
     } = usePatrimoine();
+
+    const loadAuditMonth = useCallback(async (month: number, year: number) => {
+        if (!currentOrganization?.uuid) {
+            setActivityEvents([]);
+            return;
+        }
+        const requestId = ++auditRequest.current;
+        setActivityEvents([]);
+        setActivityNote(null);
+        const from = new Date(year, month, 1);
+        const to = new Date(year, month + 1, 1);
+        try {
+            if (canViewAudit) {
+                const result = await auditService.list({ organizationUuid: currentOrganization.uuid, from, to, page: 1, itemsPerPage: 100 });
+                if (requestId === auditRequest.current) {
+                    setActivityEvents(result.items.map((entry: AuditEntry) => ({
+                        date: entry.createdAt,
+                        title: entry.action.replaceAll('_', ' ').toLocaleLowerCase('fr').replace(/^./, (letter) => letter.toLocaleUpperCase('fr')),
+                        detail: entry.entityType.split('\\').at(-1)?.replace(/([a-z])([A-Z])/g, '$1 $2') ?? 'Action sur le patrimoine',
+                        tone: entry.action.startsWith('CANCEL') || entry.action.startsWith('SUSPEND') ? 'warning' : 'info',
+                    })));
+                    setActivityNote(result.total > result.items.length ? `Historique plafonné à 100 actions sur ${result.total} pour ce mois.` : null);
+                }
+                return;
+            }
+
+            const fromKey = `${year}-${String(month + 1).padStart(2, '0')}-01`;
+            const lastDay = new Date(year, month + 1, 0).getDate();
+            const toKey = `${year}-${String(month + 1).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`;
+            const [expenses, rents, payments] = await Promise.allSettled([
+                canDo(organizationRole, 'view_expense')
+                    ? fetchExpenses(fromKey, toKey, cities.map((city) => city.id))
+                    : Promise.resolve(null),
+                canDo(organizationRole, 'view_rent')
+                    ? fetchRents(currentOrganization.uuid, undefined, fromKey, toKey)
+                    : Promise.resolve(null),
+                canDo(organizationRole, 'view_payment')
+                    ? fetchLoyerPaymentActivities(currentOrganization.uuid, from.toISOString(), new Date(to.getTime() - 1).toISOString())
+                    : Promise.resolve(null),
+            ]);
+            const events: ActivityCalendarEvent[] = [];
+            if (expenses.status === 'fulfilled' && expenses.value) events.push(...expenses.value.items.map((expense) => ({
+                date: expense.expenseDate,
+                title: 'Dépense enregistrée',
+                detail: `${expense.category} · ${expense.amount} ${expense.currency}`,
+                tone: 'warning' as const,
+            })));
+            if (rents.status === 'fulfilled' && rents.value) events.push(...rents.value.items.map((rent) => ({
+                date: rent.dueDate,
+                title: 'Échéance de loyer',
+                detail: `${rent.amount} ${rent.currency} · ${rent.status}`,
+                tone: rent.isOverdue ? 'error' as const : 'info' as const,
+            })));
+            if (payments.status === 'fulfilled' && payments.value) events.push(...payments.value.items.map((payment) => ({
+                date: payment.paymentDate,
+                title: payment.isReversal ? 'Contre-écriture de paiement' : 'Paiement de loyer',
+                detail: `${payment.amount} ${payment.currency}`,
+                tone: payment.isReversal ? 'warning' as const : 'success' as const,
+            })));
+            if (requestId === auditRequest.current) {
+                setActivityEvents(events);
+                const truncated = [
+                    expenses.status === 'fulfilled' && expenses.value ? expenses.value.total > expenses.value.items.length : false,
+                    rents.status === 'fulfilled' && rents.value ? rents.value.total > rents.value.items.length : false,
+                    payments.status === 'fulfilled' && payments.value ? payments.value.total > payments.value.items.length : false,
+                ].some(Boolean);
+                setActivityNote(truncated ? 'Certaines listes dépassent la limite de 100 résultats par source pour ce mois.' : null);
+            }
+        } catch {
+            if (requestId === auditRequest.current) {
+                setActivityEvents([]);
+                setActivityNote('Impossible de charger les activités de cette période.');
+            }
+        }
+    }, [canViewAudit, currentOrganization?.uuid, cities, organizationRole]);
+
+    useEffect(() => {
+        void loadAuditMonth(activityMonth.getMonth(), activityMonth.getFullYear());
+        return () => { auditRequest.current += 1; };
+    }, [loadAuditMonth, activityMonth]);
+
+    const handleActivityMonthChange = useCallback((month: number, year: number) => {
+        setActivityMonth(new Date(year, month, 1));
+    }, []);
 
     const note = data?.note;
     const cityBy = new Map(cities.map((entry) => [entry.id, entry]));
@@ -592,9 +722,71 @@ export function PatrimoinePage({ readOnly = false }: { readOnly?: boolean } = {}
                 collapsible
                 collapsedWidth={48}
                 className="patrimoine-layout__nav"
-                collapsedContent={<PatrimoineNav isCityAdmin={isCityAdmin} selection={selection} cities={cities} parcels={parcels} buildings={buildings} units={units} collapsed />}
+                collapsedContent={(
+                    <div className="patrimoine-nav-rail">
+                        <PatrimoineNav isCityAdmin={isCityAdmin} selection={selection} cities={cities} parcels={parcels} buildings={buildings} units={units} collapsed />
+                        <PatrimoineCalendarRail
+                            events={activityEvents}
+                            selectedDate={activityDate}
+                            onSelectDate={setActivityDate}
+                            onClearDate={() => setActivityDate(null)}
+                            onMonthChange={handleActivityMonthChange}
+                            description={`${canViewAudit ? 'Historique des actions sur le patrimoine de cette organisation.' : 'Opérations de votre périmètre : dépenses, échéances et paiements selon vos droits.'}${activityNote ? ` ${activityNote}` : ''}`}
+                        />
+                    </div>
+                )}
             >
-                <PatrimoineNav isCityAdmin={isCityAdmin} selection={selection} cities={cities} parcels={parcels} buildings={buildings} units={units} />
+                <div className="patrimoine-rightbar-split" ref={splitRef}>
+                    {(splitSettings.activityFirst ? ['activity', 'tree'] : ['tree', 'activity']).map((panel, index) => <Fragment key={panel}>
+                        <div className="patrimoine-rightbar-split__panel" style={{ flex: index === 0 ? `0 0 ${splitSettings.ratio}%` : '1 1 0' }}>
+                            <div
+                                className={`patrimoine-rightbar-section${panel === 'activity' ? ' patrimoine-rightbar-section--activity' : ''}`}
+                                aria-labelledby={panel === 'tree' ? 'patrimoine-tree-title' : 'patrimoine-activity-title'}
+                            >
+                                {panel === 'tree' ? <>
+                                    <h2 id="patrimoine-tree-title">Arbre du patrimoine</h2>
+                                    <PatrimoineNav isCityAdmin={isCityAdmin} selection={selection} cities={cities} parcels={parcels} buildings={buildings} units={units} />
+                                </> : <>
+                                    <h2 id="patrimoine-activity-title">Activité</h2>
+                                    <ActivityCalendar
+                                        events={activityEvents}
+                                        label="Calendrier de l’activité du patrimoine"
+                                        selectedDate={activityDate}
+                                        onSelectDate={setActivityDate}
+                                        onClearDate={() => setActivityDate(null)}
+                                        onMonthChange={handleActivityMonthChange}
+                                        description={`${canViewAudit ? 'Historique des actions sur le patrimoine de cette organisation.' : 'Opérations de votre périmètre : dépenses, échéances et paiements selon vos droits.'}${activityNote ? ` ${activityNote}` : ''}`}
+                                        emptyMessage="Aucune activité autorisée enregistrée pour cette journée."
+                                    />
+                                </>}
+                            </div>
+                        </div>
+                        {index === 0 && <div className="patrimoine-rightbar-split__controls" aria-label="Commandes de séparation">
+                        <div
+                            className="patrimoine-rightbar-split__handle"
+                            role="separator"
+                            aria-label="Redimensionner les sections de la barre latérale"
+                            aria-orientation="horizontal"
+                            aria-valuemin={20}
+                            aria-valuemax={80}
+                            aria-valuenow={Math.round(splitSettings.ratio)}
+                            tabIndex={0}
+                            onKeyDown={handleSplitKeyDown}
+                            onPointerDown={(event) => { resizingSplit.current = true; event.currentTarget.setPointerCapture(event.pointerId); }}
+                            onPointerMove={resizeSplit}
+                            onPointerUp={(event) => { resizingSplit.current = false; event.currentTarget.releasePointerCapture(event.pointerId); }}
+                            onPointerCancel={() => { resizingSplit.current = false; }}
+                        ><span /></div>
+                        <button
+                            type="button"
+                            className="patrimoine-rightbar-split__swap"
+                            aria-label={splitSettings.activityFirst ? 'Placer l’arbre du patrimoine au-dessus du calendrier' : 'Placer le calendrier au-dessus de l’arbre du patrimoine'}
+                            title="Inverser l’ordre des sections"
+                            onClick={() => setSplitSettings((current) => ({ ...current, activityFirst: !current.activityFirst }))}
+                        >{splitSettings.activityFirst ? '↓' : '↑'}</button>
+                        </div>}
+                    </Fragment>)}
+                </div>
             </RightSidebar>
 
             <Modal
@@ -608,4 +800,86 @@ export function PatrimoinePage({ readOnly = false }: { readOnly?: boolean } = {}
             </Modal>
         </div>
     );
+}
+
+interface PatrimoineCalendarRailProps {
+    events: ActivityCalendarEvent[];
+    selectedDate: string | null;
+    onSelectDate: (date: string) => void;
+    onClearDate: () => void;
+    onMonthChange: (month: number, year: number) => void;
+    description: string;
+}
+
+function PatrimoineCalendarRail({ events, selectedDate, onSelectDate, onClearDate, onMonthChange, description }: PatrimoineCalendarRailProps) {
+    const [isOpen, setOpen] = useState(false);
+    const anchorRef = useRef<HTMLButtonElement>(null);
+    const getAnchorEl = useCallback(() => anchorRef.current, []);
+    const { floatingRef, coords, isPositioned } = useFloatingPosition<HTMLDivElement>({
+        getAnchorEl,
+        placement: 'left',
+        offset: 8,
+        isOpen,
+    });
+
+    useEffect(() => {
+        if (!isOpen) return;
+        const onPointerDown = (event: MouseEvent) => {
+            const target = event.target as Node;
+            if (floatingRef.current?.contains(target) || anchorRef.current?.contains(target)) return;
+            setOpen(false);
+        };
+        const onKeyDown = (event: KeyboardEvent) => {
+            if (event.key !== 'Escape') return;
+            setOpen(false);
+            anchorRef.current?.focus();
+        };
+        document.addEventListener('mousedown', onPointerDown);
+        document.addEventListener('keydown', onKeyDown);
+        return () => {
+            document.removeEventListener('mousedown', onPointerDown);
+            document.removeEventListener('keydown', onKeyDown);
+        };
+    }, [isOpen, floatingRef]);
+
+    return <>
+        <button
+            ref={anchorRef}
+            type="button"
+            className={`patrimoine-nav-rail__button${selectedDate ? ' is-active' : ''}`}
+            aria-label="Ouvrir le calendrier du patrimoine"
+            aria-haspopup="true"
+            aria-expanded={isOpen}
+            title="Calendrier du patrimoine"
+            onClick={() => setOpen((value) => !value)}
+        >
+            <svg viewBox="0 0 24 24" width="21" height="21" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <rect x="3" y="5" width="18" height="16" rx="2" />
+                <path d="M16 3v4M8 3v4M3 10h18M8 14h.01M12 14h.01M16 14h.01M8 17h.01M12 17h.01" />
+            </svg>
+        </button>
+        {isOpen && typeof document !== 'undefined' && createPortal(
+            <div
+                ref={floatingRef}
+                className="patrimoine-nav__popover patrimoine-calendar-rail__popover"
+                role="dialog"
+                aria-label="Calendrier de l’activité du patrimoine"
+                style={{ position: 'fixed', top: coords?.top ?? 0, left: coords?.left ?? 0, visibility: isPositioned ? 'visible' : 'hidden' }}
+            >
+                <div className="patrimoine-nav__popover-title">Activité du patrimoine</div>
+                <div className="patrimoine-nav__popover-content">
+                    <ActivityCalendar
+                        events={events}
+                        selectedDate={selectedDate}
+                        onSelectDate={onSelectDate}
+                        onClearDate={onClearDate}
+                        onMonthChange={onMonthChange}
+                        description={description}
+                        emptyMessage="Aucune activité autorisée enregistrée pour cette journée."
+                    />
+                </div>
+            </div>,
+            document.body,
+        )}
+    </>;
 }
