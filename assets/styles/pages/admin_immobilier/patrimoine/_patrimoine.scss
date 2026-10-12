@@ -120,7 +120,7 @@
    tiroir (voile + fermeture clavier) en compact. La barre latérale gauche
    reste réservée aux grandes sections de l'application. */
 .patrimoine-layout { display: flex; align-items: stretch; min-width: 0; min-height: 100%; }
-.patrimoine-layout__main { flex: 1; min-width: 0; }
+.patrimoine-layout__main { flex: 1; min-width: 0; padding-right: var(--right-sidebar-width, 0); }
 .patrimoine-level { min-width: 0; animation: patrimoine-level-enter 180ms ease-out both; }
 @keyframes patrimoine-level-enter {
   from { opacity: 0; transform: translateY(5px); }
