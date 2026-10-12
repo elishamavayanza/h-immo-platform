@@ -26,6 +26,7 @@ const CloseIcon = () => (
 export interface RightSidebarProps extends UseRightSidebarProps {
     children: React.ReactNode;
     title?: React.ReactNode;
+    collapsedContent?: React.ReactNode;
     header?: React.ReactNode;
     footer?: React.ReactNode;
     onToggle?: (collapsed: boolean) => void;
@@ -39,6 +40,7 @@ export interface RightSidebarProps extends UseRightSidebarProps {
 export function RightSidebar({
                                  children,
                                  title,
+                                 collapsedContent,
                                  header,
                                  footer,
                                  variant,
@@ -81,8 +83,13 @@ export function RightSidebar({
         initialCollapsed
     );
     const asideRef = useRef<HTMLElement>(null);
+    const triggerRef = useRef<HTMLButtonElement>(null);
+    const wasOpenRef = useRef(!initialCollapsed);
 
     const isDraggingRef = useRef(false);
+    const didPointerMoveRef = useRef(false);
+    const suppressClickRef = useRef(false);
+    const pointerStartXRef = useRef(0);
     const rafRef = useRef<number | null>(null);
     const isFullyCollapsedRef = useRef(isFullyCollapsed);
 
@@ -98,6 +105,7 @@ export function RightSidebar({
 
     const handlePointerMove = useCallback((e: PointerEvent) => {
         if (!isDraggingRef.current) return;
+        if (Math.abs(e.clientX - pointerStartXRef.current) > 3) didPointerMoveRef.current = true;
 
         if (rafRef.current !== null) cancelAnimationFrame(rafRef.current);
 
@@ -127,6 +135,7 @@ export function RightSidebar({
 
     const handlePointerUp = useCallback(() => {
         isDraggingRef.current = false;
+        suppressClickRef.current = didPointerMoveRef.current;
         document.body.classList.remove('right-sidebar-resizing');
         document.removeEventListener('pointermove', handlePointerMove);
         document.removeEventListener('pointerup', handlePointerUp);
@@ -152,6 +161,8 @@ export function RightSidebar({
     const startDragging = useCallback((e: React.PointerEvent) => {
         if (e.pointerType === 'mouse') e.preventDefault();
         e.stopPropagation();
+        pointerStartXRef.current = e.clientX;
+        didPointerMoveRef.current = false;
         isDraggingRef.current = true;
         document.body.classList.add('right-sidebar-resizing');
         document.addEventListener('pointermove', handlePointerMove);
@@ -195,6 +206,42 @@ export function RightSidebar({
         updateWidthDOM(isFullyCollapsed ? effectiveCollapsedWidth : width);
     }, [isFullyCollapsed, width, effectiveCollapsedWidth, updateWidthDOM]);
 
+    // Fermeture au clavier (mode tiroir) : Échap referme le panneau.
+    // On ignore la touche lorsqu'une boîte de dialogue modale est ouverte, pour
+    // ne pas lui voler son propre Échap ; sinon on capte l'événement afin que
+    // d'autres tiroirs (le menu latéral) ne se ferment pas en même temps.
+    useEffect(() => {
+        if (!isCompact || isFullyCollapsed) return;
+
+        const onKeyDown = (event: KeyboardEvent) => {
+            if (event.key !== 'Escape') return;
+            if (document.querySelector('[aria-modal="true"]') !== null) return;
+
+            event.stopPropagation();
+            setIsFullyCollapsed(true);
+            updateWidthDOM(effectiveCollapsedWidth);
+            onToggle?.(true);
+        };
+
+        document.addEventListener('keydown', onKeyDown, true);
+
+        return () => document.removeEventListener('keydown', onKeyDown, true);
+    }, [isCompact, isFullyCollapsed, effectiveCollapsedWidth, updateWidthDOM, onToggle]);
+
+    // Continuité du focus : à l'ouverture le focus entre dans le tiroir ; à la
+    // fermeture il revient au déclencheur qui l'a ouvert.
+    useEffect(() => {
+        if (!isCompact) return;
+
+        if (!isFullyCollapsed) {
+            asideRef.current?.focus();
+        } else if (wasOpenRef.current) {
+            triggerRef.current?.focus();
+        }
+
+        wasOpenRef.current = !isFullyCollapsed;
+    }, [isCompact, isFullyCollapsed]);
+
     return (
         <>
             {/* Backdrop : tap à l'extérieur → ferme le drawer */}
@@ -209,6 +256,7 @@ export function RightSidebar({
             {/* Bouton flottant pour rouvrir le panneau fermé */}
             {isCompact && isFullyCollapsed && (
                 <button
+                    ref={triggerRef}
                     type="button"
                     className="right-sidebar__mobile-trigger"
                     onClick={handleToggle}
@@ -223,20 +271,41 @@ export function RightSidebar({
 
             <aside
                 ref={asideRef}
+                tabIndex={-1}
                 className={`${classes} ${isFullyCollapsed ? 'right-sidebar--fully-collapsed' : ''}`}
                 style={sidebarStyle}
             >
                 {isFullyCollapsed ? (
-                    <div
-                        className="right-sidebar__collapsed-strip"
-                        onPointerDown={startDragging}
-                        onClick={() => {
-                            if (!isDraggingRef.current) handleToggle();
-                        }}
-                        title="Cliquer pour ouvrir ou glisser vers la gauche"
-                    >
-                        <span className="right-sidebar__collapsed-text">{title || ''}</span>
-                    </div>
+                    <>
+                        {collapsedContent ? <div className="right-sidebar__collapsed-content">{collapsedContent}</div> : <div
+                            className="right-sidebar__collapsed-strip"
+                            onPointerDown={startDragging}
+                            onClick={() => {
+                                if (!isDraggingRef.current) handleToggle();
+                            }}
+                            title="Cliquer pour ouvrir ou glisser vers la gauche"
+                        >
+                            <span className="right-sidebar__collapsed-text">{title || ''}</span>
+                        </div>}
+                        {!isCompact && collapsible && (
+                            <button
+                                type="button"
+                                className="right-sidebar__collapsed-resizer"
+                                onPointerDown={startDragging}
+                                onClick={() => {
+                                    if (suppressClickRef.current) {
+                                        suppressClickRef.current = false;
+                                        return;
+                                    }
+                                    handleToggle();
+                                }}
+                                aria-label={`Ouvrir ${title || 'le panneau'}`}
+                                title="Cliquer pour ouvrir ou glisser pour ajuster la largeur"
+                            >
+                                <ExpandIcon />
+                            </button>
+                        )}
+                    </>
                 ) : (
                     <>
                         <div
