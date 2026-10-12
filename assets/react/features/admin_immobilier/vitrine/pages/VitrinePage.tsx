@@ -15,6 +15,7 @@ import { Modal } from '../../../../components/UI/Modal';
 import { useVitrine } from '../hooks/useVitrine';
 import { VitrineTable } from '../components/VitrineTable';
 import { fieldErrorMap } from '../../../shared/actionErrors';
+import { changedFields } from '../../../shared/changedFields';
 import { ModalActions } from '../../../shared/components/ModalActions'
 import { PhotoGallery } from '../../../shared/media/components/PhotoGallery';
 import type { VitrineRow } from '../types/vitrine.types';
@@ -54,7 +55,7 @@ export function VitrinePage({ readOnly = false }: { readOnly?: boolean } = {}) {
         setEditForm({
             description: '',
             monthlyRent: '',
-            currency: 'USD',
+            currency: target.currency as 'USD' | 'CDF',
         });
         setEditFormErrors({});
         setEditModalOpen(true);
@@ -78,7 +79,12 @@ export function VitrinePage({ readOnly = false }: { readOnly?: boolean } = {}) {
         };
 
         try {
-            await updateUnit(editTarget.id, payload);
+            const changes = changedFields(payload, {
+                description: undefined,
+                monthlyRent: undefined,
+                currency: editTarget.currency as 'USD' | 'CDF',
+            });
+            if (Object.keys(changes).length > 0) await updateUnit(editTarget.id, changes);
             closeEditModal();
         } catch (cause) {
             setEditFormErrors(fieldErrorMap(cause));

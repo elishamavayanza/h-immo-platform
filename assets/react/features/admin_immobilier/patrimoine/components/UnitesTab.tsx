@@ -22,6 +22,7 @@ import { formatMoney } from '../../../../../utils/format.utils';
 import { canDo } from '../../../shared/permissions';
 import { fieldErrorMap } from '../../../shared/actionErrors';
 import { ModalActions } from '../../../shared/components/ModalActions';
+import { changedFields } from '../../../shared/changedFields';
 import { PhotoGallery } from '../../../shared/media/components/PhotoGallery';
 import { CURRENCY_OPTIONS, UNIT_TYPE_LABELS, UNIT_TYPE_OPTIONS } from './patrimoineView';
 import type { BuildingItem, UnitItem } from '../../shared/types/reference.types';
@@ -69,7 +70,7 @@ interface UnitesTabProps {
     error: string | null;    note?: string | null;
     onReload: () => void;
     onCreate: (payload: UnitPayload) => Promise<void>;
-    onUpdate: (uuid: string, payload: UnitPayload) => Promise<void>;
+    onUpdate: (uuid: string, payload: Partial<UnitPayload>) => Promise<void>;
     onDelete: (uuid: string) => Promise<void>;
     onPublish: (unit: UnitItem) => Promise<void>;
     selectedBuildingId: string | null;
@@ -143,7 +144,21 @@ export function UnitesTab({ units, buildings, role, isLoading, error, note, onRe
         };
         try {
             if (editTarget) {
-                await onUpdate(editTarget.id, payload);
+                const initial = {
+                    buildingUuid: editTarget.buildingId,
+                    reference: editTarget.reference,
+                    type: editTarget.type,
+                    floor: editTarget.floor,
+                    surface: editTarget.surface,
+                    bedrooms: editTarget.bedrooms,
+                    rooms: editTarget.rooms,
+                    bathrooms: editTarget.bathrooms,
+                    monthlyRent: editTarget.monthlyRent,
+                    currency: editTarget.currency,
+                    description: editTarget.description,
+                };
+                const changes = changedFields(payload, initial);
+                if (Object.keys(changes).length > 0) await onUpdate(editTarget.id, changes);
             } else {
                 await onCreate(payload);
             }

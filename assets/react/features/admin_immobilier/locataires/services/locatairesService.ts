@@ -86,14 +86,14 @@ export interface CreateTenantPayload {
 
 /** Payload pour modifier un locataire. */
 export interface UpdateTenantPayload {
-    type: 'individual' | 'company';
+    type?: 'individual' | 'company';
     firstName?: string;
     lastName?: string;
     companyName?: string;
-    phone: string;
-    email?: string;
-    address?: string;
-    notes?: string;
+    phone?: string;
+    email?: string | null;
+    address?: string | null;
+    notes?: string | null;
 }
 
 /** `POST /api/v1/tenants` — créer un locataire. */

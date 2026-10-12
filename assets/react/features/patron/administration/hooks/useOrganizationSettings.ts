@@ -4,6 +4,7 @@ import { useToast } from '../../../../app/layout/MainLayout/contexts/ToastContex
 import { useOrganization } from '../../../../app/providers/OrganizationProvider';
 import { ApiError } from '../../../../../services/api/api.types';
 import { actionErrorMessage, isValidationError } from '../../../shared/actionErrors';
+import { changedFields } from '../../../shared/changedFields';
 import { administrationService } from '../services/administrationService';
 import type { OrganizationProfile, UpdateOrganizationPayload } from '../types/administration.types';
 
@@ -47,8 +48,18 @@ export function useOrganizationSettings() {
 
     const save = async (payload: UpdateOrganizationPayload): Promise<void> => {
         if (!organizationUuid) return;
+        if (!profile) return;
+        const changes = changedFields(payload, {
+            name: profile.name.trim(),
+            email: profile.email.trim(),
+            phone: profile.phone.trim(),
+            address: profile.address?.trim() ?? '',
+            city: profile.city?.trim() ?? '',
+            country: profile.country?.trim() ?? '',
+        });
+        if (Object.keys(changes).length === 0) return;
         try {
-            setProfile(await administrationService.updateOrganization(organizationUuid, payload));
+            setProfile(await administrationService.updateOrganization(organizationUuid, changes));
             push('success', 'Les coordonnées de l’organisation ont été enregistrées.');
         } catch (cause) {
             if (!isValidationError(cause)) push('error', actionErrorMessage(cause));

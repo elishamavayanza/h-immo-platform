@@ -111,7 +111,7 @@ export function usePatrimoine() {
         );
     };
 
-    const updateCity = (uuid: string, payload: CityPayload) =>
+    const updateCity = (uuid: string, payload: Partial<CityPayload>) =>
         runAction('Ville mise à jour.', () => updateCityRequest(uuid, payload));
 
     const setCityStatus = (city: CityItem, status: CityPayload['status']) =>
@@ -128,7 +128,7 @@ export function usePatrimoine() {
     const createParcel = (payload: ParcelPayload) =>
         runAction('Parcelle enregistrée.', () => createParcelRequest(payload));
 
-    const updateParcel = (uuid: string, payload: ParcelPayload) =>
+    const updateParcel = (uuid: string, payload: Partial<ParcelPayload>) =>
         runAction('Parcelle mise à jour.', () => updateParcelRequest(uuid, payload));
 
     const deleteParcel = (uuid: string) => runAction('Parcelle supprimée.', () => deleteParcelRequest(uuid));
@@ -146,14 +146,14 @@ export function usePatrimoine() {
     const createBuilding = (payload: BuildingPayload) =>
         runAction('Bâtiment enregistré.', () => createBuildingRequest(payload));
 
-    const updateBuilding = (uuid: string, payload: BuildingPayload) =>
+    const updateBuilding = (uuid: string, payload: Partial<BuildingPayload>) =>
         runAction('Bâtiment mis à jour.', () => updateBuildingRequest(uuid, payload));
 
     const deleteBuilding = (uuid: string) => runAction('Bâtiment supprimé.', () => deleteBuildingRequest(uuid));
 
     const createUnit = (payload: UnitPayload) => runAction('Unité enregistrée.', () => createUnitRequest(payload));
 
-    const updateUnit = (uuid: string, payload: UnitPayload) =>
+    const updateUnit = (uuid: string, payload: Partial<UnitPayload>) =>
         runAction('Unité mise à jour.', () => updateUnitRequest(uuid, payload));
 
     const deleteUnit = (uuid: string) => runAction('Unité supprimée.', () => deleteUnitRequest(uuid));

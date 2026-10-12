@@ -9,6 +9,7 @@ import { FormField } from '../../../../../components/Forms/FormField';
 import { Input } from '../../../../../components/Forms/Input';
 import { UserPhotoPicker } from '../components/UserPhotoPicker';
 import { useProfile } from '../hooks/useProfile';
+import { changedFields } from '../../../changedFields';
 import { formatUserDate } from '../../../../../services/userPreferences';
 import './profile.scss';
 
@@ -67,14 +68,16 @@ export function ProfilePage() {
                 await deletePhoto();
             }
 
-            const nextFullName = `${formData.firstName.trim()} ${formData.lastName.trim()}`.trim();
-            if (nextFullName !== profile.fullName || formData.phone !== (profile.phone ?? '')) {
-                await updateProfile({
-                    firstName: formData.firstName,
-                    lastName: formData.lastName,
-                    phone: formData.phone,
-                });
-            }
+            const profileChanges = changedFields({
+                firstName: formData.firstName.trim(),
+                lastName: formData.lastName.trim(),
+                phone: formData.phone.trim(),
+            }, {
+                firstName,
+                lastName,
+                phone: profile.phone ?? '',
+            });
+            if (Object.keys(profileChanges).length > 0) await updateProfile(profileChanges);
             setIsEditing(false);
             setPhotoChange(null);
         } catch (err) {

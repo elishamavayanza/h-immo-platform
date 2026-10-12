@@ -155,10 +155,11 @@ export async function createExpense(payload: CreateExpensePayload): Promise<unkn
 
 /** Payload pour modifier une dépense. */
 export interface UpdateExpensePayload {
-    category: string;
-    amount: string;
-    currency: 'USD' | 'CDF';
-    expenseDate: string;
+    cityUuid?: string;
+    category?: string;
+    amount?: string;
+    currency?: 'USD' | 'CDF';
+    expenseDate?: string;
     method?: string;
     supplier?: string;
     reference?: string;

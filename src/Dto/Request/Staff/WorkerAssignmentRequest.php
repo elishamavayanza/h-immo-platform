@@ -41,7 +41,7 @@ final readonly class WorkerAssignmentRequest
             format: 'uuid',
             example: 'f81d4fae-7dec-11d0-a765-00a0c91e6bf6'
         )]
-        #[Assert\NotBlank(groups: ['create', 'update'])]
+        #[Assert\NotBlank(groups: ['create'])]
         #[Assert\Uuid(groups: ['create', 'update'])]
         public ?string $cityUuid = null,
 
@@ -78,14 +78,14 @@ final readonly class WorkerAssignmentRequest
             example: 'gardien',
             enum: WorkerRole::class
         )]
-        #[Assert\NotBlank(groups: ['create', 'update'])]
+        #[Assert\NotBlank(groups: ['create'])]
         public ?string $role = null,
 
         #[OA\Property(
             description: 'Rémunération mensuelle de base',
             example: '500.00'
         )]
-        #[Assert\NotBlank(groups: ['create', 'update'])]
+        #[Assert\NotBlank(groups: ['create'])]
         #[Assert\Regex(pattern: '/^\d{1,10}(\.\d{1,2})?$/', groups: ['create', 'update'], message: 'Le salaire doit être un nombre positif avec au plus 2 décimales.')]
         public ?string $monthlySalary = null,
 
@@ -102,7 +102,7 @@ final readonly class WorkerAssignmentRequest
             format: 'date',
             example: '2026-01-01'
         )]
-        #[Assert\NotBlank(groups: ['create', 'update'])]
+        #[Assert\NotBlank(groups: ['create'])]
         public ?\DateTimeImmutable $startDate = null,
 
         #[OA\Property(

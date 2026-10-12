@@ -18,6 +18,7 @@ import { useOrganization } from '../../../../app/providers/OrganizationProvider'
 import { useLoyers } from '../hooks/useLoyers';
 import { LoyersTable } from '../components/LoyersTable';
 import { fieldErrorMap } from '../../../shared/actionErrors';
+import { changedFields } from '../../../shared/changedFields';
 import { ModalActions } from '../../../shared/components/ModalActions';
 import { canDo } from '../../../shared/permissions';
 import type { LoyerRow } from '../types/loyer.types';
@@ -186,7 +187,14 @@ export function LoyersPage({ readOnly = false }: { readOnly?: boolean } = {}) {
         };
 
         try {
-            await updateRent(updateTarget.id, payload);
+            const initial = {
+                dueDate: updateTarget.dueDate,
+                amount: updateTarget.amount,
+                currency: updateTarget.currency as 'USD' | 'CDF',
+                notes: undefined,
+            };
+            const changes = changedFields(payload, initial);
+            if (Object.keys(changes).length > 0) await updateRent(updateTarget.id, changes);
             closeUpdateModal();
         } catch (cause) {
             setUpdateFormErrors(fieldErrorMap(cause));

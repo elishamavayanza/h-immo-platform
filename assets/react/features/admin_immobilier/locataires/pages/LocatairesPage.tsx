@@ -17,6 +17,7 @@ import { useOrganization } from '../../../../app/providers/OrganizationProvider'
 import { useLocataires } from '../hooks/useLocataires';
 import { LocatairesTable } from '../components/LocatairesTable';
 import { fieldErrorMap } from '../../../shared/actionErrors';
+import { changedFields } from '../../../shared/changedFields';
 import { ModalActions } from '../../../shared/components/ModalActions';
 import { canDo } from '../../../shared/permissions';
 import type { LocataireRow } from '../types/locataire.types';
@@ -130,7 +131,36 @@ export function LocatairesPage({ readOnly = false }: { readOnly?: boolean } = {}
 
         try {
             if (editTarget) {
-                await updateTenant(editTarget.id, payload);
+                const initial = tenantToForm(editTarget);
+                const initialPayload = {
+                    type: initial.type,
+                    firstName: initial.type === 'individual' ? initial.firstName.trim() : undefined,
+                    lastName: initial.type === 'individual' ? initial.lastName.trim() : undefined,
+                    companyName: initial.type === 'company' ? initial.companyName.trim() : undefined,
+                    phone: initial.phone.trim(),
+                    email: initial.email.trim(),
+                    address: initial.address.trim(),
+                    notes: initial.notes.trim(),
+                };
+                const updatePayload = {
+                    type: form.type,
+                    firstName: form.type === 'individual' ? form.firstName.trim() : undefined,
+                    lastName: form.type === 'individual' ? form.lastName.trim() : undefined,
+                    companyName: form.type === 'company' ? form.companyName.trim() : undefined,
+                    phone: form.phone.trim(),
+                    email: form.email.trim(),
+                    address: form.address.trim(),
+                    notes: form.notes.trim(),
+                };
+                const changes = changedFields(updatePayload, initialPayload);
+                const nameChanged = ['type', 'firstName', 'lastName', 'companyName'].some((key) => key in changes);
+                if (nameChanged) {
+                    changes.type = updatePayload.type;
+                    changes.firstName = updatePayload.firstName;
+                    changes.lastName = updatePayload.lastName;
+                    changes.companyName = updatePayload.companyName;
+                }
+                if (Object.keys(changes).length > 0) await updateTenant(editTarget.id, changes);
             } else {
                 if (!currentOrganization?.uuid) throw new Error('Aucune organisation active.');
                 await createTenant({ ...payload, organizationUuid: currentOrganization.uuid });

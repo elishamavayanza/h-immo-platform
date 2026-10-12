@@ -20,6 +20,7 @@ import type { OrganizationRole } from '../../../../../services/api/api.types';
 import { canDo } from '../../../shared/permissions';
 import { fieldErrorMap } from '../../../shared/actionErrors';
 import { ModalActions } from '../../../shared/components/ModalActions';
+import { changedFields } from '../../../shared/changedFields';
 import { PhotoGallery } from '../../../shared/media/components/PhotoGallery';
 import { PhotoViewer } from '../../../shared/media/components/PhotoViewer';
 import { BUILDING_TYPE_LABELS, BUILDING_TYPE_OPTIONS } from './patrimoineView';
@@ -56,7 +57,7 @@ interface BatimentsTabProps {
     error: string | null;    note?: string | null;
     onReload: () => void;
     onCreate: (payload: BuildingPayload) => Promise<void>;
-    onUpdate: (uuid: string, payload: BuildingPayload) => Promise<void>;
+    onUpdate: (uuid: string, payload: Partial<BuildingPayload>) => Promise<void>;
     onDelete: (uuid: string) => Promise<void>;
     cities: CityItem[];
     selectedParcelId: string | null;
@@ -139,7 +140,16 @@ export function BatimentsTab({ buildings, parcels, cities, role, isLoading, erro
         };
         try {
             if (editTarget) {
-                await onUpdate(editTarget.id, payload);
+                const initial = {
+                    parcelUuid: editTarget.parcelId,
+                    reference: editTarget.reference,
+                    name: editTarget.name,
+                    type: editTarget.type,
+                    numberOfFloors: editTarget.numberOfFloors,
+                    description: editTarget.description,
+                };
+                const changes = changedFields(payload, initial);
+                if (Object.keys(changes).length > 0) await onUpdate(editTarget.id, changes);
             } else {
                 await onCreate(payload);
             }

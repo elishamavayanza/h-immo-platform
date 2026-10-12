@@ -22,6 +22,7 @@ import type { OrganizationStatusFilter, OrganizationRow } from '../types/organiz
 import { useOrganizations } from '../hooks/useOrganizations';
 import { logoHref } from '../services/organizationsService';
 import { formatUserDate } from '../../../../services/userPreferences';
+import { changedFields } from '../../../shared/changedFields';
 import '../../../../../styles/pages/super_admin/organizations/_organizations.scss';
 
 const STATUS_LABEL: Record<OrganizationStatus, string> = { active: 'Active', suspended: 'Suspendue', inactive: 'Inactive' };
@@ -126,7 +127,18 @@ const [isWizardOpen, setWizardOpen] = useState(false);
                 logoFile: editLogoChange?.kind === 'new' ? editLogoChange.file : undefined,
                 removeLogo: editLogoChange?.kind === 'removed' ? true : undefined,
             };
-            await updateOrganization(editingOrganization.id, payload);
+            const changes = changedFields(payload, {
+                name: editingOrganization.name.trim(),
+                code: editingOrganization.code.trim(),
+                email: editingOrganization.email.trim(),
+                phone: editingOrganization.phone.trim(),
+                address: editingOrganization.address.trim(),
+                city: editingOrganization.city.trim(),
+                status: editingOrganization.status,
+                logoFile: undefined,
+                removeLogo: undefined,
+            });
+            if (Object.keys(changes).length > 0) await updateOrganization(editingOrganization.id, changes);
             setEditOpen(false);
         } catch {
             // Le toast d'échec est déjà émis par le hook.

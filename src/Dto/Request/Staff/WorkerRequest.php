@@ -33,7 +33,7 @@ final readonly class WorkerRequest
             maxLength: 200,
             example: 'Jean Dupont'
         )]
-        #[Assert\NotBlank(groups: ['create', 'update'])]
+        #[Assert\NotBlank(groups: ['create'])]
         #[Assert\Length(max: 200, groups: ['create', 'update'])]
         public ?string $fullName = null,
 
@@ -42,7 +42,7 @@ final readonly class WorkerRequest
             maxLength: 30,
             example: '+243 99 123 4567'
         )]
-        #[Assert\NotBlank(groups: ['create', 'update'])]
+        #[Assert\NotBlank(groups: ['create'])]
         #[Assert\Length(max: 30, groups: ['create', 'update'])]
         public ?string $phone = null,
 

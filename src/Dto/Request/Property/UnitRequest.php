@@ -50,7 +50,7 @@ final readonly class UnitRequest
             example: 'apartment',
             enum: UnitType::class,
         )]
-        #[Assert\NotBlank(groups: ['create', 'update'])]
+        #[Assert\NotBlank(groups: ['create'])]
         #[Groups(['create', 'update'])]
         public ?UnitType $type = null,
 
@@ -59,7 +59,7 @@ final readonly class UnitRequest
             example: 1,
             minimum: 0,
         )]
-        #[Assert\NotBlank(groups: ['create', 'update'])]
+        #[Assert\NotBlank(groups: ['create'])]
         #[Assert\PositiveOrZero(groups: ['create', 'update'])]
         #[Groups(['create', 'update'])]
         public ?int $floor = null,
@@ -68,7 +68,7 @@ final readonly class UnitRequest
             description: 'Surface habitable ou exploitable en m²',
             example: '85.50',
         )]
-        #[Assert\NotBlank(groups: ['create', 'update'])]
+        #[Assert\NotBlank(groups: ['create'])]
         #[Assert\Positive(groups: ['create', 'update'])]
         #[Groups(['create', 'update'])]
         public ?string $surface = null,
@@ -107,7 +107,7 @@ final readonly class UnitRequest
             description: 'Loyer mensuel hors charges',
             example: '450.00',
         )]
-        #[Assert\NotBlank(groups: ['create', 'update'])]
+        #[Assert\NotBlank(groups: ['create'])]
         #[Assert\Positive(groups: ['create', 'update'])]
         #[Groups(['create', 'update'])]
         public ?string $monthlyRent = null,
@@ -118,7 +118,7 @@ final readonly class UnitRequest
             example: 'USD',
             enum: Currency::class,
         )]
-        #[Assert\NotBlank(groups: ['create', 'update'])]
+        #[Assert\NotBlank(groups: ['create'])]
         #[Groups(['create', 'update'])]
         public ?Currency $currency = null,
 

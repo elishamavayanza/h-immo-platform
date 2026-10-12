@@ -27,7 +27,7 @@ final readonly class OrganizationRequest
             example: 'Immo RDC SARL',
             maxLength: 150
         )]
-        #[Assert\NotBlank(groups: ['create', 'update'])]
+        #[Assert\NotBlank(groups: ['create'])]
         #[Assert\Length(max: 150, groups: ['create', 'update'])]
         public ?string $name = null,
 
@@ -54,7 +54,7 @@ final readonly class OrganizationRequest
             example: 'contact@immo-rdc.cd',
             maxLength: 180
         )]
-        #[Assert\NotBlank(groups: ['create', 'update'])]
+        #[Assert\NotBlank(groups: ['create'])]
         #[Assert\Email(groups: ['create', 'update'])]
         #[Assert\Length(max: 180, groups: ['create', 'update'])]
         public ?string $email = null,
@@ -64,7 +64,7 @@ final readonly class OrganizationRequest
             example: '+243990000000',
             maxLength: 30
         )]
-        #[Assert\NotBlank(groups: ['create', 'update'])]
+        #[Assert\NotBlank(groups: ['create'])]
         #[Assert\Length(max: 30, groups: ['create', 'update'])]
         public ?string $phone = null,
 

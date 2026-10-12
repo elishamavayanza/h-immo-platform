@@ -77,8 +77,8 @@ export interface CreateAdminPayload {
  * par la réactivation explicite d'un compte suspendu.
  */
 export interface UpdateMemberPayload {
-    firstName: string;
-    lastName: string;
+    firstName?: string;
+    lastName?: string;
     phone?: string;
     isActive?: boolean;
 }
@@ -132,9 +132,9 @@ export interface OrganizationProfile {
 
 /** Corps de `PUT /v1/identity/organizations/{uuid}` (groupe `update`). */
 export interface UpdateOrganizationPayload {
-    name: string;
-    email: string;
-    phone: string;
+    name?: string;
+    email?: string;
+    phone?: string;
     address?: string;
     city?: string;
     country?: string;

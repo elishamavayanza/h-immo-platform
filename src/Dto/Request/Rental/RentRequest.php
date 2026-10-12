@@ -50,14 +50,14 @@ final readonly class RentRequest
             format: 'date',
             example: '2026-09-05'
         )]
-        #[Assert\NotBlank(groups: ['create', 'update'])]
+        #[Assert\NotBlank(groups: ['create'])]
         public ?\DateTimeImmutable $dueDate = null,
 
         #[OA\Property(
             description: 'Montant facturé pour la période',
             example: '500.00'
         )]
-        #[Assert\NotBlank(groups: ['create', 'update'])]
+        #[Assert\NotBlank(groups: ['create'])]
         #[Assert\Positive(groups: ['create', 'update'])]
         public ?string $amount = null,
 
@@ -67,7 +67,7 @@ final readonly class RentRequest
             example: 'USD',
             enum: Currency::class
         )]
-        #[Assert\NotBlank(groups: ['create', 'update'])]
+        #[Assert\NotBlank(groups: ['create'])]
         public ?Currency $currency = null,
     ) {
     }

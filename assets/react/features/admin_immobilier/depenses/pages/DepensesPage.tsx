@@ -18,6 +18,7 @@ import { useOrganization } from '../../../../app/providers/OrganizationProvider'
 import { useDepenses } from '../hooks/useDepenses';
 import { DepensesTable } from '../components/DepensesTable';
 import { fieldErrorMap } from '../../../shared/actionErrors';
+import { changedFields } from '../../../shared/changedFields';
 import { ModalActions } from '../../../shared/components/ModalActions';
 import { canDo } from '../../../shared/permissions';
 import { CATEGORY_OPTIONS, CURRENCY_OPTIONS, EXPENSE_METHOD_OPTIONS } from '../services/depensesService';
@@ -180,7 +181,23 @@ export function DepensesPage({ readOnly = false }: { readOnly?: boolean } = {}) 
 
         try {
             if (editTarget) {
-                await updateExpense(editTarget.id, payload);
+                const initial = {
+                    cityUuid: editTarget.cityId,
+                    category: editTarget.categoryCode,
+                    amount: editTarget.amount,
+                    currency: editTarget.currency as 'USD' | 'CDF',
+                    expenseDate: editTarget.expenseDate.slice(0, 10),
+                    method: editTarget.method || undefined,
+                    supplier: editTarget.supplier || undefined,
+                    reference: editTarget.reference || undefined,
+                    notes: editTarget.notes || undefined,
+                    parcelUuid: editTarget.parcelId || undefined,
+                    buildingUuid: editTarget.buildingId || undefined,
+                    unitUuid: editTarget.unitId || undefined,
+                    workerUuid: editTarget.workerId || undefined,
+                };
+                const changes = changedFields(payload, initial);
+                if (Object.keys(changes).length > 0) await updateExpense(editTarget.id, changes);
             } else {
                 await createExpense(payload);
             }

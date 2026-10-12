@@ -37,7 +37,7 @@ final readonly class TenantRequest
             example: 'individual',
             enum: TenantType::class
         )]
-        #[Assert\NotBlank(groups: ['create', 'update'])]
+        #[Assert\NotBlank(groups: ['create'])]
         public ?TenantType $type = null,
 
         #[OA\Property(
@@ -72,7 +72,7 @@ final readonly class TenantRequest
             example: '+243990000000',
             maxLength: 30
         )]
-        #[Assert\NotBlank(groups: ['create', 'update'])]
+        #[Assert\NotBlank(groups: ['create'])]
         #[Assert\Length(max: 30, groups: ['create', 'update'])]
         public ?string $phone = null,
 

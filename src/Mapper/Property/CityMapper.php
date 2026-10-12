@@ -55,7 +55,9 @@ final class CityMapper
             $city->setCountry($dto->country);
         }
 
-        $city->setStatus($dto->status);
+        if ($dto->status !== null) {
+            $city->setStatus($dto->status);
+        }
 
         return $city;
     }

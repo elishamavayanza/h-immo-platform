@@ -49,7 +49,7 @@ final readonly class UserRequest
             example: 'Jean',
             maxLength: 100
         )]
-        #[Assert\NotBlank(groups: ['create', 'update'])]
+        #[Assert\NotBlank(groups: ['create'])]
         #[Assert\Length(max: 100, groups: ['create', 'update'])]
         public ?string $firstName = null,
 
@@ -58,7 +58,7 @@ final readonly class UserRequest
             example: 'Kasereka',
             maxLength: 100
         )]
-        #[Assert\NotBlank(groups: ['create', 'update'])]
+        #[Assert\NotBlank(groups: ['create'])]
         #[Assert\Length(max: 100, groups: ['create', 'update'])]
         public ?string $lastName = null,
 

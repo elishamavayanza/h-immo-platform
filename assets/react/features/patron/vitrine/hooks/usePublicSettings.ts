@@ -4,6 +4,7 @@ import { useToast } from '../../../../app/layout/MainLayout/contexts/ToastContex
 import { useOrganization } from '../../../../app/providers/OrganizationProvider';
 import { ApiError } from '../../../../../services/api/api.types';
 import { actionErrorMessage, fieldErrorMap, isValidationError } from '../../../shared/actionErrors';
+import { changedFields } from '../../../shared/changedFields';
 import {
     deleteOrganizationLogo,
     fetchPublicSettings,
@@ -57,8 +58,15 @@ export function usePublicSettings() {
      */
     const save = async (payload: ShowcasePayload): Promise<void> => {
         if (!organizationUuid) return;
+        if (!settings) return;
+        const changes = changedFields(payload, {
+            slug: settings.slug ?? undefined,
+            publicDescription: settings.publicDescription ?? '',
+            isPubliclyListed: settings.isPubliclyListed,
+        });
+        if (Object.keys(changes).length === 0) return;
         try {
-            setSettings(await updateShowcase(organizationUuid, payload));
+            setSettings(await updateShowcase(organizationUuid, changes));
             push('success', 'Les réglages publics ont été enregistrés.');
         } catch (cause) {
             if (!isValidationError(cause)) push('error', actionErrorMessage(cause));

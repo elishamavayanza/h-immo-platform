@@ -67,7 +67,7 @@ final readonly class ParcelRequest
             example: 'Concession Les Oliviers',
             maxLength: 150,
         )]
-        #[Assert\NotBlank(groups: ['create', 'update'])]
+        #[Assert\NotBlank(groups: ['create'])]
         #[Assert\Length(max: 150, groups: ['create', 'update'])]
         #[Groups(['create', 'update'])]
         public ?string $name = null,
@@ -77,7 +77,7 @@ final readonly class ParcelRequest
             example: '14, Avenue du Lac',
             maxLength: 255,
         )]
-        #[Assert\NotBlank(groups: ['create', 'update'])]
+        #[Assert\NotBlank(groups: ['create'])]
         #[Assert\Length(max: 255, groups: ['create', 'update'])]
         #[Groups(['create', 'update'])]
         public ?string $address = null,
@@ -96,7 +96,7 @@ final readonly class ParcelRequest
             description: 'Superficie globale en m²',
             example: '1200.50',
         )]
-        #[Assert\NotBlank(groups: ['create', 'update'])]
+        #[Assert\NotBlank(groups: ['create'])]
         #[Assert\Positive(groups: ['create', 'update'])]
         #[Groups(['create', 'update'])]
         public ?string $area = null,
