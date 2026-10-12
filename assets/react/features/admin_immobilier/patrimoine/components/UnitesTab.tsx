@@ -23,24 +23,9 @@ import { canDo } from '../../../shared/permissions';
 import { fieldErrorMap } from '../../../shared/actionErrors';
 import { ModalActions } from '../../../shared/components/ModalActions';
 import { PhotoGallery } from '../../../shared/media/components/PhotoGallery';
+import { CURRENCY_OPTIONS, UNIT_TYPE_LABELS, UNIT_TYPE_OPTIONS } from './patrimoineView';
 import type { BuildingItem, UnitItem } from '../../shared/types/reference.types';
 import type { UnitPayload } from '../services/patrimoineService';
-
-const UNIT_TYPE_OPTIONS = [
-    { value: 'apartment', label: 'Appartement' },
-    { value: 'house', label: 'Maison' },
-    { value: 'shop', label: 'Magasin' },
-    { value: 'office', label: 'Bureau' },
-    { value: 'restaurant', label: 'Restaurant' },
-    { value: 'other', label: 'Autre' },
-];
-
-const UNIT_TYPE_LABELS: Record<string, string> = Object.fromEntries(UNIT_TYPE_OPTIONS.map((option) => [option.value, option.label]));
-
-const CURRENCY_OPTIONS = [
-    { value: 'USD', label: 'USD' },
-    { value: 'CDF', label: 'CDF' },
-];
 
 interface UnitForm {
     buildingUuid: string;

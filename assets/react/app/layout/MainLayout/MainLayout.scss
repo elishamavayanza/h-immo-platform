@@ -160,6 +160,28 @@
     }
 }
 
+/* Transition de route non bloquante : l'Outlet reste visible pendant le
+   changement. Un voile léger accompagne le nouvel écran sans remplacer toute
+   la page par un spinner qui provoquait un clignotement. */
+.main-layout__route-transition {
+    position: absolute;
+    inset: 0;
+    z-index: 2;
+    pointer-events: none;
+    background: color-mix(in srgb, #{$color-bg-content} 24%, transparent);
+    backdrop-filter: blur(1px);
+    animation: route-transition-fade 220ms ease-out both;
+}
+
+@keyframes route-transition-fade {
+    from { opacity: .72; }
+    to { opacity: 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .main-layout__route-transition { animation-duration: 80ms; backdrop-filter: none; }
+}
+
 .main-layout__page-loading {
     position: absolute;
     inset: 0;

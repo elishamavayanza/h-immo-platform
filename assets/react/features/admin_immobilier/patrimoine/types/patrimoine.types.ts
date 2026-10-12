@@ -8,6 +8,7 @@
  * pas un taux fictif.
  */
 import type { BuildingItem, CityItem, ParcelItem, UnitItem } from '../../shared/types/reference.types';
+import type { OccupancyItem } from '../../reports/types';
 
 export type PatrimoineKind = 'Parcelle' | 'Bâtiment';
 
@@ -33,6 +34,14 @@ export interface PatrimoineData {
     buildings: BuildingItem[];
     /** Unités brutes (gestion du niveau Unité). */
     units: UnitItem[];
+    /**
+     * Occupation par parcelle / immeuble, telle que fournie par le rapport
+     * (non paginée, `levelUuid` = uuid du bien). Conservée pour que les vues de
+     * niveau calculent des indicateurs agrégés (ville, parcelle, bâtiment) sans
+     * nouvel appel ni approximation : les valeurs viennent du backend.
+     */
+    occupancyByParcel: OccupancyItem[];
+    occupancyByBuilding: OccupancyItem[];
     /** Villes présentes dans le jeu chargé (options du filtre). */
     availableCities: string[];
     /** Indicateurs issus du rapport (non paginés). */
