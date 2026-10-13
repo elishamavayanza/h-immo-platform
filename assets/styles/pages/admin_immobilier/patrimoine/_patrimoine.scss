@@ -126,11 +126,23 @@
 .photo-viewer__preview { display: grid; gap: .75rem; min-width: 0; }
 .photo-viewer__preview-toolbar { display: flex; align-items: center; justify-content: space-between; gap: .65rem; }
 .photo-viewer__preview-toolbar > div { display: flex; gap: .4rem; }
-.photo-viewer__preview > img { display: block; width: 100%; max-height: 62vh; min-height: 180px; object-fit: contain; border-radius: .6rem; background: $color-bg-card-hover; }
+.photo-viewer__zoom-controls { display: flex; align-items: center; gap: .4rem; }
+.photo-viewer__zoom-controls > span { min-width: 3.5rem; text-align: center; color: $color-text-muted; }
+.photo-viewer__stage { display: grid; width: 100%; height: min(62vh, 640px); min-width: 0; min-height: 180px; place-items: center; overflow: hidden; border-radius: .6rem; background: $color-bg-card-hover; touch-action: none; }
+.photo-viewer__stage img { display: block; width: 100%; height: 100%; min-height: 180px; object-fit: contain; border-radius: .6rem; transform-origin: center; user-select: none; }
+.photo-viewer__stage.is-zoomed { cursor: grab; }
+.photo-viewer__stage.is-swipeable { cursor: grab; }
+.photo-viewer__stage.is-zoomed:active { cursor: grabbing; }
+.modal--center-expanded .photo-viewer__preview { flex: 1; min-height: 0; grid-template-rows: auto minmax(0, 1fr); }
+.modal--center-expanded .photo-viewer__stage { height: auto; min-height: 0; }
+.modal--center-expanded .photo-viewer__stage img { min-height: 0; }
+.modal--center-expanded .parcel-map { flex: 1; min-height: 0; grid-template-rows: auto minmax(220px, 1fr) auto; }
+.modal--center-expanded .parcel-map__canvas { height: auto; min-height: 0; max-height: none; }
 @media (max-width: 640px) {
   .photo-viewer__preview-toolbar { flex-wrap: wrap; }
   .photo-viewer__preview-toolbar > button:first-child { flex: 1 1 100%; }
-  .photo-viewer__preview > img { max-height: 55vh; }
+  .photo-viewer__stage { height: 55vh; }
+  .photo-viewer__zoom-controls { order: 3; width: 100%; justify-content: center; }
 }
 
 /* Navigation verticale du patrimoine : le contenu du panneau est fourni au
