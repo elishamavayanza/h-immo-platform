@@ -32,6 +32,7 @@ use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpFoundation\RequestStack;
+use Symfony\Component\HttpKernel\KernelInterface;
 use Symfony\Component\HttpKernel\Attribute\MapQueryString;
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
@@ -77,6 +78,7 @@ final class ReportController extends AbstractController
         private readonly DateTimeService $dateTime,
         private readonly RequestStack $requestStack,
         private readonly FileUploadService $fileUploadService,
+        private readonly KernelInterface $kernel,
     ) {
     }
 
@@ -129,6 +131,11 @@ final class ReportController extends AbstractController
 
         if ($error !== null) {
             return $error;
+        }
+
+        $periodError = $this->requirePeriodForPdf($filter);
+        if ($periodError !== null) {
+            return $periodError;
         }
 
         $report = $this->reportService->generatePatronReport($filter, $organization);
@@ -191,6 +198,11 @@ final class ReportController extends AbstractController
 
         if ($error !== null) {
             return $error;
+        }
+
+        $periodError = $this->requirePeriodForPdf($filter);
+        if ($periodError !== null) {
+            return $periodError;
         }
 
         $report = $this->reportService->generateAdminImmobilierReport($filter, $organization);
@@ -258,6 +270,11 @@ final class ReportController extends AbstractController
         // organization qu'il ne s'est pas vu attribuer.
         $this->securityService->checkCityAccess($city, SecurityAction::VIEW_REPORT);
 
+        $periodError = $this->requirePeriodForPdf($filter);
+        if ($periodError !== null) {
+            return $periodError;
+        }
+
         $report = $this->reportService->generateAdminVilleReport($filter, $city);
 
         $format = $this->getFormatFromRequest();
@@ -307,6 +324,11 @@ final class ReportController extends AbstractController
 
         $this->securityService->requirePlatformRole(\App\Enum\PlatformRole::SUPER_ADMIN);
 
+        $periodError = $this->requirePeriodForPdf($filter);
+        if ($periodError !== null) {
+            return $periodError;
+        }
+
         $format = $this->getFormatFromRequest();
 
         $report = $this->reportService->generateSuperAdminReport($filter);
@@ -319,6 +341,7 @@ final class ReportController extends AbstractController
                 'scope' => 'Toutes les organisations',
                 'appliedFilters' => [],
                 'generatedAt' => $this->dateTime->now(),
+                'applicationLogo' => $this->applicationLogoDataUri(),
             ]);
         }
         return $this->json($report);
@@ -557,18 +580,19 @@ final class ReportController extends AbstractController
     private function renderPdf(string $template, array $params): Response
     {
         $options = new \Dompdf\Options();
-        // Le logo est embarqué en data URI : les images distantes sont un
-        // repli, pas une dépendance de rendu.
-        $options->set('isRemoteEnabled', true);
+        // Les deux logos sont embarqués en data URI ; aucun chargement réseau
+        // ni accès à une URL contrôlée par les données du rapport n'est requis.
+        $options->set('isRemoteEnabled', false);
         $options->set('isHtml5ParserEnabled', true);
         $options->set('defaultFont', 'DejaVu Sans');
-        // Numérotation des pages par le script `page_text` du gabarit.
-        $options->set('isPhpEnabled', true);
 
         $dompdf = new \Dompdf\Dompdf($options);
+        $params['applicationLogo'] ??= $this->applicationLogoDataUri();
         $dompdf->loadHtml($this->renderView($template, $params));
-        $dompdf->setPaper('A4', 'landscape');
+        $dompdf->setPaper('A4', 'portrait');
         $dompdf->render();
+        $font = $dompdf->getFontMetrics()->getFont('DejaVu Sans', 'normal');
+        $dompdf->getCanvas()->page_text(470, 797, 'Page {PAGE_NUM} / {PAGE_COUNT}', $font, 7, [0.25, 0.25, 0.25]);
 
         return new Response(
             $dompdf->output(),
@@ -578,5 +602,52 @@ final class ReportController extends AbstractController
                 'Content-Disposition' => 'attachment; filename="rapport-' . $this->dateTime->format($this->dateTime->now(), 'Y-m-d') . '.pdf"',
             ]
         );
+    }
+
+    /**
+     * Un export doit toujours documenter une période choisie explicitement.
+     * Les vues JSON gardent leur comportement historique tant qu'aucun filtre
+     * n'est transmis ; l'export PDF, lui, ne génère jamais un intervalle implicite.
+     */
+    private function requirePeriodForPdf(ReportFilterDto $filter): ?JsonResponse
+    {
+        if ($this->getFormatFromRequest() !== 'pdf') {
+            return null;
+        }
+
+        if ($filter->periodFrom !== null && $filter->periodTo !== null) {
+            return null;
+        }
+
+        return $this->json(
+            (new Feedback())
+                ->addError('periodFrom', 'Choisissez une date de début et une date de fin.')
+                ->addError('periodTo', 'Choisissez une date de début et une date de fin.')
+                ->setErrorFlushDescription('Sélectionnez une période complète avant de télécharger le rapport PDF.')
+                ->setStatus(400)
+                ->autoInitFlush(),
+            400
+        );
+    }
+
+    /** Le logo de l’application est embarqué afin que le PDF reste autonome. */
+    private function applicationLogoDataUri(): ?string
+    {
+        $path = $this->kernel->getProjectDir() . '/public/logo-email.png';
+        if (!is_file($path)) {
+            $path = $this->kernel->getProjectDir() . '/public/logo.png';
+        }
+        if (!is_file($path)) {
+            return null;
+        }
+
+        $contents = file_get_contents($path);
+        if ($contents === false) {
+            return null;
+        }
+
+        $mime = mime_content_type($path) ?: 'image/png';
+
+        return 'data:' . $mime . ';base64,' . base64_encode($contents);
     }
 }

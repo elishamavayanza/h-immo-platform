@@ -1,8 +1,9 @@
 import { Button } from '../../../../components/UI/Button';
-import { Select } from '../../../../components/Forms/Select';
 import { Spinner } from '../../../../components/UI/Spinner';
+import { ReportPeriodFilter } from '../../../shared/reports/components/ReportPeriodFilter';
+import { isValidPeriodRange, type PeriodRange } from '../../../shared/reports/periodPresets';
 import { ReportsPageView } from '../../../shared/reports/components/ReportsPageView';
-import type { ReportsData, ReportsPeriod } from '../../../shared/reports/types/report.types';
+import type { ReportsData } from '../../../shared/reports/types/report.types';
 
 const DOWNLOAD_ICON = (
     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
@@ -19,14 +20,18 @@ export function ReportsOverview({
     period,
     setPeriod,
     downloadPdf,
+    isExporting,
 }: {
     data: ReportsData | null;
     isLoading: boolean;
     error: string | null;
-    period: ReportsPeriod;
-    setPeriod: (period: ReportsPeriod) => void;
+    period: PeriodRange;
+    setPeriod: (period: PeriodRange) => void;
     downloadPdf: () => void;
+    isExporting: boolean;
 }) {
+    const hasValidPeriod = isValidPeriodRange(period);
+
     if (isLoading) return <div className="reports-loading"><Spinner size="large" /><span>Préparation du rapport…</span></div>;
     if (error || !data) {
         return (
@@ -45,23 +50,20 @@ export function ReportsOverview({
                     <h1>{data.title}</h1>
                     <p>{data.description}</p>
                 </div>
-                <div className="reports-page__controls">
-                    <Select
-                        aria-label="Période du rapport"
-                        value={period}
-                        onChange={(event) => setPeriod(event.target.value as ReportsPeriod)}
-                        options={[
-                            { value: 'month', label: '30 derniers jours' },
-                            { value: 'quarter', label: '3 derniers mois' },
-                            { value: 'year', label: 'Année en cours' },
-                        ]}
-                    />
-                    <Button variant="outline" onClick={downloadPdf} icon={DOWNLOAD_ICON} iconPosition="left">
-                        Télécharger PDF
+            </header>
+            <section className="reports-page__toolbar" aria-label="Filtres du rapport">
+                <div className="reports-page__date-filter">
+                    <ReportPeriodFilter periodFrom={period.from} periodTo={period.to} onChange={setPeriod} disabled={isExporting} />
+                </div>
+                <div className="reports-page__toolbar-actions">
+                    <span className="reports-page__period-label">Période : {data.periodLabel.replace(' to ', ' → ')}</span>
+                    <Button variant="outline" onClick={downloadPdf} disabled={isExporting || !hasValidPeriod} aria-busy={isExporting} icon={DOWNLOAD_ICON} iconPosition="left">
+                        {isExporting ? 'Préparation…' : 'Télécharger PDF'}
                     </Button>
                 </div>
-            </header>
-            <ReportsPageView data={data} isLoading={false} showHeader={false} period={period} setPeriod={setPeriod} />
+            </section>
+            {!hasValidPeriod && <p className="reports-empty" role="alert">Choisissez une période complète pour générer le PDF.</p>}
+            <ReportsPageView data={data} isLoading={false} showHeader={false} />
         </main>
     );
 }

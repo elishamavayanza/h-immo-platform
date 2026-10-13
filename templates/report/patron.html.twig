@@ -12,18 +12,18 @@
         </div>
         <div class="summary-card">
             <h4>Résultat Net</h4>
-            <div class="value" style="color: {{ netResult|slice(0, 1) == '-' ? '#e74c3c' : '#27ae60' }};">
+            <div class="value">
                 {{ netResult }} {{ report.currency }}
             </div>
         </div>
         <div class="summary-card">
             <h4>Total Impayés</h4>
-            <div class="value" style="color: #e74c3c;">{{ report.totalArrears }} {{ report.currency }}</div>
+            <div class="value">{{ report.totalArrears }} {{ report.currency }}</div>
         </div>
     </div>
 
-    <h2>Résumé financier par période</h2>
     {% if report.financialSummary %}
+    <h2>Résumé financier par période</h2>
     <table>
         <thead>
             <tr>
@@ -31,7 +31,6 @@
                 <th class="text-right">Revenus</th>
                 <th class="text-right">Dépenses</th>
                 <th class="text-right">Résultat net</th>
-                <th class="text-center">Devise</th>
             </tr>
         </thead>
         <tbody>
@@ -40,8 +39,7 @@
                 <td>{{ item.period }}</td>
                 <td class="text-right">{{ item.revenues }} {{ item.currency }}</td>
                 <td class="text-right">{{ item.expenses }} {{ item.currency }}</td>
-                <td class="text-right" style="color: {{ item.netResult >= 0 ? '#27ae60' : '#e74c3c' }};">{{ item.netResult }} {{ item.currency }}</td>
-                <td class="text-center">{{ item.currency }}</td>
+                <td class="text-right">{{ item.netResult }} {{ item.currency }}</td>
             </tr>
             {% endfor %}
         </tbody>
@@ -50,8 +48,8 @@
     <p>Aucune donnée financière pour cette période.</p>
     {% endif %}
 
-    <h2>Occupation par ville</h2>
     {% if report.occupancyByCity %}
+    <h2>Occupation par ville</h2>
     <table>
         <thead>
             <tr>
@@ -78,8 +76,8 @@
     <p>Aucune donnée d'occupation.</p>
     {% endif %}
 
-    <h2>Occupation par parcelle</h2>
     {% if report.occupancyByParcel %}
+    <h2>Occupation par parcelle</h2>
     <table>
         <thead>
             <tr>
@@ -104,8 +102,8 @@
     </table>
     {% endif %}
 
-    <h2>Impayés et retards</h2>
     {% if report.arrears %}
+    <h2>Impayés et retards</h2>
     <table>
         <thead>
             <tr>
@@ -116,7 +114,6 @@
                 <th class="text-right">Payé</th>
                 <th class="text-right">Impayé</th>
                 <th class="text-center">Jours retard</th>
-                <th>Devise</th>
             </tr>
         </thead>
         <tbody>
@@ -127,9 +124,8 @@
                 <td>{{ item.unitLabel }}</td>
                 <td class="text-right">{{ item.amountDue }} {{ item.currency }}</td>
                 <td class="text-right">{{ item.amountPaid }} {{ item.currency }}</td>
-                <td class="text-right" style="color: #e74c3c;">{{ item.arrears }} {{ item.currency }}</td>
+                <td class="text-right">{{ item.arrears }} {{ item.currency }}</td>
                 <td class="text-center">{{ item.daysOverdue }}</td>
-                <td>{{ item.currency }}</td>
             </tr>
             {% endfor %}
         </tbody>
@@ -138,14 +134,13 @@
     <p>Aucun impayé pour cette période.</p>
     {% endif %}
 
-    <h2>Dépenses par catégorie</h2>
     {% if report.expensesByCategory %}
+    <h2>Dépenses par catégorie</h2>
     <table>
         <thead>
             <tr>
                 <th>Catégorie</th>
                 <th class="text-right">Montant total</th>
-                <th>Devise</th>
             </tr>
         </thead>
         <tbody>
@@ -153,21 +148,19 @@
             <tr>
                 <td>{{ item.category }}</td>
                 <td class="text-right">{{ item.totalAmount }} {{ item.currency }}</td>
-                <td>{{ item.currency }}</td>
             </tr>
             {% endfor %}
         </tbody>
     </table>
     {% endif %}
 
-    <h2>Dépenses par ville</h2>
     {% if report.expensesByCity %}
+    <h2>Dépenses par ville</h2>
     <table>
         <thead>
             <tr>
                 <th>Ville</th>
                 <th class="text-right">Montant total</th>
-                <th>Devise</th>
             </tr>
         </thead>
         <tbody>
@@ -175,7 +168,6 @@
             <tr>
                 <td>{{ item.levelLabel }}</td>
                 <td class="text-right">{{ item.totalAmount }} {{ item.currency }}</td>
-                <td>{{ item.currency }}</td>
             </tr>
             {% endfor %}
         </tbody>

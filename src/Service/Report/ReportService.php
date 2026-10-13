@@ -273,6 +273,7 @@ final readonly class ReportService
                 revenues: $this->sumRevenues($org->getId(), $cityIds, $periodFrom, $periodTo),
                 expenses: $this->sumExpenses($org->getId(), $cityIds, $periodFrom, $periodTo),
                 arrears: $this->sumArrears($org->getId(), $cityIds, $periodTo),
+                currency: $org->getCurrency()->value,
             );
         }
 
@@ -325,6 +326,7 @@ final readonly class ReportService
                 revenues: $orgRevenue,
                 expenses: $orgExpense,
                 arrears: $orgArrears,
+                currency: $org->getCurrency()->value,
             );
         }
 

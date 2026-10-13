@@ -2,21 +2,22 @@ import { useCallback, useEffect, useState } from 'react';
 
 import { fetchSuperAdminReport, downloadSuperAdminReportPdf, mapToReportsData } from '../services/reportsService';
 import type { ReportsData } from '../../../shared/reports/types/report.types';
-import type { ReportsPeriod } from '../../../shared/reports/types/report.types';
+import { computePeriodPreset, isValidPeriodRange, type PeriodRange } from '../../../shared/reports/periodPresets';
 
 export function useReports() {
     const [data, setData] = useState<ReportsData | null>(null);
     const [isLoading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
-    const [period, setPeriod] = useState<ReportsPeriod>('year');
+    const [period, setPeriod] = useState<PeriodRange>(() => computePeriodPreset('this_year'));
+    const [isExporting, setExporting] = useState(false);
 
     const reload = useCallback(async () => {
         setLoading(true);
         setError(null);
         try {
             const response = await fetchSuperAdminReport({
-                periodFrom: period === 'month' ? getStartOfMonth(-1) : period === 'quarter' ? getStartOfMonth(-3) : getStartOfYear(),
-                periodTo: getEndOfToday(),
+                periodFrom: period.from,
+                periodTo: period.to,
             });
             const mapped = mapToReportsData(response);
             setData(mapped);
@@ -25,37 +26,31 @@ export function useReports() {
         } finally {
             setLoading(false);
         }
-    }, [period]);
+    }, [period.from, period.to]);
 
     useEffect(() => {
         void reload();
     }, [reload]);
 
     const downloadPdf = useCallback(async () => {
+        if (isExporting || !isValidPeriodRange(period)) {
+            setError('Choisissez une période complète et valide avant de générer le PDF.');
+            return;
+        }
+
+        setExporting(true);
+        setError(null);
         try {
             await downloadSuperAdminReportPdf({
-                periodFrom: period === 'month' ? getStartOfMonth(-1) : period === 'quarter' ? getStartOfMonth(-3) : getStartOfYear(),
-                periodTo: getEndOfToday(),
+                periodFrom: period.from,
+                periodTo: period.to,
             });
         } catch (err) {
             setError(err instanceof Error ? err.message : 'Échec du téléchargement PDF');
+        } finally {
+            setExporting(false);
         }
-    }, [period]);
+    }, [isExporting, period]);
 
-    return { data, isLoading, error, reload, period, setPeriod, downloadPdf };
-}
-
-function getStartOfYear(): string {
-    return new Date(new Date().getFullYear(), 0, 1).toISOString().split('T')[0];
-}
-
-function getStartOfMonth(monthsAgo: number): string {
-    const date = new Date();
-    date.setMonth(date.getMonth() + monthsAgo);
-    date.setDate(1);
-    return date.toISOString().split('T')[0];
-}
-
-function getEndOfToday(): string {
-    return new Date().toISOString().split('T')[0];
+    return { data, isLoading, error, reload, period, setPeriod, downloadPdf, isExporting };
 }

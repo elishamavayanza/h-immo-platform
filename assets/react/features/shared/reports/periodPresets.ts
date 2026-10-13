@@ -8,14 +8,27 @@
  * Kinshasa (UTC+1) verrait un basculement de mois décalé de quelques heures.
  * Le format produit est ISO `YYYY-MM-DD`, celui attendu par l'API.
  */
-export type PeriodPresetId = 'this_month' | 'last_month' | 'this_quarter' | 'this_year';
+export type PeriodPresetId = 'today' | 'this_week' | 'this_month' | 'last_month' | 'this_quarter' | 'this_year';
 
 export interface PeriodRange {
     from: string;
     to: string;
 }
 
+/** Vrai uniquement si les deux dates sont définies et dans l'ordre. */
+export function isValidPeriodRange(range: PeriodRange): boolean {
+    const isCalendarDate = (value: string): boolean => {
+        if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
+        const parsed = new Date(`${value}T00:00:00.000Z`);
+        return !Number.isNaN(parsed.getTime()) && parsed.toISOString().slice(0, 10) === value;
+    };
+
+    return isCalendarDate(range.from) && isCalendarDate(range.to) && range.from <= range.to;
+}
+
 export const PERIOD_PRESETS: ReadonlyArray<{ id: PeriodPresetId; label: string }> = [
+    { id: 'today', label: 'Aujourd’hui' },
+    { id: 'this_week', label: 'Cette semaine' },
     { id: 'this_month', label: 'Ce mois-ci' },
     { id: 'last_month', label: 'Mois dernier' },
     { id: 'this_quarter', label: 'Ce trimestre' },
@@ -39,8 +52,21 @@ function lastDayOfMonth(year: number, monthIndex0: number): number {
 export function computePeriodPreset(preset: PeriodPresetId, reference: Date = new Date()): PeriodRange {
     const year = reference.getFullYear();
     const month = reference.getMonth();
+    const day = reference.getDate();
 
     switch (preset) {
+        case 'today':
+            return { from: toIsoDate(year, month, day), to: toIsoDate(year, month, day) };
+        case 'this_week': {
+            const mondayOffset = (reference.getDay() + 6) % 7;
+            const monday = new Date(year, month, day - mondayOffset);
+            const sunday = new Date(year, month, day + (6 - mondayOffset));
+
+            return {
+                from: toIsoDate(monday.getFullYear(), monday.getMonth(), monday.getDate()),
+                to: toIsoDate(sunday.getFullYear(), sunday.getMonth(), sunday.getDate()),
+            };
+        }
         case 'this_month':
             return {
                 from: toIsoDate(year, month, 1),

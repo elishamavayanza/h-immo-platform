@@ -10,6 +10,7 @@ export interface OrganizationSummaryItem {
     revenues: string;
     expenses: string;
     arrears: string;
+    currency?: string | null;
 }
 
 export interface SuperAdminReportResponse {

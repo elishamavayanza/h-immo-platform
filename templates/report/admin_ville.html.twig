@@ -20,8 +20,8 @@
         </div>
     </div>
 
-    <h2>Occupation par parcelle</h2>
     {% if report.occupancyByParcel %}
+    <h2>Occupation par parcelle</h2>
     <table>
         <thead>
             <tr>
@@ -46,8 +46,8 @@
     </table>
     {% endif %}
 
-    <h2>Occupation par immeuble</h2>
     {% if report.occupancyByBuilding %}
+    <h2>Occupation par immeuble</h2>
     <table>
         <thead>
             <tr>
@@ -72,8 +72,8 @@
     </table>
     {% endif %}
 
-    <h2>Impayés et retards</h2>
     {% if report.arrears %}
+    <h2>Impayés et retards</h2>
     <table>
         <thead>
             <tr>
@@ -84,7 +84,6 @@
                 <th class="text-right">Payé</th>
                 <th class="text-right">Impayé</th>
                 <th class="text-center">Jours retard</th>
-                <th>Devise</th>
             </tr>
         </thead>
         <tbody>
@@ -95,9 +94,8 @@
                 <td>{{ item.unitLabel }}</td>
                 <td class="text-right">{{ item.amountDue }} {{ item.currency }}</td>
                 <td class="text-right">{{ item.amountPaid }} {{ item.currency }}</td>
-                <td class="text-right" style="color: #e74c3c;">{{ item.arrears }} {{ item.currency }}</td>
+                <td class="text-right">{{ item.arrears }} {{ item.currency }}</td>
                 <td class="text-center">{{ item.daysOverdue }}</td>
-                <td>{{ item.currency }}</td>
             </tr>
             {% endfor %}
         </tbody>
@@ -106,8 +104,8 @@
     <p>Aucun impayé pour cette période.</p>
     {% endif %}
 
-    <h2>Dépenses de la ville</h2>
     {% if report.cityExpenses %}
+    <h2>Dépenses de la ville</h2>
     <table>
         <thead>
             <tr>
@@ -116,7 +114,6 @@
                 <th>Cible</th>
                 <th class="text-center">Écritures</th>
                 <th class="text-right">Montant</th>
-                <th>Devise</th>
             </tr>
         </thead>
         <tbody>
@@ -127,7 +124,6 @@
                 <td>{{ item.levelLabel }}</td>
                 <td class="text-center">{{ item.count }}</td>
                 <td class="text-right">{{ item.totalAmount }} {{ item.currency.value }}</td>
-                <td>{{ item.currency.value }}</td>
             </tr>
             {% endfor %}
         </tbody>
@@ -143,17 +139,15 @@
                 <th>Rôle</th>
                 <th>Affectation</th>
                 <th class="text-right">Salaire mensuel</th>
-                <th>Devise</th>
             </tr>
         </thead>
         <tbody>
             {% for item in report.workers %}
             <tr>
                 <td>{{ item.fullName }}</td>
-                <td><span class="badge badge-info">{{ item.role }}</span></td>
+                <td>{{ item.role }}</td>
                 <td>{{ item.assignmentLabel }}</td>
                 <td class="text-right">{{ item.monthlySalary }} {{ item.currency }}</td>
-                <td>{{ item.currency }}</td>
             </tr>
             {% endfor %}
         </tbody>
