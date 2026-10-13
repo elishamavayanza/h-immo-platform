@@ -173,6 +173,23 @@
     transition: color $transition-fast;
 }
 
+.sidebar__brand-expand {
+    @include flex-center;
+    width: 100%;
+    min-width: 0;
+    padding: 0;
+    color: inherit;
+    background: transparent;
+    border: 0;
+    border-radius: $radius-sm;
+    cursor: pointer;
+
+    &:focus-visible {
+        outline: 2px solid $color-primary;
+        outline-offset: 3px;
+    }
+}
+
 .sidebar__collapse {
     @include flex-center;
     flex-shrink: 0;
