@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 
+import { useAdminCity } from '../../../../app/providers/AdminCityProvider';
 import { ApiError } from '../../../../../services/api/api.types';
-import { useAssignedCities } from '../../../shared/hooks/useAssignedCities';
 import { fetchAdminVilleDashboard } from '../services/adminVilleDashboardService';
 import type { AdminVilleDashboardData } from '../types/adminVilleDashboard.types';
 
@@ -11,17 +11,11 @@ import type { AdminVilleDashboardData } from '../types/adminVilleDashboard.types
  * affectée, l'API refuserait en 403. Changer de ville recharge l'API.
  */
 export function useAdminVilleDashboard() {
-    const { cities, isLoading: citiesLoading, hasAssignedCities } = useAssignedCities();
-
-    const [cityUuid, setCityUuid] = useState('');
+    const { cities, activeCityUuid: cityUuid, selectCity: setCityUuid, isLoading: citiesLoading } = useAdminCity();
+    const hasAssignedCities = cities.length > 0;
     const [data, setData] = useState<AdminVilleDashboardData | null>(null);
     const [isLoading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
-
-    // Ville par défaut : la première ville affectée renvoyée par l'API.
-    useEffect(() => {
-        if (!cityUuid && cities.length > 0) setCityUuid(cities[0].id);
-    }, [cities, cityUuid]);
 
     const reload = useCallback(async () => {
         if (!cityUuid) {

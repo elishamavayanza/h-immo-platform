@@ -4,6 +4,7 @@ import { BrowserRouter } from 'react-router-dom';
 
 import { AuthProvider } from './providers/AuthProvider.tsx';
 import { OrganizationProvider } from './providers/OrganizationProvider.tsx';
+import { AdminCityProvider } from './providers/AdminCityProvider.tsx';
 import { ToastProvider } from './layout/MainLayout/contexts/ToastContext.tsx';
 import { AppRoutes } from './routes/AppRoutes.tsx';
 import { initializeUserPreferences } from '../services/userPreferences';
@@ -20,9 +21,11 @@ function App() {
         <BrowserRouter>
             <AuthProvider>
                 <OrganizationProvider>
-                    <ToastProvider>
-                        <AppRoutes />
-                    </ToastProvider>
+                    <AdminCityProvider>
+                        <ToastProvider>
+                            <AppRoutes />
+                        </ToastProvider>
+                    </AdminCityProvider>
                 </OrganizationProvider>
             </AuthProvider>
         </BrowserRouter>

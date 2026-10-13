@@ -1,20 +1,50 @@
 @use '../../../pages/patron/dashboard/dashboard';
 @use '../../../baseVariables/variables' as *;
 
-/* Sélecteur de ville dans l'en-tête du tableau de bord ADMIN_VILLE. */
-.organization-page__header-actions {
+/* Barre d'outils pleine largeur : le sélecteur reste à gauche, les raccourcis
+   se placent à droite pour éviter une grande zone vide après les contrôles. */
+.organization-dashboard-toolbar {
     display: flex;
     align-items: center;
-    gap: $spacing-3;
+    justify-content: space-between;
+    gap: $spacing-4;
+    width: 100%;
+    min-width: 0;
+}
+
+.organization-dashboard-toolbar__city {
+    flex: 0 1 clamp(260px, 34vw, 420px);
+    min-width: 0;
 }
 
 /* Accès rapides vers les écrans liés aux indicateurs affichés. */
 .organization-quick-actions {
     display: flex;
     flex-wrap: wrap;
+    justify-content: flex-end;
     gap: $spacing-2;
+    margin-left: auto;
 }
 
 @media (max-width: 600px) {
-    .organization-page__header-actions { width: 100%; }
+    .organization-dashboard-toolbar {
+        align-items: stretch;
+        flex-direction: column;
+        gap: $spacing-2;
+    }
+
+    .organization-dashboard-toolbar__city { width: 100%; flex-basis: auto; }
+
+    .organization-quick-actions {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        justify-content: stretch;
+        margin-left: 0;
+    }
+
+    .organization-quick-actions > * { width: 100%; min-width: 0; }
+}
+
+@media (max-width: 380px) {
+    .organization-quick-actions { grid-template-columns: minmax(0, 1fr); }
 }
