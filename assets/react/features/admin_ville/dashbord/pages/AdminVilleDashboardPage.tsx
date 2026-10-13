@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Spinner } from '../../../../components/UI/Spinner';
 import { EmptyState } from '../../../../components/Data/EmptyState';
 import { Button } from '../../../../components/UI/Button';
+import { Select } from '../../../../components/Forms/Select';
 import { NoAssignedCityState } from '../../../shared/components/NoAssignedCityState';
 import { useAdminVilleDashboard } from '../hooks/useAdminVilleDashboard';
 import { AdminVilleOverview } from '../components/AdminVilleOverview';
@@ -17,7 +18,7 @@ import '../../../../../styles/pages/admin_ville/dashboard/_dashboard.scss';
  */
 export function AdminVilleDashboardPage() {
     const navigate = useNavigate();
-    const { data, isLoading, error, reload, citiesLoading, hasAssignedCities } = useAdminVilleDashboard();
+    const { data, isLoading, error, reload, cities, cityUuid, setCityUuid, citiesLoading, hasAssignedCities } = useAdminVilleDashboard();
 
     if (citiesLoading) {
         return <div className="main-layout__page-loading" aria-busy="true"><Spinner size="large" className="spinner--page" /><span>Chargement de votre périmètre…</span></div>;
@@ -49,10 +50,17 @@ export function AdminVilleDashboardPage() {
                 </div>
             </header>
 
-            <nav className="organization-quick-actions" aria-label="Actions principales">
-                <Button variant="outline" onClick={() => navigate('/app/location/loyers')}>Consulter les impayés</Button>
-                <Button variant="outline" onClick={() => navigate('/app/patrimoine')}>Gérer le patrimoine</Button>
-            </nav>
+            <div className="organization-dashboard-toolbar">
+                {cities.length > 1 && (
+                    <div className="organization-dashboard-toolbar__city">
+                        <Select fullWidth aria-label="Ville active" value={cityUuid} onChange={(event) => setCityUuid(event.target.value)} options={cities.map((city) => ({ value: city.id, label: city.name }))} />
+                    </div>
+                )}
+                <nav className="organization-quick-actions" aria-label="Actions principales">
+                    <Button variant="outline" onClick={() => navigate('/app/location/loyers')}>Consulter les impayés</Button>
+                    <Button variant="outline" onClick={() => navigate('/app/patrimoine')}>Gérer le patrimoine</Button>
+                </nav>
+            </div>
 
             <AdminVilleOverview data={data} />
         </main>
