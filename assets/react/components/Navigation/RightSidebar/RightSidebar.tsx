@@ -286,11 +286,9 @@ export function RightSidebar({
     // Continuité du focus : à l'ouverture le focus entre dans le tiroir ; à la
     // fermeture il revient au déclencheur qui l'a ouvert.
     useEffect(() => {
-        if (!isCompact) return;
-
-        if (!isFullyCollapsed) {
+        if (!isFullyCollapsed && !wasOpenRef.current) {
             asideRef.current?.focus();
-        } else if (wasOpenRef.current) {
+        } else if (isCompact && isFullyCollapsed && wasOpenRef.current) {
             triggerRef.current?.focus();
         }
 
@@ -336,7 +334,12 @@ export function RightSidebar({
             >
                 {isFullyCollapsed ? (
                     <>
-                        {collapsedContent ? <div className="right-sidebar__collapsed-content">{collapsedContent}</div> : <div
+                        {collapsedContent ? <div className="right-sidebar__collapsed-content" onClick={(event) => {
+                            if ((event.target as HTMLElement).closest('[data-right-sidebar-expand]')) {
+                                handleToggle();
+                                requestAnimationFrame(() => asideRef.current?.focus());
+                            }
+                        }}>{collapsedContent}</div> : <div
                             className="right-sidebar__collapsed-strip"
                             onPointerDown={startDragging}
                             onClick={() => {

@@ -234,6 +234,43 @@ body.right-sidebar-resizing {
     overflow: auto;
 }
 
+// Raccourci clavier/pointeur pour rouvrir directement les calendriers métier.
+.financial-calendar-rail {
+    display: flex;
+    width: 100%;
+    flex-direction: column;
+    align-items: center;
+    padding-top: $spacing-2;
+
+    &__button {
+        display: grid;
+        width: 44px;
+        height: 44px;
+        place-items: center;
+        padding: 0;
+        border: 1px solid transparent;
+        border-radius: $radius-md;
+        color: $color-text-secondary;
+        background: transparent;
+        cursor: pointer;
+
+        &:hover,
+        &:focus-visible,
+        &:active {
+            color: $color-primary;
+            background: $color-primary-light;
+            border-color: color-mix(in srgb, #{$color-primary} 38%, transparent);
+        }
+
+        &:focus-visible {
+            outline: 2px solid $color-primary;
+            outline-offset: 2px;
+        }
+    }
+
+    svg { width: 21px; height: 21px; fill:none; stroke:currentColor; stroke-width:1.8; stroke-linecap:round; stroke-linejoin:round; }
+}
+
 .right-sidebar__collapsed-resizer {
     position: absolute;
     top: 50%;

@@ -17,7 +17,10 @@
 .settings-calendar__picker .calendar__day-number { min-width:0; }
 .settings-rightbar__rail { display:flex; flex-direction:column; align-items:center; gap:8px; padding-top:8px; }
 .settings-rightbar__rail span,.settings-rightbar__rail a { display:grid; width:36px; height:36px; place-items:center; border:1px solid var(--color-border); border-radius:9px; color:var(--color-primary); background:var(--color-bg-card); }
-.settings-rightbar__rail a:hover,.settings-rightbar__rail a:focus-visible { border-color:var(--color-primary); outline:2px solid var(--color-focus-ring); outline-offset:2px; }
+.settings-rightbar__rail button { display:grid; width:36px; height:36px; place-items:center; padding:0; border:1px solid var(--color-border); border-radius:9px; color:var(--color-primary); background:var(--color-bg-card); cursor:pointer; }
+.settings-rightbar__rail a:hover,.settings-rightbar__rail button:hover { border-color:var(--color-primary); background:color-mix(in srgb, var(--color-primary) 12%, var(--color-bg-card)); }
+.settings-rightbar__rail a:focus-visible,.settings-rightbar__rail button:focus-visible { outline:3px solid var(--color-focus-ring); outline-offset:3px; }
+.settings-rightbar__rail a[aria-current='page'],.settings-rightbar__rail button[aria-pressed='true'],.settings-rightbar__rail button[aria-expanded='true'] { color:var(--color-primary); border-color:color-mix(in srgb, var(--color-primary) 50%, transparent); background:color-mix(in srgb, var(--color-primary) 15%, var(--color-bg-card)); box-shadow:0 0 0 1px color-mix(in srgb, var(--color-primary) 22%, transparent); }
 .settings-rightbar__rail svg { width:18px; height:18px; fill:none; stroke:currentColor; stroke-width:1.8; stroke-linecap:round; stroke-linejoin:round; }
 .settings-rate-history { margin:14px 0; padding:12px 14px; border:1px solid var(--color-border); border-radius:var(--radius-md, 8px); background:var(--color-bg-card); }
 .settings-rate-history h3 { margin:0; font-size:.95rem; }
