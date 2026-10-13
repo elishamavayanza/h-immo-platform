@@ -283,7 +283,7 @@ export function BatimentsTab({ buildings, parcels, cities, role, isLoading, erro
                 />
             </Modal>
 
-            <Modal isOpen={viewTarget !== null} onClose={() => setViewTarget(null)} title={viewTarget ? `Photos — ${viewTarget.name}` : 'Photos du bâtiment'} size="large" footer={<Button variant="outline" onClick={() => setViewTarget(null)}>Fermer</Button>}>
+            <Modal isOpen={viewTarget !== null} onClose={() => setViewTarget(null)} title={viewTarget ? `Photos — ${viewTarget.name}` : 'Photos du bâtiment'} size="large" expandable footer={<Button variant="outline" onClick={() => setViewTarget(null)}>Fermer</Button>}>
                 {viewTarget && <PhotoViewer entityUuid={viewTarget.id} entityType="building" entityName={viewTarget.name} />}
             </Modal>
         </Card>

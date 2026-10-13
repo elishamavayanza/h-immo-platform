@@ -283,7 +283,7 @@ export function ParcellesTab({ parcels, cities, role, isLoading, error, note, on
             </div>
             {body}
 
-            <Modal isOpen={mapTargetId !== null} onClose={() => setMapTargetId(null)} title="Carte des parcelles" size="large">
+            <Modal isOpen={mapTargetId !== null} onClose={() => setMapTargetId(null)} title="Carte des parcelles" size="large" expandable>
                 <ParcelMap parcels={mappedParcels} initialParcelId={mapTargetId} onClose={() => setMapTargetId(null)} />
             </Modal>
 
@@ -353,7 +353,7 @@ export function ParcellesTab({ parcels, cities, role, isLoading, error, note, on
                 />
             </Modal>
 
-            <Modal isOpen={viewTarget !== null} onClose={() => setViewTarget(null)} title={viewTarget ? `Photos — ${viewTarget.name}` : 'Photos de la parcelle'} size="large" footer={<Button variant="outline" onClick={() => setViewTarget(null)}>Fermer</Button>}>
+            <Modal isOpen={viewTarget !== null} onClose={() => setViewTarget(null)} title={viewTarget ? `Photos — ${viewTarget.name}` : 'Photos de la parcelle'} size="large" expandable footer={<Button variant="outline" onClick={() => setViewTarget(null)}>Fermer</Button>}>
                 {viewTarget && <PhotoViewer entityUuid={viewTarget.id} entityType="parcel" entityName={viewTarget.name} />}
             </Modal>
         </Card>
