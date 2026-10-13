@@ -98,6 +98,7 @@ export function MainLayout() {
     const { user, isAuthenticated, isLoading: isAuthLoading, logout } = useAuth();
     const { currentOrganization, platformRole, organizationRole, isLoading: isOrgLoading } = useOrganization();
     const [isMobileOpen, setIsMobileOpen] = useState(false);
+    const [isWorkspaceSwitcherOpen, setWorkspaceSwitcherOpen] = useState(false);
     const isMobile = useIsMobile();
     const isPortrait = useIsPortrait();
     const [isPageTransitionLoading, setPageTransitionLoading] = useState(false);
@@ -233,7 +234,7 @@ return (
                     header={(
                         <div className="main-layout__sidebar-header-stack">
                             <Brand organizationName={currentOrganization?.name} />
-                            {isMobile && <WorkspaceSwitcher mobile />}
+                            {isMobile && <WorkspaceSwitcher mobile open={isWorkspaceSwitcherOpen} onOpenChange={setWorkspaceSwitcherOpen} />}
                         </div>
                     )}
                     activeRoute={location.pathname}
@@ -250,7 +251,7 @@ return (
                     }}
                     footer={
                         <div className="main-layout__sidebar-footer">
-                            {!isMobile && <WorkspaceSwitcher />}
+                            {!isMobile && <WorkspaceSwitcher open={isWorkspaceSwitcherOpen} onOpenChange={setWorkspaceSwitcherOpen} />}
                             <UserMenu
                                 fullName={user.fullName}
                                 email={user.email}
