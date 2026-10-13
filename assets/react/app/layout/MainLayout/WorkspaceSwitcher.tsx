@@ -75,7 +75,7 @@ export function WorkspaceSwitcher({ mobile = false, open, onOpenChange }: { mobi
     if (platformRole || (workspaces.length < 2 && !canSwitchCity)) return null;
 
     const chooseWorkspace = async (workspace: SessionOrganizationMembership) => {
-        const keepOpenForCitySelection = mobile && workspace.role === 'admin_ville';
+        const keepOpenForCitySelection = workspace.role === 'admin_ville';
         if (`${workspace.uuid}:${workspace.role}` === currentKey || isSwitching) {
             onOpenChange(keepOpenForCitySelection);
             return;
