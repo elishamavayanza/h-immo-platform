@@ -44,6 +44,9 @@ final class OrganizationSummaryItem
 
         #[OA\Property(description: 'Impayés', type: 'number', format: 'decimal')]
         public string $arrears,
+
+        #[OA\Property(description: 'Devise de référence de l’organisation', nullable: true, example: 'CDF')]
+        public ?string $currency = null,
     ) {
     }
 }

@@ -6,6 +6,7 @@ import { Spinner } from '../../../../components/UI/Spinner';
 import { EmptyState } from '../../../../components/Data/EmptyState';
 import { Select } from '../../../../components/Forms/Select';
 import { ReportPeriodFilter } from '../../../shared/reports/components/ReportPeriodFilter';
+import { isValidPeriodRange } from '../../../shared/reports/periodPresets';
 import { NoAssignedCityState } from '../../../shared/components/NoAssignedCityState';
 import { canDo } from '../../../shared/permissions';
 import { useReports } from '../hooks/useReports';
@@ -40,6 +41,7 @@ export function ReportsPage() {
 
     const [isExporting, setExporting] = useState(false);
     const [exportError, setExportError] = useState<string | null>(null);
+    const hasValidPeriod = isValidPeriodRange({ from: periodFrom, to: periodTo });
 
     if (citiesLoading) {
         return <div className="reports-loading" aria-busy="true"><Spinner size="large" /><span>Chargement de votre périmètre…</span></div>;
@@ -50,7 +52,10 @@ export function ReportsPage() {
     }
 
     const handleExportPdf = async () => {
-        if (!cityUuid || isExporting) return;
+        if (!cityUuid || isExporting || !hasValidPeriod) {
+            if (!hasValidPeriod) setExportError('Choisissez une date de début et une date de fin valides avant de générer le PDF.');
+            return;
+        }
         setExporting(true);
         setExportError(null);
         try {
@@ -107,12 +112,13 @@ export function ReportsPage() {
                 <div className="reports-page__toolbar-actions">
                     <span className="reports-page__period-label">Période affichée : {data.periodCovered.replace(' to ', ' → ')}</span>
                     {canDo(organizationRole, 'export_report') && (
-                        <Button variant="outline" onClick={() => void handleExportPdf()} disabled={isExporting} aria-busy={isExporting}>
+                        <Button variant="outline" onClick={() => void handleExportPdf()} disabled={isExporting || !hasValidPeriod} aria-busy={isExporting}>
                             {isExporting ? 'Export…' : 'Exporter en PDF'}
                         </Button>
                     )}
                 </div>
             </section>
+            {!hasValidPeriod && <p className="reports-empty" role="alert">Choisissez une période complète pour générer le PDF.</p>}
             {exportError && <p className="reports-empty" role="alert">{exportError}</p>}
             <ReportsOverview data={data} />
         </main>

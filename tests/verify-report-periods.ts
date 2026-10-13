@@ -14,6 +14,7 @@ import {
     formatIsoDate,
     formatPeriodLabel,
     findMatchingPreset,
+    isValidPeriodRange,
 } from '../assets/react/features/shared/reports/periodPresets.ts';
 
 let checks = 0;
@@ -37,6 +38,23 @@ function deepEqual(actual: unknown, expected: unknown, label: string): void {
 }
 
 console.log('\n=== verify-report-periods.ts ===\n');
+
+// --- today / this_week ---
+deepEqual(
+    computePeriodPreset('today', new Date(2026, 9, 13)),
+    { from: '2026-10-13', to: '2026-10-13' },
+    'today : même borne début et fin'
+);
+deepEqual(
+    computePeriodPreset('this_week', new Date(2026, 9, 13)), // mardi
+    { from: '2026-10-12', to: '2026-10-18' },
+    'this_week : semaine lundi-dimanche'
+);
+deepEqual(
+    computePeriodPreset('this_week', new Date(2027, 0, 1)), // vendredi, traversée année
+    { from: '2026-12-28', to: '2027-01-03' },
+    'this_week : semaine traversant une année'
+);
 
 // --- computePeriodPreset : this_month ---
 deepEqual(
@@ -97,6 +115,12 @@ check('formatPeriodLabel : seule borne basse', formatPeriodLabel({ from: '2026-0
 check('formatPeriodLabel : seule borne haute', formatPeriodLabel({ from: '', to: '2026-09-30' }) === '… → 30/09/2026');
 check('formatPeriodLabel : aucune borne', formatPeriodLabel({ from: '', to: '' }) === 'Période complète');
 
+// --- export PDF : sélection de période obligatoire ---
+check('isValidPeriodRange : dates valides et ordonnées', isValidPeriodRange({ from: '2026-01-01', to: '2026-12-31' }));
+check('isValidPeriodRange : période partielle refusée', !isValidPeriodRange({ from: '2026-01-01', to: '' }));
+check('isValidPeriodRange : période inversée refusée', !isValidPeriodRange({ from: '2026-12-31', to: '2026-01-01' }));
+check('isValidPeriodRange : date impossible refusée', !isValidPeriodRange({ from: '2026-02-30', to: '2026-03-01' }));
+
 // --- findMatchingPreset ---
 const refNov = new Date(2026, 10, 15); // 15 nov 2026
 check('findMatchingPreset : this_month détecté', findMatchingPreset('2026-11-01', '2026-11-30', refNov) === 'this_month');
@@ -105,7 +129,9 @@ check('findMatchingPreset : intervalle personnalisé -> null', findMatchingPrese
 check('findMatchingPreset : vides -> null', findMatchingPreset('', '', refNov) === null);
 
 // --- PERIOD_PRESETS array ---
-check('PERIOD_PRESETS : 4 presets définis', PERIOD_PRESETS.length === 4);
+check('PERIOD_PRESETS : 6 presets définis', PERIOD_PRESETS.length === 6);
+check('PERIOD_PRESETS : today inclus', PERIOD_PRESETS.some(p => p.id === 'today'));
+check('PERIOD_PRESETS : this_week inclus', PERIOD_PRESETS.some(p => p.id === 'this_week'));
 check('PERIOD_PRESETS : this_month inclus', PERIOD_PRESETS.some(p => p.id === 'this_month'));
 check('PERIOD_PRESETS : last_month inclus', PERIOD_PRESETS.some(p => p.id === 'last_month'));
 check('PERIOD_PRESETS : this_quarter inclus', PERIOD_PRESETS.some(p => p.id === 'this_quarter'));

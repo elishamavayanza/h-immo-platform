@@ -3,7 +3,7 @@ import { ReportsOverview } from '../components/ReportsOverview';
 import '../../../../../styles/pages/super_admin/reports/_reports.scss';
 
 export function ReportsPage() {
-    const { data, isLoading, error, period, setPeriod, downloadPdf } = useReports();
+    const { data, isLoading, error, period, setPeriod, downloadPdf, isExporting } = useReports();
 
     return (
         <ReportsOverview
@@ -13,6 +13,7 @@ export function ReportsPage() {
             period={period}
             setPeriod={setPeriod}
             downloadPdf={downloadPdf}
+            isExporting={isExporting}
         />
     );
 }
