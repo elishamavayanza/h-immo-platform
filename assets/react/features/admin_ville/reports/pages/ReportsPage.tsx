@@ -4,7 +4,8 @@ import { useOrganization } from '../../../../app/providers/OrganizationProvider'
 import { Button } from '../../../../components/UI/Button';
 import { Spinner } from '../../../../components/UI/Spinner';
 import { EmptyState } from '../../../../components/Data/EmptyState';
-import { DateRangePicker } from '../../../../components/Forms/DateRangePicker';
+import { Select } from '../../../../components/Forms/Select';
+import { ReportPeriodFilter } from '../../../shared/reports/components/ReportPeriodFilter';
 import { NoAssignedCityState } from '../../../shared/components/NoAssignedCityState';
 import { canDo } from '../../../shared/permissions';
 import { useReports } from '../hooks/useReports';
@@ -27,6 +28,8 @@ export function ReportsPage() {
         error,
         reload,
         cityUuid,
+        setCityUuid,
+        cities,
         periodFrom,
         setPeriodFrom,
         periodTo,
@@ -85,13 +88,22 @@ export function ReportsPage() {
             </header>
             <section className="reports-page__toolbar" aria-label="Filtres du rapport">
                 <div className="reports-page__date-filter">
-                    <DateRangePicker
-                        startDate={periodFrom}
-                        endDate={periodTo}
-                        fullWidth
-                        onChange={(range) => { setPeriodFrom(range.startDate); setPeriodTo(range.endDate); }}
+                    <ReportPeriodFilter
+                        periodFrom={periodFrom}
+                        periodTo={periodTo}
+                        onChange={(range) => { setPeriodFrom(range.from); setPeriodTo(range.to); }}
                     />
                 </div>
+                {cities.length > 1 && (
+                    <div className="reports-page__city-filter">
+                        <Select
+                            aria-label="Choisir la ville"
+                            value={cityUuid}
+                            onChange={(event) => setCityUuid(event.target.value)}
+                            options={cities.map((city) => ({ value: city.id, label: city.name }))}
+                        />
+                    </div>
+                )}
                 <div className="reports-page__toolbar-actions">
                     <span className="reports-page__period-label">Période affichée : {data.periodCovered.replace(' to ', ' → ')}</span>
                     {canDo(organizationRole, 'export_report') && (

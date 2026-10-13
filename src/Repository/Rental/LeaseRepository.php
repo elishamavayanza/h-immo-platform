@@ -131,6 +131,44 @@ class LeaseRepository extends ServiceEntityRepository
     }
 
     /**
+     * Nombre d'unités occupées à une date, en une requête bornée aux villes.
+     * Les baux résiliés restent comptés jusqu'à leur vraie date de résiliation,
+     * même si leur statut n'est plus ACTIVE aujourd'hui ; les brouillons et
+     * baux annulés ne sont jamais considérés comme une occupation.
+     *
+     * @param list<int> $cityIds
+     */
+    public function countOccupiedUnitsByCitiesAtDate(array $cityIds, int $organizationId, \DateTimeImmutable $date): int
+    {
+        if ($cityIds === []) {
+            return 0;
+        }
+
+        return (int) $this->createQueryBuilder('l')
+            ->select('COUNT(DISTINCT u.id)')
+            ->innerJoin('l.unit', 'u')
+            ->innerJoin('u.building', 'b')
+            ->innerJoin('b.parcel', 'p')
+            ->andWhere('p.city IN (:cities)')
+            ->andWhere('l.deletedAt IS NULL')
+            ->andWhere('l.organization = :organization')
+            ->andWhere('u.deletedAt IS NULL')
+            ->andWhere('b.deletedAt IS NULL')
+            ->andWhere('p.deletedAt IS NULL')
+            ->andWhere('l.status IN (:occupancyStatuses)')
+            ->andWhere('l.startDate <= :atDate')
+            ->andWhere('(l.endDate IS NULL OR l.endDate >= :atDate)')
+            ->andWhere('(l.status != :terminated OR l.terminationDate IS NULL OR l.terminationDate >= :atDate)')
+            ->setParameter('cities', $cityIds)
+            ->setParameter('organization', $organizationId)
+            ->setParameter('occupancyStatuses', [LeaseStatus::ACTIVE, LeaseStatus::EXPIRED, LeaseStatus::TERMINATED])
+            ->setParameter('terminated', LeaseStatus::TERMINATED)
+            ->setParameter('atDate', $date)
+            ->getQuery()
+            ->getSingleScalarResult();
+    }
+
+    /**
      * Existe-t-il déjà un bail actif sur cette unité ?
      *
      * Utilisé pour lever un conflit explicite (HTTP 409) sans charger

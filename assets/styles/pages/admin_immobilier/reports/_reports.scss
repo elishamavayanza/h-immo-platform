@@ -1,9 +1,31 @@
 @use '../../../baseVariables/variables' as *;
 @use '../../shared/reports';
 
+.reports-page__toolbar {
+    display: grid;
+    grid-template-columns: minmax(280px, 1fr) minmax(180px, 240px) minmax(0, auto);
+    align-items: end;
+    gap: $spacing-4;
+    padding: $spacing-3 $spacing-4;
+    border: 1px solid $color-border;
+    border-radius: $radius-lg;
+    background: $color-bg-card;
+}
+
+.reports-page__date-filter { width: 100%; min-width: 0; }
+.reports-page__city-filter { min-width: 0; }
+.reports-page__toolbar-actions { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: $spacing-3; min-width: 0; }
+
 /* Libellé de période réelle (le rapport affiche ses bornes backend). */
 .reports-page__period-label {
     color: $color-text-secondary;
     font-size: $font-size-xs;
     white-space: nowrap;
+}
+
+@media (max-width: 900px) {
+    .reports-page__toolbar { grid-template-columns: minmax(0, 1fr); gap: $spacing-3; }
+    .reports-page__date-filter { width: 100%; }
+    .reports-page__toolbar-actions { align-items: stretch; flex-direction: column; }
+    .reports-page__toolbar-actions .btn { width: 100%; }
 }

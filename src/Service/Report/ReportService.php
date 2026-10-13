@@ -55,6 +55,9 @@ use App\Repository\Staff\WorkerAssignmentRepository;
 use App\Repository\Staff\WorkerRepository;
 use App\Security\SecurityServiceInterface;
 use App\Service\System\DateTimeService;
+use Symfony\Component\HttpKernel\Exception\BadRequestHttpException;
+use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
+use Symfony\Component\Uid\Uuid;
 
 /**
  * ReportService
@@ -97,6 +100,7 @@ final readonly class ReportService
         $this->securityService->checkOrganizationAccess($organization, \App\Security\SecurityAction::VIEW);
 
         $cities = $this->cityRepository->findActiveByOrganization($organization);
+        $cities = $this->applyCityFilter($cities, $filter->cityUuid);
         $cityIds = array_map(fn(City $c) => $c->getId(), $cities);
 
         $periodFrom = $filter->periodFrom ?? $this->dateTime->startOfCurrentYear();
@@ -146,6 +150,7 @@ final readonly class ReportService
         $this->securityService->checkOrganizationAccess($organization, \App\Security\SecurityAction::VIEW);
 
         $cities = $this->cityRepository->findActiveByOrganization($organization);
+        $cities = $this->applyCityFilter($cities, $filter->cityUuid);
         $cityIds = array_map(fn(City $c) => $c->getId(), $cities);
 
         $periodFrom = $filter->periodFrom ?? $this->dateTime->startOfCurrentYear();
@@ -163,11 +168,16 @@ final readonly class ReportService
         $response->arrears = $this->buildArrears($organization->getId(), $cityIds, $periodTo);
 
         if ($filter->includePropertyExpenses) {
-            $response->propertyExpenses = $this->buildExpensesByParcel($cityIds, $periodFrom, $periodTo);
+            $response->propertyExpenses = $this->buildExpensesByPropertyLevel($cityIds, $periodFrom, $periodTo);
         }
 
         if ($filter->includeOccupancyEvolution) {
-            $response->occupancyEvolution = $this->buildOccupancyEvolution($cityIds, $periodFrom, $periodTo);
+            $response->occupancyEvolution = $this->buildOccupancyEvolution(
+                $cityIds,
+                $organization->getId(),
+                $periodFrom,
+                $periodTo,
+            );
         }
 
         $totalUnits = 0;
@@ -205,7 +215,18 @@ final readonly class ReportService
         $response->occupancyByParcel = $this->buildOccupancyByParcel($cityIds);
         $response->occupancyByBuilding = $this->buildOccupancyByBuilding($cityIds);
         $response->arrears = $this->buildArrears(null, $cityIds, $periodTo);
-        $response->cityExpenses = $this->buildExpensesByParcel($cityIds, $periodFrom, $periodTo);
+        $response->cityExpenses = array_map(
+            static fn(ExpenseSummaryItem $item) => new ExpenseSummaryItem(
+                category: $item->category,
+                level: 'city',
+                levelLabel: $city->getName(),
+                count: $item->count,
+                totalAmount: $item->totalAmount,
+                currency: $item->currency,
+                levelUuid: $city->getUuid()->toRfc4122(),
+            ),
+            $this->buildExpensesByCategory(null, $cityIds, $periodFrom, $periodTo),
+        );
 
         if ($filter->includeWorkers) {
             $response->workers = $this->buildWorkerActivity($cityIds);
@@ -887,42 +908,38 @@ final readonly class ReportService
     }
 
     /** @return list<OccupancyItem> */
-    private function buildOccupancyEvolution(array $cityIds, \DateTimeImmutable $from, \DateTimeImmutable $to): array
+    private function buildOccupancyEvolution(
+        array $cityIds,
+        int $organizationId,
+        \DateTimeImmutable $from,
+        \DateTimeImmutable $to,
+    ): array
     {
+        $today = $this->dateTime->today();
+
+        if ($cityIds === [] || $from > $today) {
+            return [];
+        }
+
         // Générer l'évolution de l'occupation mois par mois
         $items = [];
         $current = $from->modify('first day of this month');
-        $endMonth = $to->modify('first day of this month');
+        $endMonth = ($to > $today ? $today : $to)->modify('first day of this month');
+        $totalUnits = $this->countUnitsByCityIds($cityIds);
 
         while ($current <= $endMonth) {
-            $totalUnits = 0;
-            $occupiedUnits = 0;
-
-            $cities = $this->cityRepository->findInOrganization($this->cityRepository->find($cityIds[0])->getOrganization());
-
-            foreach ($cities as $city) {
-                if (!in_array($city->getId(), $cityIds, true)) {
-                    continue;
-                }
-                $parcels = $this->parcelRepository->findByCity($city);
-
-                foreach ($parcels as $parcel) {
-                    $buildings = $this->buildingRepository->findByParcel($parcel);
-
-                    foreach ($buildings as $building) {
-                        $units = $this->unitRepository->findByBuilding($building);
-                        $totalUnits += count($units);
-
-                        foreach ($units as $unit) {
-                            // Un bail est actif pour ce mois si sa période le couvre
-                            $activeLease = $this->leaseRepository->findActiveLeaseForUnitAtDate($unit, $current);
-                            if ($activeLease !== null) {
-                                $occupiedUnits++;
-                            }
-                        }
-                    }
-                }
+            // L'agrégat est borné à toutes les villes déjà autorisées et
+            // interroge les baux en une seule requête par mois. Les baux
+            // résiliés/expirés gardent leur période historique utile.
+            $snapshotDate = $current->modify('last day of this month');
+            if ($snapshotDate > $today) {
+                $snapshotDate = $today;
             }
+            if ($snapshotDate > $to) {
+                $snapshotDate = $to;
+            }
+
+            $occupiedUnits = $this->leaseRepository->countOccupiedUnitsByCitiesAtDate($cityIds, $organizationId, $snapshotDate);
 
             $items[] = new OccupancyItem(
                 level: 'month',
@@ -1003,6 +1020,7 @@ final readonly class ReportService
         $items = [];
         $referenceCurrency = $this->getReferenceCurrency($organizationId, $cityIds);
         $totalsByCategory = [];
+        $countsByCategory = [];
         foreach ($results as $row) {
             // `e.category` est mappée sur l'enum `ExpenseCategory` : Doctrine
             // la rend comme telle, alors que le DTO attend une chaîne (il
@@ -1015,13 +1033,14 @@ final readonly class ReportService
             $currencyCode = $row['currency'] instanceof \BackedEnum ? $row['currency']->value : (string) $row['currency'];
             $amount = $this->convertToReferenceCurrency((string) $row['total'], Currency::from($currencyCode), $referenceCurrency, $this->periodStart($row['period'] ?? null, $periodFrom), isset($row['cityId']) ? (int) $row['cityId'] : null);
             $totalsByCategory[$category] = bcadd($totalsByCategory[$category] ?? '0.00', $amount, 2);
+            $countsByCategory[$category] = ($countsByCategory[$category] ?? 0) + (int) $row['count'];
         }
         foreach ($totalsByCategory as $category => $amount) {
             $items[] = new ExpenseSummaryItem(
                 category: $category,
                 level: 'organization',
                 levelLabel: 'Organisation',
-                count: 0, // Would need separate count query
+                count: $countsByCategory[$category],
                 totalAmount: $amount,
                 currency: $referenceCurrency,
             );
@@ -1054,8 +1073,9 @@ final readonly class ReportService
             $currencyCode = $row['currency'] instanceof \BackedEnum ? $row['currency']->value : (string) $row['currency'];
             $amount = $this->convertToReferenceCurrency((string) $row['total'], Currency::from($currencyCode), $referenceCurrency, $this->periodStart($row['period'] ?? null, $periodFrom), isset($row['cityId']) ? (int) $row['cityId'] : null);
             $uuid = (string) $row['cityUuid'];
-            $totalsByCity[$uuid] ??= ['cityUuid' => $uuid, 'cityName' => (string) $row['cityName'], 'amount' => '0.00'];
+            $totalsByCity[$uuid] ??= ['cityUuid' => $uuid, 'cityName' => (string) $row['cityName'], 'amount' => '0.00', 'count' => 0];
             $totalsByCity[$uuid]['amount'] = bcadd($totalsByCity[$uuid]['amount'], $amount, 2);
+            $totalsByCity[$uuid]['count'] += (int) $row['count'];
         }
         foreach ($totalsByCity as $city) {
             $items[] = new ExpenseSummaryItem(
@@ -1063,13 +1083,69 @@ final readonly class ReportService
                 level: 'city',
                 levelUuid: $city['cityUuid'],
                 levelLabel: $city['cityName'],
-                count: 0,
+                count: $city['count'],
                 totalAmount: $city['amount'],
                 currency: $referenceCurrency,
             );
         }
 
         return $items;
+    }
+
+    /** @return list<ExpenseSummaryItem> */
+    private function buildExpensesByPropertyLevel(
+        array $cityIds,
+        \DateTimeImmutable $periodFrom,
+        \DateTimeImmutable $periodTo,
+    ): array {
+        if ($cityIds === []) {
+            return [];
+        }
+
+        $rows = $this->expenseRepository->sumByPropertyLevel($cityIds, $periodFrom, $periodTo);
+        $referenceCurrency = $this->getReferenceCurrency(null, $cityIds);
+        $totals = [];
+
+        foreach ($rows as $row) {
+            $category = $row['category'] instanceof \BackedEnum
+                ? (string) $row['category']->value
+                : (string) $row['category'];
+            $currencyCode = $row['currency'] instanceof \BackedEnum
+                ? $row['currency']->value
+                : (string) $row['currency'];
+            $level = (string) $row['level'];
+            $targetId = (int) $row['targetId'];
+            $key = $level . ':' . $targetId . ':' . $category;
+            $amount = $this->convertToReferenceCurrency(
+                (string) $row['total'],
+                Currency::from($currencyCode),
+                $referenceCurrency,
+                $this->periodStart($row['period'] ?? null, $periodFrom),
+                (int) $row['cityId'],
+            );
+
+            $totals[$key] ??= [
+                'category' => $category,
+                'level' => $level,
+                'levelLabel' => (string) $row['levelLabel'],
+                'amount' => '0.00',
+                'count' => 0,
+            ];
+            $totals[$key]['amount'] = bcadd($totals[$key]['amount'], $amount, 2);
+            $totals[$key]['count'] += (int) $row['count'];
+        }
+
+        return array_map(
+            fn(array $item) => new ExpenseSummaryItem(
+                category: $item['category'],
+                level: $item['level'],
+                levelLabel: $item['levelLabel'],
+                count: $item['count'],
+                totalAmount: $item['amount'],
+                currency: $referenceCurrency,
+            ),
+            array_values($totals),
+        );
     }
 
     /** @return list<ExpenseSummaryItem> */
@@ -1224,27 +1300,7 @@ final readonly class ReportService
 
     private function countUnitsByCityIds(array $cityIds): int
     {
-        if (empty($cityIds)) {
-            return 0;
-        }
-
-        $count = 0;
-        $cities = $this->cityRepository->findInOrganization($this->cityRepository->find($cityIds[0])->getOrganization());
-
-        foreach ($cities as $city) {
-            if (!in_array($city->getId(), $cityIds, true)) {
-                continue;
-            }
-            $parcels = $this->parcelRepository->findByCity($city);
-            foreach ($parcels as $parcel) {
-                $buildings = $this->buildingRepository->findByParcel($parcel);
-                foreach ($buildings as $building) {
-                    $count += count($this->unitRepository->findByBuilding($building));
-                }
-            }
-        }
-
-        return $count;
+        return $this->unitRepository->countByCityIds($cityIds);
     }
 
     private function calculateOccupancyRate(array $cityIds): float
@@ -1388,6 +1444,42 @@ final readonly class ReportService
             $total = bcadd($total, $converted, 2);
         }
         return $total;
+    }
+
+    /**
+     * Restreint une liste de villes déjà autorisées à la ville demandée.
+     *
+     * Le filtre `cityUuid` est une **intention** de l'appelant, pas une
+     * autorisation : on ne l'applique que s'il désigne une ville présente
+     * dans le périmètre déjà résolu (`$cities`), c'est-à-dire une ville
+     * active de l'organisation courante. Une ville d'une autre organisation
+     * — ou supprimée — est traitée comme introuvable (404) plutôt que
+     * refusée (403), pour ne pas confirmer son existence à un appelant qui
+     * tente d'énumérer des UUID.
+     *
+     * @param list<City> $cities villes du périmètre autorisé
+     *
+     * @return list<City>
+     */
+    private function applyCityFilter(array $cities, ?string $cityUuid): array
+    {
+        if ($cityUuid === null || $cityUuid === '') {
+            return $cities;
+        }
+
+        try {
+            $parsed = Uuid::fromString($cityUuid);
+        } catch (\InvalidArgumentException) {
+            throw new BadRequestHttpException('Le paramètre "cityUuid" n\'est pas un UUID valide.');
+        }
+
+        foreach ($cities as $city) {
+            if ($city->getUuid()->equals($parsed)) {
+                return [$city];
+            }
+        }
+
+        throw new NotFoundHttpException('Ville introuvable dans le périmètre du rapport.');
     }
 
     /**

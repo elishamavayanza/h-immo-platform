@@ -4,8 +4,8 @@ import { useOrganization } from '../../../../app/providers/OrganizationProvider'
 import { Button } from '../../../../components/UI/Button';
 import { Spinner } from '../../../../components/UI/Spinner';
 import { EmptyState } from '../../../../components/Data/EmptyState';
-import { DateRangePicker } from '../../../../components/Forms/DateRangePicker';
 import { Select } from '../../../../components/Forms/Select';
+import { ReportPeriodFilter } from '../../../shared/reports/components/ReportPeriodFilter';
 import { useReports } from '../hooks/useReports';
 import { ReportsOverview } from '../components/ReportsOverview';
 import { downloadPatronReportPdf } from '../services/reportsService';
@@ -78,11 +78,10 @@ export function ReportsPage() {
             </header>
             <section className="reports-page__toolbar" aria-label="Filtres du rapport">
                 <div className="reports-page__date-filter">
-                    <DateRangePicker
-                        startDate={periodFrom}
-                        endDate={periodTo}
-                        fullWidth
-                        onChange={(range) => { setPeriodFrom(range.startDate); setPeriodTo(range.endDate); }}
+                    <ReportPeriodFilter
+                        periodFrom={periodFrom}
+                        periodTo={periodTo}
+                        onChange={(range) => { setPeriodFrom(range.from); setPeriodTo(range.to); }}
                     />
                 </div>
                 <div className="reports-page__city-filter">

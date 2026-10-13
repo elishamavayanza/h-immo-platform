@@ -6,6 +6,7 @@ namespace App\Dto\Request\Report;
 
 use OpenApi\Attributes as OA;
 use Symfony\Component\Validator\Constraints as Assert;
+use Symfony\Component\Validator\Context\ExecutionContextInterface;
 
 #[OA\Schema(
     title: 'ReportFilterDto',
@@ -53,5 +54,26 @@ class ReportFilterDto
         #[Assert\Choice(choices: ['json', 'pdf'])]
         public string $format = 'json',
     ) {
+    }
+
+    /**
+     * Une période inversée (`periodFrom` postérieure à `periodTo`) ne doit
+     * jamais produire un rapport vide silencieusement : c'est une requête
+     * invalide, répondue en 422 avec le champ fautif, comme toute violation
+     * de validation. Les dates illisibles, elles, sont déjà refusées en amont
+     * par la dénormalisation de `#[MapQueryString]`.
+     */
+    #[Assert\Callback]
+    public function validatePeriodBounds(ExecutionContextInterface $context): void
+    {
+        if ($this->periodFrom === null || $this->periodTo === null) {
+            return;
+        }
+
+        if ($this->periodFrom > $this->periodTo) {
+            $context->buildViolation('La date de début doit être antérieure ou égale à la date de fin.')
+                ->atPath('periodFrom')
+                ->addViolation();
+        }
     }
 }

@@ -24,6 +24,7 @@ use App\Security\SecurityServiceInterface;
 use App\Security\SecurityAction;
 use App\Service\Report\ReportService;
 use App\Service\System\DateTimeService;
+use App\Service\System\FileUploadService;
 use App\Trait\FeedbackTrait;
 use Nelmio\ApiDocBundle\Attribute\Model;
 use OpenApi\Attributes as OA;
@@ -75,6 +76,7 @@ final class ReportController extends AbstractController
         private readonly SecurityServiceInterface $securityService,
         private readonly DateTimeService $dateTime,
         private readonly RequestStack $requestStack,
+        private readonly FileUploadService $fileUploadService,
     ) {
     }
 
@@ -133,10 +135,14 @@ final class ReportController extends AbstractController
 
         $format = $this->getFormatFromRequest();
         if ($format === 'pdf') {
-            return $this->renderPdf('report/patron.html.twig', [
-                'report' => $report,
-                'title' => 'Rapport Organisation - ' . $organization->getName(),
-            ]);
+            return $this->renderPdf('report/patron.html.twig', $this->buildPdfParams(
+                report: $report,
+                title: 'Rapport d\'activité — ' . $organization->getName(),
+                reportType: 'Rapport organisation (Patron)',
+                scope: 'Organisation entière',
+                organization: $organization,
+                cityName: $this->resolveCityName($filter->cityUuid, $organization),
+            ));
         }
 
         return $this->json($report);
@@ -191,10 +197,14 @@ final class ReportController extends AbstractController
 
         $format = $this->getFormatFromRequest();
         if ($format === 'pdf') {
-            return $this->renderPdf('report/admin_immobilier.html.twig', [
-                'report' => $report,
-                'title' => 'Rapport Immobilier - ' . $organization->getName(),
-            ]);
+            return $this->renderPdf('report/admin_immobilier.html.twig', $this->buildPdfParams(
+                report: $report,
+                title: 'Rapport immobilier — ' . $organization->getName(),
+                reportType: 'Rapport opérationnel (Admin immobilier)',
+                scope: 'Patrimoine de l\'organisation',
+                organization: $organization,
+                cityName: $this->resolveCityName($filter->cityUuid, $organization),
+            ));
         }
 
         return $this->json($report);
@@ -252,10 +262,14 @@ final class ReportController extends AbstractController
 
         $format = $this->getFormatFromRequest();
         if ($format === 'pdf') {
-            return $this->renderPdf('report/admin_ville.html.twig', [
-                'report' => $report,
-                'title' => 'Rapport Ville - ' . $city->getName(),
-            ]);
+            return $this->renderPdf('report/admin_ville.html.twig', $this->buildPdfParams(
+                report: $report,
+                title: 'Rapport de ville — ' . $city->getName(),
+                reportType: 'Rapport de ville (Admin ville)',
+                scope: 'Ville : ' . $city->getName(),
+                organization: $city->getOrganization(),
+                cityName: $city->getName(),
+            ));
         }
 
         return $this->json($report);
@@ -301,9 +315,12 @@ final class ReportController extends AbstractController
             return $this->renderPdf('report/super_admin.html.twig', [
                 'report' => $report,
                 'title' => 'Rapport Plateforme H-Immo',
+                'reportType' => 'Rapport plateforme (Super administrateur)',
+                'scope' => 'Toutes les organisations',
+                'appliedFilters' => [],
+                'generatedAt' => $this->dateTime->now(),
             ]);
         }
-
         return $this->json($report);
     }
 
@@ -439,12 +456,117 @@ final class ReportController extends AbstractController
         return [$organization, null];
     }
 
+    /**
+     * Prépare le contexte administratif commun aux PDF de rapport.
+     *
+     * Le document doit être exploitable seul : identité de l'organisation,
+     * périmètre du rapport, période réellement couverte (telle que calculée
+     * par le service, pas celle demandée), filtres appliqués et date de
+     * génération. Les informations absentes (adresse, logo) sont simplement
+     * omises, jamais inventées.
+     *
+     * @param list<string> $extraFilters
+     *
+     * @return array<string, mixed>
+     */
+    private function buildPdfParams(
+        object $report,
+        string $title,
+        string $reportType,
+        string $scope,
+        Organization $organization,
+        ?string $cityName = null,
+        array $extraFilters = [],
+    ): array {
+        $appliedFilters = $extraFilters;
+
+        if ($cityName !== null && $cityName !== '') {
+            $appliedFilters[] = 'Ville : ' . $cityName;
+        }
+
+        return [
+            'report' => $report,
+            'title' => $title,
+            'reportType' => $reportType,
+            'scope' => $scope,
+            'organization' => $organization,
+            'organizationLogo' => $this->buildLogoDataUri($organization->getLogo()),
+            'appliedFilters' => $appliedFilters,
+            'generatedAt' => $this->dateTime->now(),
+            'netResult' => $report instanceof PatronReportResponse
+                ? bcsub($report->totalRevenues, $report->totalExpenses, 2)
+                : null,
+        ];
+    }
+
+    /**
+     * Encode le logo de l'organisation en data URI pour dompdf.
+     *
+     * On lit le fichier plutôt que de pointer vers `/uploads/...` : dompdf
+     * charge les images distantes avec `isRemoteEnabled`, mais une URL
+     * relative dépend du `basePath` du rendu, ce qui rend le PDF fragile
+     * selon l'environnement (CLI, worker, sous-dossier). Un data URI est
+     * autonome. Un logo introuvable renvoie `null` : le PDF part sans image,
+     * sans échouer.
+     */
+    private function buildLogoDataUri(?string $logo): ?string
+    {
+        if ($logo === null || $logo === '') {
+            return null;
+        }
+
+        $absolute = $this->fileUploadService->resolveInsideUploads($logo);
+
+        if ($absolute === null || !is_file($absolute)) {
+            return null;
+        }
+
+        $contents = file_get_contents($absolute);
+
+        if ($contents === false) {
+            return null;
+        }
+
+        $mime = mime_content_type($absolute) ?: 'image/png';
+
+        return 'data:' . $mime . ';base64,' . base64_encode($contents);
+    }
+
+    /**
+     * Nom de la ville filtrée, si le filtre désigne une ville du périmètre.
+     *
+     * N'est appelé que sur le chemin PDF, après que le service a déjà validé
+     * l'appartenance de la ville à l'organisation. Sert uniquement à
+     * l'affichage des filtres appliqués.
+     */
+    private function resolveCityName(?string $cityUuid, Organization $organization): ?string
+    {
+        if ($cityUuid === null || $cityUuid === '') {
+            return null;
+        }
+
+        $city = $this->reportService->getCityByUuid($cityUuid);
+
+        if ($city === null || $city->getOrganization()->getId() !== $organization->getId()) {
+            return null;
+        }
+
+        return $city->getName();
+    }
+
     private function renderPdf(string $template, array $params): Response
     {
-        $html = $this->renderView($template, $params);
+        $options = new \Dompdf\Options();
+        // Le logo est embarqué en data URI : les images distantes sont un
+        // repli, pas une dépendance de rendu.
+        $options->set('isRemoteEnabled', true);
+        $options->set('isHtml5ParserEnabled', true);
+        $options->set('defaultFont', 'DejaVu Sans');
+        // Numérotation des pages par le script `page_text` du gabarit.
+        $options->set('isPhpEnabled', true);
 
-        $dompdf = new \Dompdf\Dompdf();
-        $dompdf->loadHtml($html);
+        $dompdf = new \Dompdf\Dompdf($options);
+        $dompdf->loadHtml($this->renderView($template, $params));
         $dompdf->setPaper('A4', 'landscape');
         $dompdf->render();
 

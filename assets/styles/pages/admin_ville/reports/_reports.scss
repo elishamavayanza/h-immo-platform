@@ -2,8 +2,8 @@
 @use '../../../baseVariables/variables' as *;
 
 .reports-page__toolbar {
-    display: grid;
-    grid-template-columns: minmax(280px, 1fr) minmax(0, auto);
+    display: flex;
+    flex-wrap: wrap;
     align-items: end;
     gap: $spacing-4;
     padding: $spacing-3 $spacing-4;
@@ -12,13 +12,15 @@
     background: $color-bg-card;
 }
 
-.reports-page__date-filter { width: min(100%, 620px); min-width: 0; }
-.reports-page__toolbar-actions { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: $spacing-3; min-width: 0; }
+.reports-page__date-filter { flex: 1 1 320px; min-width: 0; }
+.reports-page__city-filter { flex: 0 1 220px; min-width: 180px; }
+.reports-page__toolbar-actions { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: $spacing-3; min-width: 0; margin-left: auto; }
 .reports-page__period-label { color: $color-text-muted; font-size: $font-size-xs; }
 
 @media (max-width: 900px) {
-    .reports-page__toolbar { grid-template-columns: minmax(0, 1fr); gap: $spacing-3; }
-    .reports-page__date-filter { width: 100%; }
-    .reports-page__toolbar-actions { align-items: stretch; flex-direction: column; }
+    .reports-page__toolbar { flex-direction: column; align-items: stretch; gap: $spacing-3; }
+    .reports-page__date-filter,
+    .reports-page__city-filter { flex: 1 1 auto; width: 100%; }
+    .reports-page__toolbar-actions { align-items: stretch; flex-direction: column; margin-left: 0; }
     .reports-page__toolbar-actions .btn { width: 100%; }
 }

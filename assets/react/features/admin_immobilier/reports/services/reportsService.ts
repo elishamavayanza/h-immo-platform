@@ -12,6 +12,7 @@
  * active du contexte et on affiche ce que l'API renvoie.
  */
 import { apiClient } from '../../../../../services/api/client';
+import { tokenStorage } from '../../../../../services/storage/storage.service';
 import { formatInteger, formatMoney, formatPercent } from '../../../../../utils/format.utils';
 import type {
     AdminImmobilierReport,
@@ -19,13 +20,75 @@ import type {
     AdminImmobilierReportsMetric,
 } from '../types';
 
+/** Filtres optionnels du rapport (dates ISO `YYYY-MM-DD`, UUID de ville). */
+export interface AdminImmobilierReportQuery {
+    periodFrom?: string;
+    periodTo?: string;
+    cityUuid?: string;
+}
+
 /** Récupère le rapport brut de l'organization active. */
-export async function fetchAdminImmobilierReport(organizationUuid: string): Promise<AdminImmobilierReport> {
+export async function fetchAdminImmobilierReport(
+    organizationUuid: string,
+    query: AdminImmobilierReportQuery = {}
+): Promise<AdminImmobilierReport> {
     const { data } = await apiClient.get<AdminImmobilierReport>('/v1/reports/admin-immobilier', {
-        params: { organizationUuid },
+        params: {
+            organizationUuid,
+            ...(query.periodFrom ? { periodFrom: query.periodFrom } : {}),
+            ...(query.periodTo ? { periodTo: query.periodTo } : {}),
+            ...(query.cityUuid ? { cityUuid: query.cityUuid } : {}),
+        },
     });
 
     return data;
+}
+
+/**
+ * Télécharge le rapport au format PDF.
+ *
+ * `window.open` ne peut pas porter l'en-tête `Authorization` et ouvrait la
+ * route SPA sans jeton : on récupère le PDF en `fetch` authentifié puis on
+ * déclenche le téléchargement depuis le blob. Le backend rejoue les mêmes
+ * contrôles (organisation de l'appelant) et applique les mêmes filtres que
+ * l'écran.
+ */
+export async function downloadAdminImmobilierReportPdf(
+    organizationUuid: string,
+    query: AdminImmobilierReportQuery = {}
+): Promise<void> {
+    const accessToken = tokenStorage.getAccessToken();
+    if (!accessToken) {
+        throw new Error('Non authentifié : jeton d’accès manquant');
+    }
+
+    const params = new URLSearchParams({ organizationUuid, format: 'pdf' });
+    if (query.periodFrom) params.set('periodFrom', query.periodFrom);
+    if (query.periodTo) params.set('periodTo', query.periodTo);
+    if (query.cityUuid) params.set('cityUuid', query.cityUuid);
+
+    const response = await fetch(`/api/v1/reports/admin-immobilier?${params.toString()}`, {
+        method: 'GET',
+        headers: {
+            'Accept': 'application/pdf',
+            'X-Requested-With': 'XMLHttpRequest',
+            'Authorization': `Bearer ${accessToken}`,
+        },
+    });
+
+    if (!response.ok) {
+        throw new Error(`Échec du téléchargement (${response.status})`);
+    }
+
+    const blob = await response.blob();
+    const urlBlob = window.URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = urlBlob;
+    link.download = `rapport-immobilier-${new Date().toISOString().split('T')[0]}.pdf`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    window.URL.revokeObjectURL(urlBlob);
 }
 
 /** Décimale "12.50" → nombre de centimes (entier, pas de calcul en flottant). */
@@ -114,13 +177,16 @@ export function normalizeAdminImmobilierReport(report: AdminImmobilierReport): A
         arrears: report.arrears,
         expenses: report.propertyExpenses,
         // 6 derniers mois : le graphe de la page ne montre que ce revenu.
-        evolution: report.occupancyEvolution.slice(-6),
+        evolution: report.occupancyEvolution.slice(-12),
     };
 }
 
 /** Historique : récupère et normalise le rapport en une seule étape. */
-export async function fetchAdminImmobilierReports(organizationUuid: string): Promise<AdminImmobilierReportsData> {
-    const report = await fetchAdminImmobilierReport(organizationUuid);
+export async function fetchAdminImmobilierReports(
+    organizationUuid: string,
+    query: AdminImmobilierReportQuery = {}
+): Promise<AdminImmobilierReportsData> {
+    const report = await fetchAdminImmobilierReport(organizationUuid, query);
 
     return normalizeAdminImmobilierReport(report);
 }

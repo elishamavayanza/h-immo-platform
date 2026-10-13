@@ -571,6 +571,64 @@ check(
     json_encode($uploadsA)
 );
 
+$countsByCityA = array_map(
+    static fn (array $ligne): int => (int) ($ligne['count'] ?? 0),
+    is_array($expensesByCityA) ? $expensesByCityA : []
+);
+check(
+    'le résumé des dépenses indique le nombre réel d’écritures',
+    $countsByCityA !== [] && min($countsByCityA) > 0,
+    json_encode($countsByCityA)
+);
+
+[$status, $periodPayload] = $request(
+    'GET',
+    "/api/v1/reports/patron?organizationUuid={$uuidA}&periodFrom=2026-03-01&periodTo=2026-03-31",
+    null,
+    $tokenPatronA
+);
+check(
+    'le rapport applique les bornes de période demandées',
+    $status === 200 && ($periodPayload['periodCovered'] ?? null) === '2026-03-01 to 2026-03-31',
+    'statut=' . $status . ', période=' . ($periodPayload['periodCovered'] ?? 'absente')
+);
+
+[$status] = $request(
+    'GET',
+    "/api/v1/reports/patron?organizationUuid={$uuidA}&periodFrom=2026-04-01&periodTo=2026-03-31",
+    null,
+    $tokenPatronA
+);
+check(
+    'une période inversée est refusée au lieu de produire un rapport vide',
+    $status === 422,
+    "obtenu {$status}"
+);
+
+[$status, $cityFilteredPayload] = $request(
+    'GET',
+    "/api/v1/reports/patron?organizationUuid={$uuidA}&cityUuid=" . $cityA1->getUuid()->toRfc4122(),
+    null,
+    $tokenPatronA
+);
+check(
+    'le filtre ville restreint les statistiques aux villes sélectionnées',
+    $status === 200 && count($cityFilteredPayload['occupancyByCity'] ?? []) === 1,
+    'statut=' . $status . ', villes=' . count($cityFilteredPayload['occupancyByCity'] ?? [])
+);
+
+[$status] = $request(
+    'GET',
+    "/api/v1/reports/patron?organizationUuid={$uuidA}&cityUuid=" . $cityB1->getUuid()->toRfc4122(),
+    null,
+    $tokenPatronA
+);
+check(
+    'le filtre ville ne permet pas de lire une ville d’une autre organisation',
+    $status === 404,
+    "obtenu {$status}"
+);
+
 // Une organisation sans aucune ville ne doit pas produire un cumul global :
 // c'est précisément le cas qui fuyait.
 [$status, $payloadVide] = $request(

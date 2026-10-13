@@ -97,6 +97,26 @@ class UnitRepository extends ServiceEntityRepository
             ->getResult();
     }
 
+    /** @param list<int> $cityIds */
+    public function countByCityIds(array $cityIds): int
+    {
+        if ($cityIds === []) {
+            return 0;
+        }
+
+        return (int) $this->createQueryBuilder('u')
+            ->select('COUNT(u.id)')
+            ->innerJoin('u.building', 'b')
+            ->innerJoin('b.parcel', 'p')
+            ->andWhere('p.city IN (:cities)')
+            ->andWhere('u.deletedAt IS NULL')
+            ->andWhere('b.deletedAt IS NULL')
+            ->andWhere('p.deletedAt IS NULL')
+            ->setParameter('cities', $cityIds)
+            ->getQuery()
+            ->getSingleScalarResult();
+    }
+
     /**
      * Liste les unités d'un bâtiment n'ayant aucun bail ACTIVE en cours
      * (utile pour l'affichage des disponibilités locatives).

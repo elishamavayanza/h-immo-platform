@@ -220,7 +220,7 @@ final class ExpenseRepository extends ServiceEntityRepository
         ?\DateTimeImmutable $periodTo = null
     ): array {
         $qb = $this->createQueryBuilder('e')
-            ->select('e.category, DATE_FORMAT(e.expenseDate, \'%Y-%m\') as period, SUM(e.amount) as total, e.currency, c.id as cityId')
+            ->select('e.category, DATE_FORMAT(e.expenseDate, \'%Y-%m\') as period, SUM(e.amount) as total, COUNT(e.id) as count, e.currency, c.id as cityId')
             ->innerJoin('e.city', 'c')
             ->groupBy('e.category, period, e.currency, c.id');
 
@@ -263,7 +263,7 @@ final class ExpenseRepository extends ServiceEntityRepository
      *
      * @param list<int> $cityIds
      *
-     * @return list<array{cityUuid: string, cityName: string, cityId: int, period: string, total: string, currency: Currency|string}>
+     * @return list<array{cityUuid: string, cityName: string, cityId: int, period: string, total: string, count: int, currency: Currency|string}>
      */
     public function sumByCity(
         array $cityIds,
@@ -280,7 +280,7 @@ final class ExpenseRepository extends ServiceEntityRepository
         // résolu contre la classe racine, qui n'a pas de champ `uuid`. Le
         // champ doit être lu par l'alias du join, `c.uuid`.
         $qb = $this->createQueryBuilder('e')
-            ->select('c.uuid as cityUuid, c.name as cityName, c.id as cityId, DATE_FORMAT(e.expenseDate, \'%Y-%m\') as period, SUM(e.amount) as total, e.currency')
+            ->select('c.uuid as cityUuid, c.name as cityName, c.id as cityId, DATE_FORMAT(e.expenseDate, \'%Y-%m\') as period, SUM(e.amount) as total, COUNT(e.id) as count, e.currency')
             ->innerJoin('e.city', 'c')
             ->groupBy('c.uuid, c.name, c.id, period, e.currency')
             ->andWhere('e.city IN (:cities)')
@@ -297,6 +297,47 @@ final class ExpenseRepository extends ServiceEntityRepository
         }
 
         return $qb->getQuery()->getResult();
+    }
+
+    /**
+     * Agrège les dépenses au niveau exact de leur rattachement patrimonial.
+     * Une dépense sans parcelle, immeuble ou unité reste rattachée à sa ville.
+     * La liste des villes est obligatoire pour éviter toute agrégation
+     * inter-organisation lorsque l'appelant n'a plus de périmètre.
+     *
+     * @param list<int> $cityIds
+     *
+     * @return list<array{category: mixed, level: string, levelLabel: string, targetId: int, period: string, total: string, count: int, currency: Currency|string, cityId: int}>
+     */
+    public function sumByPropertyLevel(
+        array $cityIds,
+        \DateTimeImmutable $periodFrom,
+        \DateTimeImmutable $periodTo,
+    ): array {
+        if ($cityIds === []) {
+            return [];
+        }
+
+        $level = "CASE WHEN u.id IS NOT NULL THEN 'unit' WHEN b.id IS NOT NULL THEN 'building' WHEN p.id IS NOT NULL THEN 'parcel' ELSE 'city' END";
+        $label = 'COALESCE(u.reference, b.name, p.name, c.name)';
+        $targetId = 'COALESCE(u.id, b.id, p.id, c.id)';
+
+        return $this->createQueryBuilder('e')
+            ->select("e.category as category, $level as level, $label as levelLabel, $targetId as targetId, DATE_FORMAT(e.expenseDate, '%Y-%m') as period, SUM(e.amount) as total, COUNT(e.id) as count, e.currency as currency, c.id as cityId")
+            ->innerJoin('e.city', 'c')
+            ->leftJoin('e.parcel', 'p')
+            ->leftJoin('e.building', 'b')
+            ->leftJoin('e.unit', 'u')
+            ->andWhere('e.city IN (:cities)')
+            ->andWhere('e.expenseDate >= :periodFrom')
+            ->andWhere('e.expenseDate <= :periodTo')
+            ->setParameter('cities', $cityIds)
+            ->setParameter('periodFrom', $periodFrom)
+            ->setParameter('periodTo', $periodTo)
+            ->groupBy("level, levelLabel, targetId, period, e.category, e.currency, c.id")
+            ->orderBy('levelLabel', 'ASC')
+            ->getQuery()
+            ->getResult();
     }
 
     /**
