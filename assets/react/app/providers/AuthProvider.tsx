@@ -18,6 +18,7 @@ interface AuthContextValue {
     isLoading: boolean;
     accessToken: string | null;
     updateUser: (updates: Partial<SessionUserResponse>) => void;
+    refreshUser: () => Promise<void>;
     /**
      * `POST /api/auth/login` (firewall `json_login`, champs `email`/`password`).
      * Lève une `ApiError` 401 ou 429 : le message doit être affiché tel
@@ -152,6 +153,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setUser((current) => current ? { ...current, ...updates } : current);
     }, []);
 
+    const refreshUser = useCallback(async () => {
+        const { data } = await authService.me();
+        setUser(data);
+    }, []);
+
     const value = useMemo<AuthContextValue>(() => ({
         user,
         isAuthenticated: user !== null,
@@ -160,6 +166,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         login,
         logout,
         updateUser,
+        refreshUser,
     }), [user, isLoading, login, logout, updateUser]);
 
     return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

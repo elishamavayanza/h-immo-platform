@@ -21,6 +21,7 @@ import { Loading } from '../../../components/UI/Loading';
 import { useIsPortrait } from '../../../hooks/useIsPortrait';
 import { useIsMobile } from '../../../hooks/useIsMobile';
 import { mediaHref } from '../../../features/shared/media/services/mediaService';
+import { WorkspaceSwitcher } from './WorkspaceSwitcher';
 
 /**
  * Marque du sidebar : logo + "IMMO" + nom de l'organisation active sur sa propre ligne.
@@ -218,7 +219,10 @@ return (
                 />
             )}
 
-            <div className="main-layout__body">
+            <div
+                key={`${currentOrganization?.uuid ?? 'platform'}:${organizationRole ?? platformRole ?? ''}`}
+                className="main-layout__body"
+            >
                 <Sidebar
                     id="main-sidebar"
                     groups={groups}
@@ -226,7 +230,12 @@ return (
                     collapsible
                     defaultCollapsed={isPortrait && !isMobile}
                     width="264px"
-                    header={<Brand organizationName={currentOrganization?.name} />}
+                    header={(
+                        <div className="main-layout__sidebar-header-stack">
+                            <Brand organizationName={currentOrganization?.name} />
+                            {isMobile && <WorkspaceSwitcher mobile />}
+                        </div>
+                    )}
                     activeRoute={location.pathname}
                     activeIds={activeIds}
                     mobileOpen={isMobileOpen}
@@ -240,17 +249,18 @@ return (
                         }
                     }}
                     footer={
-                        <UserMenu
-                            fullName={user.fullName}
-                            email={user.email}
-                            profilePhoto={mediaHref(user.profilePhoto)}
-                            roleLabel={effectiveRoleLabel}
-                            onOpenSettings={() => navigate('/settings')}
-                            onOpenProfile={() => navigate('/profile')}
-                            onLogout={() => {
-                                void logout();
-                            }}
-                        />
+                        <div className="main-layout__sidebar-footer">
+                            {!isMobile && <WorkspaceSwitcher />}
+                            <UserMenu
+                                fullName={user.fullName}
+                                email={user.email}
+                                profilePhoto={mediaHref(user.profilePhoto)}
+                                roleLabel={effectiveRoleLabel}
+                                onOpenSettings={() => navigate('/settings')}
+                                onOpenProfile={() => navigate('/profile')}
+                                onLogout={() => { void logout(); }}
+                            />
+                        </div>
                     }
                 />
 

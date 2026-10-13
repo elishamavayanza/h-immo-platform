@@ -12,6 +12,7 @@ use App\Entity\Identity\User;
 use App\Enum\CityAccessScope;
 use App\Enum\CityStatus;
 use App\Enum\OrganizationRole;
+use App\Enum\OrganizationStatus;
 use App\Enum\PlatformRole;
 use App\Repository\Identity\OrganizationUserRepository;
 use App\Repository\Property\CityRepository;
@@ -60,7 +61,7 @@ final class SessionUserResponseFactory
             profilePhoto: $user->getProfilePhoto(),
             platformRole: $user->getPlatformRole(),
             roles: $user->getRoles(),
-            organizations: $this->buildOrganizations($memberships),
+            organizations: $this->buildOrganizations($memberships, $user),
             cities: $this->buildCities($user, $isAdminVille),
             cityScope: $this->resolveCityScope($user, $isAdminVille),
             isActive: $user->isActive(),
@@ -69,7 +70,7 @@ final class SessionUserResponseFactory
     }
 
     /**
-     * Un rôle métier par Organization dont l'utilisateur est membre.
+     * Une entrée par rôle actif et réellement accessible.
      *
      * Trier rend la réponse stable entre deux appels : sans tri, l'ordre
      * suit celui que MySQL renvoie, qui n'est pas garanti, et les listes du
@@ -79,12 +80,27 @@ final class SessionUserResponseFactory
      *
      * @return list<SessionOrganizationMembership>
      */
-    private function buildOrganizations(array $memberships): array
+    private function buildOrganizations(array $memberships, User $user): array
     {
         $result = [];
 
         foreach ($memberships as $membership) {
             $organization = $membership->getOrganization();
+            if ($organization->getStatus() !== OrganizationStatus::ACTIVE) {
+                continue;
+            }
+            if ($membership->getRole() === OrganizationRole::ADMIN_VILLE) {
+                $hasActiveCity = false;
+                foreach ($this->cityRepository->findAssignedToUserInOrganization($user, $organization) as $city) {
+                    if ($city->getStatus() === CityStatus::ACTIVE) {
+                        $hasActiveCity = true;
+                        break;
+                    }
+                }
+                if (!$hasActiveCity) {
+                    continue;
+                }
+            }
 
             $result[] = new SessionOrganizationMembership(
                 uuid: (string) $organization->getUuid(),
@@ -96,7 +112,7 @@ final class SessionUserResponseFactory
 
         usort(
             $result,
-            static fn (SessionOrganizationMembership $a, SessionOrganizationMembership $b): int => $a->code <=> $b->code,
+            static fn (SessionOrganizationMembership $a, SessionOrganizationMembership $b): int => ($a->code <=> $b->code) ?: ($a->role->value <=> $b->role->value),
         );
 
         return $result;

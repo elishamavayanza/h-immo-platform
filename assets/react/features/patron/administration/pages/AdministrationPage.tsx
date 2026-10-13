@@ -18,6 +18,7 @@ import { useOrganization } from '../../../../app/providers/OrganizationProvider'
 import { useAdministration } from '../hooks/useAdministration';
 import { TeamTable } from '../components/TeamTable';
 import { OrganizationProfileCard } from '../components/OrganizationProfileCard';
+import { RoleAssignmentsPanel } from '../components/RoleAssignmentsPanel';
 import { CityAssignmentModal } from '../components/CityAssignmentModal';
 import { fieldErrorMap } from '../../../shared/actionErrors';
 import type { TeamMember } from '../types/administration.types';
@@ -191,6 +192,7 @@ export function AdministrationPage() {
                     <OrganizationProfileCard />
                 ) : (
                     <>
+                        <RoleAssignmentsPanel />
                         <OrganizationSummary items={[
                             { label: 'Membres de l’équipe', value: <>{members.length}</> },
                             { label: 'Administrateurs ville', value: <>{members.filter((member) => member.role === 'admin_ville').length}</> },

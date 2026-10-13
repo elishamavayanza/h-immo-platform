@@ -108,7 +108,7 @@ console.log('\n=== Structure du menu par rôle (menu plat) ===\n');
 // Menu attendu, ordre compris. « Tableau de bord » est toujours la première
 // entrée (écran de synthèse demandé par le cahier des charges).
 const EXPECTED_PATRON = ['dashboard', 'rapports', 'patrimoine', 'location-locataires', 'location-loyers', 'depenses', 'vitrine', 'administration'];
-const EXPECTED_ADMIN_IMMOBILIER = ['dashboard', 'rapports', 'patrimoine', 'location-locataires', 'location-loyers', 'depenses', 'vitrine', 'personnel'];
+const EXPECTED_ADMIN_IMMOBILIER = ['dashboard', 'rapports', 'patrimoine', 'location-locataires', 'location-loyers', 'depenses', 'vitrine', 'personnel', 'administration'];
 const EXPECTED_ADMIN_VILLE = ['dashboard', 'rapports', 'patrimoine', 'location-locataires', 'location-loyers', 'depenses', 'operations'];
 
 check(
@@ -117,7 +117,7 @@ check(
     idsOf(PATRON).join(', ')
 );
 check(
-    `ADMIN_IMMOBILIER : menu exact de ${EXPECTED_ADMIN_IMMOBILIER.length} entrées, Personnel inclus`,
+    `ADMIN_IMMOBILIER : menu exact de ${EXPECTED_ADMIN_IMMOBILIER.length} entrées, Personnel et Administration déléguée inclus`,
     JSON.stringify(idsOf(ADMIN_IMMOBILIER)) === JSON.stringify(EXPECTED_ADMIN_IMMOBILIER),
     idsOf(ADMIN_IMMOBILIER).join(', ')
 );
@@ -191,12 +191,12 @@ check('SUPER_ADMIN voit son entrée Rapports plateforme', hasTopLevelItem(PLATFO
 check('PATRON n\'accède plus à /app/personnel/ouvriers (fusionné dans Administration)', !isPathInMenu(PATRON, '/app/personnel/ouvriers'));
 check('PATRON n\'accède plus à /app/personnel (fusionné dans Administration)', !isPathInMenu(PATRON, '/app/personnel'));
 
-console.log('\n=== Administration — réservée au PATRON ===\n');
+console.log('\n=== Administration — périmètre selon le rôle actif ===\n');
 
 check('PATRON accède à /app/administration/equipe (drill-down couvert)', isPathInMenu(PATRON, '/app/administration/equipe'));
 check('PATRON accède à /app/administration/villes (drill-down couvert)', isPathInMenu(PATRON, '/app/administration/villes'));
-check('ADMIN_IMMOBILIER est refusé sur /app/administration/equipe', !isPathInMenu(ADMIN_IMMOBILIER, '/app/administration/equipe'));
-check('ADMIN_IMMOBILIER est refusé sur /app/administration/villes', !isPathInMenu(ADMIN_IMMOBILIER, '/app/administration/villes'));
+check('ADMIN_IMMOBILIER ouvre son écran Administration déléguée', isPathInMenu(ADMIN_IMMOBILIER, '/app/administration'));
+check('ADMIN_VILLE ne voit pas Administration', !hasTopLevelItem(ADMIN_VILLE, 'administration'));
 check('ADMIN_VILLE est refusé sur /app/administration/equipe', !isPathInMenu(ADMIN_VILLE, '/app/administration/equipe'));
 
 console.log('\n=== SUPER_ADMIN : aucune entrée métier d\'organisation ===\n');

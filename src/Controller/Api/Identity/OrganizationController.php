@@ -10,6 +10,7 @@ use App\Dto\Request\Identity\OrganizationShowcaseRequest;
 use App\Dto\Request\Identity\OrganizationSuspendRequest;
 use App\Dto\Request\PaginationQuery;
 use App\Dto\Response\Identity\SessionOrganizationMembership;
+use App\Enum\OrganizationRole;
 use App\Service\Identity\OrganizationService;
 use App\Trait\FeedbackTrait;
 use Nelmio\ApiDocBundle\Attribute\Model;
@@ -17,6 +18,7 @@ use OpenApi\Attributes as OA;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpKernel\Attribute\MapQueryString;
+use Symfony\Component\HttpKernel\Attribute\MapQueryParameter;
 use Symfony\Component\HttpKernel\Attribute\MapRequestPayload;
 use Symfony\Component\Routing\Attribute\Route;
 
@@ -99,9 +101,18 @@ final class OrganizationController extends AbstractController
         response: 404,
         description: 'Organisation introuvable'
     )]
-    public function membership(string $uuid): JsonResponse
+    public function membership(string $uuid, #[MapQueryParameter] ?string $role = null): JsonResponse
     {
-        $feedback = $this->organizationService->getMembership($uuid);
+        $requestedRole = $role !== null ? OrganizationRole::tryFrom($role) : null;
+        if ($role !== null && $requestedRole === null) {
+            $feedback = (new Feedback())
+                ->addError('role', 'Le rôle demandé est invalide.')
+                ->setErrorFlushDescription('Impossible de résoudre cet espace.')
+                ->setStatus(422)
+                ->autoInitFlush();
+        } else {
+            $feedback = $this->organizationService->getMembership($uuid, $requestedRole);
+        }
 
         return $this->json($feedback, $feedback->getStatus());
     }

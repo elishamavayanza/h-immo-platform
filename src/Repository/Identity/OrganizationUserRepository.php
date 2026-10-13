@@ -50,23 +50,33 @@ class OrganizationUserRepository extends ServiceEntityRepository
         }
     }
 
-    /**
-     * Recherche le rattachement d'un utilisateur précis à une
-     * organisation précise (garantit l'unicité du couple).
-     *
-     * Paramètres typés par entité : le passing de l'identifiant
-     * interne exposait à un mélange d'identifiants entre deux
-     * Organizations lors de l'appel depuis un contexte multi-tenant.
-     */
-    public function findOneByOrganizationAndUser(Organization $organization, User $user): ?OrganizationUser
+    public function findOneByOrganizationUserAndRole(
+        Organization $organization,
+        User $user,
+        OrganizationRole $role,
+    ): ?OrganizationUser {
+        return $this->createQueryBuilder('ou')
+            ->andWhere('ou.organization = :organization')
+            ->andWhere('ou.user = :user')
+            ->andWhere('ou.role = :role')
+            ->setParameter('organization', $organization)
+            ->setParameter('user', $user)
+            ->setParameter('role', $role)
+            ->getQuery()
+            ->getOneOrNullResult();
+    }
+
+    /** @return list<OrganizationUser> */
+    public function findByOrganizationAndUser(Organization $organization, User $user): array
     {
         return $this->createQueryBuilder('ou')
             ->andWhere('ou.organization = :organization')
             ->andWhere('ou.user = :user')
             ->setParameter('organization', $organization)
             ->setParameter('user', $user)
+            ->orderBy('ou.role', 'ASC')
             ->getQuery()
-            ->getOneOrNullResult();
+            ->getResult();
     }
 
     public function findOneByUuidAndOrganization(string $uuid, Organization $organization): ?OrganizationUser
@@ -120,7 +130,10 @@ class OrganizationUserRepository extends ServiceEntityRepository
     public function findByOrganization(Organization $organization): array
     {
         return $this->createQueryBuilder('ou')
+            ->innerJoin('ou.user', 'u')
+            ->addSelect('u')
             ->andWhere('ou.organization = :organization')
+            ->andWhere('u.deletedAt IS NULL')
             ->setParameter('organization', $organization)
             ->orderBy('ou.createdAt', 'DESC')
             ->getQuery()

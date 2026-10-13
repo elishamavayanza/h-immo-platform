@@ -6,6 +6,7 @@ namespace App\Service\Identity;
 
 use App\Dto\Feedback;
 use App\Dto\Request\Identity\OrganizationUserRequest;
+use App\Dto\Request\Identity\AssignExistingRoleRequest;
 use App\Dto\Request\PaginationQuery;
 use App\Entity\Identity\OrganizationUser;
 use App\Entity\Identity\User;
@@ -101,10 +102,52 @@ final readonly class OrganizationUserService
             ->autoInitFlush();
     }
 
-    /**
-     * Rattache un utilisateur à une organisation en lui assignant un rôle spécifique.
-     * Contrôle l'unicité de la relation (un seul rôle par couple utilisateur/organisation).
-     */
+    /** Liste les rôles visibles dans le contexte, avec les membres admissibles aux rôles déléguables. */
+    public function listRoleAssignments(string $orgUuid): Feedback
+    {
+        $organization = $this->orgRepository->findOneBy(['uuid' => $orgUuid]);
+        if (!$organization) return (new Feedback())->addError('organizationUuid', 'Organisation introuvable.')
+            ->setErrorFlushDescription('Liste indisponible.')->setStatus(404)->autoInitFlush();
+        $actorRole = $this->security->getOrganizationRole($this->security->getCurrentUser(), $organization);
+        $isPatron = $actorRole === OrganizationRole::PATRON;
+        $this->security->checkOrganizationAccess($organization, $isPatron ? SecurityAction::MANAGE_USERS : SecurityAction::CREATE_CITY_ADMIN);
+        if (!$isPatron && $actorRole !== OrganizationRole::ADMIN_IMMOBILIER) {
+            return (new Feedback())->setErrorFlushDescription('Votre rôle ne permet pas de gérer des affectations.')
+                ->setStatus(403)->autoInitFlush();
+        }
+        $assignments = $isPatron
+            ? $this->orgUserRepository->findByOrganization($organization)
+            : $this->orgUserRepository->findByOrganizationAndRole($organization, OrganizationRole::ADMIN_VILLE);
+        $items = array_map(function (OrganizationUser $assignment) use ($organization): array {
+            $user = $assignment->getUser();
+            $cities = $this->cityRepository->findAssignedToUserInOrganization($user, $organization);
+            return [
+                'assignmentUuid' => $assignment->getUuid()->toRfc4122(),
+                'userUuid' => $user->getUuid()->toRfc4122(),
+                'name' => $user->getFullName(),
+                'email' => $user->getEmail(),
+                'active' => $user->isActive(),
+                'role' => $assignment->getRole()->value,
+                'cities' => array_map(static fn (City $city): array => ['uuid' => $city->getUuid()->toRfc4122(), 'name' => $city->getName()], $cities),
+            ];
+        }, $assignments);
+        $candidates = [];
+        foreach ($this->orgUserRepository->findByOrganization($organization) as $membership) {
+            $candidate = $membership->getUser();
+            $candidateUuid = $candidate->getUuid()->toRfc4122();
+            if (!$candidate->isActive()) continue;
+            if (!isset($candidates[$candidateUuid])) {
+                $candidates[$candidateUuid] = ['uuid' => $candidateUuid, 'name' => $candidate->getFullName(), 'email' => $candidate->getEmail(), 'roles' => []];
+            }
+            $candidates[$candidateUuid]['roles'][] = $membership->getRole()->value;
+        }
+        $candidates = array_values(array_filter($candidates, static fn (array $candidate): bool => $isPatron || !in_array(OrganizationRole::ADMIN_VILLE->value, $candidate['roles'], true)));
+        $candidates = array_values($candidates);
+        usort($candidates, static fn (array $a, array $b): int => $a['name'] <=> $b['name']);
+        return (new Feedback())->setData(['items' => $items, 'candidates' => $candidates])->setStatus(200)->autoInitFlush();
+    }
+
+    /** Rattache un utilisateur à un rôle d'organisation sans créer de doublon. */
     public function assignUser(OrganizationUserRequest $request): Feedback
     {
         $feedback = new Feedback();
@@ -142,11 +185,17 @@ final readonly class OrganizationUserService
         $this->security->checkOrganizationAccess($organization, SecurityAction::MANAGE_USERS);
         $this->security->checkUserAccess($user, SecurityAction::MANAGE_USERS);
 
-        $existing = $this->orgUserRepository->findOneBy(['organization' => $organization, 'user' => $user]);
+        if ($request->role === OrganizationRole::ADMIN_VILLE) {
+            return $feedback->addError('role', 'Attribuez ADMIN_VILLE via l’opération avec périmètre de villes.')
+                ->setErrorFlushDescription('Les affectations de ville exigent une sélection explicite des villes.')
+                ->setStatus(422)->autoInitFlush();
+        }
+
+        $existing = $this->orgUserRepository->findOneByOrganizationUserAndRole($organization, $user, $request->role);
         if ($existing) {
             return $feedback
-                ->addError('userUuid', 'L\'utilisateur appartient déjà à cette organisation.')
-                ->setErrorFlushDescription('Relation utilisateur-organisation déjà existante.')
+                ->addError('role', 'Cet utilisateur possède déjà ce rôle dans l’organisation.')
+                ->setErrorFlushDescription('Cette affectation existe déjà.')
                 ->setStatus(422)
                 ->autoInitFlush();
         }
@@ -164,6 +213,112 @@ final readonly class OrganizationUserService
             ->setFlushDescription('L\'utilisateur a été affecté à l\'organisation.')
             ->setStatus(201)
             ->autoInitFlush();
+    }
+
+    /** Attribue un second espace à un membre existant, sous l'autorité du rôle actif. */
+    public function assignExistingRole(AssignExistingRoleRequest $request): Feedback
+    {
+        $feedback = new Feedback();
+        $violations = $this->validator->validate($request);
+        if (count($violations) > 0) {
+            return $feedback->bind($violations)->setErrorFlushDescription('Données d’affectation invalides.')->setStatus(422)->autoInitFlush();
+        }
+
+        $organization = $this->orgRepository->findOneBy(['uuid' => $request->organizationUuid]);
+        $target = $this->userRepository->findOneBy(['uuid' => $request->userUuid]);
+        if (!$organization || !$target) {
+            return $feedback->addError('userUuid', 'Organisation ou utilisateur introuvable.')
+                ->setErrorFlushDescription('Affectation impossible.')->setStatus(404)->autoInitFlush();
+        }
+
+        $actor = $this->security->getCurrentUser();
+        if ($actor->getUuid()->equals($target->getUuid())) {
+            return $feedback->addError('userUuid', 'Vous ne pouvez pas vous attribuer un autre rôle.')
+                ->setErrorFlushDescription('Auto-attribution interdite.')->setStatus(403)->autoInitFlush();
+        }
+
+        $actorRole = $this->security->getOrganizationRole($actor, $organization);
+        $allowed = match ($actorRole) {
+            OrganizationRole::PATRON => in_array($request->role, [OrganizationRole::ADMIN_IMMOBILIER, OrganizationRole::ADMIN_VILLE], true),
+            OrganizationRole::ADMIN_IMMOBILIER => $request->role === OrganizationRole::ADMIN_VILLE,
+            default => false,
+        };
+        if (!$allowed) {
+            return $feedback->setErrorFlushDescription('Votre rôle actif ne permet pas cette attribution.')
+                ->setStatus(403)->autoInitFlush();
+        }
+        $this->security->checkOrganizationAccess(
+            $organization,
+            $actorRole === OrganizationRole::ADMIN_IMMOBILIER ? SecurityAction::CREATE_CITY_ADMIN : SecurityAction::MANAGE_USERS,
+        );
+
+        if ($this->orgUserRepository->findByOrganizationAndUser($organization, $target) === []) {
+            return $feedback->addError('userUuid', 'Le compte doit déjà être membre de cette organisation.')
+                ->setErrorFlushDescription('Seuls les membres existants peuvent recevoir un rôle supplémentaire.')
+                ->setStatus(422)->autoInitFlush();
+        }
+        if (!$target->isActive() || $target->getDeletedAt() !== null) {
+            return $feedback->addError('userUuid', 'Le compte sélectionné est désactivé ou supprimé.')
+                ->setErrorFlushDescription('Un compte inactif ne peut pas recevoir un nouvel espace.')
+                ->setStatus(409)->autoInitFlush();
+        }
+        if ($this->orgUserRepository->findOneByOrganizationUserAndRole($organization, $target, $request->role)) {
+            return $feedback->addError('role', 'Cet utilisateur possède déjà ce rôle dans l’organisation.')
+                ->setErrorFlushDescription('Cette affectation existe déjà.')->setStatus(409)->autoInitFlush();
+        }
+
+        $cities = [];
+        if ($request->role === OrganizationRole::ADMIN_VILLE) {
+            if ($request->cityUuids === []) {
+                return $feedback->addError('cityUuids', 'Choisissez au moins une ville pour le rôle ADMIN_VILLE.')
+                    ->setErrorFlushDescription('Le périmètre de ville est obligatoire.')->setStatus(422)->autoInitFlush();
+            }
+            foreach (array_unique($request->cityUuids) as $cityUuid) {
+                $city = $this->cityRepository->findOneBy(['uuid' => $cityUuid]);
+                if (!$city || $city->getOrganization() !== $organization) {
+                    return $feedback->addError('cityUuids', 'Chaque ville doit appartenir à l’organisation active.')
+                        ->setErrorFlushDescription('Le périmètre demandé contient une ville non autorisée.')
+                        ->setStatus(422)->autoInitFlush();
+                }
+                $cities[] = $city;
+            }
+        } elseif ($request->cityUuids !== []) {
+            return $feedback->addError('cityUuids', 'Les villes ne peuvent être fournies que pour ADMIN_VILLE.')
+                ->setErrorFlushDescription('Périmètre incompatible avec le rôle demandé.')
+                ->setStatus(422)->autoInitFlush();
+        }
+
+        $assignment = new OrganizationUser();
+        $assignment->setOrganization($organization)->setUser($target)->setRole($request->role);
+        $this->em->wrapInTransaction(function () use ($assignment, $cities, $target): void {
+            $this->em->persist($assignment);
+            foreach ($cities as $city) {
+                if ($this->userCityRepository->existsForUserAndCity($target, $city)) {
+                    continue;
+                }
+                $link = new UserCity();
+                $link->setUser($target)->setCity($city);
+                $this->em->persist($link);
+            }
+            $this->em->flush();
+        });
+        $this->auditLogService->log(
+            action: 'ASSIGN_ORGANIZATION_ROLE',
+            entityType: OrganizationUser::class,
+            entityId: (int) $assignment->getId(),
+            organization: $organization,
+            user: $actor,
+            oldValues: null,
+            newValues: [
+                'targetUserUuid' => $target->getUuid()->toRfc4122(),
+                'role' => $request->role->value,
+                'cityUuids' => array_map(static fn (City $city): string => $city->getUuid()->toRfc4122(), $cities),
+            ],
+        );
+
+        return $feedback->setData($this->mapper->toResponse($assignment))
+            ->setFlushDescription('Le nouvel espace a été attribué au membre.')
+            ->setStatus(201)->autoInitFlush();
     }
 
     /**
@@ -205,6 +360,16 @@ final readonly class OrganizationUserService
 
         $newRole = $request->role;
         if ($newRole !== null && $newRole !== $oldRole) {
+            if ($newRole === OrganizationRole::ADMIN_VILLE) {
+                return $feedback->addError('role', 'Ajoutez ADMIN_VILLE via une affectation avec périmètre de villes.')
+                    ->setErrorFlushDescription('Le rôle de ville ne peut pas être modifié sans villes attribuées.')
+                    ->setStatus(422)->autoInitFlush();
+            }
+            if ($this->orgUserRepository->findOneByOrganizationUserAndRole($organization, $user, $newRole) !== null) {
+                return $feedback->addError('role', 'Cet utilisateur possède déjà le rôle demandé.')
+                    ->setErrorFlushDescription('L’affectation existe déjà.')
+                    ->setStatus(409)->autoInitFlush();
+            }
             // Protection du dernier PATRON : on ne peut pas rétrograder
             // le dernier PATRON de l'organisation
             if ($oldRole === OrganizationRole::PATRON) {
@@ -220,14 +385,21 @@ final readonly class OrganizationUserService
 
             // Nettoyer UserCity si on change depuis ADMIN_VILLE
             if ($oldRole === OrganizationRole::ADMIN_VILLE) {
-                $this->userCityRepository->deleteByUser($orgUser->getUser());
+                $this->userCityRepository->deleteByUserAndOrganization($orgUser->getUser(), $organization);
                 $this->em->flush();
             }
 
-            // Note: si on passe à ADMIN_VILLE, les villes devront être assignées séparément
-
             $orgUser->setRole($newRole);
             $this->em->flush();
+            $this->auditLogService->log(
+                action: 'UPDATE_ORGANIZATION_ROLE',
+                entityType: OrganizationUser::class,
+                entityId: (int) $orgUser->getId(),
+                organization: $organization,
+                user: $currentUser,
+                oldValues: ['role' => $oldRole->value],
+                newValues: ['role' => $newRole->value],
+            );
         }
 
         return $feedback
@@ -260,10 +432,16 @@ final readonly class OrganizationUserService
         $user = $orgUser->getUser();
         $currentRole = $orgUser->getRole();
 
-        $this->security->checkOrganizationAccess(
-            $organization,
-            SecurityAction::MANAGE_USERS
-        );
+        $actorRole = $this->security->getOrganizationRole($this->security->getCurrentUser(), $organization);
+        $action = $actorRole === OrganizationRole::ADMIN_IMMOBILIER && $currentRole === OrganizationRole::ADMIN_VILLE
+            ? SecurityAction::CREATE_CITY_ADMIN
+            : SecurityAction::MANAGE_USERS;
+        $this->security->checkOrganizationAccess($organization, $action);
+
+        if ($actorRole === OrganizationRole::ADMIN_IMMOBILIER && $currentRole !== OrganizationRole::ADMIN_VILLE) {
+            return $feedback->setErrorFlushDescription('Un administrateur immobilier ne peut révoquer que le rôle ADMIN_VILLE.')
+                ->setStatus(403)->autoInitFlush();
+        }
 
         // Protection du dernier PATRON : on ne peut pas révoquer/dégrader
         // le dernier PATRON de l'organisation
@@ -278,19 +456,23 @@ final readonly class OrganizationUserService
             }
         }
 
-        // Nettoyer les UserCity si l'utilisateur était ADMIN_VILLE
+        // Nettoyer seulement les villes de cette organisation : le même compte
+        // peut conserver son accès ADMIN_VILLE ailleurs.
         if ($currentRole === OrganizationRole::ADMIN_VILLE) {
-            $this->userCityRepository->deleteByUser($user);
-            $this->em->flush();
+            $this->userCityRepository->deleteByUserAndOrganization($user, $organization);
         }
-
-        $this->security->checkOrganizationAccess(
-            $organization,
-            SecurityAction::MANAGE_USERS
-        );
 
         $this->em->remove($orgUser);
         $this->em->flush();
+        $this->auditLogService->log(
+            action: 'REVOKE_ORGANIZATION_ROLE',
+            entityType: OrganizationUser::class,
+            entityId: (int) $orgUser->getId(),
+            organization: $organization,
+            user: $this->security->getCurrentUser(),
+            oldValues: ['userUuid' => $user->getUuid()->toRfc4122(), 'role' => $currentRole->value],
+            newValues: null,
+        );
 
         return $feedback
             ->setFlushDescription('L\'accès de l\'utilisateur à l\'organisation a été révoqué.')

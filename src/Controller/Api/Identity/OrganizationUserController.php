@@ -6,6 +6,7 @@ namespace App\Controller\Api\Identity;
 
 use App\Dto\Feedback;
 use App\Dto\Request\Identity\CreateAdminRequest;
+use App\Dto\Request\Identity\AssignExistingRoleRequest;
 use App\Dto\Request\Identity\OrganizationUserRequest;
 use App\Dto\Request\PaginationQuery;
 use App\Entity\Identity\User;
@@ -66,6 +67,20 @@ final class OrganizationUserController extends AbstractController
     ): JsonResponse {
         $feedback = $this->orgUserService->assignUser($request);
 
+        return $this->json($feedback, $feedback->getStatus());
+    }
+
+    #[Route('/assign-existing', name: 'assign_existing_role', methods: ['POST'])]
+    public function assignExistingRole(#[MapRequestPayload] AssignExistingRoleRequest $request): JsonResponse
+    {
+        $feedback = $this->orgUserService->assignExistingRole($request);
+        return $this->json($feedback, $feedback->getStatus());
+    }
+
+    #[Route('/role-assignments/organization/{orgUuid}', name: 'role_assignments', methods: ['GET'])]
+    public function listRoleAssignments(string $orgUuid): JsonResponse
+    {
+        $feedback = $this->orgUserService->listRoleAssignments($orgUuid);
         return $this->json($feedback, $feedback->getStatus());
     }
 

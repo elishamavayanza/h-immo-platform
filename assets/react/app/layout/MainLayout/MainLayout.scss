@@ -374,6 +374,134 @@
     margin-left: 30px;  // aligné sous "IMMO" (logo 28px + gap 2px)
 }
 
+.main-layout__sidebar-footer {
+    display: grid;
+    gap: $spacing-2;
+    min-width: 0;
+}
+
+.main-layout__sidebar-header-stack {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    align-items: stretch;
+    gap: $spacing-3;
+    min-width: 0;
+}
+
+.main-layout__workspace-switcher { min-width: 0; }
+
+.main-layout__workspace-trigger {
+    display: flex;
+    align-items: center;
+    gap: $spacing-2;
+    width: 100%;
+    min-width: 0;
+    min-height: 56px;
+    padding: $spacing-2 $spacing-3;
+    color: $color-text-secondary;
+    background: color-mix(in srgb, #{$color-bg-elevated} 82%, transparent);
+    border: 1px solid $color-border;
+    border-radius: $radius-md;
+    cursor: pointer;
+    text-align: left;
+    transition: color $transition-fast, border-color $transition-fast, background-color $transition-fast;
+
+    &:hover { color: $color-text-primary; border-color: $color-primary; }
+    &:focus-visible { outline: 2px solid $color-primary; outline-offset: 2px; }
+    &:disabled { cursor: progress; opacity: .65; }
+}
+
+.main-layout__workspace-trigger-icon {
+    display: grid;
+    flex: 0 0 30px;
+    width: 30px;
+    height: 30px;
+    place-items: center;
+    color: $color-primary;
+    background: $color-primary-soft;
+    border-radius: $radius-sm;
+    font-size: 1.35rem;
+    line-height: 1;
+}
+
+.main-layout__workspace-current {
+    display: grid;
+    flex: 1;
+    min-width: 0;
+    gap: 2px;
+
+    strong { @include truncate; font-size: $font-size-sm; font-weight: $font-weight-semibold; }
+    small { color: $color-text-muted; font-size: $font-size-xs; overflow-wrap: anywhere; }
+}
+
+.main-layout__workspace-eyebrow {
+    color: $color-text-muted;
+    font-size: 10px;
+    font-weight: $font-weight-semibold;
+    letter-spacing: .06em;
+    line-height: 1.2;
+    text-transform: uppercase;
+}
+
+.main-layout__workspace-chevron {
+    flex: 0 0 auto;
+    color: $color-text-muted;
+    font-size: $font-size-sm;
+}
+
+.main-layout__workspace-menu {
+    position: fixed;
+    z-index: 1200;
+    padding: $spacing-2;
+    color: $color-text-primary;
+    background: $color-bg-elevated;
+    border: 1px solid $color-border;
+    border-radius: $radius-lg;
+    box-shadow: $shadow-lg;
+}
+
+.main-layout__workspace-heading {
+    padding: $spacing-2 $spacing-3;
+    color: $color-text-muted;
+    font-size: $font-size-xs;
+    font-weight: $font-weight-semibold;
+    text-transform: uppercase;
+    letter-spacing: .06em;
+}
+
+.main-layout__workspace-option {
+    display: flex;
+    align-items: center;
+    gap: $spacing-3;
+    width: 100%;
+    padding: $spacing-3;
+    color: inherit;
+    background: transparent;
+    border: 0;
+    border-radius: $radius-md;
+    text-align: left;
+    cursor: pointer;
+
+    &:hover, &:focus-visible, &.is-active { background: $color-primary-soft; }
+    &:focus-visible { outline: 2px solid $color-primary; outline-offset: 1px; }
+    > span:nth-child(2) { display: grid; min-width: 0; gap: 2px; }
+    strong, small { @include truncate; }
+    strong { font-size: $font-size-sm; font-weight: $font-weight-semibold; }
+    small { color: $color-text-muted; font-size: $font-size-xs; }
+}
+
+.main-layout__workspace-icon {
+    display: grid;
+    flex: 0 0 30px;
+    width: 30px;
+    height: 30px;
+    place-items: center;
+    color: $color-primary;
+    background: $color-primary-soft;
+    border-radius: $radius-sm;
+}
+
 // Sidebar replié : le rail ne garde que le logo, centré.
 // « IMMO » et le nom d'org sont masqués pour ne pas déborder sur 72px.
 .sidebar--collapsed .main-layout__brand {
@@ -393,6 +521,60 @@
         width: 32px;
         height: 32px;
     }
+}
+
+.sidebar--collapsed .main-layout__workspace-trigger {
+    justify-content: center;
+    padding-inline: $spacing-1;
+    min-height: 42px;
+}
+
+.sidebar--collapsed .main-layout__workspace-current,
+.sidebar--collapsed .main-layout__workspace-chevron { display: none; }
+
+.sidebar--collapsed .main-layout__workspace-trigger-icon {
+    flex-basis: 30px;
+}
+
+@media (max-width: #{$breakpoint-tablet - 1px}) {
+    .main-layout__sidebar-header-stack { gap: $spacing-2; }
+    .main-layout__workspace-switcher--mobile .main-layout__workspace-trigger {
+        min-height: 50px;
+        padding: 5px $spacing-2;
+        background: color-mix(in srgb, #{$color-bg-elevated} 92%, transparent);
+    }
+
+    .main-layout__workspace-switcher--mobile .main-layout__workspace-trigger-icon,
+    .main-layout__workspace-switcher--mobile .main-layout__workspace-icon {
+        flex-basis: 28px;
+        width: 28px;
+        height: 28px;
+    }
+
+    .main-layout__workspace-switcher--mobile .main-layout__workspace-current { gap: 1px; }
+    .main-layout__workspace-switcher--mobile .main-layout__workspace-current strong { font-size: $font-size-xs; }
+    .main-layout__workspace-switcher--mobile .main-layout__workspace-current small { font-size: 11px; }
+    .main-layout__workspace-menu--mobile {
+        position: static;
+        width: 100%;
+        max-height: min(38dvh, 280px);
+        margin-top: $spacing-2;
+        overflow-y: auto;
+        overscroll-behavior: contain;
+        box-shadow: none;
+    }
+
+    .main-layout__workspace-menu--mobile .main-layout__workspace-option {
+        gap: $spacing-2;
+        padding: $spacing-2;
+    }
+
+    .main-layout__sidebar-footer { gap: 6px; }
+    .main-layout__sidebar-footer .user-menu__wrapper { padding: 4px 8px; }
+    .main-layout__sidebar-footer .user-menu__trigger { gap: $spacing-2; padding: 0; }
+    .main-layout__sidebar-footer .user-menu__trigger .avatar { width: 30px; height: 30px; }
+    .main-layout__sidebar-footer .user-menu__name { font-size: $font-size-xs; }
+    .main-layout__sidebar-footer .user-menu__role { font-size: 11px; }
 }
 
     

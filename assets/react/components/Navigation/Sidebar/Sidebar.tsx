@@ -240,27 +240,6 @@ export function Sidebar({
         handleItemClick(item);
     };
 
-    // Clic sur le logo (dans le sidebar) :
-    //   - tiroir mobile ouvert  → ferme le tiroir (via onMobileClose) ;
-    //   - desktop               → replie ou déplie le menu.
-    const handleBrandClick = () => {
-        if (isMobileOpen) {
-            closeMobile();
-            return;
-        }
-        if (collapsible) {
-            toggleCollapse();
-        }
-    };
-
-    // Le brand est interactif : sur mobile il ferme le tiroir, sur desktop il replie/déplie.
-    const isBrandInteractive = collapsible || !!onMobileClose;
-    const brandLabel = isMobileOpen
-        ? 'Fermer le menu'
-        : displayCollapsed
-            ? 'Déplier le menu'
-            : 'Replier le menu';
-
     const renderItem = (item: SidebarItem, collapsed: boolean) => {
         const textLabel = toTextLabel(item.label);
         const hasChildren = item.children !== undefined && item.children.length > 0;
@@ -407,18 +386,16 @@ export function Sidebar({
             aria-label="Menu principal"
         >
             <div className="sidebar__header">
-                {isBrandInteractive ? (
+                <div className="sidebar__header-brand">{header}</div>
+                {isMobileOpen && (
                     <button
                         type="button"
-                        className="sidebar__header-brand"
-                        onClick={handleBrandClick}
-                        aria-label={brandLabel}
-                        title={brandLabel}
+                        className="sidebar__mobile-close"
+                        onClick={closeMobile}
+                        aria-label="Fermer le menu"
                     >
-                        {header}
+                        <span aria-hidden="true">×</span>
                     </button>
-                ) : (
-                    <div className="sidebar__header-brand">{header}</div>
                 )}
                 {/* Le repli n'a pas de sens dans un tiroir plein écran (mobile).
                     Sur desktop/tablette, le bouton replie/déploie le menu.
