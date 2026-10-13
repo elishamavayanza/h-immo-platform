@@ -386,7 +386,21 @@ export function Sidebar({
             aria-label="Menu principal"
         >
             <div className="sidebar__header">
-                <div className="sidebar__header-brand">{header}</div>
+                <div className="sidebar__header-brand">
+                    {!isMobile && collapsible && displayCollapsed ? (
+                        <button
+                            type="button"
+                            className="sidebar__brand-expand"
+                            onClick={toggleCollapse}
+                            aria-label="Ouvrir le menu"
+                            aria-expanded={false}
+                            aria-controls={id}
+                            title="Ouvrir le menu"
+                        >
+                            {header}
+                        </button>
+                    ) : header}
+                </div>
                 {isMobileOpen && (
                     <button
                         type="button"
