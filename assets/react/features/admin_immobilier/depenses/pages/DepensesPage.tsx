@@ -24,6 +24,7 @@ import { canDo } from '../../../shared/permissions';
 import { CATEGORY_OPTIONS, CURRENCY_OPTIONS, EXPENSE_METHOD_OPTIONS } from '../services/depensesService';
 import type { DepenseRow } from '../types/depense.types';
 import { ActivityCalendar, activityDateKey, type ActivityCalendarEvent } from '../../../shared/components/ActivityCalendar';
+import { CalendarRailPopover } from '../../../shared/components/CalendarRailPopover';
 import type { OrganizationRole } from '../../../../../services/api/api.types';
 import '../../../../../styles/pages/admin_immobilier/depenses/_depenses.scss';
 
@@ -294,7 +295,7 @@ export function DepensesPage({ readOnly = false }: { readOnly?: boolean } = {}) 
             </form>
         </Modal>
         </main>
-        <RightSidebar title="Calendrier des dépenses" size="medium" variant="dark" collapsible>
+        <RightSidebar title="Calendrier des dépenses" size="medium" variant="dark" collapsible collapsedWidth={48} collapsedContent={<div className="financial-calendar-rail"><CalendarRailPopover title="Activité des dépenses" label="Ouvrir le calendrier des dépenses"><ActivityCalendar events={calendarEvents} label="Calendrier des dépenses" selectedDate={selectedDate} onSelectDate={setSelectedDate} onClearDate={() => setSelectedDate(null)} onMonthChange={(month, year) => { setSelectedDate(null); void loadCalendarMonth(month, year); }} description={calendarRows === null ? 'Chargement des dépenses du mois…' : calendarNote ? `${calendarNote} Les marqueurs indiquent les dépenses enregistrées pour le mois choisi.` : 'Les jours marqués correspondent aux dépenses enregistrées. Sélectionnez un jour pour afficher ses opérations.'} emptyMessage="Aucune dépense connue pour cette journée." /></CalendarRailPopover></div>}>
             <ActivityCalendar
                 events={calendarEvents}
                 label="Calendrier des dépenses"

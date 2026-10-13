@@ -23,6 +23,7 @@ import { ModalActions } from '../../../shared/components/ModalActions';
 import { canDo } from '../../../shared/permissions';
 import type { LoyerRow } from '../types/loyer.types';
 import { ActivityCalendar, activityDateKey, type ActivityCalendarEvent } from '../../../shared/components/ActivityCalendar';
+import { CalendarRailPopover } from '../../../shared/components/CalendarRailPopover';
 import type { OrganizationRole } from '../../../../../services/api/api.types';
 import '../../../../../styles/pages/admin_immobilier/loyers/_loyers.scss';
 
@@ -276,7 +277,7 @@ export function LoyersPage({ readOnly = false }: { readOnly?: boolean } = {}) {
             </form>
         </Modal>
     </main>
-    <RightSidebar title="Calendrier des loyers" size="medium" variant="dark" collapsible>
+    <RightSidebar title="Calendrier des loyers" size="medium" variant="dark" collapsible collapsedWidth={48} collapsedContent={<div className="financial-calendar-rail"><CalendarRailPopover title="Activité des loyers" label="Ouvrir le calendrier des loyers"><ActivityCalendar events={calendarEvents} label="Calendrier des loyers et paiements" selectedDate={selectedDate} onSelectDate={setSelectedDate} onClearDate={() => setSelectedDate(null)} onMonthChange={(month, year) => { setSelectedDate(null); void loadCalendarMonth(month, year); }} description={calendarData === null ? 'Chargement des loyers et encaissements du mois…' : calendarData.paymentsUnavailable ? 'Les paiements ne sont pas disponibles ; les marqueurs affichent les échéances de loyer.' : calendarData.rents.note ?? (calendarData.payments.length >= 100 ? 'Historique mensuel plafonné à 100 résultats.' : 'Les marqueurs indiquent les échéances de loyer et les paiements reçus. Sélectionnez une date pour afficher les opérations correspondantes.')} emptyMessage="Aucune échéance ni paiement connu pour cette journée." /></CalendarRailPopover></div>}>
         <ActivityCalendar
             events={calendarEvents}
             label="Calendrier des loyers et paiements"

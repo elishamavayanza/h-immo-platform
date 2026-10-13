@@ -376,6 +376,39 @@
     background: $color-bg-card;
 }
 
+// Calendrier flottant ouvert depuis les icônes du rail droit replié.
+.calendar-rail-popover {
+    z-index: $z-modal;
+    width: min(380px, calc(100vw - 24px));
+    max-height: calc(100vh - 16px);
+    overflow: hidden;
+    border: 1px solid $color-border;
+    border-radius: $radius-lg;
+    color: $color-text-primary;
+    background: $color-bg-sidebar;
+    box-shadow: $shadow-lg;
+}
+
+.calendar-rail-popover__title {
+    padding: $spacing-3 $spacing-4;
+    border-bottom: 1px solid $color-border;
+    color: $color-text-primary;
+    font-weight: $font-weight-semibold;
+}
+
+.calendar-rail-popover__content {
+    max-height: calc(100vh - 72px);
+    padding: $spacing-2;
+    overflow: auto;
+    @include scrollbar;
+}
+
+.calendar-rail-popover .activity-calendar__calendar {
+    width: 100%;
+    max-width: none;
+    box-sizing: border-box;
+}
+
 .activity-calendar__calendar .calendar__header {
     display: grid;
     grid-template-columns: 32px minmax(0, 1fr) 32px;
