@@ -4,6 +4,7 @@ import { ApiError } from '../../../../../services/api/api.types';
 import { useAssignedCities } from '../../../shared/hooks/useAssignedCities';
 import { fetchAdminVilleReports } from '../services/reportsService';
 import type { AdminVilleReportsData } from '../types';
+import { computePeriodPreset } from '../../../shared/reports/periodPresets';
 
 /**
  * Rapport ADMIN_VILLE : le périmètre vient du backend (villes affectées à
@@ -14,12 +15,27 @@ import type { AdminVilleReportsData } from '../types';
 export function useReports() {
     const { cities, isLoading: citiesLoading, hasAssignedCities } = useAssignedCities();
 
-    const cityUuid = cities[0]?.id ?? '';
-    const [periodFrom, setPeriodFrom] = useState('');
-    const [periodTo, setPeriodTo] = useState('');
+    const [cityUuid, setCityUuid] = useState('');
+    const [periodFrom, setPeriodFrom] = useState(() => computePeriodPreset('this_year').from);
+    const [periodTo, setPeriodTo] = useState(() => computePeriodPreset('this_year').to);
     const [data, setData] = useState<AdminVilleReportsData | null>(null);
     const [isLoading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
+
+    // Ville par défaut : la première du périmètre, tant que l'utilisateur n'a
+    // rien choisi. Un administrateur affecté à plusieurs villes doit pouvoir
+    // basculer ; on ne présume donc plus de `cities[0]` au moment du rendu.
+    useEffect(() => {
+        if (cities.length === 0) {
+            setCityUuid('');
+
+            return;
+        }
+
+        setCityUuid((current) => (
+            current && cities.some((city) => city.id === current) ? current : cities[0].id
+        ));
+    }, [cities]);
 
     const reload = useCallback(async () => {
         if (!cityUuid) {
@@ -54,6 +70,7 @@ export function useReports() {
         reload,
         cities,
         cityUuid,
+        setCityUuid,
         periodFrom,
         setPeriodFrom,
         periodTo,

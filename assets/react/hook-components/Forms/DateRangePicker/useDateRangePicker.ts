@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 
 export type DateRangeVariant = 'default' | 'error' | 'success';
 export type DateRangeSize = 'small' | 'medium' | 'large';
@@ -31,6 +31,14 @@ export function useDateRangePicker({
                                    }: UseDateRangePickerProps) {
     const [startDate, setStartDate] = useState(initialStart);
     const [endDate, setEndDate] = useState(initialEnd);
+
+    // Le composant doit rester pilotable : quand le parent applique une
+    // période (bouton « Ce mois-ci », réinitialisation, navigation), les
+    // champs doivent suivre. Sans cette synchronisation, `useState` ne
+    // capterait que la valeur initiale et les presets n'auraient aucun effet
+    // visible sur les deux champs de date.
+    useEffect(() => { setStartDate(initialStart); }, [initialStart]);
+    useEffect(() => { setEndDate(initialEnd); }, [initialEnd]);
 
     const updateStartDate = (value: string) => {
         setStartDate(value);

@@ -2,6 +2,7 @@ import { Card } from '../../../../components/UI/Card';
 import { Badge } from '../../../../components/UI/Badge';
 import { InlineSummary } from '../../../shared/components/InlineSummary';
 import { formatInteger, formatMoney, formatPercent } from '../../../../../utils/format.utils';
+import { absoluteCents, amountBarPercent } from '../../../shared/reports/amountChart';
 import type { ArrearsItem, ExpenseSummaryItem, FinancialSummaryItem, OccupancyItem, PatronReportsData } from '../types';
 
 /** Libellé court d'un mois `YYYY-MM` fourni par le backend. */
@@ -60,19 +61,53 @@ function ExpenseRow({ item }: { item: ExpenseSummaryItem }) {
 }
 
 /** Ligne du résumé financier : revenus / dépenses / résultat net d'un mois. */
-function FinancialRow({ item }: { item: FinancialSummaryItem }) {
-    const positive = !item.netResult.startsWith('-');
+function FinancialTrend({ items, currency }: { items: FinancialSummaryItem[]; currency: string }) {
+    const points = items.slice(-12);
+    const maximum = points.reduce((largest, item) => {
+        const revenues = absoluteCents(item.revenues);
+        const expenses = absoluteCents(item.expenses);
+        const largestPoint = revenues > expenses ? revenues : expenses;
+
+        return largestPoint > largest ? largestPoint : largest;
+    }, 0n);
+
+    if (points.length === 0) return <p className="reports-empty">Aucune activité financière sur la période.</p>;
 
     return (
-        <div className="reports-breakdown__item">
-            <div className="reports-breakdown__copy">
-                <strong>{periodLabel(item.period)}</strong>
-                <small>Attendu {formatMoney(item.expected, item.currency)}</small>
+        <>
+            <div className="reports-legend" aria-hidden="true">
+                <span><i className="reports-legend__revenue" /> Revenus encaissés</span>
+                <span><i className="reports-legend__expenses" /> Dépenses</span>
             </div>
-            <span className={`reports-breakdown__amount${positive ? '' : ' reports-breakdown__amount--negative'}`}>
-                {formatMoney(item.netResult, item.currency)}
-            </span>
-        </div>
+            <div
+                className="reports-chart reports-chart--financial"
+                role="img"
+                aria-label={`Revenus encaissés et dépenses mensuels en ${currency}, sur ${points.length} périodes`}
+                style={{ gridTemplateColumns: `repeat(${points.length}, minmax(0, 1fr))` }}
+            >
+                {points.map((item) => (
+                    <div className="reports-chart__group" key={item.period}>
+                        <div className="reports-chart__bars">
+                            <div
+                                className="reports-chart__bar reports-chart__bar--revenue"
+                                style={{ height: `${Math.max(2, amountBarPercent(item.revenues, maximum))}%` }}
+                                title={`${periodLabel(item.period)} · Revenus : ${formatMoney(item.revenues, item.currency)}`}
+                            />
+                            <div
+                                className="reports-chart__bar reports-chart__bar--expenses"
+                                style={{ height: `${Math.max(2, amountBarPercent(item.expenses, maximum))}%` }}
+                                title={`${periodLabel(item.period)} · Dépenses : ${formatMoney(item.expenses, item.currency)}`}
+                            />
+                        </div>
+                        <span>{periodLabel(item.period)}</span>
+                    </div>
+                ))}
+            </div>
+            <div className="reports-chart__footnote">
+                <span>Montants convertis en {currency} · valeurs mensuelles réelles.</span>
+                {items.length > points.length && <span>12 périodes au plus sont affichées.</span>}
+            </div>
+        </>
     );
 }
 
@@ -111,11 +146,7 @@ export function ReportsOverview({ data }: { data: PatronReportsData }) {
                     <div className="reports-panel__heading">
                         <div><h2>Résultat net par période</h2><p>Revenus encaissés moins dépenses · {data.currency}</p></div>
                     </div>
-                    <div className="reports-breakdown__list">
-                        {data.financialSummary.length > 0
-                            ? data.financialSummary.map((item) => <FinancialRow key={item.period} item={item} />)
-                            : <p className="reports-empty">Aucune donnée financière sur la période.</p>}
-                    </div>
+                    <FinancialTrend items={data.financialSummary} currency={data.currency} />
                 </Card>
 
                 <Card className="reports-panel reports-breakdown" padding="medium">

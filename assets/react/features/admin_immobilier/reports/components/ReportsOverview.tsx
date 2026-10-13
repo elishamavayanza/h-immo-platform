@@ -93,9 +93,9 @@ export function ReportsOverview({ data }: { data: AdminImmobilierReportsData }) 
             <section className="reports-lower-grid">
                 <Card className="reports-panel" padding="medium">
                     <div className="reports-panel__heading">
-                        <div><h2>Évolution de l’occupation</h2><p>Taux d’occupation des 6 derniers mois · {data.currency}</p></div>
+                        <div><h2>Évolution de l’occupation</h2><p>Fin de chaque mois, jusqu’à aujourd’hui pour le mois courant.</p></div>
                     </div>
-                    <div className="reports-chart" role="img" aria-label="Évolution du taux d’occupation sur les 6 derniers mois">
+                    {data.evolution.length > 0 ? <div className="reports-chart" role="img" aria-label={`Évolution du taux d’occupation sur ${data.evolution.length} mois de la période sélectionnée`} style={{ gridTemplateColumns: `repeat(${data.evolution.length}, minmax(0, 1fr))` }}>
                         {data.evolution.map((point) => (
                             <div className="reports-chart__group" key={point.levelUuid ?? point.label}>
                                 <div className="reports-chart__bars">
@@ -108,10 +108,10 @@ export function ReportsOverview({ data }: { data: AdminImmobilierReportsData }) 
                                 <span>{monthLabel(point)}</span>
                             </div>
                         ))}
-                    </div>
+                    </div> : <p className="reports-empty">Aucune donnée d’occupation sur cette période.</p>}
                     <div className="reports-chart__footnote">
                         <span>Période : {data.periodCovered.replace(' to ', ' → ')}</span>
-                        <span>Source : rapport immobilier de l’organisation.</span>
+                        <span>Jusqu’à 12 mois · taux calculé sur les unités du patrimoine.</span>
                     </div>
                 </Card>
 

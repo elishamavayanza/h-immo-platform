@@ -110,6 +110,7 @@
                 <th>Catégorie</th>
                 <th>Niveau</th>
                 <th>Cible</th>
+                <th class="text-center">Écritures</th>
                 <th class="text-right">Montant</th>
                 <th>Devise</th>
             </tr>
@@ -120,6 +121,7 @@
                 <td>{{ item.category }}</td>
                 <td>{{ item.level }}</td>
                 <td>{{ item.levelLabel }}</td>
+                <td class="text-center">{{ item.count }}</td>
                 <td class="text-right">{{ item.totalAmount }} {{ item.currency.value }}</td>
                 <td>{{ item.currency.value }}</td>
             </tr>

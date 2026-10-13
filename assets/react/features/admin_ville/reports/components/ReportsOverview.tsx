@@ -9,6 +9,7 @@ import type {
     OccupancyItem,
     WorkerActivityItem,
 } from '../types';
+import { absoluteCents, amountBarPercent } from '../../../shared/reports/amountChart';
 
 /** Ligne d'occupation : taux en pourcentage + barre de progression. */
 function OccupancyRow({ item }: { item: OccupancyItem }) {
@@ -43,14 +44,19 @@ function ArrearsRow({ item }: { item: ArrearsItem }) {
 }
 
 /** Ligne de dépense agrégée par niveau (ville), montant déjà formaté. */
-function ExpenseRow({ item }: { item: ExpenseSummaryItem }) {
+function ExpenseRow({ item, maximum }: { item: ExpenseSummaryItem; maximum: bigint }) {
     return (
-        <div className="reports-breakdown__item">
-            <div className="reports-breakdown__copy">
-                <strong>{item.levelLabel}</strong>
-                <small>{item.category === 'ALL' ? 'Toutes catégories' : item.category}</small>
+        <div className="reports-expense-chart__item">
+            <div className="reports-breakdown__item">
+                <div className="reports-breakdown__copy">
+                    <strong>{item.category === 'ALL' ? 'Toutes catégories' : item.category}</strong>
+                    <small>{formatInteger(item.count)} écriture(s) · {item.levelLabel}</small>
+                </div>
+                <span className="reports-breakdown__amount">{formatMoney(item.totalAmount, item.currency)}</span>
             </div>
-            <span className="reports-breakdown__amount">{formatMoney(item.totalAmount, item.currency)}</span>
+            <div className="reports-expense-chart__track" aria-hidden="true">
+                <span style={{ width: `${amountBarPercent(item.totalAmount, maximum)}%` }} />
+            </div>
         </div>
     );
 }
@@ -70,6 +76,12 @@ function WorkerRow({ item }: { item: WorkerActivityItem }) {
 
 /** Corps du rapport, affiché sous l'en-tête de la page. */
 export function ReportsOverview({ data }: { data: AdminVilleReportsData }) {
+    const maximumExpense = data.expenses.reduce((largest, item) => {
+        const amount = absoluteCents(item.totalAmount);
+
+        return amount > largest ? amount : largest;
+    }, 0n);
+
     return (
         <div className="reports-page__content">
             <InlineSummary items={data.metrics.map((metric) => ({ label: metric.label, value: metric.value, detail: metric.helper }))} />
@@ -105,7 +117,7 @@ export function ReportsOverview({ data }: { data: AdminVilleReportsData }) {
                     </div>
                     <div className="reports-breakdown__list">
                         {data.expenses.length > 0
-                            ? data.expenses.map((item) => <ExpenseRow key={`${item.level}-${item.levelLabel}`} item={item} />)
+                            ? data.expenses.map((item) => <ExpenseRow key={`${item.category}-${item.levelLabel}`} item={item} maximum={maximumExpense} />)
                             : <p className="reports-empty">Aucune dépense enregistrée sur la période.</p>}
                     </div>
                 </Card>

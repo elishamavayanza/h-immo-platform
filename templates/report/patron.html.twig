@@ -12,8 +12,8 @@
         </div>
         <div class="summary-card">
             <h4>Résultat Net</h4>
-            <div class="value" style="color: {{ report.totalRevenues - report.totalExpenses >= 0 ? '#27ae60' : '#e74c3c' }};">
-                {{ report.totalRevenues - report.totalExpenses }} {{ report.currency }}
+            <div class="value" style="color: {{ netResult|slice(0, 1) == '-' ? '#e74c3c' : '#27ae60' }};">
+                {{ netResult }} {{ report.currency }}
             </div>
         </div>
         <div class="summary-card">

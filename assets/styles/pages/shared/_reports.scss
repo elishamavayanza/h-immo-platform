@@ -25,6 +25,31 @@
 .reports-page__controls .select-field__wrapper { min-width: 190px; }
 .reports-page__mock-label { color: $color-text-muted; font-size: $font-size-xs; white-space: nowrap; }
 
+/* Sélecteur de période partagé (périodes rapides + intervalle personnalisé). */
+.report-period-filter { display: flex; flex-direction: column; gap: $spacing-2; min-width: 0; }
+.report-period-filter__presets { display: flex; flex-wrap: wrap; gap: $spacing-2; }
+.report-period-filter__preset {
+    padding: 6px 12px;
+    border: 1px solid $color-border;
+    border-radius: $radius-full;
+    background: $color-bg-input;
+    color: $color-text-secondary;
+    font-size: $font-size-xs;
+    line-height: 1.2;
+    white-space: nowrap;
+    cursor: pointer;
+    transition: border-color $transition-fast, background $transition-fast, color $transition-fast;
+}
+.report-period-filter__preset:hover:not(:disabled) { border-color: $color-primary; color: $color-text-primary; }
+.report-period-filter__preset:focus-visible { outline: 2px solid $color-primary; outline-offset: 2px; }
+.report-period-filter__preset--active {
+    border-color: $color-primary;
+    background: color-mix(in srgb, $color-primary 18%, transparent);
+    color: $color-text-primary;
+    font-weight: $font-weight-semibold;
+}
+.report-period-filter__preset:disabled { opacity: .6; cursor: not-allowed; }
+
 .reports-lower-grid { display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(300px, .85fr); gap: $spacing-3; }
 .reports-panel .card__body { min-width: 0; padding: $spacing-4; }
 .reports-panel__heading { display: flex; align-items: flex-start; justify-content: space-between; gap: $spacing-3; margin-bottom: $spacing-4; }

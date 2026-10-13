@@ -4,47 +4,75 @@
     <meta charset="UTF-8">
     <title>{{ title }}</title>
     <style>
-        body { font-family: DejaVu Sans, sans-serif; font-size: 10px; margin: 20px; color: #333; }
-        h1 { font-size: 18px; color: #1a5276; border-bottom: 2px solid #1a5276; padding-bottom: 5px; }
-        h2 { font-size: 14px; color: #2c3e50; margin-top: 20px; border-bottom: 1px solid #bdc3c7; padding-bottom: 3px; }
-        h3 { font-size: 12px; color: #34495e; margin-top: 15px; }
-        .header { display: flex; justify-content: space-between; margin-bottom: 20px; }
-        .header-info { font-size: 9px; color: #7f8c8d; }
-        table { width: 100%; border-collapse: collapse; margin-bottom: 15px; font-size: 9px; }
+        @page { size: A4 landscape; margin: 90px 30px 45px 30px; }
+        body { font-family: DejaVu Sans, sans-serif; font-size: 10px; margin: 0; color: #333; }
+        h1 { font-size: 17px; color: #1a5276; margin: 0 0 4px; }
+        h2 { font-size: 13px; color: #2c3e50; margin: 18px 0 6px; border-bottom: 1px solid #bdc3c7; padding-bottom: 3px; }
+        h3 { font-size: 11px; color: #34495e; margin: 12px 0 4px; }
+        table { width: 100%; border-collapse: collapse; margin-bottom: 12px; font-size: 9px; }
         th, td { border: 1px solid #ddd; padding: 4px 6px; text-align: left; }
-        th { background-color: #1a5276; color: white; font-weight: bold; }
+        th { background-color: #1a5276; color: #fff; font-weight: bold; }
         tr:nth-child(even) { background-color: #f8f9fa; }
         .text-right { text-align: right; }
         .text-center { text-align: center; }
-        .badge { padding: 2px 6px; border-radius: 3px; font-size: 8px; font-weight: bold; }
-        .badge-success { background-color: #27ae60; color: white; }
-        .badge-warning { background-color: #f39c12; color: white; }
-        .badge-danger { background-color: #e74c3c; color: white; }
-        .badge-info { background-color: #3498db; color: white; }
-        .footer { margin-top: 30px; font-size: 8px; color: #95a5a6; text-align: center; border-top: 1px solid #ecf0f1; padding-top: 10px; }
-        .summary-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 20px; }
-        .summary-card { background: #f8f9fa; border: 1px solid #e0e0e0; border-radius: 4px; padding: 10px; }
-        .summary-card h4 { margin: 0 0 5px 0; font-size: 9px; color: #7f8c8d; }
-        .summary-card .value { font-size: 16px; font-weight: bold; color: #2c3e50; }
+        .header { position: fixed; top: -75px; left: 0; right: 0; padding-bottom: 6px; border-bottom: 2px solid #1a5276; }
+        .header__logo { float: left; width: 90px; max-height: 60px; margin-right: 12px; }
+        .header__identity { overflow: hidden; }
+        .header__org { font-size: 12px; font-weight: bold; color: #1a5276; }
+        .header__meta { font-size: 8px; color: #7f8c8d; margin-top: 2px; }
+        .header__meta span { margin-right: 10px; }
+        .doc-title { font-size: 17px; font-weight: bold; color: #1a5276; margin: 0; }
+        .doc-subtitle { font-size: 10px; color: #2c3e50; margin-top: 2px; }
+        .filters { margin: 8px 0 12px; padding: 8px 10px; border: 1px solid #e0e0e0; border-radius: 4px; background: #f8f9fa; font-size: 9px; }
+        .filters strong { color: #2c3e50; }
+        .filters span { display: inline-block; margin-right: 16px; }
+        .summary-grid { display: table; width: 100%; border-spacing: 8px 0; margin-bottom: 14px; }
+        .summary-card { display: table-cell; width: 25%; background: #f8f9fa; border: 1px solid #e0e0e0; border-radius: 4px; padding: 8px 10px; }
+        .summary-card h4 { margin: 0 0 4px; font-size: 9px; color: #7f8c8d; text-transform: uppercase; }
+        .summary-card .value { font-size: 15px; font-weight: bold; color: #2c3e50; }
+        .footer { position: fixed; bottom: -30px; left: 0; right: 0; font-size: 8px; color: #95a5a6; text-align: center; border-top: 1px solid #ecf0f1; padding-top: 6px; }
     </style>
 </head>
 <body>
     <div class="header">
-        <div>
-            <h1>{{ title }}</h1>
-            <div class="header-info">
-                Organisation: {{ report.organizationName|default(report.cityName|default('Plateforme')) }}<br>
-                Période: {{ report.periodCovered }}<br>
-                Généré le: {{ report.generatedAt|date('d/m/Y H:i') }}
+        {% if organizationLogo is defined and organizationLogo %}
+            <img class="header__logo" src="{{ organizationLogo }}" alt="Logo">
+        {% endif %}
+        <div class="header__identity">
+            <div class="header__org">{{ organization.name|default(report.organizationName|default(report.cityName|default('Plateforme H-Immo'))) }}</div>
+            <div class="header__meta">
+                {% if organization is defined %}
+                    {% if organization.address %}<span>{{ organization.address }}{% if organization.city %}, {{ organization.city }}{% endif %}{% if organization.country %}, {{ organization.country }}{% endif %}</span>{% endif %}
+                    {% if organization.phone %}<span>Tél : {{ organization.phone }}</span>{% endif %}
+                    {% if organization.email %}<span>Email : {{ organization.email }}</span>{% endif %}
+                {% endif %}
             </div>
         </div>
+    </div>
+
+    <div class="doc-title">{{ title }}</div>
+    <div class="doc-subtitle">{{ reportType|default('Rapport') }}</div>
+
+    <div class="filters">
+        <span><strong>Périmètre :</strong> {{ scope|default('—') }}</span>
+        <span><strong>Période :</strong> {{ (report.periodCovered|default('—'))|replace({' to ': ' → '}) }}</span>
+        <span><strong>Généré le :</strong> {{ (generatedAt|default(report.generatedAt|default(null)))|date('d/m/Y H:i') }}</span>
+        {% if appliedFilters is defined and appliedFilters|length > 0 %}
+            <br><strong>Filtres appliqués :</strong> {{ appliedFilters|join(' · ') }}
+        {% endif %}
     </div>
 
     {% block content %}{% endblock %}
 
     <div class="footer">
-        Soft-IMMO - Rapport généré automatiquement le {{ "now"|date('d/m/Y H:i') }}<br>
-        Ce document est confidentiel et destiné à l'usage interne uniquement.
+        H-Immo — document confidentiel destiné à l'usage interne. Généré automatiquement le {{ (generatedAt|default(report.generatedAt|default(null)))|date('d/m/Y H:i') }}.
     </div>
+
+    <script type="text/php">
+        if (isset($pdf)) {
+            $font = $fontMetrics->getFont("DejaVu Sans", "normal");
+            $pdf->page_text(740, 560, "Page {PAGE_NUM} / {PAGE_COUNT}", $font, 8, [0.5, 0.5, 0.5]);
+        }
+    </script>
 </body>
 </html>
