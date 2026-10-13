@@ -7,6 +7,7 @@ namespace App\Repository\Identity;
 use App\Entity\Identity\User;
 use App\Entity\Identity\UserCity;
 use App\Entity\Property\City;
+use App\Entity\Identity\Organization;
 use App\Repository\UuidParameterTrait;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\Persistence\ManagerRegistry;
@@ -112,19 +113,22 @@ class UserCityRepository extends ServiceEntityRepository
         ];
     }
 
-    /**
-     * Supprime toutes les affectations de villes d'un utilisateur.
-     *
-     * Utilisé lors de la révocation d'un ADMIN_VILLE ou du changement
-     * de son rôle vers un rôle sans gestion de ville.
-     */
-    public function deleteByUser(User $user): int
+    /** Retire uniquement les villes de l’organisation concernée lors d’une révocation de rôle. */
+    public function deleteByUserAndOrganization(User $user, Organization $organization): int
     {
-        return $this->createQueryBuilder('uc')
-            ->delete()
+        $links = $this->createQueryBuilder('uc')
+            ->innerJoin('uc.city', 'c')
             ->andWhere('uc.user = :user')
+            ->andWhere('c.organization = :organization')
             ->setParameter('user', $user)
+            ->setParameter('organization', $organization)
             ->getQuery()
-            ->execute();
+            ->getResult();
+
+        foreach ($links as $link) {
+            $this->getEntityManager()->remove($link);
+        }
+
+        return count($links);
     }
 }

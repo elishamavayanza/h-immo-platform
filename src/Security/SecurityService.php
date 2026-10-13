@@ -18,6 +18,7 @@ use App\Entity\Rental\Tenant;
 use App\Entity\Staff\Worker;
 use App\Entity\Staff\WorkerAssignment;
 use App\Entity\System\AuditLog;
+use App\Enum\CityStatus;
 use App\Enum\OrganizationRole;
 use App\Enum\OrganizationStatus;
 use App\Enum\PlatformRole;
@@ -28,6 +29,7 @@ use App\Repository\Identity\UserCityRepository;
 use App\Repository\Property\CityRepository;
 use App\Repository\Rental\TenantRepository;
 use Symfony\Bundle\SecurityBundle\Security;
+use Symfony\Component\HttpFoundation\RequestStack;
 
 /**
  * SecurityService
@@ -78,6 +80,7 @@ final class SecurityService implements SecurityServiceInterface
         private readonly UserCityRepository $userCityRepository,
         private readonly CityRepository $cityRepository,
         private readonly TenantRepository $tenantRepository,
+        private readonly RequestStack $requestStack,
     ) {
     }
 
@@ -205,9 +208,65 @@ final class SecurityService implements SecurityServiceInterface
      */
     public function getOrganizationRole(User $user, Organization $organization): ?OrganizationRole
     {
-        return $this->organizationUserRepository
-            ->findOneByOrganizationAndUser($organization, $user)
-            ?->getRole();
+        $request = $this->requestStack->getCurrentRequest();
+        $activeOrganization = $request?->headers->get('X-Organization-Context');
+        if ($activeOrganization !== null && $activeOrganization !== ''
+            && strtolower($activeOrganization) !== strtolower($organization->getUuid()->toRfc4122())) {
+            return null;
+        }
+
+        $requestedRole = $request?->headers->get('X-Organization-Role');
+        if ($requestedRole !== null && $requestedRole !== '') {
+            $role = OrganizationRole::tryFrom($requestedRole);
+
+            return $role === null
+                ? null
+                : $this->organizationUserRepository
+                    ->findOneByOrganizationUserAndRole($organization, $user, $role)
+                    ?->getRole();
+        }
+
+        // Les anciens clients restent compatibles tant qu'il n'y a qu'un
+        // rôle. En cas d'ambiguïté, aucun privilège n'est choisi implicitement.
+        $memberships = $this->organizationUserRepository->findByOrganizationAndUser($organization, $user);
+
+        return count($memberships) === 1 ? $memberships[0]->getRole() : null;
+    }
+
+    /**
+     * Résout un espace explicitement choisi pendant un basculement. Cette
+     * vérification ignore le contexte précédent de la requête, mais exige
+     * toujours une affectation DB exacte et une organisation active.
+     */
+    public function resolveWorkspaceRole(
+        User $user,
+        Organization $organization,
+        ?OrganizationRole $requestedRole = null,
+    ): OrganizationRole {
+        $this->checkOrganizationActive($organization);
+        $memberships = $requestedRole === null
+            ? $this->organizationUserRepository->findByOrganizationAndUser($organization, $user)
+            : [$this->organizationUserRepository->findOneByOrganizationUserAndRole($organization, $user, $requestedRole)];
+        $memberships = array_values(array_filter($memberships));
+        if (count($memberships) !== 1) {
+            throw new AccessDeniedException('Accès refusé : cet espace de travail n’est pas attribué à ce compte.');
+        }
+
+        $role = $memberships[0]->getRole();
+        if ($role === OrganizationRole::ADMIN_VILLE) {
+            $hasAccessibleCity = false;
+            foreach ($this->cityRepository->findAssignedToUserInOrganization($user, $organization) as $city) {
+                if ($city->getStatus() === CityStatus::ACTIVE) {
+                    $hasAccessibleCity = true;
+                    break;
+                }
+            }
+            if (!$hasAccessibleCity) {
+                throw new AccessDeniedException('Accès refusé : aucun périmètre de ville actif n’est attribué à cet espace.');
+            }
+        }
+
+        return $role;
     }
 
     public function hasOrganizationRole(
@@ -234,8 +293,7 @@ final class SecurityService implements SecurityServiceInterface
 
     public function belongsToOrganization(User $user, Organization $organization): bool
     {
-        return $this->organizationUserRepository
-            ->findOneByOrganizationAndUser($organization, $user) !== null;
+        return $this->organizationUserRepository->findByOrganizationAndUser($organization, $user) !== [];
     }
 
     /**
@@ -275,13 +333,37 @@ final class SecurityService implements SecurityServiceInterface
      */
     public function getCurrentUserOrganizations(): array
     {
-        $organizations = [];
+        $user = $this->getCurrentUser();
+        $request = $this->requestStack->getCurrentRequest();
+        $activeOrganizationUuid = $request?->headers->get('X-Organization-Context');
+        $activeRoleValue = $request?->headers->get('X-Organization-Role');
 
-        foreach ($this->organizationUserRepository->findByUser($this->getCurrentUser()) as $membership) {
-            $organizations[] = $membership->getOrganization();
+        if ($activeOrganizationUuid !== null && $activeOrganizationUuid !== '') {
+            $role = $activeRoleValue !== null ? OrganizationRole::tryFrom($activeRoleValue) : null;
+            if ($role === null) {
+                return [];
+            }
+
+            foreach ($this->organizationUserRepository->findByUser($user) as $membership) {
+                if (strtolower($membership->getOrganization()->getUuid()->toRfc4122()) === strtolower($activeOrganizationUuid)
+                    && $membership->getRole() === $role) {
+                    return [$membership->getOrganization()];
+                }
+            }
+
+            // Le contexte client est une sélection, jamais une permission :
+            // seules les affectations réellement présentes en base la valident.
+            return [];
         }
 
-        return $organizations;
+        $organizations = [];
+
+        foreach ($this->organizationUserRepository->findByUser($user) as $membership) {
+            $organization = $membership->getOrganization();
+            $organizations[(string) $organization->getUuid()] = $organization;
+        }
+
+        return array_values($organizations);
     }
 
     /*
@@ -344,7 +426,8 @@ final class SecurityService implements SecurityServiceInterface
         // tenant, pas un privilège d'administration.
         if ($action === SecurityAction::VIEW_USER) {
             foreach ($sharedOrganizations as $organization) {
-                if ($this->belongsToOrganization($user, $organization)) {
+                if ($this->getOrganizationRole($currentUser, $organization) !== null
+                    && $this->belongsToOrganization($user, $organization)) {
                     return;
                 }
             }
@@ -501,7 +584,11 @@ final class SecurityService implements SecurityServiceInterface
     {
         $this->checkCityAccess($city, SecurityAction::VIEW_CITY);
         $user = $this->getCurrentUser();
-        $membership = $this->organizationUserRepository->findOneByOrganizationAndUser($city->getOrganization(), $user);
+        $membership = $this->organizationUserRepository->findOneByOrganizationUserAndRole(
+            $city->getOrganization(),
+            $user,
+            OrganizationRole::ADMIN_VILLE,
+        );
 
         if ($membership === null
             || $membership->getRole() !== OrganizationRole::ADMIN_VILLE
@@ -524,7 +611,7 @@ final class SecurityService implements SecurityServiceInterface
      * - ADMIN_VILLE : uniquement ses villes attribuées ;
      * - PATRON / ADMIN_IMMOBILIER : toutes les villes de ses Organizations.
      *
-     * @return list<City>|null `null` = aucun filtre de ville à appliquer
+     * @return list<City>|null `null` = SUPER_ADMIN, donc aucun filtre de ville
      */
     public function getAccessibleCities(): ?array
     {
@@ -543,15 +630,15 @@ final class SecurityService implements SecurityServiceInterface
                 foreach ($this->cityRepository->findAssignedToUserInOrganization($user, $organization) as $city) {
                     $cities[] = $city;
                 }
-            } else {
-                // PATRON, ADMIN_IMMOBILIER, SUPER_ADMIN (mais pas ici) : toutes les villes de l'org
+            } elseif (in_array($role, [OrganizationRole::PATRON, OrganizationRole::ADMIN_IMMOBILIER], true)) {
+                // PATRON et ADMIN_IMMOBILIER : toutes les villes de l'organisation active.
                 foreach ($this->cityRepository->findInOrganization($organization) as $city) {
                     $cities[] = $city;
                 }
             }
         }
 
-        return $cities === [] ? null : $cities;
+        return $cities;
     }
 
     /**
@@ -565,9 +652,13 @@ final class SecurityService implements SecurityServiceInterface
     public function getAccessibleCitiesForOrganization(Organization $organization): array
     {
         $user = $this->getCurrentUser();
-
-        if ($this->getOrganizationRole($user, $organization) === OrganizationRole::ADMIN_VILLE) {
+        $role = $this->getOrganizationRole($user, $organization);
+        if ($role === OrganizationRole::ADMIN_VILLE) {
             return $this->cityRepository->findAssignedToUserInOrganization($user, $organization);
+        }
+
+        if (!in_array($role, [OrganizationRole::PATRON, OrganizationRole::ADMIN_IMMOBILIER], true)) {
+            return [];
         }
 
         return $this->cityRepository->findInOrganization($organization);

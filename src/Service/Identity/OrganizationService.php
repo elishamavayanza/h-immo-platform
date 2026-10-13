@@ -138,7 +138,7 @@ final readonly class OrganizationService
      * réponse reste un 403 « pas de rôle métier » plutôt qu'un rôle
      * inventé.
      */
-    public function getMembership(string $uuid): Feedback
+    public function getMembership(string $uuid, ?OrganizationRole $requestedRole = null): Feedback
     {
         $feedback = new Feedback();
         $organization = $this->repository->findOneBy(['uuid' => $uuid]);
@@ -151,18 +151,8 @@ final readonly class OrganizationService
                 ->autoInitFlush();
         }
 
-        $this->security->checkOrganizationAccess($organization, SecurityAction::VIEW_ORGANIZATION);
-
         $user = $this->security->getCurrentUser();
-        $role = $this->security->getOrganizationRole($user, $organization);
-
-        if ($role === null) {
-            return $feedback
-                ->addError('uuid', 'Vous n\'avez aucun rôle métier dans cette organisation.')
-                ->setErrorFlushDescription('Accès refusé : pas de rôle pour cette organisation.')
-                ->setStatus(403)
-                ->autoInitFlush();
-        }
+        $role = $this->security->resolveWorkspaceRole($user, $organization, $requestedRole);
 
         return $feedback
             ->setData(new SessionOrganizationMembership(

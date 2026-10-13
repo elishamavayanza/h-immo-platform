@@ -75,7 +75,7 @@ final readonly class ExchangeRateService
             return $this->failure(403, 'Ce réglage est réservé à l’administrateur immobilier ou aux administrateurs de ville autorisés.');
         }
 
-        $membership = $this->memberships->findOneByOrganizationAndUser($organization, $user);
+        $membership = $this->memberships->findOneByOrganizationUserAndRole($organization, $user, OrganizationRole::ADMIN_VILLE);
         if (!$membership?->canManageCityExchangeRate()) {
             return (new Feedback())->setData(['scope' => 'none', 'enabled' => false, 'organizationCurrency' => $organization->getCurrency()->value])->setStatus(200)->autoInitFlush();
         }
@@ -102,7 +102,7 @@ final readonly class ExchangeRateService
         $at = $date->modify('+1 day')->modify('-1 second');
         $allowCityRate = $role === OrganizationRole::ADMIN_IMMOBILIER;
         if ($role === OrganizationRole::ADMIN_VILLE) {
-            $membership = $this->memberships->findOneByOrganizationAndUser($organization, $user);
+            $membership = $this->memberships->findOneByOrganizationUserAndRole($organization, $user, OrganizationRole::ADMIN_VILLE);
             $allowCityRate = $membership?->canManageCityExchangeRate() ?? false;
         }
         $rates = [];

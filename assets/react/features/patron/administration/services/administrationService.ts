@@ -66,6 +66,27 @@ function toProfile(response: OrganizationApiResponse): OrganizationProfile {
  * pas l'équipe d'une autre.
  */
 export const administrationService = {
+    async listRoleAssignments(organizationUuid: string): Promise<{
+        items: Array<{ assignmentUuid: string; userUuid: string; name: string; email: string; active: boolean; role: string; cities: Array<{ uuid: string; name: string }> }>;
+        candidates: Array<{ uuid: string; name: string; email: string; roles: string[] }>;
+    }> {
+        const { data } = await apiClient.get<Feedback<{
+            items: Array<{ assignmentUuid: string; userUuid: string; name: string; email: string; active: boolean; role: string; cities: Array<{ uuid: string; name: string }> }>;
+            candidates: Array<{ uuid: string; name: string; email: string; roles: string[] }>;
+        }>>(`/v1/identity/organization-users/role-assignments/organization/${organizationUuid}`);
+        return data.data;
+    },
+
+    async assignExistingRole(payload: { organizationUuid: string; userUuid: string; role: 'admin_immobilier' | 'admin_ville'; cityUuids: string[] }): Promise<string | null> {
+        const { data } = await apiClient.post<Feedback<unknown>>('/v1/identity/organization-users/assign-existing', payload);
+        return data.flushDescription;
+    },
+
+    async revokeRole(assignmentUuid: string): Promise<string | null> {
+        const { data } = await apiClient.delete<Feedback<null>>(`/v1/identity/organization-users/${assignmentUuid}`);
+        return data.flushDescription;
+    },
+
     /**
      * `GET /v1/identity/users` — membres des organizations de l'appelant,
      * filtrés sur l'organization active (UUID en path, jamais depuis le body).

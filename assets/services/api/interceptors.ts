@@ -94,13 +94,23 @@ class InterceptorManager<T> {
 export const jwtInterceptor: RequestInterceptor = {
     onFulfilled: (config: RequestConfig): RequestConfig => {
         const token = tokenStorage.getAccessToken();
-        if (!token) return config;
+        let activeWorkspace: { uuid?: string; role?: string } | null = null;
+        try {
+            if (typeof localStorage === 'undefined') throw new Error('storage unavailable');
+            const stored = localStorage.getItem('h-immo:active-workspace');
+            activeWorkspace = stored ? JSON.parse(stored) as { uuid?: string; role?: string } : null;
+        } catch {
+            activeWorkspace = null;
+        }
+        if (!token && !activeWorkspace?.role) return config;
 
         return {
             ...config,
             headers: {
                 ...config.headers,
-                Authorization: `Bearer ${token}`,
+                ...(token ? { Authorization: `Bearer ${token}` } : {}),
+                ...(activeWorkspace?.role ? { 'X-Organization-Role': activeWorkspace.role } : {}),
+                ...(activeWorkspace?.uuid ? { 'X-Organization-Context': activeWorkspace.uuid } : {}),
             },
         };
     },

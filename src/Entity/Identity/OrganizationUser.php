@@ -18,12 +18,12 @@ use Doctrine\ORM\Mapping as ORM;
  * Table de liaison N-N entre User et Organization, portant en plus
  * le rôle (OrganizationRole) que l'utilisateur occupe au sein de
  * cette Organization précise (PATRON, ADMIN_IMMOBILIER, ADMIN_VILLE).
- * Un couple (organization, user) est unique : un utilisateur n'a
- * qu'un seul rôle par Organization.
+ * Un rôle est unique par couple (organization, user) : un utilisateur peut
+ * disposer de plusieurs espaces dans la même Organization.
  */
 #[ORM\Entity]
 #[ORM\Table(name: 'organization_user')]
-#[ORM\UniqueConstraint(name: 'uniq_org_user', columns: ['organization_id', 'user_id'])]
+#[ORM\UniqueConstraint(name: 'uniq_org_user_role', columns: ['organization_id', 'user_id', 'role'])]
 class OrganizationUser extends TimestampedEntity
 {
 

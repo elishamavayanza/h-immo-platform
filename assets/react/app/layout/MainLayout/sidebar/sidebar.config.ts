@@ -209,7 +209,7 @@ const RAPPORTS: AppMenuItem = {
  * - `patron` : tout le menu, avec « Administration » qui regroupe l'Équipe
  *   (une seule liste : cadres et ouvriers) — « Personnel » n'est donc plus
  *   une entrée à part pour ce rôle.
- * - `admin_immobilier` : opérations + Personnel, qui est la 7e entrée
+ * - `admin_immobilier` : opérations + Personnel + Administration des seuls accès ville déléguables
  *   (le backend lui accorde CREATE/UPDATE/DELETE sur Worker, cf.
  *   `SecurityService::checkAdminImmobilierAction`). Seule l'Administration
  *   reste réservée au PATRON.
@@ -219,7 +219,7 @@ const RAPPORTS: AppMenuItem = {
  */
 export const ORGANIZATION_SIDEBAR: Record<OrganizationRole, SidebarMenu> = {
     patron: [DASHBOARD, RAPPORTS, PATRIMOINE, LOCATAIRES, LOYERS, DEPENSES, VITRINE, ADMINISTRATION],
-    admin_immobilier: [DASHBOARD, RAPPORTS, PATRIMOINE, LOCATAIRES, LOYERS, DEPENSES, VITRINE, PERSONNEL],
+    admin_immobilier: [DASHBOARD, RAPPORTS, PATRIMOINE, LOCATAIRES, LOYERS, DEPENSES, VITRINE, PERSONNEL, ADMINISTRATION],
     admin_ville: [DASHBOARD, RAPPORTS, PATRIMOINE, LOCATAIRES, LOYERS, DEPENSES, ADMIN_VILLE_OPERATIONS],
 };
 

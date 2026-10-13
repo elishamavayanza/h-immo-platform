@@ -16,6 +16,7 @@ import { DepensesPage as AdminImmobilierDepensesPage } from '../../features/admi
 import { VitrinePage as AdminImmobilierVitrinePage } from '../../features/admin_immobilier/vitrine/pages/VitrinePage';
 import { PersonnelPage as AdminImmobilierPersonnelPage } from '../../features/admin_immobilier/personnel/pages/PersonnelPage';
 import { ReportsPage as AdminImmobilierReportsPage } from '../../features/admin_immobilier/reports/pages/ReportsPage';
+import { AdministrationPage as AdminImmobilierAdministrationPage } from '../../features/admin_immobilier/administration/pages/AdministrationPage';
 import { AdminVilleDashboardPage } from '../../features/admin_ville/dashbord/pages/AdminVilleDashboardPage';
 import { PatrimoinePage as AdminVillePatrimoinePage } from '../../features/admin_ville/patrimoine/pages/PatrimoinePage';
 import { LocatairesPage as AdminVilleLocatairesPage } from '../../features/admin_ville/locataires/pages/LocatairesPage';
@@ -40,6 +41,7 @@ export function OrganizationMenuPage({ path }: OrganizationMenuPageProps) {
             case '/app/rapports': return <AdminImmobilierReportsPage />;
             case '/app/vitrine': return <AdminImmobilierVitrinePage />;
             case '/app/personnel': return <AdminImmobilierPersonnelPage />;
+            case '/app/administration': return <AdminImmobilierAdministrationPage />;
             default: return null;
         }
     }
