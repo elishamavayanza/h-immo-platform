@@ -22,6 +22,13 @@ export default defineConfig({
     server: {
         port: 5173,
         strictPort: true,
+        // Le point d'entrée Vite est dans assets/react/app, tandis que les
+        // fonctionnalités importées vivent dans assets/react/features.
+        // Autoriser explicitement la racine du dépôt évite que le serveur
+        // refuse une nouvelle fonctionnalité hors du root de l'application.
+        fs: {
+            allow: [projectRoot],
+        },
 
         proxy: {
             '/api': {

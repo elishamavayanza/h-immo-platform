@@ -46,6 +46,9 @@ export interface DepenseRow {
     supplier: string | null;
     reference: string | null;
     notes: string | null;
+    isReversal?: boolean;
+    isReversed?: boolean;
+    reversalOfId?: string | null;
 }
 
 export interface DepensesData {
