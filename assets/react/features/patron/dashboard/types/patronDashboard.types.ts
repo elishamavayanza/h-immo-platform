@@ -6,7 +6,7 @@
  * tableau de bord ADMIN_IMMOBILIER projette son propre rapport. Les types
  * bruts proviennent du contrat `../../reports/types`.
  */
-import type { ArrearsItem, ExpenseSummaryItem, OccupancyItem } from '../../reports/types';
+import type { ArrearsItem, ExpenseSummaryItem, LeaseExpiryItem, OccupancyItem } from '../../reports/types';
 
 /** Carte indicateur du tableau de bord. */
 export interface PatronDashboardMetric {
@@ -30,6 +30,7 @@ export interface PatronDashboardData {
     cities: OccupancyItem[];
     /** Impayés à recouvrer, triés par retard côté backend. */
     arrears: ArrearsItem[];
+    upcomingLeaseExpirations: LeaseExpiryItem[];
     /** Dépenses agrégées par ville. */
     expenses: ExpenseSummaryItem[];
 }

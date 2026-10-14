@@ -319,4 +319,44 @@ class LeaseRepository extends ServiceEntityRepository
             ->getQuery()
             ->getResult();
     }
+
+    /**
+     * Baux actifs arrivant à échéance dans les villes autorisées.
+     * Une liste vide ne signifie jamais « toutes les villes ».
+     *
+     * @param list<int> $cityIds
+     * @return list<Lease>
+     */
+    public function findUpcomingExpirations(array $cityIds, int $organizationId, \DateTimeImmutable $from, \DateTimeImmutable $to): array
+    {
+        if ($cityIds === []) {
+            return [];
+        }
+
+        return $this->createQueryBuilder('l')
+            ->addSelect('t', 'u', 'b', 'p', 'c')
+            ->innerJoin('l.tenant', 't')
+            ->innerJoin('l.unit', 'u')
+            ->innerJoin('u.building', 'b')
+            ->innerJoin('b.parcel', 'p')
+            ->innerJoin('p.city', 'c')
+            ->andWhere('l.organization = :organization')
+            ->andWhere('c.id IN (:cities)')
+            ->andWhere('l.status = :active')
+            ->andWhere('l.endDate IS NOT NULL AND l.endDate >= :from AND l.endDate <= :to')
+            ->andWhere('l.deletedAt IS NULL')
+            ->andWhere('t.deletedAt IS NULL')
+            ->andWhere('u.deletedAt IS NULL')
+            ->andWhere('b.deletedAt IS NULL')
+            ->andWhere('p.deletedAt IS NULL')
+            ->andWhere('c.deletedAt IS NULL')
+            ->setParameter('organization', $organizationId)
+            ->setParameter('cities', $cityIds)
+            ->setParameter('active', LeaseStatus::ACTIVE)
+            ->setParameter('from', $from)
+            ->setParameter('to', $to)
+            ->orderBy('l.endDate', 'ASC')
+            ->getQuery()
+            ->getResult();
+    }
 }

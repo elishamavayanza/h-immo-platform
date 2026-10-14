@@ -38,6 +38,16 @@ export interface ArrearsItem {
     currency: string;
 }
 
+export interface LeaseExpiryItem {
+    leaseUuid: string;
+    leaseReference: string;
+    tenantName: string;
+    unitLabel: string;
+    cityName: string;
+    endDate: string;
+    daysRemaining: number;
+}
+
 /** Dépense agrégée par niveau : `currency` est un code ISO 4217 ("USD"/"CDF"). */
 export interface ExpenseSummaryItem {
     category: string;
@@ -58,6 +68,7 @@ export interface AdminImmobilierReport {
     occupancyByParcel: OccupancyItem[];
     occupancyByBuilding: OccupancyItem[];
     arrears: ArrearsItem[];
+    upcomingLeaseExpirations: LeaseExpiryItem[];
     propertyExpenses: ExpenseSummaryItem[];
     occupancyEvolution: OccupancyItem[];
     totalUnits: number;
@@ -82,6 +93,7 @@ export interface AdminImmobilierReportsData {
     metrics: AdminImmobilierReportsMetric[];
     buildings: OccupancyItem[];
     arrears: ArrearsItem[];
+    upcomingLeaseExpirations: LeaseExpiryItem[];
     expenses: ExpenseSummaryItem[];
     /** Derniers mois d'occupation (déjà bornés à 6 par le service). */
     evolution: OccupancyItem[];

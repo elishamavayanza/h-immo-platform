@@ -149,6 +149,7 @@ export function normalizePatronReport(report: PatronReport): PatronReportsData {
         cities: report.occupancyByCity,
         parcels: report.occupancyByParcel,
         arrears: report.arrears,
+        upcomingLeaseExpirations: report.upcomingLeaseExpirations,
         expensesByCategory: report.expensesByCategory,
         expensesByCity: report.expensesByCity,
         financialSummary: report.financialSummary,

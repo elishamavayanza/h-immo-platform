@@ -1,6 +1,7 @@
 import { Card } from '../../../../components/UI/Card';
 import { formatInteger, formatMoney, formatPercent } from '../../../../../utils/format.utils';
 import type { PatronDashboardData } from '../types/patronDashboard.types';
+import { UpcomingLeaseExpirations } from '../../../shared/components/UpcomingLeaseExpirations';
 
 /** Vue d'ensemble du Patron : indicateurs + occupation par ville + impayés + dépenses. */
 export function PatronOverview({ data }: { data: PatronDashboardData }) {
@@ -14,6 +15,10 @@ export function PatronOverview({ data }: { data: PatronDashboardData }) {
                         <small>{metric.detail}</small>
                     </Card>
                 ))}
+            </section>
+
+            <section className="organization-dashboard-grid">
+                <UpcomingLeaseExpirations items={data.upcomingLeaseExpirations} />
             </section>
 
             <section className="organization-dashboard-grid">

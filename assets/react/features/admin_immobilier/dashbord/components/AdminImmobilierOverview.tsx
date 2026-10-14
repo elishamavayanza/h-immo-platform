@@ -1,6 +1,7 @@
 import { Card } from '../../../../components/UI/Card';
 import { formatInteger, formatMoney, formatPercent } from '../../../../../utils/format.utils';
 import type { AdminImmobilierDashboardData } from '../types/adminImmobilierDashboard.types';
+import { UpcomingLeaseExpirations } from '../../../shared/components/UpcomingLeaseExpirations';
 
 /** Vue d'ensemble : indicateurs + occupation du patrimoine + impayés à traiter. */
 export function AdminImmobilierOverview({ data }: { data: AdminImmobilierDashboardData }) {
@@ -16,6 +17,10 @@ export function AdminImmobilierOverview({ data }: { data: AdminImmobilierDashboa
                         <small>{metric.detail}</small>
                     </Card>
                 ))}
+            </section>
+
+            <section className="organization-dashboard-grid">
+                <UpcomingLeaseExpirations items={data.upcomingLeaseExpirations} />
             </section>
 
             <section className="organization-dashboard-grid">

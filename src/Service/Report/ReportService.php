@@ -20,6 +20,7 @@ use App\Dto\Response\Report\SuperAdminDashboardResponse;
 use App\Dto\Response\Report\WorkerActivityItem;
 use App\Dto\Response\Report\OrganizationSummaryItem;
 use App\Dto\Response\Report\KpiMetric;
+use App\Dto\Response\Report\LeaseExpiryItem;
 use App\Dto\Response\Report\RevenuePoint;
 use App\Dto\Response\Report\ActivityEntry;
 use App\Dto\Response\Report\SystemHealthMetric;
@@ -70,6 +71,8 @@ use Symfony\Component\Uid\Uuid;
  */
 final readonly class ReportService
 {
+    private const LEASE_EXPIRY_ALERT_DAYS = 30;
+
     public function __construct(
         private CityRepository $cityRepository,
         private ParcelRepository $parcelRepository,
@@ -112,6 +115,7 @@ final readonly class ReportService
             periodCovered: $this->dateTime->format($periodFrom, 'Y-m-d') . ' to ' . $this->dateTime->format($periodTo, 'Y-m-d'),
             generatedAt: $this->dateTime->now(),
         );
+        $response->upcomingLeaseExpirations = $this->buildUpcomingLeaseExpirations($organization->getId(), $cityIds);
 
         if ($filter->includeFinancials) {
             $response->financialSummary = $this->buildFinancialSummary($organization->getId(), $cityIds, $periodFrom, $periodTo);
@@ -162,6 +166,7 @@ final readonly class ReportService
             periodCovered: $this->dateTime->format($periodFrom, 'Y-m-d') . ' to ' . $this->dateTime->format($periodTo, 'Y-m-d'),
             generatedAt: $this->dateTime->now(),
         );
+        $response->upcomingLeaseExpirations = $this->buildUpcomingLeaseExpirations($organization->getId(), $cityIds);
 
         $response->occupancyByParcel = $this->buildOccupancyByParcel($cityIds);
         $response->occupancyByBuilding = $this->buildOccupancyByBuilding($cityIds);
@@ -211,6 +216,7 @@ final readonly class ReportService
             periodCovered: $this->dateTime->format($periodFrom, 'Y-m-d') . ' to ' . $this->dateTime->format($periodTo, 'Y-m-d'),
             generatedAt: $this->dateTime->now(),
         );
+        $response->upcomingLeaseExpirations = $this->buildUpcomingLeaseExpirations($city->getOrganization()->getId(), $cityIds);
 
         $response->occupancyByParcel = $this->buildOccupancyByParcel($cityIds);
         $response->occupancyByBuilding = $this->buildOccupancyByBuilding($cityIds);
@@ -245,6 +251,49 @@ final readonly class ReportService
         $response->currency = $this->getMainCurrency(null, $cityIds);
 
         return $response;
+    }
+
+    /**
+     * Les alertes se limitent aux baux actifs qui expirent dans les 30
+     * prochains jours. La requête repository borne déjà l'organisation et
+     * les villes avant de charger les lignes.
+     *
+     * @param list<int> $cityIds
+     * @return list<LeaseExpiryItem>
+     */
+    private function buildUpcomingLeaseExpirations(int $organizationId, array $cityIds): array
+    {
+        $today = $this->dateTime->today();
+        $until = $today->add(new \DateInterval('P' . self::LEASE_EXPIRY_ALERT_DAYS . 'D'));
+
+        $leases = $this->leaseRepository->findUpcomingExpirations(
+            $cityIds,
+            $organizationId,
+            $today,
+            $until,
+        );
+        $items = [];
+        foreach ($leases as $lease) {
+            $endDate = $lease->getEndDate();
+            if ($endDate === null) {
+                continue;
+            }
+            $unit = $lease->getUnit();
+            $tenant = $lease->getTenant();
+            $parcel = $unit->getBuilding()->getParcel();
+
+            $items[] = new LeaseExpiryItem(
+                leaseUuid: $lease->getUuid()->toRfc4122(),
+                leaseReference: $lease->getReference(),
+                tenantName: $tenant->getFullName() ?? $tenant->getCompanyName() ?? 'Locataire',
+                unitLabel: $unit->getReference(),
+                cityName: $parcel->getCity()->getName(),
+                endDate: $this->dateTime->format($endDate, 'Y-m-d'),
+                daysRemaining: (int) $today->diff($endDate)->format('%a'),
+            );
+        }
+
+        return $items;
     }
 
     /**

@@ -1,6 +1,7 @@
 import { Card } from '../../../../components/UI/Card';
 import { formatInteger, formatMoney, formatPercent } from '../../../../../utils/format.utils';
 import type { AdminVilleDashboardData } from '../types/adminVilleDashboard.types';
+import { UpcomingLeaseExpirations } from '../../../shared/components/UpcomingLeaseExpirations';
 
 /** Vue d'ensemble : indicateurs + occupation du patrimoine + impayés à traiter. */
 export function AdminVilleOverview({ data }: { data: AdminVilleDashboardData }) {
@@ -16,6 +17,10 @@ export function AdminVilleOverview({ data }: { data: AdminVilleDashboardData }) 
                         <small>{metric.detail}</small>
                     </Card>
                 ))}
+            </section>
+
+            <section className="organization-dashboard-grid">
+                <UpcomingLeaseExpirations items={data.upcomingLeaseExpirations} />
             </section>
 
             <section className="organization-dashboard-grid">

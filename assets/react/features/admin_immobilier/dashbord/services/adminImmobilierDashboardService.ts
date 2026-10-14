@@ -83,6 +83,7 @@ export async function fetchAdminImmobilierDashboard(organizationUuid: string): P
         ),
         buildings: report.occupancyByBuilding,
         arrears: report.arrears,
+        upcomingLeaseExpirations: report.upcomingLeaseExpirations,
         expenses: report.propertyExpenses,
     };
 }
