@@ -44,6 +44,21 @@ export const usersService = {
             warnings: data.warnings,
         };
     },
+
+    /** `PUT /api/v1/identity/users/{uuid}` — réactive sans attendre l'échéance. */
+    async activate(uuid: string, fullName: string): Promise<UserSuspendResult> {
+        const [firstName, ...lastName] = fullName.trim().split(/\s+/);
+        const { data } = await apiClient.put<Feedback<UserApiResponse>>(`/v1/identity/users/${uuid}`, {
+            firstName: firstName || '-',
+            lastName: lastName.join(' ') || '-',
+            isActive: true,
+        });
+        return {
+            user: toRow(data.data),
+            flushDescription: data.flushDescription,
+            warnings: data.warnings,
+        };
+    },
 };
 
 /**

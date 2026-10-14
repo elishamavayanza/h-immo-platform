@@ -87,6 +87,19 @@ export function useUsers() {
         }
     };
 
+    const activateUser = async (id: string): Promise<void> => {
+        const current = users.find((user) => user.id === id);
+        if (!current) return;
+        try {
+            const result = await usersService.activate(id, current.name);
+            setUsers((list) => list.map((user) => user.id === id ? result.user : user));
+            push('success', result.flushDescription ?? 'Le compte a été réactivé.');
+        } catch (cause) {
+            push('error', actionErrorMessage(cause));
+            throw cause;
+        }
+    };
+
     return {
         users,
         filteredUsers,
@@ -103,5 +116,6 @@ export function useUsers() {
         organizationFilter,
         setOrganizationFilter,
         suspendUser,
+        activateUser,
     };
 }

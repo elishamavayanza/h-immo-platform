@@ -218,11 +218,24 @@ final readonly class UserService
             }
         }
 
+        $wasInactive = !$user->isActive();
         $this->mapper->copyToEntity($request, $user);
         if ($request->isActive !== null) {
             $user->setSuspensionEndsAt(null);
+            $user->setUpdatedAt($this->dateTimeService->now());
         }
         $this->em->flush();
+
+        if ($wasInactive && $request->isActive === true) {
+            $this->auditLogService->log(
+                action: 'ACTIVATE_USER',
+                entityType: User::class,
+                entityId: $user->getId(),
+                user: $this->security->getCurrentUser(),
+                oldValues: ['isActive' => false],
+                newValues: ['isActive' => true, 'suspensionEndsAt' => null],
+            );
+        }
 
         return $feedback
             ->setData($this->mapper->toResponse($user, $this->membershipsFor($user)))
