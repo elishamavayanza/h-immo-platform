@@ -3,24 +3,13 @@
 // Table de routage du SPA.
 // ============================================================
 
+import { lazy, Suspense, type ComponentType } from 'react';
 import { Navigate, Route, Routes, useNavigate } from 'react-router-dom';
-
-import { ForgotPasswordPage } from '../../features/auth/pages/ForgotPasswordPage';
-import { LoginPage } from '../../features/auth/pages/LoginPage';
-import { ResetPasswordPage } from '../../features/auth/pages/ResetPasswordPage';
-import { SuperAdminDashboardPage } from '../../features/super_admin/dashboard/pages/SuperAdminDashboardPage';
-import { OrganizationsPage } from '../../features/super_admin/organizations/pages/OrganizationsPage';
-import { UsersPage } from '../../features/super_admin/users/pages/UsersPage';
-import { AuditLogPage } from '../../features/super_admin/audit/pages/AuditLogPage';
-import { ReportsPage as SuperAdminReportsPage } from '../../features/super_admin/reports/pages/ReportsPage';
-import { OrganizationMenuPage } from './OrganizationMenuPage';
-import { OrganisationPage } from '../../features/patron/administration/pages/OrganisationPage';
-import { ProfilePage } from '../../features/shared/account/profile/pages/ProfilePage';
-import { SettingsPage } from '../../features/shared/account/settings/pages/SettingsPage';
 
 import { AuthLayout } from '../layout/AuthLayout/AuthLayout';
 import { MainLayout } from '../layout/MainLayout/MainLayout';
 import { ErrorState } from '../../components/UI/ErrorState';
+import { Spinner } from '../../components/UI/Spinner';
 import { useOrganization } from '../providers/OrganizationProvider';
 import { useAuth } from '../providers/AuthProvider';
 import { defaultPathFor } from '../layout/MainLayout/sidebar/sidebar.config';
@@ -35,6 +24,24 @@ import { AppRouteGuard } from './AppRouteGuard';
 import { readLastLocation } from './navigationMemory';
 
 // Import des pages métier
+
+/** Les écrans ne sont téléchargés qu'à l'ouverture de leur route. */
+function lazyPage<Module extends object, ExportName extends keyof Module>(loader: () => Promise<Module>, exportName: ExportName) {
+    return lazy(async () => ({ default: (await loader())[exportName] as ComponentType<any> }));
+}
+
+const LoginPage = lazyPage(() => import('../../features/auth/pages/LoginPage'), 'LoginPage');
+const ForgotPasswordPage = lazyPage(() => import('../../features/auth/pages/ForgotPasswordPage'), 'ForgotPasswordPage');
+const ResetPasswordPage = lazyPage(() => import('../../features/auth/pages/ResetPasswordPage'), 'ResetPasswordPage');
+const SuperAdminDashboardPage = lazyPage(() => import('../../features/super_admin/dashboard/pages/SuperAdminDashboardPage'), 'SuperAdminDashboardPage');
+const OrganizationsPage = lazyPage(() => import('../../features/super_admin/organizations/pages/OrganizationsPage'), 'OrganizationsPage');
+const UsersPage = lazyPage(() => import('../../features/super_admin/users/pages/UsersPage'), 'UsersPage');
+const AuditLogPage = lazyPage(() => import('../../features/super_admin/audit/pages/AuditLogPage'), 'AuditLogPage');
+const SuperAdminReportsPage = lazyPage(() => import('../../features/super_admin/reports/pages/ReportsPage'), 'ReportsPage');
+const OrganizationMenuPage = lazyPage(() => import('./OrganizationMenuPage'), 'OrganizationMenuPage');
+const OrganisationPage = lazyPage(() => import('../../features/patron/administration/pages/OrganisationPage'), 'OrganisationPage');
+const ProfilePage = lazyPage(() => import('../../features/shared/account/profile/pages/ProfilePage'), 'ProfilePage');
+const SettingsPage = lazyPage(() => import('../../features/shared/account/settings/pages/SettingsPage'), 'SettingsPage');
 
 /** Table figée au chargement : le menu est statique dans le bundle. */
 const APP_ROUTES = buildAppRoutes();
@@ -80,12 +87,14 @@ function AccessDenied() {
 
 
 export function AppRoutes() {
+    const pageFallback = <div className="main-layout__page-loading" aria-busy="true"><Spinner size="large" className="spinner--page" /><span>Chargement de la page…</span></div>;
+
     return (
         <Routes>
             <Route element={<AuthLayout />}>
-                <Route path="/login" element={<LoginPage />} />
-                <Route path="/forgot-password" element={<ForgotPasswordPage />} />
-                <Route path="/reset-password" element={<ResetPasswordPage />} />
+                <Route path="/login" element={<Suspense fallback={pageFallback}><LoginPage /></Suspense>} />
+                <Route path="/forgot-password" element={<Suspense fallback={pageFallback}><ForgotPasswordPage /></Suspense>} />
+                <Route path="/reset-password" element={<Suspense fallback={pageFallback}><ResetPasswordPage /></Suspense>} />
             </Route>
 
             <Route path="/" element={<Navigate to={APP_ROOT} replace />} />
@@ -104,23 +113,23 @@ export function AppRoutes() {
                                 element={
                                     route.path.startsWith('/app/admin/')
                                         ? route.path === '/app/admin/dashboard'
-                                            ? <SuperAdminDashboardPage />
+                                            ? <Suspense fallback={pageFallback}><SuperAdminDashboardPage /></Suspense>
                                             : route.path === '/app/admin/organisations'
-                                                ? <OrganizationsPage />
+                                                ? <Suspense fallback={pageFallback}><OrganizationsPage /></Suspense>
                                                 : route.path === '/app/admin/utilisateurs'
-                                                    ? <UsersPage />
+                                                    ? <Suspense fallback={pageFallback}><UsersPage /></Suspense>
                                                     : route.path === '/app/admin/audit'
-                                                        ? <AuditLogPage />
+                                                        ? <Suspense fallback={pageFallback}><AuditLogPage /></Suspense>
                                                         : route.path === '/app/admin/rapports'
-                                                            ? <SuperAdminReportsPage />
+                                                            ? <Suspense fallback={pageFallback}><SuperAdminReportsPage /></Suspense>
                                                             : undefined
-                                        : <OrganizationMenuPage path={route.path} />
+                                        : <Suspense fallback={pageFallback}><OrganizationMenuPage path={route.path} /></Suspense>
                                 }
                             />
                         );
                     })}
 
-                    <Route path="organisation" element={<OrganisationPage />} />
+                    <Route path="organisation" element={<Suspense fallback={pageFallback}><OrganisationPage /></Suspense>} />
 
                     <Route
                         path={toRelativeAppPath(ACCESS_DENIED_PATH)}
@@ -131,9 +140,9 @@ export function AppRoutes() {
 
             {/* Pages ouvertes depuis le menu utilisateur du pied de sidebar. */}
             <Route element={<MainLayout />}>
-                <Route path="/profile" element={<ProfilePage />} />
-                <Route path="/settings" element={<SettingsPage />} />
-                <Route path="/settings/organisation" element={<SettingsPage />} />
+                <Route path="/profile" element={<Suspense fallback={pageFallback}><ProfilePage /></Suspense>} />
+                <Route path="/settings" element={<Suspense fallback={pageFallback}><SettingsPage /></Suspense>} />
+                <Route path="/settings/organisation" element={<Suspense fallback={pageFallback}><SettingsPage /></Suspense>} />
             </Route>
 
             <Route path="*" element={<Navigate to={APP_ROOT} replace />} />

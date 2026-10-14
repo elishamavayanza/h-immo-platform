@@ -118,6 +118,44 @@ class UnitRepository extends ServiceEntityRepository
     }
 
     /**
+     * Agrège les unités et leur occupation courante par ville en une requête.
+     * Les filtres reproduisent les suppressions logiques appliquées aux listes
+     * du patrimoine et la règle d'occupation par bail ACTIVE.
+     *
+     * @param list<int> $cityIds
+     * @return list<array{cityId: int, cityName: string, totalUnits: int, occupiedUnits: int}>
+     */
+    public function getCurrentOccupancyByCityIds(array $cityIds): array
+    {
+        if ($cityIds === []) {
+            return [];
+        }
+
+        $rows = $this->createQueryBuilder('u')
+            ->select('c.id AS cityId, c.name AS cityName, COUNT(DISTINCT u.id) AS totalUnits, COUNT(DISTINCT CASE WHEN l.id IS NOT NULL THEN u.id ELSE NULL END) AS occupiedUnits')
+            ->innerJoin('u.building', 'b')
+            ->innerJoin('b.parcel', 'p')
+            ->innerJoin('p.city', 'c')
+            ->leftJoin('App\\Entity\\Rental\\Lease', 'l', 'WITH', 'l.unit = u AND l.status = :activeStatus AND l.deletedAt IS NULL')
+            ->andWhere('c.id IN (:cities)')
+            ->andWhere('u.deletedAt IS NULL')
+            ->andWhere('b.deletedAt IS NULL')
+            ->andWhere('p.deletedAt IS NULL')
+            ->groupBy('c.id, c.name')
+            ->setParameter('cities', $cityIds)
+            ->setParameter('activeStatus', LeaseStatus::ACTIVE)
+            ->getQuery()
+            ->getScalarResult();
+
+        return array_map(static fn (array $row): array => [
+            'cityId' => (int) $row['cityId'],
+            'cityName' => (string) $row['cityName'],
+            'totalUnits' => (int) $row['totalUnits'],
+            'occupiedUnits' => (int) $row['occupiedUnits'],
+        ], $rows);
+    }
+
+    /**
      * Liste les unités d'un bâtiment n'ayant aucun bail ACTIVE en cours
      * (utile pour l'affichage des disponibilités locatives).
      *
