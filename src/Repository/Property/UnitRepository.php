@@ -214,7 +214,7 @@ class UnitRepository extends ServiceEntityRepository
         }
 
         if ($search !== null && $search !== '') {
-            $qb->andWhere('u.reference LIKE :search OR u.label LIKE :search')
+            $qb->andWhere('u.reference LIKE :search OR u.description LIKE :search')
                 ->setParameter('search', '%' . $search . '%');
         }
 

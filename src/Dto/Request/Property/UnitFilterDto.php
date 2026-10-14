@@ -31,7 +31,7 @@ final readonly class UnitFilterDto
         #[Assert\Uuid]
         public ?string $buildingUuid = null,
 
-        #[OA\Property(description: 'Terme de recherche (référence, libellé)', nullable: true)]
+        #[OA\Property(description: 'Terme de recherche (référence ou description)', nullable: true)]
         public ?string $search = null,
 
         #[OA\Property(description: 'Numéro de page', default: 1)]
