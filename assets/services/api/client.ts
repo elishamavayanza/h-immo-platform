@@ -20,6 +20,7 @@ import {
 } from './interceptors';
 import { isJsonContentType } from '../security/security.utils';
 import { getHttpErrorMessage, getNetworkErrorMessage, getTimeoutErrorMessage } from './userFacingErrors';
+import { getRecentUserActions } from './userActionTrail';
 
 // ─────────────────────────────────────────
 // Constantes
@@ -92,12 +93,14 @@ class HttpClient {
     // ── Construction des headers ─────────────────
 
     private buildHeaders(config: RequestConfig): HeadersInit {
+        const actionTrail = getRecentUserActions();
         const headers: Record<string, string> = {
             'Content-Type': 'application/json',
             Accept:         'application/json',
             ...this.config.defaultHeaders,
             ...config.headers,
         };
+        if (actionTrail) headers['X-UI-Action-Trail'] = actionTrail;
         return headers;
     }
 

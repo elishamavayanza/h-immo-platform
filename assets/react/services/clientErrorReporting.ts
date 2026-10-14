@@ -1,6 +1,7 @@
 import { ApiError } from '../../services/api/api.types';
 import { apiClient } from '../../services/api/client';
 import { tokenStorage } from '../../services/storage/storage.service';
+import { getRecentUserActions, initializeUserActionTrail } from '../../services/api/userActionTrail';
 
 type ClientErrorKind = 'react_render' | 'window_error' | 'unhandled_rejection';
 
@@ -8,6 +9,9 @@ interface ClientErrorPayload {
     kind: ClientErrorKind;
     message: string;
     stack?: string;
+    sourceLocation?: string;
+    componentStack?: string;
+    actionTrail?: string;
     route: string;
     occurredAt: string;
     userAgent: string;
@@ -22,11 +26,17 @@ function scrub(value: string, limit: number): string {
         .replace(/\bBearer\s+[^\s]+/gi, 'Bearer [jeton masqué]')
         .replace(/\beyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\b/g, '[jeton masqué]')
         .replace(/\b(password|passwd|token|secret|authorization)\s*[:=]\s*[^\s,;]+/gi, '$1=[valeur masquée]')
+        .replace(/\b\+?\d[\d ()-]{7,}\d\b/g, '[numéro masqué]')
         .slice(0, limit);
 }
 
+interface ClientErrorOptions {
+    sourceLocation?: string;
+    componentStack?: string;
+}
+
 /** Envoie uniquement les erreurs d’exécution inattendues, sans contenu métier. */
-export function reportClientError(kind: ClientErrorKind, error: unknown, fallbackMessage?: string): void {
+export function reportClientError(kind: ClientErrorKind, error: unknown, fallbackMessage?: string, options: ClientErrorOptions = {}): void {
     if (!tokenStorage.getAccessToken()) return;
     if (error instanceof ApiError) return; // Les erreurs HTTP sont déjà traitées par le client / backend.
 
@@ -44,6 +54,9 @@ export function reportClientError(kind: ClientErrorKind, error: unknown, fallbac
         kind,
         message,
         ...(stack ? { stack } : {}),
+        ...(options.sourceLocation ? { sourceLocation: scrub(options.sourceLocation, 500) } : {}),
+        ...(options.componentStack ? { componentStack: scrub(options.componentStack, 4000) } : {}),
+        ...(getRecentUserActions() ? { actionTrail: getRecentUserActions() } : {}),
         route: window.location.pathname.slice(0, 500),
         occurredAt: new Date().toISOString(),
         userAgent: navigator.userAgent.slice(0, 300),
@@ -57,10 +70,17 @@ export function reportClientError(kind: ClientErrorKind, error: unknown, fallbac
 export function initializeClientErrorReporting(): void {
     if (initialized || typeof window === 'undefined') return;
     initialized = true;
+    initializeUserActionTrail();
 
     window.addEventListener('error', (event) => {
-        if (event.error) reportClientError('window_error', event.error, event.message);
-    });
+        const target = event.target;
+        const resource = target instanceof HTMLScriptElement ? target.src : target instanceof HTMLLinkElement ? target.href : '';
+        const sourceLocation = event.filename
+            ? `${event.filename}:${event.lineno}:${event.colno}`
+            : resource ? `${new URL(resource, window.location.href).pathname} (ressource)` : undefined;
+        const failure = event.error ?? (resource ? new Error('Échec de chargement d’une ressource JavaScript ou CSS.') : null);
+        if (failure) reportClientError('window_error', failure, event.message, { sourceLocation });
+    }, true);
     window.addEventListener('unhandledrejection', (event) => {
         if (event.reason instanceof ApiError) return;
         reportClientError('unhandled_rejection', event.reason, 'Une opération asynchrone a échoué sans traitement.');
