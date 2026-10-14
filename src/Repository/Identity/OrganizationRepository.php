@@ -52,6 +52,15 @@ class OrganizationRepository extends ServiceEntityRepository
         }
     }
 
+    /** @return list<Organization> */
+    public function findExpiredSuspensions(\DateTimeImmutable $now): array
+    {
+        return $this->createQueryBuilder('o')->andWhere('o.status = :status')
+            ->andWhere('o.suspensionEndsAt IS NOT NULL')->andWhere('o.suspensionEndsAt <= :now')
+            ->andWhere('o.deletedAt IS NULL')->setParameter('status', OrganizationStatus::SUSPENDED)
+            ->setParameter('now', $now)->getQuery()->getResult();
+    }
+
     /**
      * Recherche une Organization par son slug de vitrine publique.
      *

@@ -85,8 +85,8 @@ export const organizationsService = {
      * avec un motif obligatoire. Le backend archive le motif dans l'audit et
      * notifie les membres par email (échecs non bloquants → `warnings`).
      */
-    async suspend(uuid: string, reason: string): Promise<OrganizationTransitionResult> {
-        const { data } = await apiClient.post<Feedback<OrganizationApiResponse>>(`/v1/identity/organizations/${uuid}/suspend`, { reason });
+    async suspend(uuid: string, reason: string, suspensionEndsAt: string | null): Promise<OrganizationTransitionResult> {
+        const { data } = await apiClient.post<Feedback<OrganizationApiResponse>>(`/v1/identity/organizations/${uuid}/suspend`, { reason, suspensionEndsAt });
         return {
             organization: toRow(data.data),
             flushDescription: data.flushDescription,
@@ -121,6 +121,7 @@ function toRow(response: OrganizationApiResponse): OrganizationRow {
         logo: response.logo,
         status: response.status,
         createdAt: response.createdAt,
+        suspensionEndsAt: response.suspensionEndsAt ?? null,
     };
 }
 

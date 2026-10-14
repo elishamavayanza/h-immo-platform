@@ -33,6 +33,7 @@ export interface UserRow {
     role: OrganizationRole | 'super_admin' | null;
     status: UserStatus;
     lastLoginAt: string | null;
+    suspensionEndsAt: string | null;
 }
 
 /**
@@ -52,6 +53,7 @@ export interface UserApiResponse {
     lastLoginAt: string | null;
     createdAt: string;
     updatedAt: string;
+    suspensionEndsAt?: string | null;
 }
 
 /**
@@ -68,6 +70,7 @@ export interface UserListData {
 /** `UserSuspendRequest` : motif facultatif, joint à l'email et à l'audit. */
 export interface UserSuspendPayload {
     reason?: string | null;
+    suspensionEndsAt?: string | null;
 }
 
 /** Résultat d'une suspension : compte mis à jour + feedback backend affichable. */

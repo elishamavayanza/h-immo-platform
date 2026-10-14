@@ -71,6 +71,8 @@ final readonly class UserResponse
 
         #[OA\Property(description: 'Horodatage de dernière modification', format: 'date-time', example: '2026-02-18T16:45:00Z')]
         public \DateTimeImmutable $updatedAt,
+        #[OA\Property(description: 'Fin de la suspension temporaire ; null si indéterminée ou compte actif.', format: 'date-time', nullable: true)]
+        public ?\DateTimeImmutable $suspensionEndsAt = null,
     ) {
     }
 
@@ -91,6 +93,7 @@ final readonly class UserResponse
             lastLoginAt: $user->getLastLoginAt(),
             createdAt: $user->getCreatedAt(),
             updatedAt: $user->getUpdatedAt(),
+            suspensionEndsAt: $user->getSuspensionEndsAt(),
         );
     }
 }

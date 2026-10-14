@@ -46,6 +46,14 @@ class UserRepository extends ServiceEntityRepository
         }
     }
 
+    /** @return list<User> */
+    public function findExpiredSuspensions(\DateTimeImmutable $now): array
+    {
+        return $this->createQueryBuilder('u')->andWhere('u.isActive = false')
+            ->andWhere('u.suspensionEndsAt IS NOT NULL')->andWhere('u.suspensionEndsAt <= :now')
+            ->andWhere('u.deletedAt IS NULL')->setParameter('now', $now)->getQuery()->getResult();
+    }
+
     /**
      * Supprime l'entité (et déclenche le flush si demandé).
      */

@@ -41,7 +41,7 @@ final readonly class OrganizationNotificationService
      *
      * @return list<string> Adresses en échec (le mailer a rejeté le message)
      */
-    public function notifySuspension(string $organizationName, string $reason, array $emails): array
+    public function notifySuspension(string $organizationName, string $reason, array $emails, ?string $endsAtLabel = null): array
     {
         $failed = [];
 
@@ -54,8 +54,8 @@ final readonly class OrganizationNotificationService
             $logoTag = $this->attachEmailLogo($message);
 
             $message
-                ->html($this->buildSuspensionHtml($organizationName, $reason, $logoTag))
-                ->text($this->buildSuspensionText($organizationName, $reason));
+                ->html($this->buildSuspensionHtml($organizationName, $reason, $logoTag, $endsAtLabel))
+                ->text($this->buildSuspensionText($organizationName, $reason, $endsAtLabel));
 
             try {
                 $this->mailer->send($message);
@@ -103,10 +103,13 @@ final readonly class OrganizationNotificationService
         return '<img src="cid:'.$cid.'" alt="H-Immo" width="150" height="136" style="display:block;margin:0 auto 24px auto;border:0;outline:none;text-decoration:none;">';
     }
 
-    private function buildSuspensionHtml(string $organizationName, string $reason, string $logoTag): string
+    private function buildSuspensionHtml(string $organizationName, string $reason, string $logoTag, ?string $endsAtLabel): string
     {
         $organization = htmlspecialchars($organizationName, ENT_QUOTES);
         $motif = nl2br(htmlspecialchars($reason, ENT_QUOTES));
+        $duration = $endsAtLabel === null
+            ? 'La suspension reste en vigueur jusqu’à sa levée manuelle.'
+            : 'La suspension prend fin automatiquement le '.htmlspecialchars($endsAtLabel, ENT_QUOTES).'.';
 
         return <<<HTML
 <!DOCTYPE html>
@@ -132,6 +135,7 @@ final readonly class OrganizationNotificationService
                             <p style="margin:0 0 16px 0;">Bonjour,</p>
                             <p style="margin:0 0 16px 0;">L'accès de votre organisation <strong style="color:#F5F5F5;">{$organization}</strong> a été suspendu sur la plateforme.</p>
                             <p style="margin:0 0 16px 0;">Vous ne pourrez plus vous connecter tant que la suspension n'est pas levée.</p>
+                            <p style="margin:0 0 16px 0;">{$duration}</p>
                             <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background-color:#202326;border:1px solid #262A2E;border-radius:12px;margin:0 0 16px 0;">
                                 <tr>
                                     <td style="padding:16px 20px;">
@@ -152,8 +156,11 @@ final readonly class OrganizationNotificationService
 HTML;
     }
 
-    private function buildSuspensionText(string $organizationName, string $reason): string
+    private function buildSuspensionText(string $organizationName, string $reason, ?string $endsAtLabel): string
     {
+        $duration = $endsAtLabel === null
+            ? 'La suspension reste en vigueur jusqu’à sa levée manuelle.'
+            : 'La suspension prend fin automatiquement le '.$endsAtLabel.'.';
         return <<<TXT
 Suspension de votre organisation - H-Immo
 
@@ -161,6 +168,7 @@ Bonjour,
 
 L'accès de votre organisation « {$organizationName} » a été suspendu sur la plateforme.
 Vous ne pourrez plus vous connecter tant que la suspension n'est pas levée.
+{$duration}
 
 Motif de la suspension :
 {$reason}

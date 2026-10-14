@@ -116,9 +116,9 @@ export function useOrganizations() {
         }
     };
 
-    const suspendOrganization = async (id: string, reason: string): Promise<OrganizationTransitionResult> => {
+    const suspendOrganization = async (id: string, reason: string, suspensionEndsAt: string | null): Promise<OrganizationTransitionResult> => {
         try {
-            const result = await organizationsService.suspend(id, reason);
+            const result = await organizationsService.suspend(id, reason, suspensionEndsAt);
             setOrganizations((current) => current.map((organization) => organization.id === id ? result.organization : organization));
             push('success', result.flushDescription ?? 'L’organisation a été suspendue.');
             if (result.warnings.emails) {

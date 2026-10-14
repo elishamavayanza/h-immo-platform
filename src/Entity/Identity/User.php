@@ -37,6 +37,7 @@ use Symfony\Component\Security\Core\User\UserInterface;
  */
 #[ORM\Entity]
 #[ORM\Table(name: 'user')]
+#[ORM\Index(name: 'IDX_USER_SUSPENSION_END', columns: ['is_active', 'suspension_ends_at'])]
 #[ORM\UniqueConstraint(name: 'uniq_user_email', columns: ['email'])]
 class User extends SoftDeletableEntity implements UserInterface, PasswordAuthenticatedUserInterface
 {
@@ -84,6 +85,10 @@ class User extends SoftDeletableEntity implements UserInterface, PasswordAuthent
      */
     #[ORM\Column(type: Types::BOOLEAN)]
     private bool $isActive = true;
+
+    /** Fin d'une suspension temporaire ; null signifie suspension indéterminée. */
+    #[ORM\Column(type: Types::DATETIME_IMMUTABLE, nullable: true)]
+    private ?\DateTimeImmutable $suspensionEndsAt = null;
 
     /**
      * Date et heure de la dernière connexion.
@@ -177,6 +182,18 @@ class User extends SoftDeletableEntity implements UserInterface, PasswordAuthent
     public function setIsActive(bool $isActive): static
     {
         $this->isActive = $isActive;
+
+        return $this;
+    }
+
+    public function getSuspensionEndsAt(): ?\DateTimeImmutable
+    {
+        return $this->suspensionEndsAt;
+    }
+
+    public function setSuspensionEndsAt(?\DateTimeImmutable $suspensionEndsAt): static
+    {
+        $this->suspensionEndsAt = $suspensionEndsAt;
 
         return $this;
     }

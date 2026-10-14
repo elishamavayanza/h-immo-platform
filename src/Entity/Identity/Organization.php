@@ -24,6 +24,7 @@ use Doctrine\ORM\Mapping as ORM;
  */
 #[ORM\Entity]
 #[ORM\Table(name: 'organization')]
+#[ORM\Index(name: 'IDX_ORGANIZATION_SUSPENSION_END', columns: ['status', 'suspension_ends_at'])]
 #[ORM\UniqueConstraint(name: 'uniq_organization_code', columns: ['code'])]
 #[ORM\UniqueConstraint(name: 'uniq_organization_slug', columns: ['slug'])]
 class Organization extends SoftDeletableEntity
@@ -115,6 +116,10 @@ class Organization extends SoftDeletableEntity
      */
     #[ORM\Column(type: Types::STRING, enumType: OrganizationStatus::class)]
     private OrganizationStatus $status = OrganizationStatus::ACTIVE;
+
+    /** Fin d'une suspension temporaire ; null signifie suspension indéterminée. */
+    #[ORM\Column(type: Types::DATETIME_IMMUTABLE, nullable: true)]
+    private ?\DateTimeImmutable $suspensionEndsAt = null;
 
     /** Devise de référence pour les rapports et synthèses financières. */
     #[ORM\Column(type: Types::STRING, length: 3, enumType: Currency::class, options: ['default' => 'CDF'])]
@@ -284,6 +289,18 @@ class Organization extends SoftDeletableEntity
     public function setStatus(OrganizationStatus $status): static
     {
         $this->status = $status;
+
+        return $this;
+    }
+
+    public function getSuspensionEndsAt(): ?\DateTimeImmutable
+    {
+        return $this->suspensionEndsAt;
+    }
+
+    public function setSuspensionEndsAt(?\DateTimeImmutable $suspensionEndsAt): static
+    {
+        $this->suspensionEndsAt = $suspensionEndsAt;
 
         return $this;
     }

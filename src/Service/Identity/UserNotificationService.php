@@ -40,7 +40,7 @@ final readonly class UserNotificationService
      *
      * @return list<string> Adresses en échec (le mailer a rejeté le message)
      */
-    public function notifyAccountSuspended(User $user, ?string $reason): array
+    public function notifyAccountSuspended(User $user, ?string $reason, ?string $endsAtLabel = null): array
     {
         if (($user->getSettings()['emailNotifications'] ?? true) === false) {
             return [];
@@ -54,8 +54,8 @@ final readonly class UserNotificationService
         $logoTag = $this->attachEmailLogo($message);
 
         $message
-            ->html($this->buildSuspensionHtml($user->getFullName(), $reason, $logoTag))
-            ->text($this->buildSuspensionText($user->getFullName(), $reason));
+            ->html($this->buildSuspensionHtml($user->getFullName(), $reason, $logoTag, $endsAtLabel))
+            ->text($this->buildSuspensionText($user->getFullName(), $reason, $endsAtLabel));
 
         try {
             $this->mailer->send($message);
@@ -102,9 +102,12 @@ final readonly class UserNotificationService
         return '<img src="cid:'.$cid.'" alt="H-Immo" width="150" height="136" style="display:block;margin:0 auto 24px auto;border:0;outline:none;text-decoration:none;">';
     }
 
-    private function buildSuspensionHtml(string $fullName, ?string $reason, string $logoTag): string
+    private function buildSuspensionHtml(string $fullName, ?string $reason, string $logoTag, ?string $endsAtLabel): string
     {
         $name = htmlspecialchars($fullName, ENT_QUOTES);
+        $duration = $endsAtLabel === null
+            ? 'La suspension reste en vigueur jusqu’à sa levée manuelle par l’administrateur de la plateforme.'
+            : 'La suspension prend fin automatiquement le '.htmlspecialchars($endsAtLabel, ENT_QUOTES).'.';
 
         if ($reason === null || trim($reason) === '') {
             $motifBlock = '';
@@ -145,7 +148,7 @@ HTML;
                         <td style="padding:20px 32px;font-family:Inter,Arial,Helvetica,sans-serif;font-size:15px;line-height:1.6;color:#A5A8AD;">
                             <p style="margin:0 0 16px 0;">Bonjour {$name},</p>
                             <p style="margin:0 0 16px 0;">Votre compte sur la plateforme H-Immo a été <strong style="color:#F5F5F5;">suspendu</strong>.</p>
-                            <p style="margin:0 0 16px 0;">Vous ne pourrez plus vous connecter tant que la suspension n'est pas levée par l'administrateur de la plateforme.</p>
+                            <p style="margin:0 0 16px 0;">{$duration}</p>
                             {$motifBlock}
                             <p style="margin:0;font-size:13px;color:#6B7077;">Pour toute question, contactez l'administrateur de la plateforme.</p>
                         </td>
@@ -159,11 +162,14 @@ HTML;
 HTML;
     }
 
-    private function buildSuspensionText(string $fullName, ?string $reason): string
+    private function buildSuspensionText(string $fullName, ?string $reason, ?string $endsAtLabel): string
     {
         $motif = ($reason === null || trim($reason) === '')
             ? "Aucun motif n'a été communiqué."
             : $reason;
+        $duration = $endsAtLabel === null
+            ? 'La suspension reste en vigueur jusqu’à sa levée manuelle par l’administrateur de la plateforme.'
+            : 'La suspension prend fin automatiquement le '.$endsAtLabel.'.';
 
         return <<<TXT
 Suspension de votre compte - H-Immo
@@ -171,7 +177,7 @@ Suspension de votre compte - H-Immo
 Bonjour {$fullName},
 
 Votre compte sur la plateforme H-Immo a été suspendu.
-Vous ne pourrez plus vous connecter tant que la suspension n'est pas levée par l'administrateur de la plateforme.
+{$duration}
 
 Motif de la suspension :
 {$motif}

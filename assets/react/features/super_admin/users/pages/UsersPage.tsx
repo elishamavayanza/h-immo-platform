@@ -12,6 +12,7 @@ import { ErrorState } from '../../../../components/UI/ErrorState';
 import { Loading } from '../../../../components/UI/Loading';
 import { Modal } from '../../../../components/UI/Modal';
 import { Avatar } from '../../../../components/UI/Avatar';
+import { Input } from '../../../../components/Forms/Input';
 import { PlatformPageHeader } from '../../components/PlatformPageHeader';
 import { UsersStats } from '../components/UsersStats';
 import type { UserRow, UserRoleFilter, UserStatus } from '../types/user.types';
@@ -24,6 +25,7 @@ const ROLE_LABEL: Record<string, string> = { super_admin: 'Super admin', patron:
 const ROLE_VARIANT: Record<string, 'primary' | 'secondary' | 'info'> = { super_admin: 'primary', patron: 'secondary', admin_immobilier: 'info', admin_ville: 'info' };
 const STATUS_LABEL: Record<UserStatus, string> = { active: 'Actif', inactive: 'Désactivé' };
 const STATUS_VARIANT: Record<UserStatus, 'success' | 'error'> = { active: 'success', inactive: 'error' };
+const toLocalDateTime = (date: Date) => new Date(date.getTime() - date.getTimezoneOffset() * 60_000).toISOString().slice(0, 16);
 
 /**
  * Photo de profil d'un utilisateur dans la table.
@@ -70,11 +72,15 @@ export function UsersPage() {
 
     const [suspendTarget, setSuspendTarget] = useState<UserRow | null>(null);
     const [suspendReason, setSuspendReason] = useState('');
+    const [suspendDuration, setSuspendDuration] = useState('indefinite');
+    const [suspendUntil, setSuspendUntil] = useState('');
     const [suspending, setSuspending] = useState(false);
 
     const openSuspend = (user: UserRow) => {
         setSuspendTarget(user);
         setSuspendReason('');
+        setSuspendDuration('indefinite');
+        setSuspendUntil('');
     };
 
     const organizationFilterOptions = [
@@ -87,7 +93,7 @@ export function UsersPage() {
         { key: 'name', title: 'Utilisateur', sortable: true, render: (user) => <div className="sa-management-identity"><UserPhotoCell user={user} /><span><strong>{user.name}</strong><small>{user.email}</small></span></div> },
         { key: 'organization', title: 'Organisation', sortable: true },
         { key: 'role', title: 'Rôle organisationnel', sortable: true, render: (user) => user.role ? <Badge variant={ROLE_VARIANT[user.role] ?? 'secondary'}>{ROLE_LABEL[user.role] ?? user.role}</Badge> : '—' },
-        { key: 'status', title: 'Compte', sortable: true, render: (user) => <Badge variant={STATUS_VARIANT[user.status]}>{STATUS_LABEL[user.status]}</Badge> },
+        { key: 'status', title: 'Compte', sortable: true, render: (user) => <span><Badge variant={STATUS_VARIANT[user.status]}>{STATUS_LABEL[user.status]}</Badge>{user.status === 'inactive' && user.suspensionEndsAt && <small className="sa-management-status-detail">Jusqu’au {formatUserDate(user.suspensionEndsAt, true)}</small>}</span> },
         { key: 'lastLoginAt', title: 'Dernière connexion', sortable: true, render: (user) => user.lastLoginAt ? formatUserDate(user.lastLoginAt, true) : 'Jamais connecté' },
         { key: 'actions', title: 'Actions', render: (user) => (
             <Button
@@ -107,7 +113,10 @@ export function UsersPage() {
         if (!suspendTarget || suspending) return;
         setSuspending(true);
         try {
-            await suspendUser(suspendTarget.id, suspendReason.trim() || undefined);
+            const endsAt = suspendDuration === 'indefinite' ? null : suspendDuration === 'custom'
+                ? new Date(suspendUntil).toISOString()
+                : new Date(Date.now() + Number(suspendDuration) * 86_400_000).toISOString();
+            await suspendUser(suspendTarget.id, { reason: suspendReason.trim() || undefined, suspensionEndsAt: endsAt });
             setSuspendTarget(null);
         } catch {
             // Le toast d'échec est déjà émis par le hook.
@@ -134,6 +143,10 @@ export function UsersPage() {
         <Modal isOpen={suspendTarget !== null} onClose={() => setSuspendTarget(null)} title={suspendTarget ? `Suspendre « ${suspendTarget.name} »` : 'Suspendre le compte'} size="medium" footer={<><Button variant="outline" onClick={() => setSuspendTarget(null)}>Annuler</Button><Button type="submit" form="suspend-user-form" variant="danger" isLoading={suspending}>{suspending ? 'Suspension…' : 'Suspendre le compte'}</Button></>}>
             <form id="suspend-user-form" className="sa-management-form" onSubmit={submitSuspend}>
                 <p className="sa-management-form__hint">Le compte est désactivé immédiatement et l’utilisateur reçoit un email de notification{suspendTarget ? ` à ${suspendTarget.email}` : ''}. Le motif est facultatif : joint à l’email, il est également archivé dans le journal d’audit.</p>
+                <FormField label="Durée" htmlFor="suspend-user-duration" helpText="La suspension commence dès sa confirmation.">
+                    <Select id="suspend-user-duration" value={suspendDuration} onChange={(event) => setSuspendDuration(event.target.value)} options={[{ value: 'indefinite', label: 'Indéterminée — jusqu’à réactivation manuelle' }, { value: '15', label: '15 jours' }, { value: '30', label: '30 jours' }, { value: '90', label: '90 jours' }, { value: 'custom', label: 'Choisir une date et une heure de fin' }]} />
+                </FormField>
+                {suspendDuration === 'custom' && <FormField label="Fin de suspension" htmlFor="suspend-user-until" required><Input id="suspend-user-until" type="datetime-local" value={suspendUntil} onChange={(event) => setSuspendUntil(event.target.value)} min={toLocalDateTime(new Date(Date.now() + 60_000))} required fullWidth /></FormField>}
                 <FormField label="Motif de la suspension" htmlFor="suspend-user-reason" helpText="Facultatif. Il sera visible par l’utilisateur dans l’email de notification.">
                     <Textarea id="suspend-user-reason" rows={4} maxLength={1000} placeholder="Ex. : Compte dormant depuis plusieurs mois." value={suspendReason} onChange={(event) => setSuspendReason(event.target.value)} fullWidth />
                 </FormField>

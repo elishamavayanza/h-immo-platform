@@ -369,10 +369,18 @@ final readonly class OrganizationService
                 ->autoInitFlush();
         }
 
+        $now = $this->dateTimeService->now();
+        if ($request->suspensionEndsAt !== null && $request->suspensionEndsAt <= $now) {
+            return $feedback->addError('suspensionEndsAt', 'La fin doit être postérieure à la date actuelle.')
+                ->setErrorFlushDescription('La période de suspension est invalide.')
+                ->setStatus(422)->autoInitFlush();
+        }
+
         $reason = trim($request->reason);
 
-        $previous = ['status' => $organization->getStatus()->value];
+        $previous = ['status' => $organization->getStatus()->value, 'suspensionEndsAt' => null];
         $organization->setStatus(OrganizationStatus::SUSPENDED);
+        $organization->setSuspensionEndsAt($request->suspensionEndsAt);
         $organization->setUpdatedAt($this->dateTimeService->now());
         $this->em->flush();
 
@@ -386,6 +394,7 @@ final readonly class OrganizationService
             newValues: [
                 'status' => OrganizationStatus::SUSPENDED->value,
                 'reason' => $reason,
+                'suspensionEndsAt' => $request->suspensionEndsAt?->format(DATE_ATOM),
             ],
         );
 
@@ -400,7 +409,8 @@ final readonly class OrganizationService
             }
         }
         $emails = array_values(array_unique($emails));
-        $failed = $this->notificationService->notifySuspension($organization->getName(), $reason, $emails);
+        $endsAtLabel = $request->suspensionEndsAt === null ? null : $this->dateTimeService->format($request->suspensionEndsAt, 'd/m/Y à H:i', DateTimeService::PRESENTATION_TIMEZONE);
+        $failed = $this->notificationService->notifySuspension($organization->getName(), $reason, $emails, $endsAtLabel);
 
         if ($failed !== []) {
             $feedback->addWarning('emails', count($failed) . ' email(s) de notification n\'ont pas pu être envoyé(s).');
@@ -453,6 +463,7 @@ final readonly class OrganizationService
 
         $previous = ['status' => OrganizationStatus::SUSPENDED->value];
         $organization->setStatus(OrganizationStatus::ACTIVE);
+        $organization->setSuspensionEndsAt(null);
         $organization->setUpdatedAt($this->dateTimeService->now());
         $this->em->flush();
 
