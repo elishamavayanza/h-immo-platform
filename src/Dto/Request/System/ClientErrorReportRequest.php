@@ -24,6 +24,18 @@ final readonly class ClientErrorReportRequest
         #[Assert\Length(max: 7000)]
         public ?string $stack = null,
 
+        #[OA\Property(description: 'Fichier, ligne et colonne de la source si fournis par le navigateur', maxLength: 500, nullable: true)]
+        #[Assert\Length(max: 500)]
+        public ?string $sourceLocation = null,
+
+        #[OA\Property(description: 'Pile des composants React au moment du rendu', maxLength: 4000, nullable: true)]
+        #[Assert\Length(max: 4000)]
+        public ?string $componentStack = null,
+
+        #[OA\Property(description: 'Dernières actions d’interface, sans valeurs de formulaire', maxLength: 1800, nullable: true)]
+        #[Assert\Length(max: 1800)]
+        public ?string $actionTrail = null,
+
         #[OA\Property(description: 'Chemin interne de la page', maxLength: 500, nullable: true)]
         #[Assert\Length(max: 500)]
         public ?string $route = null,

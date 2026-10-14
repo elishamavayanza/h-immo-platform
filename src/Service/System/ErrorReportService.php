@@ -46,6 +46,9 @@ final readonly class ErrorReportService
             'Exception : '.$exception::class,
             'Message : '.$this->scrub($exception->getMessage(), 1200),
             '',
+            'Actions récentes (aucune valeur de formulaire) :',
+            $this->scrub(mb_substr($request->headers->get('X-UI-Action-Trail', '(aucune interaction récente capturée)'), 0, 1800), 1800),
+            '',
             'Source (pile PHP) :',
             $this->scrub($exception->getTraceAsString(), 9000),
         ]);
@@ -65,9 +68,16 @@ final readonly class ErrorReportService
             'Horodatage navigateur : '.$this->scrub($report->occurredAt ?? '', 40),
             'Navigateur : '.$this->scrub($report->userAgent ?? '', 300),
             'Message : '.$this->scrub($report->message, 1200),
+            'Source précise : '.$this->scrub($report->sourceLocation ?? '(non fournie par le navigateur)', 500),
+            '',
+            'Actions récentes (aucune valeur de formulaire) :',
+            $this->scrub($report->actionTrail ?? '(aucune interaction récente capturée)', 1800),
             '',
             'Source (pile JavaScript) :',
             $this->scrub($report->stack ?? '(aucune pile fournie)', 7000),
+            '',
+            'Pile des composants React :',
+            $this->scrub($report->componentStack ?? '(non applicable)', 4000),
             '',
             'Aucune valeur de formulaire, aucun jeton et aucun corps de requête ne sont inclus.',
         ]);
@@ -107,6 +117,7 @@ final readonly class ErrorReportService
         $value = preg_replace('/\bBearer\s+[^\s]+/i', 'Bearer [jeton masqué]', $value) ?? $value;
         $value = preg_replace('/\beyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\b/', '[jeton masqué]', $value) ?? $value;
         $value = preg_replace('/\b(password|passwd|token|secret|authorization)\s*[:=]\s*[^\s,;]+/i', '$1=[valeur masquée]', $value) ?? $value;
+        $value = preg_replace('/\b\+?\d[\d ()-]{7,}\d\b/', '[numéro masqué]', $value) ?? $value;
 
         return mb_substr($value, 0, $maxLength);
     }
