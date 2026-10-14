@@ -5,8 +5,8 @@ import {
     PERIOD_PRESETS,
     computePeriodPreset,
     findMatchingPreset,
-} from '../periodPresets';
-import type { PeriodRange } from '../periodPresets';
+} from '../utils/periodPresets';
+import type { PeriodRange } from '../utils/periodPresets';
 
 export interface ReportPeriodFilterProps {
     /** Borne basse appliquée, format ISO `YYYY-MM-DD` (vide = non filtrée). */

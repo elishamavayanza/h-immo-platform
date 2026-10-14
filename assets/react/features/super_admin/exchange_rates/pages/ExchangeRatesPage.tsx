@@ -7,7 +7,7 @@ import { Input } from '../../../../components/Forms/Input';
 import { Button } from '../../../../components/UI/Button';
 import { Card } from '../../../../components/UI/Card';
 import { Modal } from '../../../../components/UI/Modal';
-import { PlatformPageHeader } from '../../shared/PlatformPageHeader';
+import { PlatformPageHeader } from '../../components/PlatformPageHeader';
 import { ExchangeRateSummary } from '../components/ExchangeRateSummary';
 import { useExchangeRates } from '../hooks/useExchangeRates';
 import type { ExchangeRateRecord } from '../types/exchangeRate.types';

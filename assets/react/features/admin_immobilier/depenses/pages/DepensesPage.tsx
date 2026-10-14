@@ -18,8 +18,8 @@ import { useOrganization } from '../../../../app/providers/OrganizationProvider'
 import { useAdminCity } from '../../../../app/providers/AdminCityProvider';
 import { useDepenses } from '../hooks/useDepenses';
 import { DepensesTable } from '../components/DepensesTable';
-import { fieldErrorMap } from '../../../shared/actionErrors';
-import { changedFields } from '../../../shared/changedFields';
+import { fieldErrorMap } from '../../../shared/utils/actionErrors';
+import { changedFields } from '../../../shared/utils/changedFields';
 import { ModalActions } from '../../../shared/components/ModalActions';
 import { canDo } from '../../../shared/permissions';
 import { CATEGORY_OPTIONS, CURRENCY_OPTIONS, EXPENSE_METHOD_OPTIONS } from '../services/depensesService';

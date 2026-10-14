@@ -1,4 +1,4 @@
-import { DashboardIcon } from './DashboardIcon';
+import { DashboardIcon } from '../../icons/DashboardIcon';
 import type { ActivityEntry, ActivityKind, DashboardIconName } from '../types';
 
 const KIND_ICON: Record<ActivityKind, DashboardIconName> = {

@@ -14,8 +14,8 @@ import { FormField } from '../../../../components/Forms/FormField';
 import { Modal } from '../../../../components/UI/Modal';
 import { useVitrine } from '../hooks/useVitrine';
 import { VitrineTable } from '../components/VitrineTable';
-import { fieldErrorMap } from '../../../shared/actionErrors';
-import { changedFields } from '../../../shared/changedFields';
+import { fieldErrorMap } from '../../../shared/utils/actionErrors';
+import { changedFields } from '../../../shared/utils/changedFields';
 import { ModalActions } from '../../../shared/components/ModalActions'
 import { PhotoGallery } from '../../../shared/media/components/PhotoGallery';
 import type { VitrineRow } from '../types/vitrine.types';

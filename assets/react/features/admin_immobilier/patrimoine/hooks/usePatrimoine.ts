@@ -4,7 +4,7 @@ import { useToast } from '../../../../app/layout/MainLayout/contexts/ToastContex
 import { useOrganization } from '../../../../app/providers/OrganizationProvider';
 import { useAdminCity } from '../../../../app/providers/AdminCityProvider';
 import { ApiError } from '../../../../../services/api/api.types';
-import { actionErrorMessage, isValidationError } from '../../../shared/actionErrors';
+import { actionErrorMessage, isValidationError } from '../../../shared/utils/actionErrors';
 import {
     addParcelPhotos,
     createCityAdmin as createCityAdminRequest,

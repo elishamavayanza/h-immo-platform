@@ -17,7 +17,7 @@ import { Tabs } from '../../../../components/Navigation/Tabs';
 import { OrganizationLogoPicker, type OrganizationLogoChange } from '../../../super_admin/organizations/components/OrganizationLogoPicker';
 import { useVitrine } from '../../../admin_immobilier/vitrine/hooks/useVitrine';
 import { VitrineTable } from '../../../admin_immobilier/vitrine/components/VitrineTable';
-import { fieldErrorMap } from '../../../shared/actionErrors';
+import { fieldErrorMap } from '../../../shared/utils/actionErrors';
 import { usePublicSettings } from '../hooks/usePublicSettings';
 import '../../../../../styles/pages/patron/vitrine/_vitrine.scss';
 

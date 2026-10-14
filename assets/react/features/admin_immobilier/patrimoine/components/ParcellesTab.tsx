@@ -19,9 +19,9 @@ import type { PopoverMenuItem } from '../../../../hook-components/UI/PopoverMenu
 import type { OrganizationRole } from '../../../../../services/api/api.types';
 import { formatInteger } from '../../../../../utils/format.utils';
 import { canDo } from '../../../shared/permissions';
-import { fieldErrorMap } from '../../../shared/actionErrors';
+import { fieldErrorMap } from '../../../shared/utils/actionErrors';
 import { ModalActions } from '../../../shared/components/ModalActions';
-import { changedFields } from '../../../shared/changedFields';
+import { changedFields } from '../../../shared/utils/changedFields';
 import { PhotoGallery } from '../../../shared/media/components/PhotoGallery';
 import { PhotoViewer } from '../../../shared/media/components/PhotoViewer';
 import { ParcelMap } from './ParcelMap';

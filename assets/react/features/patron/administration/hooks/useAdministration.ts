@@ -4,7 +4,7 @@ import { useToast } from '../../../../app/layout/MainLayout/contexts/ToastContex
 import { useAuth } from '../../../../app/providers/AuthProvider';
 import { useOrganization } from '../../../../app/providers/OrganizationProvider';
 import { ApiError } from '../../../../../services/api/api.types';
-import { changedFields } from '../../../shared/changedFields';
+import { changedFields } from '../../../shared/utils/changedFields';
 import { fetchCities } from '../../../admin_immobilier/shared/services/referenceService';
 import { administrationService } from '../services/administrationService';
 import type { AdminApiUser, AdminCityOption, TeamMember } from '../types/administration.types';

@@ -4,7 +4,7 @@ import { useAdminCity } from '../../../../app/providers/AdminCityProvider';
 import { ApiError } from '../../../../../services/api/api.types';
 import { fetchAdminVilleReports } from '../services/reportsService';
 import type { AdminVilleReportsData } from '../types';
-import { computePeriodPreset } from '../../../shared/reports/periodPresets';
+import { computePeriodPreset } from '../../../shared/reports/utils/periodPresets';
 
 /**
  * Rapport ADMIN_VILLE : le périmètre vient du backend (villes affectées à

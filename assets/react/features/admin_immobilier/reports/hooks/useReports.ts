@@ -5,7 +5,7 @@ import { ApiError } from '../../../../../services/api/api.types';
 import { fetchCities } from '../../shared/services/referenceService';
 import { fetchAdminImmobilierReports } from '../services/reportsService';
 import type { AdminImmobilierReportsData } from '../types';
-import { computePeriodPreset } from '../../../shared/reports/periodPresets';
+import { computePeriodPreset } from '../../../shared/reports/utils/periodPresets';
 
 /** Option du sélecteur de ville (borné aux villes de l'organisation active). */
 export interface AdminImmobilierCityOption {

@@ -1,4 +1,4 @@
-import { DashboardIcon } from './DashboardIcon';
+import { DashboardIcon } from '../../icons/DashboardIcon';
 import { Card } from '../../../../components/UI/Card';
 import type { KpiMetric } from '../types';
 

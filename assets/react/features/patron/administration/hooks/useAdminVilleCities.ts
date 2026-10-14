@@ -3,7 +3,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useToast } from '../../../../app/layout/MainLayout/contexts/ToastContext';
 import { useOrganization } from '../../../../app/providers/OrganizationProvider';
 import { ApiError } from '../../../../../services/api/api.types';
-import { actionErrorMessage } from '../../../shared/actionErrors';
+import { actionErrorMessage } from '../../../shared/utils/actionErrors';
 import { fetchCities } from '../../../admin_immobilier/shared/services/referenceService';
 import { administrationService } from '../services/administrationService';
 import type { AdminCityOption, UserCityLink } from '../types/administration.types';

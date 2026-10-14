@@ -1,7 +1,7 @@
 import { Button } from '../../../../components/UI/Button';
 import { Spinner } from '../../../../components/UI/Spinner';
 import { ReportPeriodFilter } from '../../../shared/reports/components/ReportPeriodFilter';
-import { isValidPeriodRange, type PeriodRange } from '../../../shared/reports/periodPresets';
+import { isValidPeriodRange, type PeriodRange } from '../../../shared/reports/utils/periodPresets';
 import { ReportsPageView } from '../../../shared/reports/components/ReportsPageView';
 import type { ReportsData } from '../../../shared/reports/types/report.types';
 

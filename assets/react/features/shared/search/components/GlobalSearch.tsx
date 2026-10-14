@@ -1,10 +1,11 @@
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
-import { useOrganization } from '../../../app/providers/OrganizationProvider';
-import { ApiError } from '../../../../services/api/api.types';
-import { searchOrganization, type GlobalSearchResult } from '../search/globalSearchService';
-import '../../../../styles/components/Navigation/_globalSearch.scss';
+import { useOrganization } from '../../../../app/providers/OrganizationProvider';
+import { ApiError } from '../../../../../services/api/api.types';
+import { searchOrganization } from '../services/globalSearchService';
+import type { GlobalSearchResult } from '../types/globalSearch.types';
+import '../../../../../styles/components/Navigation/_globalSearch.scss';
 
 export function GlobalSearch() {
     const { currentOrganization } = useOrganization();

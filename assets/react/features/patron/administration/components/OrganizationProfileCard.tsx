@@ -6,7 +6,7 @@ import { Input } from '../../../../components/Forms/Input';
 import { FormField } from '../../../../components/Forms/FormField';
 import { Loading } from '../../../../components/UI/Loading';
 import { ErrorState } from '../../../../components/UI/ErrorState';
-import { fieldErrorMap } from '../../../shared/actionErrors';
+import { fieldErrorMap } from '../../../shared/utils/actionErrors';
 import { useOrganizationSettings } from '../hooks/useOrganizationSettings';
 
 interface FormState {

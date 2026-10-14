@@ -9,7 +9,7 @@ import { FormField } from '../../../../../components/Forms/FormField';
 import { Input } from '../../../../../components/Forms/Input';
 import { UserPhotoPicker } from '../components/UserPhotoPicker';
 import { useProfile } from '../hooks/useProfile';
-import { changedFields } from '../../../changedFields';
+import { changedFields } from '../../../utils/changedFields';
 import { formatUserDate } from '../../../../../services/userPreferences';
 import './profile.scss';
 

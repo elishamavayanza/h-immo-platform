@@ -6,7 +6,7 @@ import { Badge } from '../../../../components/UI/Badge';
 import { Card } from '../../../../components/UI/Card';
 import { IconButton } from '../../../../components/UI/IconButton';
 import { RightSidebar } from '../../../../components/Navigation/RightSidebar';
-import { PlatformPageHeader } from '../../shared/PlatformPageHeader';
+import { PlatformPageHeader } from '../../components/PlatformPageHeader';
 import { AuditEntryDetails } from '../components/AuditEntryDetails';
 import { AuditStats } from '../components/AuditStats';
 import { useAuditLog } from '../hooks/useAuditLog';

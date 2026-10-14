@@ -15,7 +15,7 @@ import {
     formatPeriodLabel,
     findMatchingPreset,
     isValidPeriodRange,
-} from '../assets/react/features/shared/reports/periodPresets.ts';
+} from '../assets/react/features/shared/reports/utils/periodPresets.ts';
 
 let checks = 0;
 const failures: string[] = [];

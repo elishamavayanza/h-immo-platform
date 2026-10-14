@@ -1,4 +1,4 @@
-import { ApiError } from '../../../services/api/api.types';
+import { ApiError } from '../../../../services/api/api.types';
 
 /**
  * actionErrors.ts — Traduction homogène des erreurs d'action (création,

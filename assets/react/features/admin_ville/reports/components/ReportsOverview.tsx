@@ -10,7 +10,7 @@ import type {
     OccupancyItem,
     WorkerActivityItem,
 } from '../types';
-import { absoluteCents, amountBarPercent } from '../../../shared/reports/amountChart';
+import { absoluteCents, amountBarPercent } from '../../../shared/reports/utils/amountChart';
 
 /** Ligne d'occupation : taux en pourcentage + barre de progression. */
 function OccupancyRow({ item }: { item: OccupancyItem }) {

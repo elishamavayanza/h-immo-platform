@@ -6,7 +6,7 @@
 import { useState } from 'react';
 
 import { Button } from '../../../../components/UI/Button';
-import { DashboardIcon } from './DashboardIcon';
+import { DashboardIcon } from '../../icons/DashboardIcon';
 
 const PERIODS = [
     { id: '7d', label: '7 jours' },

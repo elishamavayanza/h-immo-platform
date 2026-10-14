@@ -17,8 +17,8 @@ import { useOrganization } from '../../../../app/providers/OrganizationProvider'
 import { useAdminCity } from '../../../../app/providers/AdminCityProvider';
 import { useLocataires } from '../hooks/useLocataires';
 import { LocatairesTable } from '../components/LocatairesTable';
-import { fieldErrorMap } from '../../../shared/actionErrors';
-import { changedFields } from '../../../shared/changedFields';
+import { fieldErrorMap } from '../../../shared/utils/actionErrors';
+import { changedFields } from '../../../shared/utils/changedFields';
 import { ModalActions } from '../../../shared/components/ModalActions';
 import { canDo } from '../../../shared/permissions';
 import type { LocataireRow } from '../types/locataire.types';

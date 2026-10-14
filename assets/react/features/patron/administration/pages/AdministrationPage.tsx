@@ -20,7 +20,7 @@ import { TeamTable } from '../components/TeamTable';
 import { OrganizationProfileCard } from '../components/OrganizationProfileCard';
 import { RoleAssignmentsPanel } from '../components/RoleAssignmentsPanel';
 import { CityAssignmentModal } from '../components/CityAssignmentModal';
-import { fieldErrorMap } from '../../../shared/actionErrors';
+import { fieldErrorMap } from '../../../shared/utils/actionErrors';
 import type { TeamMember } from '../types/administration.types';
 import '../../../../../styles/pages/patron/administration/_administration.scss';
 

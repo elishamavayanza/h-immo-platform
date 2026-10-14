@@ -9,7 +9,7 @@ import { Input } from '../../../../components/Forms/Input';
 import { Textarea } from '../../../../components/Forms/Textarea';
 import { FormField } from '../../../../components/Forms/FormField';
 import { OrganizationLogoPicker, type OrganizationLogoChange } from '../../../super_admin/organizations/components/OrganizationLogoPicker';
-import { fieldErrorMap } from '../../../shared/actionErrors';
+import { fieldErrorMap } from '../../../shared/utils/actionErrors';
 import { useOrganizationSettings } from '../hooks/useOrganizationSettings';
 import type { OrganizationProfile } from '../types/administration.types';
 import '../../../../../styles/pages/patron/administration/_administration.scss';

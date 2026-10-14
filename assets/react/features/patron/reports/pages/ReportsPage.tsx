@@ -6,7 +6,7 @@ import { Spinner } from '../../../../components/UI/Spinner';
 import { EmptyState } from '../../../../components/Data/EmptyState';
 import { Select } from '../../../../components/Forms/Select';
 import { ReportPeriodFilter } from '../../../shared/reports/components/ReportPeriodFilter';
-import { isValidPeriodRange } from '../../../shared/reports/periodPresets';
+import { isValidPeriodRange } from '../../../shared/reports/utils/periodPresets';
 import { useReports } from '../hooks/useReports';
 import { ReportsOverview } from '../components/ReportsOverview';
 import { downloadPatronReportPdf } from '../services/reportsService';

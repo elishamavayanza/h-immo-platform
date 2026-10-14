@@ -3,8 +3,8 @@ import { useCallback, useEffect, useState } from 'react';
 import { useToast } from '../../../../app/layout/MainLayout/contexts/ToastContext';
 import { useOrganization } from '../../../../app/providers/OrganizationProvider';
 import { ApiError } from '../../../../../services/api/api.types';
-import { actionErrorMessage, fieldErrorMap, isValidationError } from '../../../shared/actionErrors';
-import { changedFields } from '../../../shared/changedFields';
+import { actionErrorMessage, fieldErrorMap, isValidationError } from '../../../shared/utils/actionErrors';
+import { changedFields } from '../../../shared/utils/changedFields';
 import {
     deleteOrganizationLogo,
     fetchPublicSettings,
