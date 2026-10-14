@@ -25,6 +25,7 @@ import { MEDIA_QUERIES } from '../../../services/device';
 import { mediaHref } from '../../../features/shared/media/services/mediaService';
 import { WorkspaceSwitcher } from './WorkspaceSwitcher';
 import { GlobalSearch } from '../../../features/shared/search/components/GlobalSearch';
+import { rememberLastLocation } from '../../routes/navigationMemory';
 
 /**
  * Marque du sidebar : logo + "IMMO" + nom de l'organisation active sur sa propre ligne.
@@ -109,6 +110,13 @@ export function MainLayout() {
     const location = useLocation();
     const navigate = useNavigate();
     const previousPath = useRef(location.pathname);
+
+    // Reprendre la dernière page métier après une fermeture ou une session
+    // interrompue. La destination est isolée par utilisateur et ne remplace
+    // jamais l'URL courante ni les contrôles d'accès du routeur / de l'API.
+    useEffect(() => {
+        if (user?.uuid) rememberLastLocation(user.uuid, location);
+    }, [user?.uuid, location.pathname, location.search, location.hash]);
 
     // Le routeur utilisé ici est BrowserRouter. On affiche le même indicateur
     // sur toutes les pages pendant le changement de chemin, y compris pour
