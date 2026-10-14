@@ -186,6 +186,16 @@ class UserRepository extends ServiceEntityRepository
         return $this->fetchPaginated($qb, $page, $limit);
     }
 
+    /** Nombre d'utilisateurs non supprimés, sans hydrater leurs entités. */
+    public function countAll(): int
+    {
+        return (int) $this->createQueryBuilder('u')
+            ->select('COUNT(u.id)')
+            ->andWhere('u.deletedAt IS NULL')
+            ->getQuery()
+            ->getSingleScalarResult();
+    }
+
     /**
      * @param list<Organization> $organizations
      * @return list<int>

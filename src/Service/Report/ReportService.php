@@ -305,11 +305,25 @@ final readonly class ReportService
         $periodTo = $filter->periodTo ?? $this->dateTime->endOfCurrentYear();
 
         $organizations = $this->organizationRepository->findAllActive();
+        $citiesByOrganization = $this->indexActiveCitiesByOrganization($organizations);
+        $cityIdsByOrganization = [];
+        $allCityIds = [];
+        foreach ($organizations as $organization) {
+            $cities = $citiesByOrganization[$organization->getId()];
+            $cityIds = array_map(static fn (City $city): int => $city->getId(), $cities);
+            $cityIdsByOrganization[$organization->getId()] = $cityIds;
+            array_push($allCityIds, ...$cityIds);
+        }
+        $occupancyByCity = [];
+        foreach ($this->unitRepository->getCurrentOccupancyByCityIds($allCityIds) as $row) {
+            $occupancyByCity[$row['cityId']] = $row;
+        }
+
         $orgSummaries = [];
 
         foreach ($organizations as $org) {
-            $cities = $this->cityRepository->findActiveByOrganization($org);
-            $cityIds = array_map(fn(City $c) => $c->getId(), $cities);
+            $cities = $citiesByOrganization[$org->getId()];
+            $cityIds = $cityIdsByOrganization[$org->getId()];
 
             $orgSummaries[] = new OrganizationSummaryItem(
                 uuid: $org->getUuid()->toRfc4122(),
@@ -317,8 +331,8 @@ final readonly class ReportService
                 code: $org->getCode(),
                 status: $org->getStatus()->value,
                 cityCount: count($cities),
-                unitCount: $this->countUnitsByCityIds($cityIds),
-                occupancyRate: $this->calculateOccupancyRate($cityIds),
+                unitCount: $this->sumCityOccupancy($cityIds, $occupancyByCity, 'totalUnits'),
+                occupancyRate: $this->occupancyRateForCities($cityIds, $occupancyByCity),
                 revenues: $this->sumRevenues($org->getId(), $cityIds, $periodFrom, $periodTo),
                 expenses: $this->sumExpenses($org->getId(), $cityIds, $periodFrom, $periodTo),
                 arrears: $this->sumArrears($org->getId(), $cityIds, $periodTo),
@@ -326,7 +340,7 @@ final readonly class ReportService
             );
         }
 
-        $totalUsers = count($this->userRepository->findPaginatedAll(1, 10000)['items'] ?? []);
+        $totalUsers = $this->userRepository->countAll();
 
         return new SuperAdminReportResponse(
             periodCovered: $this->dateTime->format($periodFrom, 'Y-m-d') . ' to ' . $this->dateTime->format($periodTo, 'Y-m-d'),
@@ -347,21 +361,31 @@ final readonly class ReportService
         $periodTo = $filter->periodTo ?? $this->dateTime->endOfCurrentYear();
 
         $organizations = $this->organizationRepository->findAllActive();
+        $citiesByOrganization = $this->indexActiveCitiesByOrganization($organizations);
+        $cityIdsByOrganization = [];
+        $allCityIds = [];
+        foreach ($organizations as $organization) {
+            $cities = $citiesByOrganization[$organization->getId()];
+            $cityIds = array_map(static fn (City $city): int => $city->getId(), $cities);
+            $cityIdsByOrganization[$organization->getId()] = $cityIds;
+            array_push($allCityIds, ...$cityIds);
+        }
+        $occupancyByCity = [];
+        foreach ($this->unitRepository->getCurrentOccupancyByCityIds($allCityIds) as $row) {
+            $occupancyByCity[$row['cityId']] = $row;
+        }
+
         $orgSummaries = [];
-        $totalRevenue = '0.00';
-        $totalExpense = '0.00';
         $totalArrears = '0.00';
 
         foreach ($organizations as $org) {
-            $cities = $this->cityRepository->findActiveByOrganization($org);
-            $cityIds = array_map(fn(City $c) => $c->getId(), $cities);
+            $cities = $citiesByOrganization[$org->getId()];
+            $cityIds = $cityIdsByOrganization[$org->getId()];
 
             $orgRevenue = $this->sumRevenues($org->getId(), $cityIds, $periodFrom, $periodTo);
             $orgExpense = $this->sumExpenses($org->getId(), $cityIds, $periodFrom, $periodTo);
             $orgArrears = $this->sumArrears($org->getId(), $cityIds, $periodTo);
 
-            $totalRevenue = bcadd($totalRevenue, $orgRevenue, 2);
-            $totalExpense = bcadd($totalExpense, $orgExpense, 2);
             $totalArrears = bcadd($totalArrears, $orgArrears, 2);
 
             $orgSummaries[] = new OrganizationSummaryItem(
@@ -370,8 +394,8 @@ final readonly class ReportService
                 code: $org->getCode(),
                 status: $org->getStatus()->value,
                 cityCount: count($cities),
-                unitCount: $this->countUnitsByCityIds($cityIds),
-                occupancyRate: $this->calculateOccupancyRate($cityIds),
+                unitCount: $this->sumCityOccupancy($cityIds, $occupancyByCity, 'totalUnits'),
+                occupancyRate: $this->occupancyRateForCities($cityIds, $occupancyByCity),
                 revenues: $orgRevenue,
                 expenses: $orgExpense,
                 arrears: $orgArrears,
@@ -390,7 +414,7 @@ final readonly class ReportService
         $suspendedOrgs = $orgsByStatus['suspended'] ?? 0;
         $inactiveOrgs = $orgsByStatus['inactive'] ?? 0;
 
-        $totalUsers = count($this->userRepository->findPaginatedAll(1, 10000)['items'] ?? []);
+        $totalUsers = $this->userRepository->countAll();
 
         // Agrégats globaux
         $totalUnits = 0;
@@ -399,47 +423,26 @@ final readonly class ReportService
         $totalOccupiedUnits = 0;
 
         foreach ($organizations as $org) {
-            $cities = $this->cityRepository->findActiveByOrganization($org);
-            $cityIds = array_map(fn(City $c) => $c->getId(), $cities);
+            $cities = $citiesByOrganization[$org->getId()];
+            $cityIds = $cityIdsByOrganization[$org->getId()];
             $totalCities += count($cities);
-
-            $totalUnits += $this->countUnitsByCityIds($cityIds);
-            $totalActiveLeases += $this->countActiveLeasesByCityIds($cityIds);
-
-            // Unités occupées pour taux occupation global
-            foreach ($cities as $city) {
-                $parcels = $this->parcelRepository->findByCity($city);
-                foreach ($parcels as $parcel) {
-                    $buildings = $this->buildingRepository->findByParcel($parcel);
-                    foreach ($buildings as $building) {
-                        $units = $this->unitRepository->findByBuilding($building);
-                        foreach ($units as $unit) {
-                            if ($this->unitHasActiveLease($unit)) {
-                                $totalOccupiedUnits++;
-                            }
-                        }
-                    }
-                }
-            }
+            $totalUnits += $this->sumCityOccupancy($cityIds, $occupancyByCity, 'totalUnits');
+            $occupied = $this->sumCityOccupancy($cityIds, $occupancyByCity, 'occupiedUnits');
+            $totalActiveLeases += $occupied;
+            $totalOccupiedUnits += $occupied;
         }
 
         $globalOccupancyRate = $totalUnits > 0 ? round(($totalOccupiedUnits / $totalUnits) * 100, 1) : 0.0;
 
         // Impayés globaux
-        $globalArrears = '0.00';
-        foreach ($organizations as $org) {
-            $cities = $this->cityRepository->findActiveByOrganization($org);
-            $cityIds = array_map(fn(City $c) => $c->getId(), $cities);
-            $globalArrears = bcadd($globalArrears, $this->sumArrears($org->getId(), $cityIds, $periodTo), 2);
-        }
+        $globalArrears = $totalArrears;
 
         // Revenus mensuels attendus (loyers du mois courant)
         $currentMonthStart = $this->dateTime->startOfCurrentMonth();
         $currentMonthEnd = $this->dateTime->endOfCurrentMonth();
         $expectedMonthlyRevenue = '0.00';
         foreach ($organizations as $org) {
-            $cities = $this->cityRepository->findActiveByOrganization($org);
-            $cityIds = array_map(fn(City $c) => $c->getId(), $cities);
+            $cityIds = $cityIdsByOrganization[$org->getId()];
             $expectedMonthlyRevenue = bcadd($expectedMonthlyRevenue, $this->sumExpectedRents($org->getId(), $cityIds, $currentMonthStart, $currentMonthEnd), 2);
         }
 
@@ -517,17 +520,51 @@ final readonly class ReportService
         $revenueSeries = [];
         $current = $this->dateTime->startOfCurrentYear();
         $end = $this->dateTime->endOfCurrentYear();
+        $monthTotals = [];
         for ($i = 0; $i < 12; $i++) {
             $monthStart = $current->modify('first day of +' . $i . ' month');
-            $monthEnd = (clone $monthStart)->modify('last day of this month 23:59:59');
             if ($monthStart > $end) break;
 
-            $monthRevenue = '0.00';
-            foreach ($organizations as $org) {
-                $cities = $this->cityRepository->findActiveByOrganization($org);
-                $cityIds = array_map(fn(City $c) => $c->getId(), $cities);
-                $monthRevenue = bcadd($monthRevenue, $this->sumRevenues($org->getId(), $cityIds, $monthStart, $monthEnd), 2);
+            $monthTotals[$this->dateTime->format($monthStart, 'Y-m')] = '0.00';
+        }
+
+        $yearEnd = $end->modify('last day of this month 23:59:59');
+        foreach ($organizations as $org) {
+            $cityIds = $cityIdsByOrganization[$org->getId()];
+            $referenceCurrency = $this->getReferenceCurrency($org->getId(), $cityIds);
+            $rows = $this->paymentRepository->getFinancialSummary(
+                [$org->getId()],
+                $cityIds ?: null,
+                $current,
+                $yearEnd,
+            );
+
+            foreach ($rows as $row) {
+                $period = (string) $row['period'];
+                if (!isset($monthTotals[$period])) {
+                    continue;
+                }
+
+                $currency = $row['currency'] instanceof \BackedEnum
+                    ? $row['currency']->value
+                    : (string) $row['currency'];
+                $amount = $this->convertToReferenceCurrency(
+                    (string) $row['total'],
+                    Currency::from($currency),
+                    $referenceCurrency,
+                    $this->periodStart($period, $current),
+                    isset($row['cityId']) ? (int) $row['cityId'] : null,
+                );
+                $monthTotals[$period] = bcadd($monthTotals[$period], $amount, 2);
             }
+        }
+
+        for ($i = 0; $i < 12; $i++) {
+            $monthStart = $current->modify('first day of +' . $i . ' month');
+            if ($monthStart > $end) break;
+            $period = $this->dateTime->format($monthStart, 'Y-m');
+            $monthRevenue = '0.00';
+            $monthRevenue = $monthTotals[$period] ?? $monthRevenue;
 
             $revenueSeries[] = new RevenuePoint(
                 label: $this->dateTime->format($monthStart, 'M'),
@@ -617,19 +654,8 @@ final readonly class ReportService
 
         // Top cities across all organizations
         $cityCounts = [];
-        foreach ($organizations as $org) {
-            $cities = $this->cityRepository->findActiveByOrganization($org);
-            foreach ($cities as $city) {
-                $parcels = $this->parcelRepository->findByCity($city);
-                $count = 0;
-                foreach ($parcels as $parcel) {
-                    $buildings = $this->buildingRepository->findByParcel($parcel);
-                    foreach ($buildings as $building) {
-                        $count += count($this->unitRepository->findByBuilding($building));
-                    }
-                }
-                $cityCounts[$city->getName()] = ($cityCounts[$city->getName()] ?? 0) + $count;
-            }
+        foreach ($occupancyByCity as $row) {
+            $cityCounts[$row['cityName']] = ($cityCounts[$row['cityName']] ?? 0) + $row['totalUnits'];
         }
         arsort($cityCounts);
         $totalUnits = array_sum($cityCounts);
@@ -756,6 +782,29 @@ final readonly class ReportService
     }
 
     // ==================== MÉTHODES PRIVÉES D'AGRÉGATION ====================
+
+    /**
+     * Précharge les villes actives en une requête pour les rapports plateforme.
+     *
+     * @param list<Organization> $organizations
+     * @return array<int, list<City>>
+     */
+    private function indexActiveCitiesByOrganization(array $organizations): array
+    {
+        $citiesByOrganization = [];
+        foreach ($organizations as $organization) {
+            $citiesByOrganization[$organization->getId()] = [];
+        }
+
+        foreach ($this->cityRepository->findAllActive() as $city) {
+            $organizationId = $city->getOrganization()->getId();
+            if (array_key_exists($organizationId, $citiesByOrganization)) {
+                $citiesByOrganization[$organizationId][] = $city;
+            }
+        }
+
+        return $citiesByOrganization;
+    }
 
     /** @return list<FinancialSummaryItem> */
     private function buildFinancialSummary(
@@ -1354,36 +1403,24 @@ final readonly class ReportService
         return $this->unitRepository->countByCityIds($cityIds);
     }
 
-    private function calculateOccupancyRate(array $cityIds): float
+    /** @param list<int> $cityIds @param array<int, array{cityId: int, cityName: string, totalUnits: int, occupiedUnits: int}> $occupancyByCity */
+    private function sumCityOccupancy(array $cityIds, array $occupancyByCity, string $field): int
     {
-        if (empty($cityIds)) {
-            return 0.0;
-        }
-
         $total = 0;
-        $occupied = 0;
-        $cities = $this->cityRepository->findInOrganization($this->cityRepository->find($cityIds[0])->getOrganization());
-
-        foreach ($cities as $city) {
-            if (!in_array($city->getId(), $cityIds, true)) {
-                continue;
-            }
-            $parcels = $this->parcelRepository->findByCity($city);
-            foreach ($parcels as $parcel) {
-                $buildings = $this->buildingRepository->findByParcel($parcel);
-                foreach ($buildings as $building) {
-                    $units = $this->unitRepository->findByBuilding($building);
-                    $total += count($units);
-                    foreach ($units as $unit) {
-                        if ($this->unitHasActiveLease($unit)) {
-                            $occupied++;
-                        }
-                    }
-                }
-            }
+        foreach ($cityIds as $cityId) {
+            $total += $occupancyByCity[$cityId][$field] ?? 0;
         }
 
-        return $total > 0 ? round(($occupied / $total) * 100, 2) : 0.0;
+        return $total;
+    }
+
+    /** @param list<int> $cityIds @param array<int, array{cityId: int, cityName: string, totalUnits: int, occupiedUnits: int}> $occupancyByCity */
+    private function occupancyRateForCities(array $cityIds, array $occupancyByCity): float
+    {
+        $units = $this->sumCityOccupancy($cityIds, $occupancyByCity, 'totalUnits');
+        $occupied = $this->sumCityOccupancy($cityIds, $occupancyByCity, 'occupiedUnits');
+
+        return $units > 0 ? round(($occupied / $units) * 100, 2) : 0.0;
     }
 
     private function getMainCurrency(?int $organizationId, array $cityIds): string
@@ -1440,39 +1477,6 @@ final readonly class ReportService
 
         arsort($currencyCounts);
         return array_key_first($currencyCounts);
-    }
-
-    /**
-     * Compte les baux actifs pour une liste de cityIds.
-     */
-    private function countActiveLeasesByCityIds(array $cityIds): int
-    {
-        if (empty($cityIds)) {
-            return 0;
-        }
-
-        $count = 0;
-        $cities = $this->cityRepository->findInOrganization($this->cityRepository->find($cityIds[0])->getOrganization());
-
-        foreach ($cities as $city) {
-            if (!in_array($city->getId(), $cityIds, true)) {
-                continue;
-            }
-            $parcels = $this->parcelRepository->findByCity($city);
-            foreach ($parcels as $parcel) {
-                $buildings = $this->buildingRepository->findByParcel($parcel);
-                foreach ($buildings as $building) {
-                    $units = $this->unitRepository->findByBuilding($building);
-                    foreach ($units as $unit) {
-                        if ($this->unitHasActiveLease($unit)) {
-                            $count++;
-                        }
-                    }
-                }
-            }
-        }
-
-        return $count;
     }
 
     /**
