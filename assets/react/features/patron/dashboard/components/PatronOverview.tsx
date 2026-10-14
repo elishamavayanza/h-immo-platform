@@ -2,9 +2,17 @@ import { Card } from '../../../../components/UI/Card';
 import { formatInteger, formatMoney, formatPercent } from '../../../../../utils/format.utils';
 import type { PatronDashboardData } from '../types/patronDashboard.types';
 import { UpcomingLeaseExpirations } from '../../../shared/components/UpcomingLeaseExpirations';
+import { DashboardStatChart } from '../../../shared/components/DashboardStatChart';
+import { absoluteCents, amountBarPercent } from '../../../shared/reports/utils/amountChart';
 
 /** Vue d'ensemble du Patron : indicateurs + occupation par ville + impayés + dépenses. */
 export function PatronOverview({ data }: { data: PatronDashboardData }) {
+    const expenses = data.expenses.filter((item) => item.currency === data.currency);
+    const maximumExpense = expenses.reduce((maximum, item) => {
+        const amount = absoluteCents(item.totalAmount);
+        return amount > maximum ? amount : maximum;
+    }, 0n);
+
     return (
         <>
             <section className="organization-kpis">
@@ -65,61 +73,31 @@ export function PatronOverview({ data }: { data: PatronDashboardData }) {
             </section>
 
             <section className="organization-dashboard-grid">
-                <Card
-                    className="organization-panel"
-                    padding="medium"
-                    header={<div><h2>Occupation par ville</h2><p>Répartition actuelle du patrimoine occupé</p></div>}
-                >
-                    <ul className="organization-activity">
-                        {data.cities.length > 0 ? data.cities.map((item) => (
-                            <li key={item.levelUuid ?? item.label} className="organization-activity__item organization-activity__item--info">
-                                <span className="organization-activity__dot" />
-                                <div>
-                                    <strong>{item.label}</strong>
-                                    <small>{item.occupiedUnits} / {item.totalUnits} unités occupées</small>
-                                </div>
-                                <time>{formatPercent(item.occupancyRate)}</time>
-                            </li>
-                        )) : (
-                            <li className="organization-activity__item">
-                                <span className="organization-activity__dot" />
-                                <div>
-                                    <strong>Aucune ville</strong>
-                                    <small>Le patrimoine est vide sur ce périmètre</small>
-                                </div>
-                                <time>—</time>
-                            </li>
-                        )}
-                    </ul>
-                </Card>
+                <DashboardStatChart
+                    title="Occupation par ville"
+                    description="Part des unités occupées dans chaque ville."
+                    emptyMessage="Aucune ville à afficher."
+                    items={data.cities.map((item) => ({
+                        id: item.levelUuid ?? item.label,
+                        label: item.label,
+                        detail: `${formatInteger(item.occupiedUnits)} / ${formatInteger(item.totalUnits)} unités occupées`,
+                        value: formatPercent(item.occupancyRate),
+                        share: item.occupancyRate,
+                    }))}
+                />
 
-                <Card
-                    className="organization-panel"
-                    padding="medium"
-                    header={<div><h2>Dépenses par ville</h2><p>Sur la période sélectionnée</p></div>}
-                >
-                    <ul className="organization-activity">
-                        {data.expenses.length > 0 ? data.expenses.map((item) => (
-                            <li key={item.levelUuid ?? item.levelLabel} className="organization-activity__item organization-activity__item--info">
-                                <span className="organization-activity__dot" />
-                                <div>
-                                    <strong>{item.levelLabel}</strong>
-                                    <small>{item.category === 'ALL' ? 'Toutes catégories' : item.category}</small>
-                                </div>
-                                <time>{formatMoney(item.totalAmount, item.currency)}</time>
-                            </li>
-                        )) : (
-                            <li className="organization-activity__item">
-                                <span className="organization-activity__dot" />
-                                <div>
-                                    <strong>Aucune dépense</strong>
-                                    <small>Rien à afficher sur la période sélectionnée</small>
-                                </div>
-                                <time>—</time>
-                            </li>
-                        )}
-                    </ul>
-                </Card>
+                <DashboardStatChart
+                    title="Dépenses par ville"
+                    description={`Répartition sur la période · ${data.currency}`}
+                    emptyMessage="Aucune dépense dans la devise de référence sur cette période."
+                    items={expenses.map((item) => ({
+                        id: item.levelUuid ?? `${item.levelLabel}-${item.category}`,
+                        label: item.levelLabel,
+                        detail: item.category === 'ALL' ? 'Toutes catégories' : item.category,
+                        value: formatMoney(item.totalAmount, item.currency),
+                        share: amountBarPercent(item.totalAmount, maximumExpense),
+                    }))}
+                />
             </section>
         </>
     );
