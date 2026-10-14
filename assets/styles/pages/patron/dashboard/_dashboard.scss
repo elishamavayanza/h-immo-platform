@@ -25,6 +25,21 @@
 .organization-activity__item strong, .organization-activity__item small { display: block; }
 .organization-activity__item strong { font-size: $font-size-sm; color: $color-text-primary; }
 .organization-activity__item small, .organization-activity__item time { color: $color-text-muted; font-size: $font-size-xs; }
+.organization-stat-chart { min-width: 0; }
+.organization-stat-chart__heading { margin-bottom: $spacing-3; }
+.organization-stat-chart__heading h2 { margin: 0; color: $color-text-primary; font-size: $font-size-lg; }
+.organization-stat-chart__heading p { margin: $spacing-1 0 0; color: $color-text-secondary; font-size: $font-size-sm; }
+.organization-stat-chart__list { display: grid; gap: $spacing-3; margin: 0; padding: 0; list-style: none; }
+.organization-stat-chart__item { min-width: 0; }
+.organization-stat-chart__labels { display: flex; justify-content: space-between; align-items: start; gap: $spacing-3; margin-bottom: $spacing-1; }
+.organization-stat-chart__labels > span { display: grid; min-width: 0; gap: 2px; }
+.organization-stat-chart__labels strong { overflow-wrap: anywhere; color: $color-text-primary; font-size: $font-size-sm; }
+.organization-stat-chart__labels small { color: $color-text-muted; font-size: $font-size-xs; }
+.organization-stat-chart__labels b { flex: 0 0 auto; color: $color-text-secondary; font-size: $font-size-sm; font-weight: 600; }
+.organization-stat-chart__track { height: 9px; overflow: hidden; border-radius: 999px; background: $color-bg-elevated; }
+.organization-stat-chart__track span { display: block; height: 100%; min-width: 2px; border-radius: inherit; background: $color-primary; transition: width 240ms ease; }
+.organization-stat-chart__empty { margin: 0; color: $color-text-muted; font-size: $font-size-sm; }
+.organization-stat-chart__note { margin: $spacing-3 0 0; color: $color-text-muted; font-size: $font-size-xs; }
 @media (max-width: 1050px) { .organization-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); } .organization-dashboard-grid { grid-template-columns: 1fr; } }
 @media (max-width: 600px) {
     .organization-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: $spacing-2; }
