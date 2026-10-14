@@ -8,7 +8,7 @@ import { DepensesPage as PatronDepensesPage } from '../../features/patron/depens
 import { VitrinePage as PatronVitrinePage } from '../../features/patron/vitrine/pages/VitrinePage';
 import { AdministrationPage } from '../../features/patron/administration/pages/AdministrationPage';
 import { ReportsPage as PatronReportsPage } from '../../features/patron/reports/pages/ReportsPage';
-import { AdminImmobilierDashboardPage } from '../../features/admin_immobilier/dashbord/pages/AdminImmobilierDashboardPage';
+import { AdminImmobilierDashboardPage } from '../../features/admin_immobilier/dashboard/pages/AdminImmobilierDashboardPage';
 import { PatrimoinePage as AdminImmobilierPatrimoinePage } from '../../features/admin_immobilier/patrimoine/pages/PatrimoinePage';
 import { LocatairesPage as AdminImmobilierLocatairesPage } from '../../features/admin_immobilier/locataires/pages/LocatairesPage';
 import { LoyersPage as AdminImmobilierLoyersPage } from '../../features/admin_immobilier/loyers/pages/LoyersPage';
@@ -17,7 +17,7 @@ import { VitrinePage as AdminImmobilierVitrinePage } from '../../features/admin_
 import { PersonnelPage as AdminImmobilierPersonnelPage } from '../../features/admin_immobilier/personnel/pages/PersonnelPage';
 import { ReportsPage as AdminImmobilierReportsPage } from '../../features/admin_immobilier/reports/pages/ReportsPage';
 import { AdministrationPage as AdminImmobilierAdministrationPage } from '../../features/admin_immobilier/administration/pages/AdministrationPage';
-import { AdminVilleDashboardPage } from '../../features/admin_ville/dashbord/pages/AdminVilleDashboardPage';
+import { AdminVilleDashboardPage } from '../../features/admin_ville/dashboard/pages/AdminVilleDashboardPage';
 import { PatrimoinePage as AdminVillePatrimoinePage } from '../../features/admin_ville/patrimoine/pages/PatrimoinePage';
 import { LocatairesPage as AdminVilleLocatairesPage } from '../../features/admin_ville/locataires/pages/LocatairesPage';
 import { LoyersPage as AdminVilleLoyersPage } from '../../features/admin_ville/loyers/pages/LoyersPage';

@@ -1,4 +1,4 @@
-import type { OrganizationStatus } from '../../dashbord/types';
+export type OrganizationStatus = 'active' | 'suspended' | 'inactive';
 
 /**
  * Ligne d'une organisation telle qu'affichée dans le tableau de gestion.

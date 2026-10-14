@@ -5,7 +5,7 @@ import { ApiError } from '../../../../../services/api/api.types';
 import { fetchCities } from '../../../admin_immobilier/shared/services/referenceService';
 import { fetchPatronReports } from '../services/reportsService';
 import type { PatronReportsData } from '../types';
-import { computePeriodPreset } from '../../../shared/reports/periodPresets';
+import { computePeriodPreset } from '../../../shared/reports/utils/periodPresets';
 
 /** Option du sélecteur de ville (borné aux villes de l'organisation active). */
 export interface PatronCityOption {

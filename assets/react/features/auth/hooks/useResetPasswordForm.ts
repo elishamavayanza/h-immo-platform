@@ -12,7 +12,7 @@
 import { useCallback, useState, type FormEvent } from 'react';
 
 import { ApiError } from '../../../../services/api/api.types';
-import { validatePasswordForm } from '../resetPasswordForm';
+import { validatePasswordForm } from '../utils/resetPasswordForm';
 import { resetPasswordService } from '../services/resetPasswordService';
 import type {
     ResetPasswordFormErrors,

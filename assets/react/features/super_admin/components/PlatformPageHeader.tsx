@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 
-import { DashboardIcon } from '../dashbord/components/DashboardIcon';
+import { DashboardIcon } from '../icons/DashboardIcon';
 
 export interface PlatformPageHeaderProps {
     title: string;

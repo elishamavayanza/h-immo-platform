@@ -1,15 +1,9 @@
-import { apiClient } from '../../../../services/api/client';
-import type { Feedback } from '../../../../services/api/api.types';
-import type { BuildingItem, CityItem, ListPage, ParcelItem, TenantItem, UnitItem } from '../../admin_immobilier/shared/types/reference.types';
-import { buildPatrimoinePath } from '../../admin_immobilier/patrimoine/components/patrimoineRouting';
+import { apiClient } from '../../../../../services/api/client';
+import type { Feedback } from '../../../../../services/api/api.types';
+import type { BuildingItem, CityItem, ListPage, ParcelItem, TenantItem, UnitItem } from '../../../admin_immobilier/shared/types/reference.types';
+import { buildPatrimoinePath } from '../../../admin_immobilier/patrimoine/components/patrimoineRouting';
+import type { GlobalSearchResult } from '../types/globalSearch.types';
 
-export interface GlobalSearchResult {
-    id: string;
-    type: 'Ville' | 'Parcelle' | 'Bâtiment' | 'Unité' | 'Locataire';
-    label: string;
-    detail: string;
-    path: string;
-}
 
 /**
  * Les listes existantes appliquent toutes les permissions et le périmètre

@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 
 import { fetchSuperAdminReport, downloadSuperAdminReportPdf, mapToReportsData } from '../services/reportsService';
 import type { ReportsData } from '../../../shared/reports/types/report.types';
-import { computePeriodPreset, isValidPeriodRange, type PeriodRange } from '../../../shared/reports/periodPresets';
+import { computePeriodPreset, isValidPeriodRange, type PeriodRange } from '../../../shared/reports/utils/periodPresets';
 
 export function useReports() {
     const [data, setData] = useState<ReportsData | null>(null);

@@ -12,7 +12,7 @@ import { ErrorState } from '../../../../components/UI/ErrorState';
 import { Loading } from '../../../../components/UI/Loading';
 import { Modal } from '../../../../components/UI/Modal';
 import { Avatar } from '../../../../components/UI/Avatar';
-import { PlatformPageHeader } from '../../shared/PlatformPageHeader';
+import { PlatformPageHeader } from '../../components/PlatformPageHeader';
 import { UsersStats } from '../components/UsersStats';
 import type { UserRow, UserRoleFilter, UserStatus } from '../types/user.types';
 import { useUsers } from '../hooks/useUsers';

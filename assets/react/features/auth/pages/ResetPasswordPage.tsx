@@ -8,7 +8,7 @@
 import { useMemo } from 'react';
 import { useLocation } from 'react-router-dom';
 
-import { readTokenFromSearch } from '../resetPasswordForm';
+import { readTokenFromSearch } from '../utils/resetPasswordForm';
 import { ResetPasswordForm } from '../components/ResetPasswordForm';
 
 import '../../../../styles/pages/auth/_reset-password.scss';

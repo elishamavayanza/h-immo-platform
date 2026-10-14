@@ -8,7 +8,7 @@ import { Navigate, Route, Routes, useNavigate } from 'react-router-dom';
 import { ForgotPasswordPage } from '../../features/auth/pages/ForgotPasswordPage';
 import { LoginPage } from '../../features/auth/pages/LoginPage';
 import { ResetPasswordPage } from '../../features/auth/pages/ResetPasswordPage';
-import { SuperAdminDashboardPage } from '../../features/super_admin/dashbord/pages/SuperAdminDashboardPage';
+import { SuperAdminDashboardPage } from '../../features/super_admin/dashboard/pages/SuperAdminDashboardPage';
 import { OrganizationsPage } from '../../features/super_admin/organizations/pages/OrganizationsPage';
 import { UsersPage } from '../../features/super_admin/users/pages/UsersPage';
 import { AuditLogPage } from '../../features/super_admin/audit/pages/AuditLogPage';

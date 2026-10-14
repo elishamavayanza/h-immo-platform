@@ -1,4 +1,4 @@
-import type { DashboardIconName } from '../types';
+import type { DashboardIconName } from '../dashboard/types';
 
 const PATHS: Record<DashboardIconName, string> = {
     building: 'M3 21h18M5 21V5a1 1 0 0 1 1-1h9a1 1 0 0 1 1 1v16M9 8h2m-2 4h2m-2 4h2m5-7h3v11',

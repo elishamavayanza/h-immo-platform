@@ -1,4 +1,4 @@
-export * from './DashboardIcon';
+export * from '../../icons/DashboardIcon';
 export * from './DashboardHeader';
 export * from './KpiCard';
 export * from './KpiGrid';

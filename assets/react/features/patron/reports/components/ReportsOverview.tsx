@@ -3,7 +3,7 @@ import { Badge } from '../../../../components/UI/Badge';
 import { InlineSummary } from '../../../shared/components/InlineSummary';
 import { UpcomingLeaseExpirations } from '../../../shared/components/UpcomingLeaseExpirations';
 import { formatInteger, formatMoney, formatPercent } from '../../../../../utils/format.utils';
-import { absoluteCents, amountBarPercent } from '../../../shared/reports/amountChart';
+import { absoluteCents, amountBarPercent } from '../../../shared/reports/utils/amountChart';
 import type { ArrearsItem, ExpenseSummaryItem, FinancialSummaryItem, OccupancyItem, PatronReportsData } from '../types';
 
 /** Libellé court d'un mois `YYYY-MM` fourni par le backend. */
