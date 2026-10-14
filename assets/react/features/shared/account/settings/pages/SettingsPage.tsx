@@ -16,6 +16,8 @@ import { useToast } from '../../../../../app/layout/MainLayout/contexts/ToastCon
 import { apiClient } from '../../../../../../services/api/client';
 import { ApiError, type Feedback } from '../../../../../../services/api/api.types';
 import { useAccountSettings } from '../hooks/useAccountSettings';
+import { OrganizationLogoPicker, type OrganizationLogoChange } from '../../../../super_admin/organizations/components/OrganizationLogoPicker';
+import { organizationsService } from '../../../../super_admin/organizations/services/organizationsService';
 import './settings.scss';
 
 type FxRate = { baseCurrency: string; quoteCurrency: string; rate: string; effectiveFrom: string };
@@ -47,6 +49,28 @@ export function SettingsPage() {
     const [historyDate, setHistoryDate] = useState(() => localDateKey(new Date()));
     const [historicalRates, setHistoricalRates] = useState<HistoricalRate[]>([]);
     const [historyLoading, setHistoryLoading] = useState(false);
+    const [organizationLogo, setOrganizationLogo] = useState<string | null>(null);
+    const [organizationLogoChange, setOrganizationLogoChange] = useState<OrganizationLogoChange>(null);
+    const [logoLoading, setLogoLoading] = useState(false);
+    const [logoBusy, setLogoBusy] = useState(false);
+    const [logoError, setLogoError] = useState<string | null>(null);
+
+    useEffect(() => {
+        if (!isOrganizationPage || organizationRole !== 'admin_immobilier' || !currentOrganization) return;
+        let active = true;
+        setOrganizationLogo(null);
+        setOrganizationLogoChange(null);
+        setLogoLoading(true);
+        setLogoError(null);
+        void apiClient.get<Feedback<{ id: string; logo: string | null }>>(`/v1/identity/organizations/${currentOrganization.uuid}`)
+            .then(({ data }) => { if (active) setOrganizationLogo(data.data.logo); })
+            .catch((cause: unknown) => {
+                if (!active) return;
+                setLogoError(cause instanceof ApiError ? cause.message : 'Impossible de charger le logo de l’organisation.');
+            })
+            .finally(() => { if (active) setLogoLoading(false); });
+        return () => { active = false; };
+    }, [isOrganizationPage, organizationRole, currentOrganization]);
 
     useEffect(() => {
         const content = document.getElementById('main-layout__content');
@@ -131,6 +155,28 @@ export function SettingsPage() {
         } finally { setFxBusy(false); }
     };
 
+    const saveOrganizationLogo = async () => {
+        if (!currentOrganization || !organizationLogoChange) return;
+        setLogoBusy(true);
+        setLogoError(null);
+        try {
+            if (organizationLogoChange.kind === 'new') {
+                const path = await organizationsService.uploadLogo(currentOrganization.uuid, organizationLogoChange.file);
+                setOrganizationLogo(path);
+                push('success', 'Le logo de l’organisation a été mis à jour.');
+            } else {
+                await organizationsService.deleteLogo(currentOrganization.uuid);
+                setOrganizationLogo(null);
+                push('success', 'Le logo de l’organisation a été retiré.');
+            }
+            setOrganizationLogoChange(null);
+        } catch (cause) {
+            const message = cause instanceof ApiError ? cause.message : 'Impossible d’enregistrer le logo de l’organisation.';
+            setLogoError(message);
+            push('error', message);
+        } finally { setLogoBusy(false); }
+    };
+
     const setFxPermission = async (admin: FxAdmin, allowed: boolean) => {
         if (!currentOrganization) return;
         setFxBusy(true);
@@ -199,6 +245,15 @@ export function SettingsPage() {
             </header>
 
             <div className="settings-page__sections">
+                {isOrganizationPage && organizationRole === 'admin_immobilier' && (
+                    <section id="settings-organization-logo" className="settings-section"><Card header="Logo de l’organisation" className="settings-card settings-card--logo">
+                        <p>Choisissez l’image qui représente votre organisation. Avant l’enregistrement, vous pouvez la déplacer, la zoomer et la faire pivoter.</p>
+                        {logoLoading && <p role="status">Chargement du logo…</p>}
+                        {logoError && <p className="settings-error" role="alert">{logoError}</p>}
+                        {!logoLoading && <OrganizationLogoPicker value={organizationLogo} change={organizationLogoChange} onChange={setOrganizationLogoChange} />}
+                        {organizationLogoChange && <div className="settings-logo__save"><Button disabled={logoBusy} onClick={() => void saveOrganizationLogo()}>{logoBusy ? 'Enregistrement…' : 'Enregistrer le logo'}</Button></div>}
+                    </Card></section>
+                )}
                 {isOrganizationPage && organizationRole === 'admin_immobilier' && (
                     <section id="settings-exchange-rate" className="settings-section"><Card header="Taux de change de l’organisation" className="settings-card">
                         <p>La devise de référence est utilisée pour les synthèses financières de toute l’organisation. Les montants comptabilisés gardent leur devise d’origine.</p>
@@ -441,6 +496,7 @@ export function SettingsPage() {
                     </div>}
                     {isOrganizationPage && <div className="settings-rightbar__subnav" aria-label="Sections de l’organisation">
                         <span className="settings-rightbar__label">Réglages partagés</span>
+                        {organizationRole === 'admin_immobilier' && <a href="#settings-organization-logo" className={activeSection === 'settings-organization-logo' ? 'is-active' : undefined} aria-current={activeSection === 'settings-organization-logo' ? 'location' : undefined}>Logo de l’organisation</a>}
                         <a href="#settings-exchange-rate" className={activeSection === 'settings-exchange-rate' ? 'is-active' : undefined} aria-current={activeSection === 'settings-exchange-rate' ? 'location' : undefined}>Taux de change</a>
                     </div>}
                 </nav>

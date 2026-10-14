@@ -7,6 +7,7 @@ export interface ModalProps extends UseModalProps {
     children: React.ReactNode;
     footer?: React.ReactNode;
     expandable?: boolean;
+    initiallyExpanded?: boolean;
 }
 
 export function Modal({
@@ -20,6 +21,7 @@ export function Modal({
                           children,
                           footer,
                           expandable = false,
+                          initiallyExpanded = false,
                       }: ModalProps) {
     const { classes, overlayClick } = useModal({
         isOpen,
@@ -62,8 +64,8 @@ export function Modal({
     }, [isOpen, expanded]);
 
     useEffect(() => {
-        if (!isOpen) setExpanded(false);
-    }, [isOpen]);
+        setExpanded(isOpen && initiallyExpanded);
+    }, [isOpen, initiallyExpanded]);
 
     if (!isOpen) return null;
 

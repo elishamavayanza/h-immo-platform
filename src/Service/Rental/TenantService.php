@@ -16,6 +16,7 @@ use App\Enum\TenantType;
 use App\Enum\OrganizationRole;
 use App\Mapper\Rental\TenantMapper;
 use App\Repository\Identity\OrganizationRepository;
+use App\Repository\Property\CityRepository;
 use App\Repository\Rental\TenantRepository;
 use App\Security\SecurityAction;
 use App\Security\SecurityServiceInterface;
@@ -41,6 +42,7 @@ final readonly class TenantService
     public function __construct(
         private TenantRepository $tenantRepository,
         private OrganizationRepository $organizationRepository,
+        private CityRepository $cityRepository,
         private TenantMapper $tenantMapper,
         private SecurityServiceInterface $securityService,
         private EntityManagerInterface $entityManager,
@@ -89,6 +91,35 @@ final readonly class TenantService
         $this->securityService->checkOrganizationAccess($organization, SecurityAction::CREATE_TENANT);
 
         return $organization;
+    }
+
+    private function resolveTenantCity(?string $cityUuid, Organization $organization, Feedback $feedback, bool $required): ?City
+    {
+        $role = $this->securityService->getOrganizationRole($this->securityService->getCurrentUser(), $organization);
+        $required = $required || $role === OrganizationRole::ADMIN_VILLE;
+        if (($cityUuid === null || $cityUuid === '') && $required) {
+            $feedback->addError('cityUuid', 'La ville active est requise pour rattacher ce locataire.');
+
+            return null;
+        }
+        if ($cityUuid === null || $cityUuid === '') {
+            return null;
+        }
+
+        try {
+            $city = $this->cityRepository->findOneByUuid(Uuid::fromString($cityUuid));
+        } catch (\InvalidArgumentException) {
+            $city = null;
+        }
+        if ($city === null || $city->getOrganization() !== $organization) {
+            $feedback->addError('cityUuid', 'La ville doit appartenir à l’organisation du locataire.');
+
+            return null;
+        }
+
+        $this->securityService->checkCityAccess($city, SecurityAction::CREATE_TENANT);
+
+        return $city;
     }
 
     /**
@@ -140,6 +171,16 @@ final readonly class TenantService
 
         $tenant = new Tenant();
         $tenant->setOrganization($organization);
+        $city = $this->resolveTenantCity(
+            $request->cityUuid,
+            $organization,
+            $feedback,
+            $this->securityService->getOrganizationRole($this->securityService->getCurrentUser(), $organization) === OrganizationRole::ADMIN_VILLE,
+        );
+        if (($request->cityUuid !== null || $this->securityService->getOrganizationRole($this->securityService->getCurrentUser(), $organization) === OrganizationRole::ADMIN_VILLE) && $city === null) {
+            return $feedback->setStatus(422)->autoInitFlush();
+        }
+        $tenant->setCity($city);
         $this->tenantMapper->copyToEntity($request, $tenant);
 
         $this->entityManager->persist($tenant);
@@ -174,6 +215,14 @@ final readonly class TenantService
         // pouvoir déplacer un locataire vers une organization où il est
         // autorisé en observant un 200 au lieu d'un refus.
         $this->securityService->checkTenantAccess($tenant, SecurityAction::UPDATE_TENANT);
+
+        if ($request->cityUuid !== null) {
+            $city = $this->resolveTenantCity($request->cityUuid, $tenant->getOrganization(), $feedback, false);
+            if ($city === null) {
+                return $feedback->setStatus(422)->autoInitFlush();
+            }
+            $tenant->setCity($city);
+        }
 
         if ($request->organizationUuid !== null) {
             $target = $this->resolveWritableOrganization($request, $feedback);
@@ -270,6 +319,30 @@ final readonly class TenantService
             static fn (City $city): bool => in_array($city->getOrganization()->getId(), $cityScopedOrganizationIds, true)
         ));
 
+        $selectedCity = null;
+        if ($filter->cityUuid !== null && $filter->cityUuid !== '') {
+            try {
+                $selectedCity = $this->cityRepository->findOneByUuid(Uuid::fromString($filter->cityUuid));
+            } catch (\InvalidArgumentException) {
+                $selectedCity = null;
+            }
+            $belongsToRequestedOrganization = $selectedCity !== null && in_array(
+                $selectedCity->getOrganization()->getId(),
+                array_map(static fn (Organization $organization): int => $organization->getId(), $organizations),
+                true,
+            );
+            $isAssignedCity = $selectedCity !== null && ($this->securityService->getAccessibleCities() === null
+                || in_array($selectedCity, $allowedCities, true)
+                || !in_array($selectedCity->getOrganization()->getId(), $cityScopedOrganizationIds, true));
+            if (!$belongsToRequestedOrganization || !$isAssignedCity) {
+                return $this->emptyListResponse($feedback, $filter->page, $filter->limit);
+            }
+        } elseif ($cityScopedOrganizations !== []) {
+            // Un ADMIN_VILLE multi-ville doit toujours travailler dans sa ville
+            // active : une liste union de ses villes confondrait les espaces.
+            return $this->emptyListResponse($feedback, $filter->page, $filter->limit);
+        }
+
         $result = $this->tenantRepository->findPaginatedAccessible(
             $organizations,
             $allowedCities,
@@ -278,7 +351,8 @@ final readonly class TenantService
             $filter->search,
             $filter->sortBy ?? 'fullName',
             $filter->sortOrder,
-            $fullAccessOrganizations
+            $fullAccessOrganizations,
+            $selectedCity,
         );
 
         return $feedback

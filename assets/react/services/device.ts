@@ -8,6 +8,7 @@
 //     $breakpoint-mobile :  480px
 //     $breakpoint-tablet :  768px
 //     $breakpoint-desktop: 1024px
+//     $breakpoint-medium-desktop: 1200px (deux barres latérales visibles)
 //     $breakpoint-large  : 1440px
 //     $breakpoint-xlarge : 1920px
 //
@@ -28,6 +29,8 @@ export const BREAKPOINTS = {
     mobile: 480,
     tablet: 768,
     desktop: 1024,
+    /** Au-dessous, les deux barres latérales réduisent trop le panneau central. */
+    mediumDesktop: 1200,
     large: 1440,
     xlarge: 1920,
 } as const;
@@ -44,6 +47,7 @@ export const MEDIA_QUERIES = {
     deviceMobile: `(max-width: ${BREAKPOINTS.tablet - 1}px)`,
     deviceTablet: `(min-width: ${BREAKPOINTS.tablet}px) and (max-width: ${BREAKPOINTS.desktop - 1}px)`,
     deviceDesktop: `(min-width: ${BREAKPOINTS.desktop}px)`,
+    narrowDesktop: `(min-width: ${BREAKPOINTS.tablet}px) and (max-width: ${BREAKPOINTS.mediumDesktop - 1}px)`,
     compact: `(max-width: ${BREAKPOINTS.desktop - 1}px)`,
     portrait: '(orientation: portrait)',
     landscape: '(orientation: landscape)',

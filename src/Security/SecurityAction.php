@@ -15,6 +15,7 @@ enum SecurityAction: string
     case SUSPEND_ORGANIZATION = 'suspend_organization';
     case ACTIVATE_ORGANIZATION = 'activate_organization';
     case VIEW_ORGANIZATION = 'view_organization';
+    case MANAGE_ORGANIZATION_LOGO = 'manage_organization_logo';
     case MANAGE_EXCHANGE_RATE = 'manage_exchange_rate';
 
     // Utilisateurs

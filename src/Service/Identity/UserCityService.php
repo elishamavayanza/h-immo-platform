@@ -8,6 +8,9 @@ use App\Dto\Feedback;
 use App\Dto\Request\Identity\UserCityRequest;
 use App\Dto\Request\PaginationQuery;
 use App\Entity\Identity\UserCity;
+use App\Enum\OrganizationRole;
+use App\Exception\AccessDeniedException;
+use App\Repository\Identity\OrganizationUserRepository;
 use App\Mapper\Identity\UserCityMapper;
 use App\Repository\Identity\UserCityRepository;
 use App\Repository\Identity\UserRepository;
@@ -36,6 +39,7 @@ final readonly class UserCityService
         private EntityManagerInterface $em,
         private UserCityRepository $userCityRepository,
         private UserRepository $userRepository,
+        private OrganizationUserRepository $organizationUserRepository,
         private CityRepository $cityRepository,
         private UserCityMapper $mapper,
         private ValidatorInterface $validator,
@@ -125,6 +129,10 @@ final readonly class UserCityService
         // droits sur une ville : les deux cibles sont donc contrôlées.
         $this->security->checkUserAccess($user, SecurityAction::ASSIGN_USER_CITY);
         $this->security->checkCityAccess($city, SecurityAction::ASSIGN_USER_CITY);
+        $memberships = $this->organizationUserRepository->findByOrganizationAndUser($city->getOrganization(), $user);
+        if (!array_filter($memberships, static fn ($membership): bool => $membership->getRole() === OrganizationRole::ADMIN_VILLE)) {
+            throw new AccessDeniedException('Les villes ne peuvent être attribuées qu’à un administrateur de ville de la même organisation.');
+        }
 
         $existing = $this->userCityRepository->findOneBy(['user' => $user, 'city' => $city]);
         if ($existing) {
@@ -174,6 +182,13 @@ final readonly class UserCityService
             $userCity->getCity(),
             SecurityAction::REVOKE_USER_CITY
         );
+        $memberships = $this->organizationUserRepository->findByOrganizationAndUser(
+            $userCity->getCity()->getOrganization(),
+            $userCity->getUser(),
+        );
+        if (!array_filter($memberships, static fn ($membership): bool => $membership->getRole() === OrganizationRole::ADMIN_VILLE)) {
+            throw new AccessDeniedException('Les villes ne peuvent être retirées qu’au périmètre d’un administrateur de ville de la même organisation.');
+        }
 
         $this->em->remove($userCity);
         $this->em->flush();

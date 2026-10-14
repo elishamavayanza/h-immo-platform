@@ -267,7 +267,7 @@ $makeTenant = static function (string $name, Organization $org) use ($em): Tenan
 
 $tenantLeaseA1 = $makeTenant('Locataire A1 ' . $suffix, $orgA);
 $tenantLeaseA2 = $makeTenant('Locataire A2 ' . $suffix, $orgA);
-$tenantNoLease = $makeTenant('Locataire sans bail ' . $suffix, $orgA);
+$tenantNoLease = $makeTenant('Locataire sans bail ' . $suffix, $orgA)->setCity($cityA1);
 $tenantB = $makeTenant('Locataire B ' . $suffix, $orgB);
 
 $em->flush();
@@ -383,6 +383,7 @@ $uuidBuildingA1 = $chainA1['building']->getUuid()->toRfc4122();
 $uuidBuildingB1 = $chainB1['building']->getUuid()->toRfc4122();
 $uuidUnitA1 = $chainA1['unit']->getUuid()->toRfc4122();
 $uuidUnitB1 = $chainB1['unit']->getUuid()->toRfc4122();
+$uuidRentA1 = $rentA1->getUuid()->toRfc4122();
 $uuidTenantLeaseA1 = $tenantLeaseA1->getUuid()->toRfc4122();
 $uuidTenantLeaseA2 = $tenantLeaseA2->getUuid()->toRfc4122();
 $uuidTenantNoLease = $tenantNoLease->getUuid()->toRfc4122();
@@ -406,6 +407,9 @@ if (!is_string($token)) {
     $rollback();
     exit(1);
 }
+
+[$status] = $request('DELETE', '/api/v1/media/organizations/' . $uuidOrgA . '/logo', null, $token);
+check('ADMIN_VILLE ne peut pas modifier le logo de l’organisation', $status === 403, 'obtenu ' . $status);
 
 // Un seul fichier multipart peut arriver sous `files` comme UploadedFile
 // (et non comme tableau) dans FileBag : ce cas doit rester accepté.
@@ -635,7 +639,21 @@ check(
 // ---------------------------------------------------------------------
 section('Locataires : D-V1 (sans bail visible, ville non attribuée invisible)');
 
-[$status, $payload, $rawTenants] = $request('GET', '/api/v1/tenants', null, $token);
+[$status, $payload] = $request('GET', '/api/v1/rents?organizationId=' . $uuidOrgA . '&cityUuid=' . $uuidCityA1, null, $token);
+$rentIdsA1 = $payloadIds($payload);
+check(
+    'GET /api/v1/rents?cityUuid=A1 : échéance de la ville active visible',
+    $status === 200 && in_array($uuidRentA1, $rentIdsA1, true),
+    'status=' . $status . ' liste=' . implode(',', $rentIdsA1)
+);
+[$status, $payload] = $request('GET', '/api/v1/rents?organizationId=' . $uuidOrgA . '&cityUuid=' . $uuidCityA2, null, $token);
+check(
+    'GET /api/v1/rents?cityUuid=A2 : ville non attribuée sans échéances',
+    $status === 200 && $payloadIds($payload) === [],
+    'status=' . $status . ' liste=' . implode(',', $payloadIds($payload))
+);
+
+[$status, $payload, $rawTenants] = $request('GET', '/api/v1/tenants?organizationId=' . $uuidOrgA . '&cityUuid=' . $uuidCityA1, null, $token);
 $tenantIds = $payloadIds($payload);
 check(
     'GET /api/v1/tenants : le locataire avec bail sur A1 est listé',
@@ -656,6 +674,14 @@ check(
     'GET /api/v1/tenants : le locataire de B ne fuite pas',
     !in_array($uuidTenantB, $tenantIds, true),
     'liste=' . implode(',', $tenantIds)
+);
+
+[$status, $payload] = $request('GET', '/api/v1/tenants?organizationId=' . $uuidOrgA . '&cityUuid=' . $uuidCityA2, null, $token);
+$tenantIdsCityA2 = $payloadIds($payload);
+check(
+    'GET /api/v1/tenants?cityUuid=A2 : une ville non attribuée ne renvoie aucun locataire',
+    $status === 200 && $tenantIdsCityA2 === [],
+    'status=' . $status . ' liste=' . implode(',', $tenantIdsCityA2)
 );
 
 [$status, $payload] = $request('GET', '/api/v1/tenants/' . $uuidTenantNoLease, null, $token);

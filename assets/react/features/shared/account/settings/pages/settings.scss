@@ -23,6 +23,13 @@
 .settings-rightbar__rail a[aria-current='page'],.settings-rightbar__rail button[aria-pressed='true'],.settings-rightbar__rail button[aria-expanded='true'] { color:var(--color-primary); border-color:color-mix(in srgb, var(--color-primary) 50%, transparent); background:color-mix(in srgb, var(--color-primary) 15%, var(--color-bg-card)); box-shadow:0 0 0 1px color-mix(in srgb, var(--color-primary) 22%, transparent); }
 .settings-rightbar__rail svg { width:18px; height:18px; fill:none; stroke:currentColor; stroke-width:1.8; stroke-linecap:round; stroke-linejoin:round; }
 .settings-rate-history { margin:14px 0; padding:12px 14px; border:1px solid var(--color-border); border-radius:var(--radius-md, 8px); background:var(--color-bg-card); }
+.settings-card--logo .sa-logo-picker { display:flex; align-items:center; gap:18px; margin-top:14px; }
+.settings-card--logo .sa-logo-picker--editing { align-items:flex-start; flex-direction:column; width:100%; }
+.settings-card--logo .sa-logo-picker__preview { display:grid; width:112px; height:112px; flex:none; place-items:center; overflow:hidden; border:1px dashed var(--color-border-strong); border-radius:14px; background:var(--color-bg-card-hover); color:var(--color-text-secondary); text-align:center; font-size:.8rem; }
+.settings-card--logo .sa-logo-picker__preview img { width:100%; height:100%; object-fit:contain; }
+.settings-card--logo .sa-logo-picker__actions { display:flex; flex-wrap:wrap; gap:8px; }
+.settings-logo__save { display:flex; justify-content:flex-end; margin-top:16px; }
+.settings-card--logo .sa-management-form__hint { margin:0 0 12px; color:var(--color-text-secondary); }
 .settings-rate-history h3 { margin:0; font-size:.95rem; }
 .settings-rate-history > p { margin:5px 0; color:var(--color-text-secondary); font-size:.84rem; }
 .settings-rate-history .setting-row { padding:10px 0; }
@@ -86,6 +93,10 @@
     .setting-row p { max-width:34ch; }
     .setting-row .select-field__wrapper { width:100%; }
     .setting-row .setting-switch { margin-left:auto; }
+    .settings-card--logo .sa-logo-picker { align-items:flex-start; flex-direction:column; }
+    .settings-card--logo .sa-logo-picker__preview { width:96px; height:96px; }
+    .settings-logo__save { justify-content:stretch; }
+    .settings-logo__save button { width:100%; }
 }
 
 @media(max-width:380px) {

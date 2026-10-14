@@ -13,6 +13,7 @@ import { Select } from '../../../../components/Forms/Select';
 import { RightSidebar } from '../../../../components/Navigation/RightSidebar';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useOrganization } from '../../../../app/providers/OrganizationProvider';
+import { useAdminCity } from '../../../../app/providers/AdminCityProvider';
 import { formatInteger, formatMoney, formatPercent } from '../../../../../utils/format.utils';
 import { usePatrimoine } from '../hooks/usePatrimoine';
 import { useUnitContext } from '../hooks/useUnitContext';
@@ -86,11 +87,16 @@ function squareMeters(value: string): string {
  */
 export function PatrimoinePage({ readOnly = false }: { readOnly?: boolean } = {}) {
     const { organizationRole, currentOrganization } = useOrganization();
+    const { activeCity, activeCityUuid, selectCity } = useAdminCity();
     const location = useLocation();
     const navigate = useNavigate();
     const isCityAdmin = organizationRole === 'admin_ville';
     const selection = resolvePatrimoineSelection(location.pathname, isCityAdmin);
     const { level: activeLevel, cityId: selectedCityId, parcelId: selectedParcelId, buildingId: selectedBuildingId, unitId: selectedUnitId } = selection;
+
+    useEffect(() => {
+        if (isCityAdmin && selectedCityId && selectedCityId !== activeCityUuid) selectCity(selectedCityId);
+    }, [isCityAdmin, selectedCityId, activeCityUuid, selectCity]);
 
     useEffect(() => {
         const content = document.querySelector<HTMLElement>('.main-layout__content');
@@ -186,6 +192,7 @@ export function PatrimoinePage({ readOnly = false }: { readOnly?: boolean } = {}
         const requestId = ++auditRequest.current;
         setActivityEvents([]);
         setActivityNote(null);
+        if (organizationRole === 'admin_ville' && !activeCityUuid) return;
         const from = new Date(year, month, 1);
         const to = new Date(year, month + 1, 1);
         try {
@@ -206,15 +213,19 @@ export function PatrimoinePage({ readOnly = false }: { readOnly?: boolean } = {}
             const fromKey = `${year}-${String(month + 1).padStart(2, '0')}-01`;
             const lastDay = new Date(year, month + 1, 0).getDate();
             const toKey = `${year}-${String(month + 1).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`;
+            const activityCityUuid = organizationRole === 'admin_ville' ? activeCityUuid : undefined;
+            const activityCityIds = organizationRole === 'admin_ville'
+                ? [activeCityUuid]
+                : cities.map((city) => city.id);
             const [expenses, rents, payments] = await Promise.allSettled([
                 canDo(organizationRole, 'view_expense')
-                    ? fetchExpenses(fromKey, toKey, cities.map((city) => city.id))
+                    ? fetchExpenses(fromKey, toKey, activityCityIds)
                     : Promise.resolve(null),
                 canDo(organizationRole, 'view_rent')
-                    ? fetchRents(currentOrganization.uuid, undefined, fromKey, toKey)
+                    ? fetchRents(currentOrganization.uuid, undefined, fromKey, toKey, activityCityUuid)
                     : Promise.resolve(null),
                 canDo(organizationRole, 'view_payment')
-                    ? fetchLoyerPaymentActivities(currentOrganization.uuid, from.toISOString(), new Date(to.getTime() - 1).toISOString())
+                    ? fetchLoyerPaymentActivities(currentOrganization.uuid, from.toISOString(), new Date(to.getTime() - 1).toISOString(), activityCityUuid)
                     : Promise.resolve(null),
             ]);
             const events: ActivityCalendarEvent[] = [];
@@ -251,7 +262,7 @@ export function PatrimoinePage({ readOnly = false }: { readOnly?: boolean } = {}
                 setActivityNote('Impossible de charger les activités de cette période.');
             }
         }
-    }, [canViewAudit, currentOrganization?.uuid, cities, organizationRole]);
+    }, [activeCityUuid, canViewAudit, currentOrganization?.uuid, cities, organizationRole]);
 
     useEffect(() => {
         void loadAuditMonth(activityMonth.getMonth(), activityMonth.getFullYear());
@@ -610,7 +621,10 @@ export function PatrimoinePage({ readOnly = false }: { readOnly?: boolean } = {}
             return <VillesTab cities={cities} role={organizationRole} isLoading={isLoading} error={error} note={note} onReload={() => void reload()} onCreate={createCity} onCreateAdmin={createCityAdmin} onUpdate={updateCity} onSetStatus={setCityStatus} onDelete={deleteCity} onOpen={(id) => goToLevel('parcelles', id, null, null)} readOnly={readOnly} />;
         }
         if (level === 'parcelles') {
-            return <ParcellesTab parcels={parcels} cities={cities} role={organizationRole} isLoading={isLoading} error={error} note={note} onReload={() => void reload()} onCreate={createParcel} onUpdate={updateParcel} onDelete={deleteParcel} selectedCityId={selectedCityId} onCityFilter={(id) => goToLevel('parcelles', id, null, null)} onOpen={(id) => openParcel(id)} readOnly={readOnly} />;
+            return <ParcellesTab parcels={parcels} cities={cities} role={organizationRole} isLoading={isLoading} error={error} note={note} onReload={() => void reload()} onCreate={createParcel} onUpdate={updateParcel} onDelete={deleteParcel} selectedCityId={isCityAdmin ? (selectedCityId ?? (activeCityUuid || null)) : selectedCityId} onCityFilter={(id) => {
+                if (isCityAdmin && id) selectCity(id);
+                goToLevel('parcelles', id ?? (isCityAdmin ? activeCityUuid || null : null), null, null);
+            }} onOpen={(id) => openParcel(id)} readOnly={readOnly} />;
         }
         if (level === 'batiments') {
             return <BatimentsTab buildings={buildings} parcels={parcels} cities={cities} role={organizationRole} isLoading={isLoading} error={error} note={note} onReload={() => void reload()} onCreate={createBuilding} onUpdate={updateBuilding} onDelete={deleteBuilding} selectedParcelId={selectedParcelId} onParcelFilter={openParcel} onOpen={(id) => openBuilding(id)} readOnly={readOnly} />;
@@ -652,7 +666,10 @@ export function PatrimoinePage({ readOnly = false }: { readOnly?: boolean } = {}
                 <div><h2>Biens du portefeuille</h2><p>{note ?? 'Recherchez et filtrez les parcelles et bâtiments de votre organisation.'}</p></div>
                 <div className="organization-filters">
                     <SearchInput value={search} onSearch={setSearch} placeholder="Rechercher un bien…" fullWidth />
-                    <Select aria-label="Filtrer par ville" value={city} onChange={(event) => setCity(event.target.value)} options={[{ value: 'all', label: 'Toutes les villes' }, ...(data?.availableCities ?? []).map((value) => ({ value, label: value }))]} />
+                    <Select aria-label="Filtrer par ville" value={city} onChange={(event) => setCity(event.target.value)} options={[
+                        ...(!isCityAdmin ? [{ value: 'all', label: 'Toutes les villes' }] : []),
+                        ...(data?.availableCities ?? []).map((value) => ({ value, label: value })),
+                    ]} />
                     <Select aria-label="Filtrer par type" value={kind} onChange={(event) => setKind(event.target.value)} options={[{ value: 'all', label: 'Tous les types' }, { value: 'Parcelle', label: 'Parcelle' }, { value: 'Bâtiment', label: 'Bâtiment' }]} />
                 </div>
             </div>

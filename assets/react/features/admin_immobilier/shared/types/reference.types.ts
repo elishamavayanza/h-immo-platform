@@ -76,6 +76,7 @@ export interface UnitItem {
 export interface TenantItem {
     id: string;
     organizationId: string;
+    cityId: string | null;
     type: string;
     fullName: string | null;
     companyName: string | null;

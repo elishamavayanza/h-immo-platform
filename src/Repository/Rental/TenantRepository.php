@@ -138,7 +138,8 @@ class TenantRepository extends ServiceEntityRepository
         ?string $search = null,
         string $sortBy = 'fullName',
         string $sortOrder = 'ASC',
-        ?array $unrestrictedOrganizations = null
+        ?array $unrestrictedOrganizations = null,
+        ?City $selectedCity = null
     ): array {
         if ($organizations === []) {
             return ['items' => [], 'total' => 0];
@@ -175,6 +176,18 @@ class TenantRepository extends ServiceEntityRepository
         $qb = $this->createQueryBuilder('t')
             ->andWhere('t.deletedAt IS NULL')
             ->orderBy("t.$sortBy", $sortOrder);
+
+        if ($selectedCity !== null) {
+            // La fiche sans bail doit elle aussi être rattachée explicitement
+            // à la ville active ; « sans bail » seul ne définit aucun périmètre.
+            $qb->andWhere('(t.city = :selectedCity OR EXISTS (
+                SELECT 1 FROM App\\Entity\\Rental\\Lease lc
+                JOIN App\\Entity\\Property\\Unit uc WITH uc = lc.unit
+                JOIN App\\Entity\\Property\\Building bc WITH bc = uc.building
+                JOIN App\\Entity\\Property\\Parcel pc WITH pc = bc.parcel
+                WHERE lc.tenant = t AND lc.deletedAt IS NULL AND pc.city = :selectedCity
+            ))')->setParameter('selectedCity', $selectedCity);
+        }
 
         if ($unrestrictedOrganizations === null) {
             $qb->andWhere('t.organization IN (:organizations)')

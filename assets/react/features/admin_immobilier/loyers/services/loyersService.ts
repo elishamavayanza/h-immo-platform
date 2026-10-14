@@ -63,6 +63,7 @@ export async function fetchLoyers(organizationUuid: string, status: string, from
             unitLabel,
             buildingId: building?.id ?? null,
             parcelId: building ? parcelById.get(building.parcelId)?.id ?? null : null,
+            cityId: building ? parcelById.get(building.parcelId)?.cityId ?? null : null,
             periodLabel: periodLabel(rent.period),
             dueDate: rent.dueDate,
             amount: rent.amount,
@@ -120,9 +121,10 @@ export async function fetchLoyerPaymentActivities(
     organizationUuid: string,
     from: string,
     to: string,
+    cityUuid?: string,
 ): Promise<LoyerPaymentActivityPage> {
     const { data } = await apiClient.get<Feedback<LoyerPaymentActivityPage>>('/v1/payments', {
-        params: { organizationId: organizationUuid, from, to, limit: REFERENCE_LIMIT, sortBy: 'paymentDate', sortOrder: 'ASC' },
+        params: { organizationId: organizationUuid, from, to, ...(cityUuid ? { cityUuid } : {}), limit: REFERENCE_LIMIT, sortBy: 'paymentDate', sortOrder: 'ASC' },
     });
     return data.data;
 }

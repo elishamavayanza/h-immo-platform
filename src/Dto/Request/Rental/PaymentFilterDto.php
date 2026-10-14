@@ -25,6 +25,10 @@ final readonly class PaymentFilterDto
         #[Assert\Uuid]
         public ?string $organizationId = null,
 
+        #[OA\Property(description: 'Filtrer par ville accessible (UUID)', format: 'uuid', nullable: true)]
+        #[Assert\Uuid]
+        public ?string $cityUuid = null,
+
         #[OA\Property(description: 'Horodatage minimal inclus', format: 'date-time', nullable: true)]
         public ?\DateTimeImmutable $from = null,
 

@@ -28,6 +28,7 @@ declare(strict_types=1);
 use App\Entity\Identity\Organization;
 use App\Entity\Identity\OrganizationUser;
 use App\Entity\Identity\User;
+use App\Entity\Identity\UserCity;
 use App\Entity\Expense\Expense;
 use App\Entity\Property\Building;
 use App\Entity\Property\City;
@@ -193,6 +194,14 @@ $orgB = $makeOrg('Organisation B', 'ORGB');
 
 $em->persist((new OrganizationUser())->setUser($adminA)->setOrganization($orgA)->setRole(OrganizationRole::ADMIN_IMMOBILIER));
 
+$adminVilleA = (new User())
+    ->setEmail('ville.a.' . $suffix . '@test.local')
+    ->setFullName('Admin Ville A')
+    ->setPassword(password_hash('MotDePasse!123', PASSWORD_BCRYPT))
+    ->setIsActive(true);
+$em->persist($adminVilleA);
+$em->persist((new OrganizationUser())->setUser($adminVilleA)->setOrganization($orgA)->setRole(OrganizationRole::ADMIN_VILLE));
+
 $makeCity = static function (string $name, string $code, Organization $org) use ($em, $suffix): City {
     $city = (new City())
         ->setName($name)
@@ -206,7 +215,9 @@ $makeCity = static function (string $name, string $code, Organization $org) use 
 };
 
 $cityA = $makeCity('Ville A', 'VA', $orgA);
+$cityA2 = $makeCity('Ville A2', 'VA2', $orgA);
 $cityB = $makeCity('Ville B', 'VB', $orgB);
+$em->persist((new UserCity())->setUser($adminVilleA)->setCity($cityA));
 
 /** @return array{parcel: Parcel, building: Building, unit: Unit} */
 $makeChain = static function (string $ref, City $city) use ($em): array {
@@ -347,6 +358,8 @@ echo "  Jeu de données créé.\n";
 $uuidOrgA = $orgA->getUuid()->toRfc4122();
 $uuidOrgB = $orgB->getUuid()->toRfc4122();
 $uuidCityA = $cityA->getUuid()->toRfc4122();
+$uuidCityA2 = $cityA2->getUuid()->toRfc4122();
+$uuidAdminVilleA = $adminVilleA->getUuid()->toRfc4122();
 $uuidCityB = $cityB->getUuid()->toRfc4122();
 $uuidParcelA = $chainA['parcel']->getUuid()->toRfc4122();
 $uuidParcelB = $chainB['parcel']->getUuid()->toRfc4122();
@@ -381,6 +394,36 @@ if (!is_string($token)) {
     exit(1);
 }
 
+[$status, $payload] = $request('GET', '/api/v1/identity/user-cities/user/' . $uuidAdminVilleA . '?page=1&limit=100', null, $token);
+check(
+    'ADMIN_IMMOBILIER : consulter les villes attribuées à un ADMIN_VILLE de son organisation',
+    $status === 200 && count($payload['data']['items'] ?? []) === 1,
+    "obtenu {$status} : " . substr(json_encode($payload), 0, 300)
+);
+
+[$status, $payload] = $request('POST', '/api/v1/identity/user-cities', [
+    'userUuid' => $uuidAdminVilleA,
+    'cityUuid' => $uuidCityA2,
+], $token);
+$uuidCityLink = is_array($payload) ? ($payload['data']['id'] ?? null) : null;
+check(
+    'ADMIN_IMMOBILIER : ajouter une seconde ville à un ADMIN_VILLE de son organisation',
+    in_array($status, [200, 201], true) && is_string($uuidCityLink),
+    "obtenu {$status} : " . substr(json_encode($payload), 0, 300)
+);
+
+[$status, $payload] = $request('GET', '/api/v1/identity/user-cities/user/' . $uuidAdminVilleA . '?page=1&limit=100', null, $token);
+check(
+    'ADMIN_IMMOBILIER : le périmètre affiche maintenant deux villes',
+    $status === 200 && count($payload['data']['items'] ?? []) === 2,
+    "obtenu {$status} : " . substr(json_encode($payload), 0, 300)
+);
+
+if (is_string($uuidCityLink)) {
+    [$status] = $request('DELETE', '/api/v1/identity/user-cities/' . $uuidCityLink, null, $token);
+    check('ADMIN_IMMOBILIER : retirer une seule ville du périmètre', $status === 200, "obtenu {$status}");
+}
+
 $photoContents = base64_decode('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+j3ioAAAAASUVORK5CYII=', true);
 $uploadedPhotoPaths = [];
 $photoTempPaths = [];
@@ -413,6 +456,8 @@ $trackUploadedPhotoPaths = static function (array $payload) use (&$uploadedPhoto
 };
 
 section('Photos : upload unique et rattachement à l’organisation');
+[$status] = $request('DELETE', '/api/v1/media/organizations/' . $uuidOrgA . '/logo', null, $token);
+check('ADMIN_IMMOBILIER peut gérer le logo de son organisation sans droit général de modification', $status === 404, 'obtenu ' . $status . ' (404 attendu car aucun logo n’est encore enregistré)');
 [$status, $parcelPhotoPayload] = $uploadSinglePhoto('/api/v1/media/parcels/' . $uuidParcelA . '/photos', 'files');
 $trackUploadedPhotoPaths($parcelPhotoPayload ?? []);
 check('ADMIN_IMMOBILIER ajoute une photo à une parcelle', $status === 200 && count($parcelPhotoPayload['data']['uploaded'] ?? []) === 1, 'obtenu ' . $status);

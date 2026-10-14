@@ -26,6 +26,9 @@ final readonly class TenantResponse
         #[OA\Property(description: 'UUID public de l\'organisation rattachée', format: 'uuid', example: '9b1deb4d-3b7d-4bad-9bdd-2b0d7b3dcb6d')]
         public string $organizationId,
 
+        #[OA\Property(description: 'UUID de la ville de rattachement, le cas échéant', format: 'uuid', nullable: true)]
+        public ?string $cityId,
+
         #[OA\Property(description: 'Type de locataire (INDIVIDUAL ou COMPANY)', type: 'string', example: 'individual', enum: TenantType::class)]
         public TenantType $type,
 
@@ -60,6 +63,7 @@ final readonly class TenantResponse
         return new self(
             id: (string) $tenant->getUuid(),
             organizationId: (string) $tenant->getOrganization()->getUuid(),
+            cityId: $tenant->getCity() ? (string) $tenant->getCity()->getUuid() : null,
             type: $tenant->getType(),
             fullName: $tenant->getFullName(),
             companyName: $tenant->getCompanyName(),

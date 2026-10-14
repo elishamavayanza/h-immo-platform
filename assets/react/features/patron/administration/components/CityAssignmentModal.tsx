@@ -1,6 +1,7 @@
 import { useState } from 'react';
 
 import { Modal } from '../../../../components/UI/Modal';
+import { ConfirmDialog } from '../../../../components/UI/ConfirmDialog';
 import { Button } from '../../../../components/UI/Button';
 import { IconButton } from '../../../../components/UI/IconButton';
 import { Icon } from '../../../../components/UI/Icon/Icon';
@@ -10,10 +11,8 @@ import { Loading } from '../../../../components/UI/Loading';
 import { ErrorState } from '../../../../components/UI/ErrorState';
 import { EmptyState } from '../../../../components/Data/EmptyState';
 import { useAdminVilleCities } from '../hooks/useAdminVilleCities';
-import type { TeamMember } from '../types/administration.types';
-
 interface CityAssignmentModalProps {
-    member: TeamMember | null;
+    member: { id: string; name: string } | null;
     onClose: () => void;
 }
 
@@ -29,6 +28,7 @@ export function CityAssignmentModal({ member, onClose }: CityAssignmentModalProp
     const { assigned, available, isLoading, error, reload, assign, revoke } = useAdminVilleCities(member?.id ?? null);
     const [selected, setSelected] = useState('');
     const [pending, setPending] = useState(false);
+    const [cityToRemove, setCityToRemove] = useState<string | null>(null);
 
     const open = member !== null;
     const lastCity = assigned.length <= 1;
@@ -46,11 +46,13 @@ export function CityAssignmentModal({ member, onClose }: CityAssignmentModalProp
         }
     };
 
-    const remove = async (linkUuid: string) => {
+    const remove = async () => {
+        if (!cityToRemove) return;
         if (pending) return;
         setPending(true);
         try {
-            await revoke(linkUuid);
+            await revoke(cityToRemove);
+            setCityToRemove(null);
         } catch {
             // Le toast d'échec est déjà émis par le hook.
         } finally {
@@ -68,7 +70,7 @@ export function CityAssignmentModal({ member, onClose }: CityAssignmentModalProp
         >
             <div className="organization-management-form">
                 <p className="organization-management-form__hint">
-                    Un administrateur ville ne voit que les villes qui lui sont attribuées. Il en faut au moins une.
+                    {assigned.length} ville{assigned.length === 1 ? '' : 's'} attribuée{assigned.length === 1 ? '' : 's'}. Un administrateur ville ne voit que les villes de cette liste ; vous pouvez lui en ajouter ou lui en retirer une. Il doit en conserver au moins une.
                 </p>
 
                 <FormField label="Attribuer une ville">
@@ -101,13 +103,23 @@ export function CityAssignmentModal({ member, onClose }: CityAssignmentModalProp
                                     variant="ghost"
                                     disabled={pending || lastCity}
                                     title={lastCity ? 'Au moins une ville est requise' : 'Retirer cette ville'}
-                                    onClick={() => void remove(link.id)}
+                                    onClick={() => setCityToRemove(link.id)}
                                 />
                             </li>
                         ))}
                     </ul>
                 )}
             </div>
+            <ConfirmDialog
+                isOpen={cityToRemove !== null}
+                onClose={() => { if (!pending) setCityToRemove(null); }}
+                onCancel={() => setCityToRemove(null)}
+                onConfirm={() => void remove()}
+                title="Retirer cette ville ?"
+                message={`L’administrateur ne pourra plus consulter ni gérer les données de ${assigned.find(({ link }) => link.id === cityToRemove)?.city?.name ?? 'cette ville'}.`}
+                confirmLabel={pending ? 'Retrait…' : 'Retirer la ville'}
+                cancelLabel="Annuler"
+            />
         </Modal>
     );
 }

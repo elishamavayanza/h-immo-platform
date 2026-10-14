@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 
 import { useToast } from '../../../../app/layout/MainLayout/contexts/ToastContext';
 import { useOrganization } from '../../../../app/providers/OrganizationProvider';
+import { useAdminCity } from '../../../../app/providers/AdminCityProvider';
 import { ApiError } from '../../../../../services/api/api.types';
 import { canDo } from '../../../shared/permissions';
 import {
@@ -42,6 +43,8 @@ const runAction = async (push: ReturnType<typeof useToast>['push'], successMessa
  */
 export function useLoyers() {
     const { currentOrganization, organizationRole } = useOrganization();
+    const { activeCityUuid } = useAdminCity();
+    const selectedCityUuid = organizationRole === 'admin_ville' ? activeCityUuid : null;
     const organizationUuid = currentOrganization?.uuid ?? null;
     const canViewPayments = canDo(organizationRole, 'view_payment');
     const { push } = useToast();
@@ -81,13 +84,19 @@ export function useLoyers() {
                 ? fetchLoyerPaymentActivities(organizationUuid, start.toISOString(), end.toISOString()).catch(() => null)
                 : Promise.resolve(null),
         ]);
+        const selectedRents = selectedCityUuid
+            ? { ...rents, rows: rents.rows.filter((rent) => rent.cityId === selectedCityUuid) }
+            : rents;
+        const selectedRentIds = new Set(selectedRents.rows.map((rent) => rent.id));
         return {
-            rents,
-            payments: paymentPage?.items ?? [],
+            rents: selectedRents,
+            payments: selectedCityUuid
+                ? (paymentPage?.items ?? []).filter((payment) => selectedRentIds.has(payment.rentId))
+                : paymentPage?.items ?? [],
             paymentsTotal: paymentPage?.total ?? 0,
             paymentsUnavailable: canViewPayments && paymentPage === null,
         };
-    }, [organizationUuid, canViewPayments]);
+    }, [organizationUuid, canViewPayments, selectedCityUuid]);
 
     useEffect(() => { void reload(); }, [reload]);
 
@@ -109,9 +118,10 @@ export function useLoyers() {
     const rows = useMemo(() => {
         const query = search.trim().toLocaleLowerCase('fr');
         return (data?.rows ?? []).filter((row) =>
-            !query || [row.tenant, row.unitLabel, row.periodLabel].some((value) => value.toLocaleLowerCase('fr').includes(query)),
+            (!selectedCityUuid || row.cityId === selectedCityUuid)
+            && (!query || [row.tenant, row.unitLabel, row.periodLabel].some((value) => value.toLocaleLowerCase('fr').includes(query))),
         );
-    }, [data, search]);
+    }, [data, search, selectedCityUuid]);
 
     return {
         data,

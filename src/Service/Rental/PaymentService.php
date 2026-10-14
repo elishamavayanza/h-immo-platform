@@ -331,13 +331,21 @@ final readonly class PaymentService
         $organizationIds = array_map(fn($o) => $o->getId(), $organizations);
 
         $cityIds = [];
+        $accessibleCityIdsByUuid = [];
         foreach ($organizations as $org) {
             $cities = $this->cityRepository->findActiveByOrganization($org);
             foreach ($cities as $city) {
                 if ($this->securityService->canAccessCity($city, SecurityAction::VIEW_PAYMENT)) {
                     $cityIds[] = $city->getId();
+                    $accessibleCityIdsByUuid[$city->getUuid()->toRfc4122()] = $city->getId();
                 }
             }
+        }
+
+        if ($filter->cityUuid !== null && $filter->cityUuid !== '') {
+            $cityIds = isset($accessibleCityIdsByUuid[$filter->cityUuid])
+                ? [$accessibleCityIdsByUuid[$filter->cityUuid]]
+                : [];
         }
 
         if ($cityIds === []) {

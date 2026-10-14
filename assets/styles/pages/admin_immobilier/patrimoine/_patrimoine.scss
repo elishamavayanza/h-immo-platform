@@ -22,7 +22,7 @@
 .patrimoine-map-action { display: flex; justify-content: space-between; align-items: center; gap: 1rem; margin: 0 0 1rem; padding: .8rem 1rem; border: 1px solid $color-border; border-radius: .75rem; background: $color-bg-card; }
 .patrimoine-map-action > div { display: grid; gap: .2rem; }
 .patrimoine-map-action span { color: $color-text-muted; font-size: .85rem; }
-.parcel-map { display: grid; gap: .85rem; min-width: 0; }
+.parcel-map { display: grid; gap: .85rem; min-width: 0; container: parcel-map / inline-size; }
 .parcel-map__toolbar { display: flex; justify-content: space-between; align-items: center; gap: 1rem; }
 .parcel-map__toolbar > div:first-child { display: grid; gap: .2rem; }
 .parcel-map__toolbar span { color: $color-text-muted; font-size: .84rem; }
@@ -52,6 +52,15 @@
 .parcel-map__list small, .parcel-map__selected span { color: $color-text-muted; font-size: .75rem; }
 .parcel-map__selected { display: grid; align-content: start; gap: .35rem; padding: .75rem; border: 1px solid $color-border; border-radius: .65rem; background: $color-bg-card; overflow-wrap: anywhere; }
 .parcel-map__selected a { margin-top: .25rem; color: $color-primary; }
+@container parcel-map (max-width: 720px) {
+  .parcel-map__toolbar { align-items: stretch; flex-direction: column; }
+  .parcel-map__controls { width: 100%; justify-content: flex-start; }
+}
+@container parcel-map (max-width: 480px) {
+  .parcel-map__controls { display: grid; grid-template-columns: repeat(4, max-content); justify-content: start; }
+  .parcel-map__style { grid-column: 1 / -1; justify-self: start; }
+  .parcel-map__canvas { min-height: 220px; }
+}
 .patrimoine-related { display: flex; flex-wrap: wrap; align-items: center; gap: .65rem 1rem; margin: 0 0 1rem; padding: .75rem 1rem; border: 1px solid $color-border; border-radius: .75rem; color: $color-text-secondary; background: $color-bg-card; }
 .patrimoine-related strong { margin-right: .25rem; }
 .patrimoine-related a { color: $color-primary; text-decoration: none; }
@@ -136,7 +145,7 @@
 .modal--center-expanded .photo-viewer__preview { flex: 1; min-height: 0; grid-template-rows: auto minmax(0, 1fr); }
 .modal--center-expanded .photo-viewer__stage { height: auto; min-height: 0; }
 .modal--center-expanded .photo-viewer__stage img { min-height: 0; }
-.modal--center-expanded .parcel-map { flex: 1; min-height: 0; grid-template-rows: auto minmax(220px, 1fr) auto; }
+.modal--center-expanded .parcel-map { flex: 1; width: 100%; min-height: 0; grid-template-rows: auto minmax(0, 1fr) auto; }
 .modal--center-expanded .parcel-map__canvas { height: auto; min-height: 0; max-height: none; }
 @media (max-width: 640px) {
   .photo-viewer__preview-toolbar { flex-wrap: wrap; }
@@ -201,7 +210,9 @@ a.patrimoine-child:focus-visible { position: relative; z-index: 1; outline: 2px 
   .patrimoine-child__arrow { margin-left: auto; }
 }
 
-@media (max-width: 380px) {
+/* Garder deux colonnes sur les mobiles courants ; passer en une colonne
+   uniquement sur les écrans très étroits où les valeurs manquent de place. */
+@media (max-width: 360px) {
   .patrimoine-summary__fields { grid-template-columns: minmax(0, 1fr); }
   .patrimoine-child__meta > div { min-width: min(76px, 100%); }
 }
@@ -209,18 +220,15 @@ a.patrimoine-child:focus-visible { position: relative; z-index: 1; outline: 2px 
 .patrimoine-nav { padding: $spacing-1 0; }
 .patrimoine-nav__list { display: grid; gap: 2px; margin: 0; padding: 0; list-style: none; }
 .patrimoine-nav__list--nested { margin-left: 8px; padding-left: 8px; border-left: 1px solid $color-border; }
-.patrimoine-nav__list--nested { animation: patrimoine-branch-enter 140ms ease-out both; transform-origin: top; }
-@keyframes patrimoine-branch-enter {
-  from { opacity: 0; transform: translateY(-3px); }
-  to { opacity: 1; transform: translateY(0); }
-}
+/* Garder les libellés sur la grille de pixels : les translations sub-pixel
+   pendant l’ouverture des branches rendaient le texte flou dans le panneau. */
 .patrimoine-nav__node { min-width: 0; }
 .patrimoine-nav__row { display: flex; align-items: center; min-width: 0; gap: 2px; }
 .patrimoine-nav__disclosure,
 .patrimoine-nav__disclosure-placeholder { display: grid; flex: 0 0 20px; width: 20px; height: 34px; place-items: center; padding: 0; border: 0; border-radius: $radius-sm; color: $color-text-muted; background: transparent; font-size: $font-size-lg; cursor: pointer; }
 .patrimoine-nav__disclosure:hover { color: $color-text-primary; background: $color-bg-card-hover; }
 .patrimoine-nav__disclosure:focus-visible { outline: 2px solid $color-primary; outline-offset: 1px; }
-.patrimoine-nav__item { display: flex; flex: 1; align-items: center; min-width: 0; min-height: 38px; gap: $spacing-2; padding: $spacing-2 $spacing-2; border: 1px solid transparent; border-radius: $radius-md; color: $color-text-secondary; background: transparent; font-size: $font-size-sm; font-weight: $font-weight-medium; text-decoration: none; overflow-wrap: anywhere; transition: color $transition-fast, background-color $transition-fast, border-color $transition-fast; }
+.patrimoine-nav__item { display: flex; flex: 1; align-items: center; min-width: 0; min-height: 38px; gap: $spacing-2; padding: $spacing-2 $spacing-2; border: 1px solid transparent; border-radius: $radius-md; color: $color-text-primary; background: transparent; font-size: $font-size-sm; font-weight: $font-weight-medium; text-decoration: none; overflow-wrap: anywhere; transition: color $transition-fast, background-color $transition-fast, border-color $transition-fast; }
 .patrimoine-nav__item:hover { color: $color-text-primary; background: $color-bg-card-hover; }
 .patrimoine-nav__item:focus-visible { outline: 2px solid $color-primary; outline-offset: 2px; }
 .patrimoine-nav__icon { display: inline-flex; flex: 0 0 18px; align-items: center; justify-content: center; color: $color-text-muted; }
@@ -259,7 +267,6 @@ a.patrimoine-child:focus-visible { position: relative; z-index: 1; outline: 2px 
 .right-sidebar__collapsed-content { align-items: center; padding: $spacing-2 0; }
 .patrimoine-nav-rail__button { width: 40px; height: 40px; }
 @media (prefers-reduced-motion: reduce) {
-  .patrimoine-level,
-  .patrimoine-nav__list--nested { animation: none; }
+  .patrimoine-level { animation: none; }
   .patrimoine-nav__item { transition: none; }
 }
