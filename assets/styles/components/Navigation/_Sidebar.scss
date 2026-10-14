@@ -505,6 +505,8 @@
 
 .sidebar__footer {
     flex-shrink: 0;
+    width: 100%;
+    min-width: 0;
     padding: $spacing-3 $spacing-4;
     font-size: $font-size-xs;
     color: $color-text-muted;
