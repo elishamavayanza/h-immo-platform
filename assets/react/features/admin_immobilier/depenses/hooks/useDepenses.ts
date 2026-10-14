@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 
 import { useToast } from '../../../../app/layout/MainLayout/contexts/ToastContext';
 import { useOrganization } from '../../../../app/providers/OrganizationProvider';
+import { useAdminCity } from '../../../../app/providers/AdminCityProvider';
 import { ApiError } from '../../../../../services/api/api.types';
 import {
     cancelExpense,
@@ -39,7 +40,9 @@ const runAction = async (push: ReturnType<typeof useToast>['push'], successMessa
  * le jeu chargé.
  */
 export function useDepenses() {
-    const { currentOrganization } = useOrganization();
+    const { currentOrganization, organizationRole } = useOrganization();
+    const { activeCityUuid } = useAdminCity();
+    const selectedCityUuid = organizationRole === 'admin_ville' ? activeCityUuid : null;
     const organizationUuid = currentOrganization?.uuid ?? null;
     const { push } = useToast();
 
@@ -70,8 +73,10 @@ export function useDepenses() {
 
     const loadPeriod = useCallback((from: string, to: string) => {
         if (!organizationUuid) return Promise.resolve(null);
-        return fetchDepenses(organizationUuid, from, to);
-    }, [organizationUuid]);
+        return fetchDepenses(organizationUuid, from, to).then((period) => selectedCityUuid
+            ? { ...period, rows: period.rows.filter((row) => row.cityId === selectedCityUuid) }
+            : period);
+    }, [organizationUuid, selectedCityUuid]);
 
     useEffect(() => { void reload(); }, [reload]);
 
@@ -98,10 +103,11 @@ export function useDepenses() {
     const rows = useMemo(() => {
         const query = search.trim().toLocaleLowerCase('fr');
         return (data?.rows ?? []).filter((row) =>
-            (!query || [row.category, row.property, row.description, row.city].some((value) => value.toLocaleLowerCase('fr').includes(query)))
+            (!selectedCityUuid || row.cityId === selectedCityUuid)
+            && (!query || [row.category, row.property, row.description, row.city].some((value) => value.toLocaleLowerCase('fr').includes(query)))
             && (category === 'all' || row.categoryCode === category),
         );
-    }, [data, search, category]);
+    }, [data, search, category, selectedCityUuid]);
 
     return {
         data,

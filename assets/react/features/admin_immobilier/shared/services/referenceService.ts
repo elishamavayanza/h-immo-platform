@@ -62,8 +62,8 @@ export function fetchUnits(organizationId: string): Promise<ListPage<UnitItem>> 
     return getList<UnitItem>('/v1/units', organizationId);
 }
 
-export function fetchTenants(organizationId: string): Promise<ListPage<TenantItem>> {
-    return getList<TenantItem>('/v1/tenants', organizationId);
+export function fetchTenants(organizationId: string, cityUuid?: string): Promise<ListPage<TenantItem>> {
+    return getList<TenantItem>('/v1/tenants', organizationId, cityUuid ? { cityUuid } : {});
 }
 
 /** Baux de l'organisation, triés `startDate` DESC par défaut côté backend. */
@@ -88,11 +88,12 @@ export function fetchLeasesByUnit(organizationId: string, unitId: string): Promi
  * `paid`, `overdue`) : un filtre est préférable à un tri client, `overdue`
  * n'étant jamais persisté.
  */
-export function fetchRents(organizationId: string, status?: string, from?: string, to?: string): Promise<ListPage<RentItem>> {
+export function fetchRents(organizationId: string, status?: string, from?: string, to?: string, cityUuid?: string): Promise<ListPage<RentItem>> {
     return getList<RentItem>('/v1/rents', organizationId, {
         ...(status && status !== 'all' ? { status } : {}),
         ...(from ? { from } : {}),
         ...(to ? { to } : {}),
+        ...(cityUuid ? { cityUuid } : {}),
         sortBy: 'dueDate',
         sortOrder: 'DESC',
     });

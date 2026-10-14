@@ -248,7 +248,7 @@ export function AdministrationPage() {
                         <Input id="invite-phone" value={inviteForm.phone} onChange={(event) => setInviteForm((current) => ({ ...current, phone: event.target.value }))} placeholder="+243…" required fullWidth maxLength={30} />
                     </FormField>
                     {inviteForm.role === 'admin_ville' && (
-                        <FormField label="Villes attribuées" error={inviteErrors.cityUuids} helpText="Au moins une ville : l’administrateur ville n’agit que dans son périmètre.">
+                        <FormField label="Villes attribuées" error={inviteErrors.cityUuids} helpText="Sélectionnez une ou plusieurs villes. L’administrateur pourra basculer entre les villes attribuées.">
                             <div className="patron-city-picker">
                                 {cities.length === 0 ? (
                                     <p className="patron-city-picker__empty">Aucune ville dans l’organisation.</p>
@@ -261,6 +261,7 @@ export function AdministrationPage() {
                                     />
                                 ))}
                             </div>
+                            {inviteForm.cityUuids.length > 0 && <small>{inviteForm.cityUuids.length} ville{inviteForm.cityUuids.length > 1 ? 's' : ''} sélectionnée{inviteForm.cityUuids.length > 1 ? 's' : ''}</small>}
                         </FormField>
                     )}
                 </form>

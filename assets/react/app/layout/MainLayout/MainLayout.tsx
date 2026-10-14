@@ -20,6 +20,8 @@ import { Sidebar, SidebarProps } from '../../../components/Navigation/Sidebar';
 import { Loading } from '../../../components/UI/Loading';
 import { useIsPortrait } from '../../../hooks/useIsPortrait';
 import { useIsMobile } from '../../../hooks/useIsMobile';
+import { useMediaQuery } from '../../../hooks/useMediaQuery';
+import { MEDIA_QUERIES } from '../../../services/device';
 import { mediaHref } from '../../../features/shared/media/services/mediaService';
 import { WorkspaceSwitcher } from './WorkspaceSwitcher';
 
@@ -101,6 +103,7 @@ export function MainLayout() {
     const [isWorkspaceSwitcherOpen, setWorkspaceSwitcherOpen] = useState(false);
     const isMobile = useIsMobile();
     const isPortrait = useIsPortrait();
+    const isNarrowDesktop = useMediaQuery(MEDIA_QUERIES.narrowDesktop);
     const [isPageTransitionLoading, setPageTransitionLoading] = useState(false);
     const location = useLocation();
     const navigate = useNavigate();
@@ -229,7 +232,7 @@ return (
                     groups={groups}
                     variant="dark"
                     collapsible
-                    defaultCollapsed={isPortrait && !isMobile}
+                    defaultCollapsed={(isPortrait || isNarrowDesktop) && !isMobile}
                     width="264px"
                     header={(
                         <div className="main-layout__sidebar-header-stack">

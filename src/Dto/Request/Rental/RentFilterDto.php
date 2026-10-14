@@ -33,6 +33,10 @@ final readonly class RentFilterDto
         #[Assert\Uuid]
         public ?string $leaseUuid = null,
 
+        #[OA\Property(description: 'Filtrer par ville accessible (UUID)', format: 'uuid', nullable: true)]
+        #[Assert\Uuid]
+        public ?string $cityUuid = null,
+
         #[OA\Property(
             description: 'Statut calculé (pending, partially_paid, paid, overdue)',
             enum: ['pending', 'partially_paid', 'paid', 'overdue'],

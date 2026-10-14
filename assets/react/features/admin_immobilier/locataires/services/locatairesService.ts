@@ -12,25 +12,34 @@
  */
 import { apiClient } from '../../../../../services/api/client';
 import type { Feedback } from '../../../../../services/api/api.types';
-import { REFERENCE_LIMIT, fetchBuildings, fetchLeases, fetchTenants, fetchUnits, tenantLabel } from '../../shared/services/referenceService';
+import { REFERENCE_LIMIT, fetchBuildings, fetchCities, fetchLeases, fetchParcels, fetchTenants, fetchUnits, tenantLabel } from '../../shared/services/referenceService';
 import type { BuildingItem, LeaseItem, TenantItem } from '../../shared/types/reference.types';
 import type { LocataireRow, LocatairesData } from '../types/locataire.types';
 
-export async function fetchLocataires(organizationUuid: string): Promise<LocatairesData> {
-    const [tenants, leases, units, buildings] = await Promise.all([
-        fetchTenants(organizationUuid),
+export async function fetchLocataires(organizationUuid: string, cityUuid?: string): Promise<LocatairesData> {
+    const [tenants, leases, units, buildings, parcels, cities] = await Promise.all([
+        fetchTenants(organizationUuid, cityUuid),
         fetchLeases(organizationUuid),
         fetchUnits(organizationUuid),
         fetchBuildings(organizationUuid),
+        fetchParcels(organizationUuid),
+        fetchCities(organizationUuid),
     ]);
 
     const unitById = new Map(units.items.map((unit) => [unit.id, unit]));
     const buildingById = new Map(buildings.items.map((building: BuildingItem) => [building.id, building]));
+    const parcelById = new Map(parcels.items.map((parcel) => [parcel.id, parcel]));
+    const unitCityById = new Map(units.items.map((unit) => {
+        const building = buildingById.get(unit.buildingId);
+        const parcel = building ? parcelById.get(building.parcelId) : null;
+        return [unit.id, parcel?.cityId ?? null] as const;
+    }));
 
     // Un locataire ne devrait avoir qu'un bail actif (contrôle métier en
     // PHP) : au cas où, on garde la fin de bail la plus lointaine.
     const currentLeaseByTenant = new Map<string, LeaseItem>();
     leases.items.forEach((lease) => {
+        if (cityUuid && unitCityById.get(lease.unitId) !== cityUuid) return;
         if (lease.status !== 'active' && lease.status !== 'draft') return;
         const existing = currentLeaseByTenant.get(lease.tenantId);
         const preferred = lease.status === 'active' || existing?.status !== 'active';
@@ -43,6 +52,7 @@ export async function fetchLocataires(organizationUuid: string): Promise<Locatai
 
         return {
             id: tenant.id,
+            cityUuid: tenant.cityId,
             name: tenantLabel(tenant),
             sublabel: [tenant.email, tenant.phone].filter(Boolean).join(' · ') || '—',
             type: tenant.type === 'company' ? 'company' : 'individual',
@@ -66,14 +76,15 @@ export async function fetchLocataires(organizationUuid: string): Promise<Locatai
         ? `Liste partielle : ${tenants.total} locataires, ${leases.total} baux et ${units.total} unités au total — les ${REFERENCE_LIMIT} premières entrées de chaque liste sont affichées.`
         : null;
 
-    const activeTenantIds = new Set(leases.items.filter((lease) => lease.status === 'active').map((lease) => lease.tenantId));
+    const activeTenantIds = new Set([...currentLeaseByTenant.values()].filter((lease) => lease.status === 'active').map((lease) => lease.tenantId));
 
-    return { rows, total: tenants.total, activeLeases: activeTenantIds.size, note, units: units.items, buildings: buildings.items };
+    return { rows, total: tenants.total, activeLeases: activeTenantIds.size, note, units: units.items, buildings: buildings.items, cities: cities.items.map(({ id, name }) => ({ id, name })) };
 }
 
 /** Payload pour créer un locataire (personne physique ou morale). */
 export interface CreateTenantPayload {
     organizationUuid: string;
+    cityUuid?: string;
     type: 'individual' | 'company';
     firstName?: string;
     lastName?: string;

@@ -29,20 +29,40 @@ function parcelSublabel(parcel: { reference: string; address: string; quarter: s
     return [parcel.quarter, parcel.address].filter(Boolean).join(' · ') || parcel.reference;
 }
 
-export async function fetchPatrimoine(organizationUuid: string, role: OrganizationRole | null): Promise<PatrimoineData> {
-    const catalog = await fetchPropertyCatalog(organizationUuid);
+export async function fetchPatrimoine(organizationUuid: string, role: OrganizationRole | null, activeCityUuid = ''): Promise<PatrimoineData> {
+    const loadedCatalog = await fetchPropertyCatalog(organizationUuid);
+    // Un ADMIN_VILLE travaille dans une seule ville active à la fois. Réduire
+    // le modèle de page à cette ville évite de mélanger tableaux, compteurs,
+    // sélecteurs et détails après un basculement.
+    const catalog = role === 'admin_ville'
+        ? (() => {
+            const city = loadedCatalog.cities.items.find((item) => item.id === activeCityUuid);
+            const parcels = loadedCatalog.parcels.items.filter((item) => item.cityId === activeCityUuid);
+            const parcelIds = new Set(parcels.map((item) => item.id));
+            const buildings = loadedCatalog.buildings.items.filter((item) => parcelIds.has(item.parcelId));
+            const buildingIds = new Set(buildings.map((item) => item.id));
+            return {
+                // Garder toutes les villes autorisées pour le sélecteur et
+                // l'arbre latéral; seules les ressources métier du modèle
+                // courant sont réduites à la ville active.
+                cities: loadedCatalog.cities,
+                parcels: { ...loadedCatalog.parcels, items: parcels, total: parcels.length },
+                buildings: { ...loadedCatalog.buildings, items: buildings, total: buildings.length },
+                units: { ...loadedCatalog.units, items: loadedCatalog.units.items.filter((item) => buildingIds.has(item.buildingId)), total: loadedCatalog.units.items.filter((item) => buildingIds.has(item.buildingId)).length },
+            };
+        })()
+        : loadedCatalog;
     let occupancyByParcel: OccupancyItem[];
     let occupancyByBuilding: OccupancyItem[];
     let totalUnits: number;
     let globalOccupancyRate: number;
 
     if (role === 'admin_ville') {
-        // Le rapport organisationnel est réservé aux rôles qui gèrent
-        // l'ensemble du portefeuille. Un ADMIN_VILLE ne consulte que les
-        // rapports des villes que le catalogue backend lui a déjà attribuées.
-        const reports: AdminVilleReport[] = await Promise.all(
-            catalog.cities.items.map((city) => fetchAdminVilleReport(city.id)),
-        );
+        // Le backend confirme aussi l'affectation de la ville; le rapport ne
+        // charge jamais les autres villes attribuées au même compte.
+        const reports: AdminVilleReport[] = activeCityUuid
+            ? [await fetchAdminVilleReport(activeCityUuid)]
+            : [];
         occupancyByParcel = reports.flatMap((report) => report.occupancyByParcel);
         occupancyByBuilding = reports.flatMap((report) => report.occupancyByBuilding);
         totalUnits = reports.reduce((total, report) => total + report.totalUnits, 0);

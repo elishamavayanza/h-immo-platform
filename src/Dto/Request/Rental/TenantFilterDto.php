@@ -27,6 +27,10 @@ final readonly class TenantFilterDto
         #[Assert\Uuid]
         public ?string $organizationId = null,
 
+        #[OA\Property(description: 'Ville active pour isoler les locataires de cette ville', format: 'uuid', nullable: true)]
+        #[Assert\Uuid]
+        public ?string $cityUuid = null,
+
         #[OA\Property(description: 'Terme de recherche (nom, entreprise, téléphone, email)', nullable: true)]
         public ?string $search = null,
 

@@ -33,6 +33,7 @@ interface OrganizationLogoPickerProps {
 export function OrganizationLogoPicker({ value, change, onChange }: OrganizationLogoPickerProps) {
     const inputRef = useRef<HTMLInputElement>(null);
     const [editing, setEditing] = useState<string | null>(null);
+    const [fileError, setFileError] = useState<string | null>(null);
 
     const preview = change ? (change.kind === 'new' ? change.dataUrl : null) : value ? logoHref(value) : null;
     const hasPicked = change?.kind === 'new';
@@ -42,6 +43,15 @@ export function OrganizationLogoPicker({ value, change, onChange }: Organization
         const file = event.target.files?.[0];
         event.target.value = '';
         if (!file) return;
+        if (!['image/png', 'image/jpeg', 'image/webp', 'image/gif'].includes(file.type)) {
+            setFileError('Choisissez une image PNG, JPEG, WebP ou GIF.');
+            return;
+        }
+        if (file.size > 10 * 1024 * 1024) {
+            setFileError('La taille de l’image ne peut pas dépasser 10 Mo.');
+            return;
+        }
+        setFileError(null);
 
         const reader = new FileReader();
         reader.onload = () => {
@@ -69,7 +79,7 @@ export function OrganizationLogoPicker({ value, change, onChange }: Organization
 
     if (editing) {
         return (
-            <div className="sa-logo-picker">
+            <div className="sa-logo-picker sa-logo-picker--editing">
                 <p className="sa-management-form__hint">Zoomez, pivotez et cadrez le logo, puis validez. Le cadrage est carré.</p>
                 <ImageEditor
                     src={editing}
@@ -109,6 +119,7 @@ export function OrganizationLogoPicker({ value, change, onChange }: Organization
                     </Button>
                 )}
             </div>
+            {fileError && <p className="settings-error" role="alert">{fileError}</p>}
         </div>
     );
 }

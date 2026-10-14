@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 
+import { useAdminCity } from '../../../../app/providers/AdminCityProvider';
 import { ApiError } from '../../../../../services/api/api.types';
-import { useAssignedCities } from '../../../shared/hooks/useAssignedCities';
 import { fetchAdminVilleReports } from '../services/reportsService';
 import type { AdminVilleReportsData } from '../types';
 import { computePeriodPreset } from '../../../shared/reports/periodPresets';
@@ -13,29 +13,13 @@ import { computePeriodPreset } from '../../../shared/reports/periodPresets';
  * jamais filtrer localement (le backend reste seul juge de l'accès).
  */
 export function useReports() {
-    const { cities, isLoading: citiesLoading, hasAssignedCities } = useAssignedCities();
-
-    const [cityUuid, setCityUuid] = useState('');
+    const { cities, activeCityUuid: cityUuid, selectCity: setCityUuid, isLoading: citiesLoading } = useAdminCity();
+    const hasAssignedCities = cities.length > 0;
     const [periodFrom, setPeriodFrom] = useState(() => computePeriodPreset('this_year').from);
     const [periodTo, setPeriodTo] = useState(() => computePeriodPreset('this_year').to);
     const [data, setData] = useState<AdminVilleReportsData | null>(null);
     const [isLoading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
-
-    // Ville par défaut : la première du périmètre, tant que l'utilisateur n'a
-    // rien choisi. Un administrateur affecté à plusieurs villes doit pouvoir
-    // basculer ; on ne présume donc plus de `cities[0]` au moment du rendu.
-    useEffect(() => {
-        if (cities.length === 0) {
-            setCityUuid('');
-
-            return;
-        }
-
-        setCityUuid((current) => (
-            current && cities.some((city) => city.id === current) ? current : cities[0].id
-        ));
-    }, [cities]);
 
     const reload = useCallback(async () => {
         if (!cityUuid) {

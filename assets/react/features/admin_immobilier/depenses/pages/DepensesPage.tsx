@@ -15,6 +15,7 @@ import { FormField } from '../../../../components/Forms/FormField';
 import { Modal } from '../../../../components/UI/Modal';
 import { RightSidebar } from '../../../../components/Navigation/RightSidebar';
 import { useOrganization } from '../../../../app/providers/OrganizationProvider';
+import { useAdminCity } from '../../../../app/providers/AdminCityProvider';
 import { useDepenses } from '../hooks/useDepenses';
 import { DepensesTable } from '../components/DepensesTable';
 import { fieldErrorMap } from '../../../shared/actionErrors';
@@ -33,6 +34,7 @@ export function DepensesPage({ readOnly = false }: { readOnly?: boolean } = {}) 
     const parcelUuid = searchParams.get('parcelUuid');
     const buildingUuid = searchParams.get('buildingUuid');
     const { organizationRole } = useOrganization();
+    const { activeCityUuid } = useAdminCity();
     const {
         data, rows: allRows, availableCategories, isLoading, error, reload,
         search, setSearch, category, setCategory, loadPeriod,
@@ -113,7 +115,7 @@ export function DepensesPage({ readOnly = false }: { readOnly?: boolean } = {}) 
 
     const openCreate = () => {
         setForm({
-            cityUuid: '',
+            cityUuid: organizationRole === 'admin_ville' ? activeCityUuid : '',
             category: '',
             amount: '',
             currency: 'USD',
@@ -266,7 +268,7 @@ export function DepensesPage({ readOnly = false }: { readOnly?: boolean } = {}) 
         >
             <form id="expense-form" className="organization-management-form" onSubmit={submitExpense}>
                 <FormField label="Ville" htmlFor="expense-city" required error={formErrors.cityUuid}>
-                    <Select id="expense-city" value={form.cityUuid} onChange={(event) => setForm((current) => ({ ...current, cityUuid: event.target.value }))} options={(data?.cities ?? []).map((city) => ({ value: city.id, label: city.name }))} placeholder="Sélectionner une ville" required />
+                    <Select id="expense-city" value={form.cityUuid} onChange={(event) => setForm((current) => ({ ...current, cityUuid: event.target.value }))} options={(data?.cities ?? []).filter((city) => organizationRole !== 'admin_ville' || city.id === activeCityUuid).map((city) => ({ value: city.id, label: city.name }))} placeholder="Sélectionner une ville" required />
                 </FormField>
                 <FormField label="Catégorie" htmlFor="expense-category" required error={formErrors.category}>
                     <Select id="expense-category" value={form.category} onChange={(event) => setForm((current) => ({ ...current, category: event.target.value }))} options={CATEGORY_OPTIONS} required />

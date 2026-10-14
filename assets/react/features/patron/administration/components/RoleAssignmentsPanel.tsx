@@ -8,6 +8,8 @@ import { Button } from '../../../../components/UI/Button';
 import { Loading } from '../../../../components/UI/Loading';
 import { SearchInput } from '../../../../components/Forms/SearchInput';
 import { Select } from '../../../../components/Forms/Select';
+import { ConfirmDialog } from '../../../../components/UI/ConfirmDialog';
+import { CityAssignmentModal } from './CityAssignmentModal';
 import { fetchCities } from '../../../admin_immobilier/shared/services/referenceService';
 import { administrationService } from '../services/administrationService';
 import '../../../../../styles/pages/patron/administration/_administration.scss';
@@ -31,6 +33,9 @@ export function RoleAssignmentsPanel() {
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    const [pendingRevoke, setPendingRevoke] = useState<Assignment | null>(null);
+    const [revoking, setRevoking] = useState(false);
+    const [cityTarget, setCityTarget] = useState<Assignment | null>(null);
     const organizationUuid = currentOrganization?.uuid;
     const isPatron = organizationRole === 'patron';
 
@@ -82,14 +87,18 @@ export function RoleAssignmentsPanel() {
         }
     };
 
-    const revoke = async (item: Assignment) => {
-        if (!window.confirm(`Retirer le rôle « ${ROLE_LABEL[item.role]} » de ${item.name} ? Son compte conservera ses autres espaces.`)) return;
+    const revoke = async () => {
+        if (!pendingRevoke || revoking) return;
+        setRevoking(true);
         try {
-            const message = await administrationService.revokeRole(item.assignmentUuid);
+            const message = await administrationService.revokeRole(pendingRevoke.assignmentUuid);
             push('success', message ?? 'L’affectation a été retirée.');
+            setPendingRevoke(null);
             await reload();
         } catch (cause) {
             push('error', cause instanceof Error ? cause.message : 'La révocation a échoué.');
+        } finally {
+            setRevoking(false);
         }
     };
 
@@ -110,9 +119,11 @@ export function RoleAssignmentsPanel() {
                 </div>
                 {role === 'admin_ville' && (
                     <fieldset className="role-assignments__cities"><legend>Villes accessibles</legend>
+                        <p>Sélectionnez une ou plusieurs villes. L’administrateur pourra basculer entre elles dans son espace.</p>
                         {cityOptions.length === 0 ? <p>Aucune ville disponible dans cette organisation.</p> : cityOptions.map(city => (
                             <label key={city.uuid}><input type="checkbox" checked={cityUuids.includes(city.uuid)} onChange={() => setCityUuids(current => current.includes(city.uuid) ? current.filter(uuid => uuid !== city.uuid) : [...current, city.uuid])} /> {city.name}</label>
                         ))}
+                        {cityUuids.length > 0 && <small>{cityUuids.length} ville{cityUuids.length > 1 ? 's' : ''} sélectionnée{cityUuids.length > 1 ? 's' : ''}</small>}
                     </fieldset>
                 )}
                 <div className="role-assignments__actions"><Button disabled={!candidateUuid || (role === 'admin_ville' && cityUuids.length === 0)} isLoading={saving} onClick={() => void submit()}>Attribuer cet espace</Button></div>
@@ -124,11 +135,28 @@ export function RoleAssignmentsPanel() {
                     <article className="role-assignments__row" key={item.assignmentUuid}>
                         <div className="role-assignments__identity"><strong>{item.name}</strong><span>{item.email}</span></div>
                         <span className="role-assignments__role">{ROLE_LABEL[item.role]}</span>
-                        {item.role === 'admin_ville' && <span className="role-assignments__cities-summary">{item.cities.map(city => city.name).join(', ') || 'Aucune ville'}</span>}
-                        <Button variant="outline" size="small" onClick={() => void revoke(item)}>Retirer</Button>
+                        {item.role === 'admin_ville' && <span className="role-assignments__cities-summary">{item.cities.length} ville{item.cities.length === 1 ? '' : 's'} attribuée{item.cities.length === 1 ? '' : 's'} · {item.cities.map(city => city.name).join(', ') || 'aucune'}</span>}
+                        <div className="role-assignments__actions-cell">
+                            {item.role === 'admin_ville' && <Button variant="outline" size="small" onClick={() => setCityTarget(item)}>Gérer les villes</Button>}
+                            <Button variant="outline" size="small" onClick={() => setPendingRevoke(item)}>Retirer le rôle</Button>
+                        </div>
                     </article>
                 ))}
             </div>
+            <ConfirmDialog
+                isOpen={pendingRevoke !== null}
+                onClose={() => { if (!revoking) setPendingRevoke(null); }}
+                onCancel={() => setPendingRevoke(null)}
+                onConfirm={() => void revoke()}
+                title="Retirer cet espace ?"
+                message={pendingRevoke ? `Retirer le rôle « ${ROLE_LABEL[pendingRevoke.role]} » de ${pendingRevoke.name} ?${pendingRevoke.role === 'admin_ville' ? ` Cela retirera son accès aux ${pendingRevoke.cities.length} ville${pendingRevoke.cities.length === 1 ? '' : 's'} attribuée${pendingRevoke.cities.length === 1 ? '' : 's'} (${pendingRevoke.cities.map(city => city.name).join(', ') || 'aucune'}).` : ''} Son compte conservera ses autres espaces.` : ''}
+                confirmLabel={revoking ? 'Retrait…' : 'Retirer l’accès'}
+                cancelLabel="Annuler"
+            />
+            <CityAssignmentModal
+                member={cityTarget ? { id: cityTarget.userUuid, name: cityTarget.name } : null}
+                onClose={() => setCityTarget(null)}
+            />
         </section>
     );
 }

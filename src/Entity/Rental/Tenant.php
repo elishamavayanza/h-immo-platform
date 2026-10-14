@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Entity\Rental;
 
 use App\Entity\Identity\Organization;
+use App\Entity\Property\City;
 use App\Entity\Shared\SoftDeletableEntity;
 use App\Enum\TenantType;
 use Doctrine\DBAL\Types\Types;
@@ -30,6 +31,23 @@ class Tenant extends SoftDeletableEntity
     #[ORM\ManyToOne(targetEntity: Organization::class)]
     #[ORM\JoinColumn(name: 'organization_id', referencedColumnName: 'id', nullable: false)]
     private Organization $organization;
+
+    /** Ville de rattachement des locataires sans bail ou en attente d'affectation. */
+    #[ORM\ManyToOne(targetEntity: City::class)]
+    #[ORM\JoinColumn(name: 'city_id', referencedColumnName: 'id', nullable: true)]
+    private ?City $city = null;
+
+    public function getCity(): ?City
+    {
+        return $this->city;
+    }
+
+    public function setCity(?City $city): static
+    {
+        $this->city = $city;
+
+        return $this;
+    }
 
     /**
      * Type de locataire.

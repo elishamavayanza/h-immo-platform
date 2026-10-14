@@ -1,7 +1,8 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { useToast } from '../../../../app/layout/MainLayout/contexts/ToastContext';
 import { useOrganization } from '../../../../app/providers/OrganizationProvider';
+import { useAdminCity } from '../../../../app/providers/AdminCityProvider';
 import { ApiError } from '../../../../../services/api/api.types';
 import { actionErrorMessage, isValidationError } from '../../../shared/actionErrors';
 import {
@@ -43,6 +44,7 @@ import type { PatrimoineData } from '../types/patrimoine.types';
  */
 export function usePatrimoine() {
     const { currentOrganization, organizationRole } = useOrganization();
+    const { activeCity, activeCityUuid } = useAdminCity();
     const { push } = useToast();
     const organizationUuid = currentOrganization?.uuid ?? null;
 
@@ -53,24 +55,38 @@ export function usePatrimoine() {
     const [search, setSearch] = useState('');
     const [city, setCity] = useState('all');
     const [kind, setKind] = useState('all');
+    const requestVersion = useRef(0);
+
+    useEffect(() => {
+        if (organizationRole === 'admin_ville') setCity(activeCity?.name ?? 'all');
+    }, [organizationRole, activeCity?.name, activeCityUuid]);
 
     const reload = useCallback(async () => {
+        const version = ++requestVersion.current;
         if (!organizationUuid) {
             setData(null);
             setLoading(false);
 
             return;
         }
+        // Tant que le périmètre de ville n'est pas résolu, ne jamais afficher
+        // le catalogue multi-ville d'un ADMIN_VILLE par défaut.
+        if (organizationRole === 'admin_ville' && !activeCityUuid) {
+            setData(null);
+            setLoading(true);
+            return;
+        }
         setLoading(true);
         setError(null);
         try {
-            setData(await fetchPatrimoine(organizationUuid, organizationRole));
+            const next = await fetchPatrimoine(organizationUuid, organizationRole, activeCityUuid);
+            if (version === requestVersion.current) setData(next);
         } catch (cause) {
-            setError(cause instanceof ApiError ? cause.message : 'Impossible de charger le patrimoine de l’organisation.');
+            if (version === requestVersion.current) setError(cause instanceof ApiError ? cause.message : 'Impossible de charger le patrimoine de l’organisation.');
         } finally {
-            setLoading(false);
+            if (version === requestVersion.current) setLoading(false);
         }
-    }, [organizationUuid, organizationRole]);
+    }, [organizationUuid, organizationRole, activeCityUuid]);
 
     useEffect(() => { void reload(); }, [reload]);
 

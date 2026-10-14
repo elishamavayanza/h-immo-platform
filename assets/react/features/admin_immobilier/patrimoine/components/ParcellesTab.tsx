@@ -272,11 +272,14 @@ export function ParcellesTab({ parcels, cities, role, isLoading, error, note, on
                 <div><h2>Parcelles</h2><p>{note ?? 'Chaque parcelle est rattachée à une ville et porte les immeubles.'}</p></div>
                 <div className="organization-filters">
                     <SearchInput value={search} onSearch={setSearch} placeholder="Rechercher une parcelle…" fullWidth />
-                    <Select aria-label="Filtrer par ville" value={selectedCityId ?? 'all'} onChange={(event) => onCityFilter(event.target.value === 'all' ? null : event.target.value)} options={[{ value: 'all', label: 'Toutes les villes' }, ...cities.map((city) => ({ value: city.id, label: city.name }))]} />
+                    <Select aria-label="Filtrer par ville" value={selectedCityId ?? 'all'} onChange={(event) => onCityFilter(event.target.value === 'all' ? null : event.target.value)} options={[
+                        ...(role === 'admin_ville' ? [] : [{ value: 'all', label: 'Toutes les villes' }]),
+                        ...cities.map((city) => ({ value: city.id, label: city.name })),
+                    ]} />
                     {!readOnly && canDo(role, 'create_parcel') && <Button onClick={openCreate} disabled={cities.length === 0}>＋ Ajouter une parcelle</Button>}
                 </div>
             </div>
-            {selectedCityId && <div className="patrimoine-context"><span>Ville sélectionnée : <strong>{cityById.get(selectedCityId)?.name ?? 'Ville'}</strong></span><Button variant="outline" onClick={() => onCityFilter(null)}>Effacer le filtre</Button></div>}
+            {selectedCityId && <div className="patrimoine-context"><span>Ville sélectionnée : <strong>{cityById.get(selectedCityId)?.name ?? 'Ville'}</strong></span>{role !== 'admin_ville' && <Button variant="outline" onClick={() => onCityFilter(null)}>Effacer le filtre</Button>}</div>}
             <div className="patrimoine-map-action">
                 <div><strong>Repérage GPS</strong><span>{mappedParcels.length} parcelle{mappedParcels.length === 1 ? '' : 's'} sur la carte{filtered.length > mappedParcels.length ? ` · ${filtered.length - mappedParcels.length} sans coordonnées valides` : ''}</span></div>
                 <Button variant="outline" onClick={() => setMapTargetId(mapTargetId ?? mappedParcels[0]?.id ?? null)} disabled={mappedParcels.length === 0}>⌖ Ouvrir la carte</Button>
@@ -353,7 +356,7 @@ export function ParcellesTab({ parcels, cities, role, isLoading, error, note, on
                 />
             </Modal>
 
-            <Modal isOpen={viewTarget !== null} onClose={() => setViewTarget(null)} title={viewTarget ? `Photos — ${viewTarget.name}` : 'Photos de la parcelle'} size="large" expandable footer={<Button variant="outline" onClick={() => setViewTarget(null)}>Fermer</Button>}>
+            <Modal isOpen={viewTarget !== null} onClose={() => setViewTarget(null)} title={viewTarget ? `Photos — ${viewTarget.name}` : 'Photos de la parcelle'} size="large" expandable initiallyExpanded footer={<Button variant="outline" onClick={() => setViewTarget(null)}>Fermer</Button>}>
                 {viewTarget && <PhotoViewer entityUuid={viewTarget.id} entityType="parcel" entityName={viewTarget.name} />}
             </Modal>
         </Card>

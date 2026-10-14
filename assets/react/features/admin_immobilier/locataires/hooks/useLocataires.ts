@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 
 import { useToast } from '../../../../app/layout/MainLayout/contexts/ToastContext';
 import { useOrganization } from '../../../../app/providers/OrganizationProvider';
+import { useAdminCity } from '../../../../app/providers/AdminCityProvider';
 import { ApiError } from '../../../../../services/api/api.types';
 import {
     archiveTenant,
@@ -40,6 +41,7 @@ const runAction = async (push: ReturnType<typeof useToast>['push'], successMessa
 export function useLocataires() {
     const { currentOrganization } = useOrganization();
     const organizationUuid = currentOrganization?.uuid ?? null;
+    const { activeCityUuid } = useAdminCity();
     const { push } = useToast();
 
     const [data, setData] = useState<LocatairesData | null>(null);
@@ -62,13 +64,13 @@ export function useLocataires() {
         setLoading(true);
         setError(null);
         try {
-            setData(await fetchLocataires(organizationUuid));
+            setData(await fetchLocataires(organizationUuid, activeCityUuid || undefined));
         } catch (cause) {
             setError(cause instanceof ApiError ? cause.message : 'Impossible de charger les locataires de l’organisation.');
         } finally {
             setLoading(false);
         }
-    }, [organizationUuid]);
+    }, [organizationUuid, activeCityUuid]);
 
     useEffect(() => { void reload(); }, [reload]);
 

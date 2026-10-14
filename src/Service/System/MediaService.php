@@ -118,14 +118,12 @@ final readonly class MediaService
     /**
      * Remplace le logo d'une organisation.
      *
-     * L'action `UPDATE_ORGANIZATION` n'est accordée qu'au PATRON dans la
-     * matrice rôle x action : ni l'ADMIN_IMMOBILIER ni l'ADMIN_VILLE ne
-     * l'obtiennent, ce qui est le comportement attendu pour une identité
-     * commerciale.
+     * Le droit dédié au logo permet à l'ADMIN_IMMOBILIER de gérer cette
+     * identité visuelle sans lui ouvrir les autres réglages de l'organisation.
      */
     public function replaceOrganizationLogo(Organization $organization, UploadedFile $file): string
     {
-        $this->securityService->checkOrganizationAccess($organization, SecurityAction::MANAGE_ORGANIZATION);
+        $this->securityService->checkOrganizationAccess($organization, SecurityAction::MANAGE_ORGANIZATION_LOGO);
 
         $oldPath = $organization->getLogo();
 
@@ -143,7 +141,7 @@ final readonly class MediaService
 
     public function removeOrganizationLogo(Organization $organization): bool
     {
-        $this->securityService->checkOrganizationAccess($organization, SecurityAction::MANAGE_ORGANIZATION);
+        $this->securityService->checkOrganizationAccess($organization, SecurityAction::MANAGE_ORGANIZATION_LOGO);
 
         $oldPath = $organization->getLogo();
 

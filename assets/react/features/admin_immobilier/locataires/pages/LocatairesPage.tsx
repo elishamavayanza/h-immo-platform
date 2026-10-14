@@ -14,6 +14,7 @@ import { Textarea } from '../../../../components/Forms/Textarea';
 import { FormField } from '../../../../components/Forms/FormField';
 import { Modal } from '../../../../components/UI/Modal';
 import { useOrganization } from '../../../../app/providers/OrganizationProvider';
+import { useAdminCity } from '../../../../app/providers/AdminCityProvider';
 import { useLocataires } from '../hooks/useLocataires';
 import { LocatairesTable } from '../components/LocatairesTable';
 import { fieldErrorMap } from '../../../shared/actionErrors';
@@ -30,6 +31,7 @@ const TENANT_TYPE_OPTIONS = [
 ];
 
 interface TenantForm {
+    cityUuid: string;
     type: 'individual' | 'company';
     firstName: string;
     lastName: string;
@@ -40,13 +42,14 @@ interface TenantForm {
     notes: string;
 }
 
-const EMPTY_TENANT_FORM: TenantForm = { type: 'individual', firstName: '', lastName: '', companyName: '', phone: '', email: '', address: '', notes: '' };
+const EMPTY_TENANT_FORM: TenantForm = { cityUuid: '', type: 'individual', firstName: '', lastName: '', companyName: '', phone: '', email: '', address: '', notes: '' };
 
 function tenantToForm(row: LocataireRow): TenantForm {
     const nameParts = row.name.trim().split(/\s+/).filter(Boolean);
     const firstName = row.type === 'individual' ? nameParts.shift() ?? '' : '';
 
     return {
+        cityUuid: row.cityUuid ?? '',
         type: row.type,
         firstName,
         lastName: row.type === 'individual' ? nameParts.join(' ') : '',
@@ -63,6 +66,8 @@ export function LocatairesPage({ readOnly = false }: { readOnly?: boolean } = {}
     const parcelUuid = searchParams.get('parcelUuid');
     const buildingUuid = searchParams.get('buildingUuid');
     const { organizationRole, currentOrganization } = useOrganization();
+    const { activeCityUuid, activeCity } = useAdminCity();
+    const isCityAdmin = organizationRole === 'admin_ville';
     const {
         data, rows: allRows, isLoading, error, reload,
         search, setSearch, type, setType,
@@ -94,14 +99,14 @@ export function LocatairesPage({ readOnly = false }: { readOnly?: boolean } = {}
     const [submittingLease, setSubmittingLease] = useState(false);
 
     const openCreate = () => {
-        setForm(EMPTY_TENANT_FORM);
+        setForm({ ...EMPTY_TENANT_FORM, cityUuid: activeCityUuid });
         setFormErrors({});
         setEditTarget(null);
         setTenantModalOpen(true);
     };
 
     const openEdit = (target: LocataireRow) => {
-        setForm(tenantToForm(target));
+        setForm({ ...tenantToForm(target), cityUuid: tenantToForm(target).cityUuid || (isCityAdmin ? activeCityUuid : '') });
         setFormErrors({});
         setEditTarget(target);
         setTenantModalOpen(true);
@@ -119,6 +124,7 @@ export function LocatairesPage({ readOnly = false }: { readOnly?: boolean } = {}
         setFormErrors({});
 
         const payload = {
+            ...(form.cityUuid ? { cityUuid: form.cityUuid } : {}),
             type: form.type,
             firstName: form.type === 'individual' ? form.firstName.trim() : undefined,
             lastName: form.type === 'individual' ? form.lastName.trim() : undefined,
@@ -133,6 +139,7 @@ export function LocatairesPage({ readOnly = false }: { readOnly?: boolean } = {}
             if (editTarget) {
                 const initial = tenantToForm(editTarget);
                 const initialPayload = {
+                    cityUuid: initial.cityUuid,
                     type: initial.type,
                     firstName: initial.type === 'individual' ? initial.firstName.trim() : undefined,
                     lastName: initial.type === 'individual' ? initial.lastName.trim() : undefined,
@@ -143,6 +150,7 @@ export function LocatairesPage({ readOnly = false }: { readOnly?: boolean } = {}
                     notes: initial.notes.trim(),
                 };
                 const updatePayload = {
+                    cityUuid: form.cityUuid || initial.cityUuid,
                     type: form.type,
                     firstName: form.type === 'individual' ? form.firstName.trim() : undefined,
                     lastName: form.type === 'individual' ? form.lastName.trim() : undefined,
@@ -163,7 +171,7 @@ export function LocatairesPage({ readOnly = false }: { readOnly?: boolean } = {}
                 if (Object.keys(changes).length > 0) await updateTenant(editTarget.id, changes);
             } else {
                 if (!currentOrganization?.uuid) throw new Error('Aucune organisation active.');
-                await createTenant({ ...payload, organizationUuid: currentOrganization.uuid });
+                await createTenant({ ...payload, organizationUuid: currentOrganization.uuid, ...(isCityAdmin && activeCityUuid ? { cityUuid: activeCityUuid } : {}) });
             }
             closeTenantModal();
         } catch (cause) {
@@ -223,7 +231,7 @@ export function LocatairesPage({ readOnly = false }: { readOnly?: boolean } = {}
     } else if (rows.length === 0) {
         body = <EmptyState
             title="Aucun locataire à afficher"
-            description={data && data.rows.length > 0 ? 'Aucun locataire ne correspond à la recherche ou au filtre sélectionné.' : "Votre organisation n'a encore aucun locataire enregistré."}
+            description={data && data.rows.length > 0 ? 'Aucun locataire ne correspond à la recherche ou au filtre sélectionné.' : isCityAdmin ? `Aucun locataire n’est rattaché à ${activeCity?.name ?? 'la ville active'}.` : "Votre organisation n'a encore aucun locataire enregistré."}
         />;
     }
 
@@ -256,6 +264,18 @@ export function LocatairesPage({ readOnly = false }: { readOnly?: boolean } = {}
             footer={<ModalActions formId="tenant-form" onCancel={closeTenantModal} submitLabel={editTarget ? 'Enregistrer' : 'Créer le locataire'} loadingLabel={editTarget ? 'Enregistrement…' : 'Création…'} isLoading={submitting} />}
         >
             <form id="tenant-form" className="organization-management-form" onSubmit={submitTenant}>
+                <FormField label="Ville de rattachement" htmlFor="tenant-city" required={isCityAdmin} error={formErrors.cityUuid} helpText={isCityAdmin ? 'Ce locataire sera isolé dans la ville active.' : 'Rattachez les fiches sans bail à une ville pour les isoler dans chaque espace.'}>
+                    <Select
+                        id="tenant-city"
+                        value={isCityAdmin ? activeCityUuid : form.cityUuid}
+                        onChange={(event) => setForm((current) => ({ ...current, cityUuid: event.target.value }))}
+                        options={[
+                            { value: '', label: 'Aucune ville' },
+                            ...(data?.cities ?? []).map((city) => ({ value: city.id, label: city.name })),
+                        ]}
+                        disabled={isCityAdmin}
+                    />
+                </FormField>
                 <FormField label="Type de locataire" htmlFor="tenant-type" required error={formErrors.type}>
                     <Select id="tenant-type" value={form.type} onChange={(event) => setForm((current) => ({ ...current, type: event.target.value as 'individual' | 'company' }))} options={TENANT_TYPE_OPTIONS} />
                 </FormField>

@@ -31,7 +31,8 @@
     font-family: $font-family-base;
     color: $color-text-primary;
     overflow: hidden;
-    will-change: width, transform;
+    // Ne force pas le panneau sur une couche GPU permanente : le texte du
+    // contenu devient flou sur certains navigateurs pendant les redimensionnements.
 
     // Le panneau reçoit le focus par programmation (ouverture du tiroir) :
     // pas d'anneau sur le conteneur lui-même, le focus se poursuit ensuite

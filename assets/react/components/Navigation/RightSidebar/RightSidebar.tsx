@@ -68,6 +68,7 @@ export function RightSidebar({
 
     const isCompact = useIsCompact();
     const isPortrait = useMediaQuery(MEDIA_QUERIES.portrait);
+    const isNarrowDesktop = useMediaQuery(MEDIA_QUERIES.narrowDesktop);
     const initialCollapsed = defaultCollapsed ?? isCompact;
 
     // Ajustements mode compact (mobile / tablette / portrait)
@@ -78,14 +79,14 @@ export function RightSidebar({
     const effectiveMinWidth = isCompact ? Math.min(280, Math.floor(viewportWidth * 0.65)) : minWidth;
     const effectiveMaxWidth = isCompact
         ? isPortrait ? Math.min(460, Math.floor(viewportWidth * 0.9)) : Math.min(380, Math.floor(viewportWidth * 0.82))
-        : maxWidth;
+        : isNarrowDesktop ? Math.min(maxWidth, 280) : maxWidth;
     const effectiveCloseThreshold = isCompact ? 40 : closeThreshold;
     const effectiveCollapsedWidth = isCompact ? 25 : collapsedWidth;
 
     // Largeur initiale adaptée
     const initialWidth = isCompact
         ? Math.min(effectiveMaxWidth, Math.max(effectiveMinWidth, compactOpenWidth))
-        : size === 'small' ? 200 : size === 'large' ? 340 : 280;
+        : Math.min(effectiveMaxWidth, size === 'small' ? 200 : size === 'large' ? 340 : 280);
 
     const { classes } = useRightSidebar({ variant, size, collapsible, defaultCollapsed: initialCollapsed, className });
 
@@ -143,7 +144,10 @@ export function RightSidebar({
 
     const handlePointerMove = useCallback((e: PointerEvent) => {
         if (!isDraggingRef.current) return;
-        if (Math.abs(e.clientX - pointerStartXRef.current) > 3) didPointerMoveRef.current = true;
+        // Une petite dérive du pointeur pendant un clic ne doit pas annuler
+        // l’activation du bouton : seul un vrai geste horizontal devient un
+        // redimensionnement.
+        if (Math.abs(e.clientX - pointerStartXRef.current) > 8) didPointerMoveRef.current = true;
 
         if (rafRef.current !== null) cancelAnimationFrame(rafRef.current);
 
@@ -172,8 +176,9 @@ export function RightSidebar({
     }, [effectiveMinWidth, effectiveMaxWidth, effectiveCloseThreshold, effectiveCollapsedWidth, updateWidthDOM]);
 
     const handlePointerUp = useCallback(() => {
+        const wasDragged = didPointerMoveRef.current;
         isDraggingRef.current = false;
-        suppressClickRef.current = didPointerMoveRef.current;
+        suppressClickRef.current = wasDragged;
         document.body.classList.remove('right-sidebar-resizing');
         document.removeEventListener('pointermove', handlePointerMove);
         document.removeEventListener('pointerup', handlePointerUp);
@@ -184,13 +189,17 @@ export function RightSidebar({
             rafRef.current = null;
         }
 
+        // Un clic sur la poignée doit laisser le bouton gérer l’ouverture.
+        // Enregistrer la largeur CSS ici capturerait les 48 px du rail et
+        // ferait rouvrir le panneau à cette largeur minuscule.
+        if (!wasDragged || !asideRef.current) return;
+
         if (asideRef.current) {
             const currentWidth = parseInt(asideRef.current.style.width, 10);
             if (!isFullyCollapsedRef.current && !isNaN(currentWidth)) {
                 setWidth(currentWidth);
                 onResize?.(currentWidth);
             } else {
-                setWidth(effectiveCollapsedWidth);
                 onResize?.(effectiveCollapsedWidth);
             }
         }
@@ -219,10 +228,10 @@ export function RightSidebar({
     }, [handlePointerMove, handlePointerUp]);
 
     useEffect(() => {
-        if (isCompact && !isFullyCollapsed) {
-            setWidth(initialWidth);
+        if (!isFullyCollapsed) {
+            setWidth((currentWidth) => Math.min(effectiveMaxWidth, Math.max(effectiveMinWidth, isCompact ? initialWidth : currentWidth)));
         }
-    }, [isCompact, isPortrait, initialWidth, isFullyCollapsed]);
+    }, [isCompact, isPortrait, isNarrowDesktop, initialWidth, effectiveMaxWidth, effectiveMinWidth, isFullyCollapsed]);
 
     const handleToggle = () => {
         const nextState = !isFullyCollapsed;

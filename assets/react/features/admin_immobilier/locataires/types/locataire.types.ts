@@ -10,6 +10,7 @@ export type TenantKind = 'individual' | 'company';
 
 export interface LocataireRow {
     id: string;
+    cityUuid: string | null;
     /** Nom complet ou raison sociale. */
     name: string;
     /** Sous-titre : e-mail · téléphone. */
@@ -39,4 +40,5 @@ export interface LocatairesData {
     note: string | null;
     units: Array<{ id: string; buildingId: string; reference: string; monthlyRent: string; currency: string }>;
     buildings: Array<{ id: string; name: string }>;
+    cities: Array<{ id: string; name: string }>;
 }

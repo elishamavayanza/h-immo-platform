@@ -31,6 +31,10 @@ final readonly class TenantRequest
         #[Assert\Uuid(groups: ['create'])]
         public ?string $organizationUuid = null,
 
+        #[OA\Property(description: 'Ville de rattachement du locataire, requise pour un locataire sans bail créé par ADMIN_VILLE', format: 'uuid', nullable: true)]
+        #[Assert\Uuid(groups: ['create', 'update'])]
+        public ?string $cityUuid = null,
+
         #[OA\Property(
             description: 'Type de locataire (INDIVIDUAL ou COMPANY)',
             type: 'string',
