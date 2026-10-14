@@ -377,6 +377,7 @@
 .main-layout__sidebar-footer {
     display: grid;
     gap: $spacing-2;
+    width: 100%;
     min-width: 0;
 }
 
@@ -639,6 +640,8 @@
 
 .user-menu {
     width: 100%;
+    max-width: 100%;
+    min-width: 0;
 }
 
 // <PopoverMenu /> emballe son déclencheur dans un conteneur
@@ -647,6 +650,8 @@
 .user-menu .popover-menu-container {
     display: block;
     width: 100%;
+    max-width: 100%;
+    min-width: 0;
 }
 
 // Piège de largeur : `.popover-menu__trigger` est en `inline-flex`
@@ -660,6 +665,7 @@
 .user-menu .popover-menu__trigger {
     display: flex;
     width: 100%;
+    max-width: 100%;
     min-width: 0;
 }
 
