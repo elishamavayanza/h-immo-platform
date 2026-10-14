@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\EventListener;
 
 use App\Dto\Response\HttpErrorResponsePayload;
+use App\Service\System\ErrorReportService;
 use Doctrine\DBAL\Exception\UniqueConstraintViolationException;
 use Doctrine\ORM\EntityNotFoundException;
 use Doctrine\ORM\OptimisticLockException;
@@ -39,6 +40,7 @@ final readonly class ApiExceptionListener
         private LoggerInterface $logger,
         private KernelInterface $kernel,
         private ?Security $security = null,
+        private ?ErrorReportService $errorReportService = null,
     ) {
     }
 
@@ -63,12 +65,25 @@ final readonly class ApiExceptionListener
             ? 'Une erreur interne est survenue. Veuillez contacter l\'administrateur.'
             : $exception->getMessage();
 
+        $errorId = $statusCode >= 500 ? bin2hex(random_bytes(8)) : null;
+
         // Journalisation de l'exception
         if ($statusCode >= 500) {
             $this->logger->critical($exception->getMessage(), [
                 'exception' => $exception,
                 'path' => $request->getPathInfo(),
+                'error_id' => $errorId,
             ]);
+            try {
+                $this->errorReportService?->reportServerException($exception, $request, $errorId ?? '', $statusCode);
+            } catch (\Throwable $reportingError) {
+                // Le canal de débogage est secondaire à la réponse API : un
+                // problème Mailpit/SMTP ne doit jamais masquer la panne d’origine.
+                $this->logger->error('Le rapport d’erreur serveur n’a pas pu être préparé.', [
+                    'error_id' => $errorId,
+                    'exception_class' => $reportingError::class,
+                ]);
+            }
         } else {
             $this->logger->warning($exception->getMessage(), [
                 'exception' => $exception,
@@ -120,6 +135,9 @@ final readonly class ApiExceptionListener
 
         // Remplacement de la réponse HTTP par notre JsonResponse
         $response = new JsonResponse($json, $statusCode, [], true);
+        if ($errorId !== null) {
+            $response->headers->set('X-Error-Id', $errorId);
+        }
 
         // Un 401 doit indiquer comment s'authentifier. Sans cet en-tête,
         // un client d'API ne peut pas distinguer « présente un jeton » de

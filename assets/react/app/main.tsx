@@ -9,6 +9,7 @@ import { ToastProvider } from './layout/MainLayout/contexts/ToastContext.tsx';
 import { AppRoutes } from './routes/AppRoutes.tsx';
 import { initializeUserPreferences } from '../services/userPreferences';
 import { ErrorBoundary } from '../components/UI/ErrorBoundary';
+import { initializeClientErrorReporting } from '../services/clientErrorReporting';
 
 // Le point d'entrée charge le thème global et toutes les primitives UI.
 // Le reset reste séparé afin de conserver un ordre prévisible.
@@ -16,6 +17,7 @@ import '../../styles/base/_reset.scss';
 import '../../styles/main.scss';
 
 initializeUserPreferences();
+initializeClientErrorReporting();
 
 function App() {
     return (

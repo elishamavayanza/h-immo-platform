@@ -1,5 +1,6 @@
 import React from 'react';
 import { ErrorState } from '../ErrorState';
+import { reportClientError } from '../../../services/clientErrorReporting';
 
 interface ErrorBoundaryState {
     error: Error | null;
@@ -23,6 +24,7 @@ class ErrorBoundaryImpl extends React.Component<ErrorBoundaryProps, ErrorBoundar
 
     componentDidCatch(error: Error, info: React.ErrorInfo) {
         console.error('[ERREUR APP] Rendu échoué —', error, info.componentStack);
+        reportClientError('react_render', error, info.componentStack ?? undefined);
     }
 
     private handleRetry = () => {

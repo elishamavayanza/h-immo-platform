@@ -2,6 +2,18 @@
 framework:
     secret: '%env(APP_SECRET)%'
 
+    # Signalements techniques : faible volume et fenêtres fixes pour
+    # éviter qu'une erreur répétée ne transforme les rapports en spam.
+    rate_limiter:
+        client_error_reports:
+            policy: 'fixed_window'
+            limit: 5
+            interval: '1 hour'
+        server_error_reports:
+            policy: 'fixed_window'
+            limit: 3
+            interval: '1 hour'
+
     # L'API est désormais sans état : le pare-feu `main` est `stateless`
     # et l'authentification se fait par jeton Bearer. Aucune session PHP
     # n'est donc créée, et le cookie `HIMMOMPA` ci-dessous n'est plus émis.
