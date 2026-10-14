@@ -473,6 +473,13 @@ try {
 }
 
 try {
+    $r = $unitRepo->findPaginatedAccessible([$cityA1, $cityA2, $cityB1], 1, 50, 'UA-1');
+    check('UnitRepository recherche par référence sans champ DQL inexistant', $r['total'] === 1 && $r['items'][0]->getReference() === 'UA-1', 'total=' . $r['total']);
+} catch (\Throwable $e) {
+    check('UnitRepository recherche par référence sans champ DQL inexistant', false, $e->getMessage());
+}
+
+try {
     $r = $unitRepo->findAvailableByBuilding($buildingA1);
     check('UnitRepository::findAvailableByBuilding exclut l\'unité louée', count($r) === 0, 'count=' . count($r));
 } catch (\Throwable $e) {
