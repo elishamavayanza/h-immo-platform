@@ -8,6 +8,7 @@ import { AdminCityProvider } from './providers/AdminCityProvider.tsx';
 import { ToastProvider } from './layout/MainLayout/contexts/ToastContext.tsx';
 import { AppRoutes } from './routes/AppRoutes.tsx';
 import { initializeUserPreferences } from '../services/userPreferences';
+import { ErrorBoundary } from '../components/UI/ErrorBoundary';
 
 // Le point d'entrée charge le thème global et toutes les primitives UI.
 // Le reset reste séparé afin de conserver un ordre prévisible.
@@ -18,17 +19,19 @@ initializeUserPreferences();
 
 function App() {
     return (
-        <BrowserRouter>
-            <AuthProvider>
-                <OrganizationProvider>
-                    <AdminCityProvider>
-                        <ToastProvider>
-                            <AppRoutes />
-                        </ToastProvider>
-                    </AdminCityProvider>
-                </OrganizationProvider>
-            </AuthProvider>
-        </BrowserRouter>
+        <ErrorBoundary>
+            <BrowserRouter>
+                <AuthProvider>
+                    <OrganizationProvider>
+                        <AdminCityProvider>
+                            <ToastProvider>
+                                <AppRoutes />
+                            </ToastProvider>
+                        </AdminCityProvider>
+                    </OrganizationProvider>
+                </AuthProvider>
+            </BrowserRouter>
+        </ErrorBoundary>
     );
 }
 

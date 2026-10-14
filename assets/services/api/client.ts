@@ -19,6 +19,7 @@ import {
     authErrorInterceptor,
 } from './interceptors';
 import { isJsonContentType } from '../security/security.utils';
+import { getHttpErrorMessage, getNetworkErrorMessage, getTimeoutErrorMessage } from './userFacingErrors';
 
 // ─────────────────────────────────────────
 // Constantes
@@ -158,7 +159,7 @@ class HttpClient {
 
             if (!raw.ok) {
                 const apiError = new ApiError(
-                    this.extractErrorMessage(body, raw.statusText),
+                    getHttpErrorMessage(raw.status, config, this.extractErrorMessage(body, raw.statusText)),
                     raw.status,
                     raw.statusText,
                     (body as ApiErrorData) ?? {},
@@ -191,7 +192,7 @@ class HttpClient {
 
             // Timeout explicite (n'attend pas la réponse du serveur)
             if (err instanceof DOMException && err.name === 'TimeoutError') {
-                const timeoutError = new ApiError('La requête a expiré', 408, 'Request Timeout', {}, config);
+                const timeoutError = new ApiError(getTimeoutErrorMessage(), 408, 'Request Timeout', {}, config);
                 if (attempt < this.maxRetries(config)) {
                     await this.delay(this.backoff(attempt, config.retryDelay ?? this.config.retryDelay));
                     return this.executeRequest<T>(config, attempt + 1);
@@ -205,7 +206,7 @@ class HttpClient {
 
             // Erreur réseau : retry seulement si le navigateur est en ligne
             const networkError = new ApiError(
-                (err as Error)?.message ?? 'Erreur réseau inconnue',
+                getNetworkErrorMessage(),
                 0,
                 'Network Error',
                 {},

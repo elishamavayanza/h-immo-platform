@@ -164,6 +164,7 @@ export const loggingResponseInterceptor: ResponseInterceptor = {
  * de ce que devient l'écran ; la couche HTTP se contente d'informer.
  */
 export const SESSION_EXPIRED_EVENT = 'himmo:session-expired';
+export const SESSION_REAUTH_NOTICE_KEY = 'soft-immo:session-reauth-notice';
 
 type SessionExpiredListener = () => void;
 
@@ -207,6 +208,11 @@ export const authErrorInterceptor: ResponseInterceptor = {
             // `POST /auth/login` renvoie 401 pour de mauvais identifiants :
             // le formulaire doit afficher l'erreur, pas purger la session.
             if (!isAuthEndpoint(url)) {
+                try {
+                    window.sessionStorage.setItem(SESSION_REAUTH_NOTICE_KEY, 'expired');
+                } catch {
+                    // La déconnexion et la redirection restent prioritaires si le stockage est bloqué.
+                }
                 tokenStorage.clearAll();
                 notifySessionExpired();
             }
