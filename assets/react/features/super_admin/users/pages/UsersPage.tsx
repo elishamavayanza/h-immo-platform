@@ -68,6 +68,7 @@ export function UsersPage() {
         organizationFilter,
         setOrganizationFilter,
         suspendUser,
+        activateUser,
     } = useUsers();
 
     const [suspendTarget, setSuspendTarget] = useState<UserRow | null>(null);
@@ -75,6 +76,8 @@ export function UsersPage() {
     const [suspendDuration, setSuspendDuration] = useState('indefinite');
     const [suspendUntil, setSuspendUntil] = useState('');
     const [suspending, setSuspending] = useState(false);
+    const [activateTarget, setActivateTarget] = useState<UserRow | null>(null);
+    const [activating, setActivating] = useState(false);
 
     const openSuspend = (user: UserRow) => {
         setSuspendTarget(user);
@@ -95,16 +98,10 @@ export function UsersPage() {
         { key: 'role', title: 'Rôle organisationnel', sortable: true, render: (user) => user.role ? <Badge variant={ROLE_VARIANT[user.role] ?? 'secondary'}>{ROLE_LABEL[user.role] ?? user.role}</Badge> : '—' },
         { key: 'status', title: 'Compte', sortable: true, render: (user) => <span><Badge variant={STATUS_VARIANT[user.status]}>{STATUS_LABEL[user.status]}</Badge>{user.status === 'inactive' && user.suspensionEndsAt && <small className="sa-management-status-detail">Jusqu’au {formatUserDate(user.suspensionEndsAt, true)}</small>}</span> },
         { key: 'lastLoginAt', title: 'Dernière connexion', sortable: true, render: (user) => user.lastLoginAt ? formatUserDate(user.lastLoginAt, true) : 'Jamais connecté' },
-        { key: 'actions', title: 'Actions', render: (user) => (
-            <Button
-                variant="danger"
-                size="small"
-                disabled={user.status !== 'active'}
-                title={user.status !== 'active' ? 'Le compte est déjà désactivé.' : undefined}
-                onClick={() => openSuspend(user)}
-            >
-                Suspendre
-            </Button>
+        { key: 'actions', title: 'Actions', render: (user) => user.status === 'active' ? (
+            <Button variant="danger" size="small" onClick={() => openSuspend(user)}>Suspendre</Button>
+        ) : (
+            <Button variant="outline" size="small" onClick={() => setActivateTarget(user)}>Réactiver</Button>
         ) },
     ];
 
@@ -122,6 +119,19 @@ export function UsersPage() {
             // Le toast d'échec est déjà émis par le hook.
         } finally {
             setSuspending(false);
+        }
+    };
+
+    const submitActivate = async () => {
+        if (!activateTarget || activating) return;
+        setActivating(true);
+        try {
+            await activateUser(activateTarget.id);
+            setActivateTarget(null);
+        } catch {
+            // Le toast d'échec est déjà émis par le hook.
+        } finally {
+            setActivating(false);
         }
     };
 
@@ -151,6 +161,9 @@ export function UsersPage() {
                     <Textarea id="suspend-user-reason" rows={4} maxLength={1000} placeholder="Ex. : Compte dormant depuis plusieurs mois." value={suspendReason} onChange={(event) => setSuspendReason(event.target.value)} fullWidth />
                 </FormField>
             </form>
+        </Modal>
+        <Modal isOpen={activateTarget !== null} onClose={() => setActivateTarget(null)} title="Réactiver le compte" size="small" footer={<><Button variant="outline" onClick={() => setActivateTarget(null)}>Annuler</Button><Button onClick={() => void submitActivate()} isLoading={activating}>{activating ? 'Réactivation…' : 'Réactiver'}</Button></>}>
+            <p>{activateTarget ? <>Réactiver <strong>{activateTarget.name}</strong> maintenant ? L’accès sera rétabli sans attendre la fin de la période de suspension.</> : null}</p>
         </Modal>
     </div>;
 }

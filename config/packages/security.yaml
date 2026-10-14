@@ -25,12 +25,10 @@ security:
             # jeton qu'elle présente dans l'en-tête `Authorization`.
             stateless: true
             lazy: true
-            # `user_checker` refuse un compte désactivé. Il s'applique aux
-            # DEUX authentificateurs du pare-feu :
-            #   - `ApiTokenAuthenticator` recharge le compte en base à chaque
-            #     requête, donc un jeton émis avant une désactivation cesse
-            #     de fonctionner dès la requête suivante ;
-            #   - `json_login` l'utilise via `AppUserProvider`.
+            # Le user checker n'indique le motif de suspension qu'après
+            # validation du mot de passe sur la route de connexion. Les
+            # requêtes Bearer restent refusées par le provider si le compte
+            # est désactivé.
             user_checker: App\Security\AccountStateUserChecker
             # Limitation des tentatives : sans elle, le login accepte des
             # milliers d'essais de mot de passe par seconde.
@@ -57,10 +55,9 @@ security:
                 check_path: api_login
                 username_path: email
                 password_path: password
-                # Gestionnaire d'échec explicite : le message reste générique
-                # afin de ne pas distinguer « e-mail inconnu » de « mot de
-                # passe faux », ce qui permettrait d'énumérer les comptes, et
-                # un blocage temporaire renvoie 429 plutôt que 401.
+                # Les identifiants erronés gardent un message générique ; un
+                # motif de suspension sûr n'est renvoyé qu'après validation
+                # du mot de passe. Un blocage temporaire renvoie 429.
                 failure_handler: App\Security\JsonAuthenticationFailureHandler
 
             # La déconnexion est traitée par `AuthController::logout()` : sur

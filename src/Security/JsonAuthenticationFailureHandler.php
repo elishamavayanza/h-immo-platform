@@ -9,6 +9,7 @@ use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Security\Core\Exception\AuthenticationException;
+use Symfony\Component\Security\Core\Exception\CustomUserMessageAccountStatusException;
 use Symfony\Component\Security\Core\Exception\TooManyLoginAttemptsAuthenticationException;
 use Symfony\Component\Security\Http\Authentication\AuthenticationFailureHandlerInterface;
 
@@ -29,7 +30,7 @@ final class JsonAuthenticationFailureHandler implements AuthenticationFailureHan
 
         $message = $tropEssais
             ? 'Trop de tentatives de connexion. Réessayez plus tard.'
-            : 'Identifiants invalides.';
+            : ($this->accountStatusMessage($exception) ?? 'Identifiants invalides.');
 
         $payload = new HttpErrorResponsePayload(
             $status,
@@ -41,5 +42,18 @@ final class JsonAuthenticationFailureHandler implements AuthenticationFailureHan
         $response->headers->set('Cache-Control', 'no-store');
 
         return $response;
+    }
+
+    private function accountStatusMessage(AuthenticationException $exception): ?string
+    {
+        // Symfony peut envelopper l'exception du user checker dans une autre
+        // AuthenticationException. Seul un motif explicitement sûr est rendu.
+        for ($current = $exception; $current !== null; $current = $current->getPrevious()) {
+            if ($current instanceof CustomUserMessageAccountStatusException) {
+                return $current->getMessageKey();
+            }
+        }
+
+        return null;
     }
 }
