@@ -46,6 +46,10 @@
     display: flex;
     flex-direction: column;
     width: 100%;
+    min-width: 0;
+    max-height: calc(100vh - #{$spacing-8});
+    max-height: calc(100dvh - #{$spacing-8});
+    box-sizing: border-box;
     background-color: $color-bg-elevated;
     border: 1px solid $color-border-light;
     border-radius: $radius-lg;
@@ -82,6 +86,7 @@
     font-size: $font-size-sm;
     color: $color-text-secondary;
     line-height: $line-height-normal;
+    overflow-wrap: anywhere;
 }
 
 
@@ -208,8 +213,18 @@
 // ============================================================
 
 @include responsive(mobile) {
+    .confirm-dialog__overlay {
+        padding: $spacing-3;
+    }
+
+    // Conserver la largeur adaptée à la taille choisie : l'ancien max-width
+    // à 100 % transformait toutes les confirmations en panneaux plein écran.
     .confirm-dialog {
-        max-width: 100%;
+        width: 100%;
+    }
+
+    .confirm-dialog__actions {
+        flex-wrap: wrap;
     }
 }
 

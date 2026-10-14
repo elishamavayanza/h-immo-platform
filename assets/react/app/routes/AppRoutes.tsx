@@ -22,6 +22,7 @@ import { AuthLayout } from '../layout/AuthLayout/AuthLayout';
 import { MainLayout } from '../layout/MainLayout/MainLayout';
 import { ErrorState } from '../../components/UI/ErrorState';
 import { useOrganization } from '../providers/OrganizationProvider';
+import { useAuth } from '../providers/AuthProvider';
 import { defaultPathFor } from '../layout/MainLayout/sidebar/sidebar.config';
 import {
     ACCESS_DENIED_PATH,
@@ -31,6 +32,7 @@ import {
     toRelativeAppRoutePath,
 } from './appRoutes.config';
 import { AppRouteGuard } from './AppRouteGuard';
+import { readLastLocation } from './navigationMemory';
 
 // Import des pages métier
 
@@ -42,8 +44,10 @@ const APP_ROUTES = buildAppRoutes();
 /** `/app` → première feuille du menu du rôle courant (suivie par le sidebar). */
 function AppLanding() {
     const { platformRole, organizationRole } = useOrganization();
+    const { user } = useAuth();
+    const rememberedLocation = user ? readLastLocation(user.uuid, APP_ROUTES) : null;
 
-    return <Navigate to={defaultPathFor(platformRole, organizationRole)} replace />;
+    return <Navigate to={rememberedLocation ?? defaultPathFor(platformRole, organizationRole)} replace />;
 }
 
 /**

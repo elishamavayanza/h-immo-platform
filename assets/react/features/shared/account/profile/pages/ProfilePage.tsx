@@ -11,16 +11,15 @@ import { UserPhotoPicker } from '../components/UserPhotoPicker';
 import { useProfile } from '../hooks/useProfile';
 import { changedFields } from '../../../utils/changedFields';
 import { formatUserDate } from '../../../../../services/userPreferences';
+import { useSessionFormDraft } from '../../../../../hooks/useSessionFormDraft';
 import './profile.scss';
+
+const EMPTY_PROFILE_FORM = { firstName: '', lastName: '', phone: '' };
 
 export function ProfilePage() {
     const { profile, isLoading, error, reload, updateProfile, uploadPhoto, deletePhoto } = useProfile();
-    const [isEditing, setIsEditing] = useState(false);
-    const [formData, setFormData] = useState({
-        firstName: '',
-        lastName: '',
-        phone: '',
-    });
+    const [formData, setFormData, hasDraft, clearDraft] = useSessionFormDraft('account-profile', EMPTY_PROFILE_FORM);
+    const [isEditing, setIsEditing] = useState(hasDraft);
     const [photoChange, setPhotoChange] = useState<{ kind: 'new'; dataUrl: string; file: File } | { kind: 'removed' } | null>(null);
     const [saveError, setSaveError] = useState<string | null>(null);
     const [isSaving, setIsSaving] = useState(false);
@@ -51,9 +50,10 @@ export function ProfilePage() {
     };
 
     const handleCancelEdit = () => {
+        clearDraft();
         setIsEditing(false);
         setSaveError(null);
-        setFormData({ firstName, lastName, phone: profile.phone ?? '' });
+        setFormData(EMPTY_PROFILE_FORM);
         setPhotoChange(null);
     };
 
@@ -78,6 +78,7 @@ export function ProfilePage() {
                 phone: profile.phone ?? '',
             });
             if (Object.keys(profileChanges).length > 0) await updateProfile(profileChanges);
+            clearDraft();
             setIsEditing(false);
             setPhotoChange(null);
         } catch (err) {
