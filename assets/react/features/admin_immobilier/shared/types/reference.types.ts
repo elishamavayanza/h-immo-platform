@@ -158,6 +158,10 @@ export interface ExpenseItem {
     reference: string | null;
     notes: string | null;
     createdAt: string;
+    reversalOfUuid?: string | null;
+    isReversal?: boolean;
+    isReversed?: boolean;
+    receiptNumber?: string | null;
 }
 
 /** `WorkerResponse` — `GET /api/v1/workers`. */

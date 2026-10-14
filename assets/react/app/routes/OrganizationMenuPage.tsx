@@ -1,4 +1,5 @@
 import { lazy, Suspense, type ComponentType, type ReactElement } from 'react';
+import { useLocation } from 'react-router-dom';
 import { useOrganization } from '../providers/OrganizationProvider';
 import { Spinner } from '../../components/UI/Spinner';
 
@@ -31,12 +32,15 @@ const AdminVilleLoyersPage = lazyPage(() => import('../../features/admin_ville/l
 const AdminVilleDepensesPage = lazyPage(() => import('../../features/admin_ville/depenses/pages/DepensesPage'), 'DepensesPage');
 const AdminVilleReportsPage = lazyPage(() => import('../../features/admin_ville/reports/pages/ReportsPage'), 'ReportsPage');
 const AdminVilleOperationsPage = lazyPage(() => import('../../features/admin_ville/operations/pages/OperationsPage'), 'OperationsPage');
+const TreasuryPage = lazyPage(() => import('../../features/shared/finance/pages/TreasuryPage.tsx'), 'TreasuryPage');
 
 interface OrganizationMenuPageProps { path: string; }
 
 /** Sélectionne la feuille du menu métier selon le rôle réellement résolu. */
 export function OrganizationMenuPage({ path }: OrganizationMenuPageProps) {
     const { organizationRole } = useOrganization();
+    const location = useLocation();
+    const showExpenseManagement = location.pathname === '/app/depenses/gestion';
     let page: ReactElement | null = null;
 
     if (organizationRole === 'admin_immobilier') {
@@ -45,7 +49,7 @@ export function OrganizationMenuPage({ path }: OrganizationMenuPageProps) {
             case '/app/patrimoine': page = <AdminImmobilierPatrimoinePage />; break;
             case '/app/location/locataires': page = <AdminImmobilierLocatairesPage />; break;
             case '/app/location/loyers': page = <AdminImmobilierLoyersPage />; break;
-            case '/app/depenses': page = <AdminImmobilierDepensesPage />; break;
+            case '/app/depenses': page = showExpenseManagement ? <AdminImmobilierDepensesPage /> : <TreasuryPage />; break;
             case '/app/rapports': page = <AdminImmobilierReportsPage />; break;
             case '/app/vitrine': page = <AdminImmobilierVitrinePage />; break;
             case '/app/personnel': page = <AdminImmobilierPersonnelPage />; break;
@@ -57,7 +61,7 @@ export function OrganizationMenuPage({ path }: OrganizationMenuPageProps) {
             case '/app/patrimoine': page = <AdminVillePatrimoinePage />; break;
             case '/app/location/locataires': page = <AdminVilleLocatairesPage />; break;
             case '/app/location/loyers': page = <AdminVilleLoyersPage />; break;
-            case '/app/depenses': page = <AdminVilleDepensesPage />; break;
+            case '/app/depenses': page = showExpenseManagement ? <AdminVilleDepensesPage /> : <TreasuryPage />; break;
             case '/app/rapports': page = <AdminVilleReportsPage />; break;
             case '/app/operations': page = <AdminVilleOperationsPage />; break;
         }
@@ -67,7 +71,7 @@ export function OrganizationMenuPage({ path }: OrganizationMenuPageProps) {
             case '/app/patrimoine': page = <PatronPatrimoinePage />; break;
             case '/app/location/locataires': page = <PatronLocatairesPage />; break;
             case '/app/location/loyers': page = <PatronLoyersPage />; break;
-            case '/app/depenses': page = <PatronDepensesPage />; break;
+            case '/app/depenses': page = showExpenseManagement ? <PatronDepensesPage /> : <TreasuryPage />; break;
             case '/app/rapports': page = <PatronReportsPage />; break;
             case '/app/vitrine': page = <PatronVitrinePage />; break;
             case '/app/administration': page = <PatronAdministrationPage />; break;

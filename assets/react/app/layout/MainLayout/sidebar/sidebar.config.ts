@@ -141,7 +141,7 @@ const LOYERS: AppMenuItem = {
  */
 const DEPENSES: AppMenuItem = {
     id: 'depenses',
-    label: 'Dépenses',
+    label: 'Trésorerie',
     icon: 'wallet',
     section: 'finance',
     path: '/app/depenses',

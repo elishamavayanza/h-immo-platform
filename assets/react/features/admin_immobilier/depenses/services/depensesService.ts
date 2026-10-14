@@ -70,7 +70,7 @@ function descriptionLabel(expense: ExpenseItem, workers: Map<string, WorkerItem>
         || '—';
 }
 
-export async function fetchDepenses(organizationUuid: string, from?: string, to?: string): Promise<DepensesData> {
+export async function fetchDepenses(organizationUuid: string, from?: string, to?: string, cityUuid?: string): Promise<DepensesData> {
     const [catalog, workers] = await Promise.all([
         fetchPropertyCatalog(organizationUuid),
         fetchWorkers(organizationUuid),
@@ -78,7 +78,10 @@ export async function fetchDepenses(organizationUuid: string, from?: string, to?
     // Les dépenses sont filtrées par ville côté API. Fournir les UUID du
     // catalogue actif borne aussi la vue au tenant sélectionné ; le backend
     // recoupe ces UUID avec les villes réellement autorisées à l'utilisateur.
-    const expenses = await fetchExpenses(from, to, catalog.cities.items.map((city) => city.id));
+    const allowedCityIds = catalog.cities.items
+        .filter((city) => !cityUuid || city.id === cityUuid)
+        .map((city) => city.id);
+    const expenses = await fetchExpenses(from, to, allowedCityIds);
 
     const cities = new Map(catalog.cities.items.map((city) => [city.id, city]));
     const parcels = new Map(catalog.parcels.items.map((parcel) => [parcel.id, parcel]));
@@ -106,6 +109,9 @@ export async function fetchDepenses(organizationUuid: string, from?: string, to?
         supplier: expense.supplier,
         reference: expense.reference,
         notes: expense.notes,
+        isReversal: expense.isReversal ?? false,
+        isReversed: expense.isReversed ?? false,
+        reversalOfId: expense.reversalOfUuid ?? null,
     }));
 
     const note = expenses.total > expenses.items.length
