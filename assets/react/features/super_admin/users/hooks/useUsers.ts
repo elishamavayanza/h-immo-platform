@@ -72,9 +72,9 @@ export function useUsers() {
      * Suspend un compte : le backend désactive le compte, archive l'événement
      * et notifie l'utilisateur par email (échec mailer → `warnings`).
      */
-    const suspendUser = async (id: string, reason?: string): Promise<UserSuspendResult> => {
+    const suspendUser = async (id: string, payload: { reason?: string; suspensionEndsAt: string | null }): Promise<UserSuspendResult> => {
         try {
-            const result = await usersService.suspend(id, reason ? { reason } : {});
+            const result = await usersService.suspend(id, payload);
             setUsers((current) => current.map((user) => user.id === id ? result.user : user));
             push('success', result.flushDescription ?? 'Le compte a été suspendu.');
             if (result.warnings.emails) {

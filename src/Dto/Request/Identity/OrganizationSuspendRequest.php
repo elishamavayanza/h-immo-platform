@@ -31,7 +31,9 @@ final readonly class OrganizationSuspendRequest
         )]
         #[Assert\NotBlank(message: 'Le motif de suspension est obligatoire.')]
         #[Assert\Length(max: 1000, maxMessage: 'Le motif ne peut pas dépasser {{ limit }} caractères.')]
-        public string $reason = ''
+        public string $reason = '',
+        #[OA\Property(description: 'Fin exacte de la suspension temporaire (date et heure UTC). Null ou absent signifie une suspension indéterminée.', format: 'date-time', nullable: true, example: '2026-11-01T00:00:00Z')]
+        public ?\DateTimeImmutable $suspensionEndsAt = null
     ) {
     }
 }

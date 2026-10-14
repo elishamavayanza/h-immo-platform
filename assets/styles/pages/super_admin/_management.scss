@@ -189,3 +189,10 @@
         grid-column: auto;
     }
 }
+.sa-management-status-detail {
+    display: block;
+    margin-top: 0.25rem;
+    color: $color-text-muted;
+    font-size: $font-size-xs;
+    line-height: 1.3;
+}

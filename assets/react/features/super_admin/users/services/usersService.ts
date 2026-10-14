@@ -69,6 +69,7 @@ function toRow(response: UserApiResponse): UserRow {
         role: response.platformRole ?? firstMembership?.role ?? null,
         status: response.isActive ? 'active' : 'inactive',
         lastLoginAt: response.lastLoginAt,
+        suspensionEndsAt: response.suspensionEndsAt ?? null,
     };
 }
 

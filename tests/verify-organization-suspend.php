@@ -31,6 +31,11 @@ use App\Enum\PlatformRole;
 use App\Exception\AccessDeniedException;
 use App\Service\Identity\OrganizationService;
 use App\Service\System\AuditLogService;
+use App\Service\System\DateTimeService;
+use App\Repository\Identity\OrganizationRepository;
+use App\Repository\Identity\UserRepository;
+use App\Command\ExpireSuspensionsCommand;
+use Symfony\Component\Console\Tester\CommandTester;
 use Symfony\Component\DependencyInjection\Compiler\CompilerPassInterface;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
 use Symfony\Component\Security\Core\Authentication\Token\UsernamePasswordToken;
@@ -164,12 +169,18 @@ check('Le motif vide est signalé sur le champ `reason`', isset($feedbackEmpty->
 $statusInDb = $connection->fetchOne('SELECT status FROM organization WHERE code = :code', ['code' => 'SUSPEND']);
 check('L\'organisation reste active après refus', $statusInDb === OrganizationStatus::ACTIVE->value, (string) $statusInDb);
 
+$pastEnd = (new DateTimeImmutable('now', new DateTimeZone('UTC')))->modify('-1 minute');
+$feedbackPast = $service->suspend($memberUuid, new OrganizationSuspendRequest('Motif.', $pastEnd));
+check('Une échéance passée est rejetée pour une organisation', $feedbackPast->getStatus() === 422);
+
 section('Suspension valide + audit');
 
-$feedbackSuspend = $service->suspend($memberUuid, new OrganizationSuspendRequest('Non-paiement des frais d\'abonnement.'));
+$suspensionEndsAt = (new DateTimeImmutable('now', new DateTimeZone('UTC')))->modify('+15 days');
+$feedbackSuspend = $service->suspend($memberUuid, new OrganizationSuspendRequest('Non-paiement des frais d\'abonnement.', $suspensionEndsAt));
 check('La suspension valide renvoie 200', $feedbackSuspend->getStatus() === 200, "obtenu {$feedbackSuspend->getStatus()}");
 $data = $feedbackSuspend->getData();
 check('Le statut exposé est `suspended`', $data->status === OrganizationStatus::SUSPENDED, $data->status->value);
+check('La fin temporaire est renvoyée par l’API', $data->suspensionEndsAt?->format(DATE_ATOM) === $suspensionEndsAt->format(DATE_ATOM));
 
 $statusInDb = $connection->fetchOne('SELECT status FROM organization WHERE code = :code', ['code' => 'SUSPEND']);
 check('Le statut en base est `suspended`', $statusInDb === OrganizationStatus::SUSPENDED->value, (string) $statusInDb);
@@ -192,6 +203,7 @@ $feedbackReactivate = $service->reactivate($memberUuid);
 check('La réactivation valide renvoie 200', $feedbackReactivate->getStatus() === 200, "obtenu {$feedbackReactivate->getStatus()}");
 $data = $feedbackReactivate->getData();
 check('Le statut exposé redevient `active`', $data->status === OrganizationStatus::ACTIVE, $data->status->value);
+check('La date de fin est effacée à la réactivation manuelle', $data->suspensionEndsAt === null);
 
 $auditReactivate = $em->getConnection()->fetchAssociative(
     'SELECT * FROM audit_log WHERE action = :action ORDER BY id DESC LIMIT 1',
@@ -200,6 +212,18 @@ $auditReactivate = $em->getConnection()->fetchAssociative(
 check('Une ligne d\'audit ACTIVATE_ORGANIZATION est écrite', $auditReactivate !== false);
 
 check('Réactiver un tenant actif renvoie 422', $service->reactivate($memberUuid)->getStatus() === 422);
+
+section('Expiration automatique d’une suspension échue');
+$org->setStatus(OrganizationStatus::SUSPENDED)->setSuspensionEndsAt((new DateTimeImmutable('now', new DateTimeZone('UTC')))->modify('-1 minute'));
+$em->flush();
+$expiryCommand = new ExpireSuspensionsCommand($em, new OrganizationRepository($container->get('doctrine')), new UserRepository($container->get('doctrine')), $container->get(AuditLogService::class), new DateTimeService());
+(new CommandTester($expiryCommand))->execute([]);
+$em->refresh($org);
+check('La commande réactive une organisation arrivée à échéance', $org->getStatus() === OrganizationStatus::ACTIVE);
+check('La commande efface la date de fin échue', $org->getSuspensionEndsAt() === null);
+check('La réactivation automatique est auditée', (int) $connection->fetchOne('SELECT COUNT(*) FROM audit_log WHERE action = :action', ['action' => 'EXPIRE_ORGANIZATION_SUSPENSION']) === 1);
+$feedbackIndefinite = $service->suspend($memberUuid, new OrganizationSuspendRequest('Suspension indéterminée.'));
+check('Une suspension sans échéance reste indéterminée', $feedbackIndefinite->getData()?->suspensionEndsAt === null);
 
 section('Erreurs et autorisation');
 

@@ -29,6 +29,7 @@ const STATUS_LABEL: Record<OrganizationStatus, string> = { active: 'Active', sus
 const STATUS_VARIANT: Record<OrganizationStatus, 'success' | 'error' | 'secondary'> = { active: 'success', suspended: 'error', inactive: 'secondary' };
 type OrganizationForm = { name: string; code: string; email: string; phone: string; address: string; city: string };
 const EMPTY_FORM: OrganizationForm = { name: '', code: '', email: '', phone: '', address: '', city: '' };
+const toLocalDateTime = (date: Date) => new Date(date.getTime() - date.getTimezoneOffset() * 60_000).toISOString().slice(0, 16);
 
 /**
  * Logo ou initiale d'une organisation dans la table.
@@ -79,6 +80,8 @@ const [isWizardOpen, setWizardOpen] = useState(false);
     const [form, setForm] = useState(EMPTY_FORM);
     const [suspendTarget, setSuspendTarget] = useState<OrganizationRow | null>(null);
     const [suspendReason, setSuspendReason] = useState('');
+    const [suspendDuration, setSuspendDuration] = useState('indefinite');
+    const [suspendUntil, setSuspendUntil] = useState('');
     const [suspending, setSuspending] = useState(false);
 
     const openEdit = (organization: OrganizationRow) => {
@@ -93,13 +96,15 @@ const [isWizardOpen, setWizardOpen] = useState(false);
     const openSuspend = (organization: OrganizationRow) => {
         setSuspendTarget(organization);
         setSuspendReason('');
+        setSuspendDuration('indefinite');
+        setSuspendUntil('');
     };
 
     const columns: DataTableColumn<OrganizationRow>[] = [
         { key: 'name', title: 'Organisation', sortable: true, render: (organization) => <div className="sa-management-identity"><OrganizationLogoCell organization={organization} /><span><strong>{organization.name}</strong><small>{organization.code}</small></span></div> },
         { key: 'city', title: 'Ville du siège', sortable: true },
         { key: 'email', title: 'Contact', sortable: true },
-        { key: 'status', title: 'Statut', sortable: true, render: (organization) => <Badge variant={STATUS_VARIANT[organization.status]}>{STATUS_LABEL[organization.status]}</Badge> },
+        { key: 'status', title: 'Statut', sortable: true, render: (organization) => <span><Badge variant={STATUS_VARIANT[organization.status]}>{STATUS_LABEL[organization.status]}</Badge>{organization.status === 'suspended' && organization.suspensionEndsAt && <small className="sa-management-status-detail">Jusqu’au {formatUserDate(organization.suspensionEndsAt, true)}</small>}</span> },
         { key: 'createdAt', title: 'Créée le', sortable: true, render: (organization) => formatUserDate(organization.createdAt) },
         { key: 'actions', title: 'Actions', render: (organization) => <RowActions label={organization.name} isActive={organization.status === 'active'} onEdit={() => openEdit(organization)} onToggleActive={() => { if (organization.status === 'active') openSuspend(organization); else void reactivateOrganization(organization); }} /> },
     ];
@@ -150,7 +155,10 @@ const [isWizardOpen, setWizardOpen] = useState(false);
         if (!suspendTarget || suspending) return;
         setSuspending(true);
         try {
-            await suspendOrganization(suspendTarget.id, suspendReason.trim());
+            const endsAt = suspendDuration === 'indefinite' ? null : suspendDuration === 'custom'
+                ? new Date(suspendUntil).toISOString()
+                : new Date(Date.now() + Number(suspendDuration) * 86_400_000).toISOString();
+            await suspendOrganization(suspendTarget.id, suspendReason.trim(), endsAt);
             setSuspendTarget(null);
         } catch {
             // Le toast d'échec est déjà émis par le hook.
@@ -186,6 +194,10 @@ const [isWizardOpen, setWizardOpen] = useState(false);
         <Modal isOpen={suspendTarget !== null} onClose={() => setSuspendTarget(null)} title={suspendTarget ? `Suspendre « ${suspendTarget.name} »` : 'Suspendre l’organisation'} size="medium" footer={<><Button variant="outline" onClick={() => setSuspendTarget(null)}>Annuler</Button><Button type="submit" form="suspend-organization-form" isLoading={suspending}>{suspending ? 'Suspension…' : 'Suspendre l’organisation'}</Button></>}>
             <form id="suspend-organization-form" className="sa-management-form" onSubmit={submitSuspend}>
                 <p className="sa-management-form__hint">La suspension désactive l’accès de tous les membres de l’organisation. Le motif est obligatoire : il sera archivé dans le journal d’audit et envoyé par email à chaque utilisateur de cette organisation.</p>
+                <FormField label="Durée" htmlFor="suspend-organization-duration" helpText="La suspension commence dès sa confirmation.">
+                    <Select id="suspend-organization-duration" value={suspendDuration} onChange={(event) => setSuspendDuration(event.target.value)} options={[{ value: 'indefinite', label: 'Indéterminée — jusqu’à réactivation manuelle' }, { value: '15', label: '15 jours' }, { value: '30', label: '30 jours' }, { value: '90', label: '90 jours' }, { value: 'custom', label: 'Choisir une date et une heure de fin' }]} />
+                </FormField>
+                {suspendDuration === 'custom' && <FormField label="Fin de suspension" htmlFor="suspend-organization-until" required><Input id="suspend-organization-until" type="datetime-local" value={suspendUntil} onChange={(event) => setSuspendUntil(event.target.value)} min={toLocalDateTime(new Date(Date.now() + 60_000))} required /></FormField>}
                 <FormField label="Motif de la suspension" htmlFor="suspend-organization-reason" required helpText="Ce motif sera visible par les utilisateurs de l’organisation dans l’email de notification.">
                     <Textarea id="suspend-organization-reason" rows={4} maxLength={1000} placeholder="Ex. : Suspension pour non-paiement des frais d’abonnement." value={suspendReason} onChange={(event) => setSuspendReason(event.target.value)} required fullWidth />
                 </FormField>

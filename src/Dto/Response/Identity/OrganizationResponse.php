@@ -66,6 +66,8 @@ final readonly class OrganizationResponse
 
         #[OA\Property(description: 'La vitrine est-elle listée publiquement', example: true)]
         public bool $isPubliclyListed,
+        #[OA\Property(description: 'Fin de la suspension temporaire ; null si indéterminée ou organisation active.', format: 'date-time', nullable: true)]
+        public ?\DateTimeImmutable $suspensionEndsAt,
     ) {
     }
 
@@ -87,6 +89,7 @@ final readonly class OrganizationResponse
             slug: $organization->getSlug(),
             publicDescription: $organization->getPublicDescription(),
             isPubliclyListed: $organization->isPubliclyListed(),
+            suspensionEndsAt: $organization->getSuspensionEndsAt(),
         );
     }
 }

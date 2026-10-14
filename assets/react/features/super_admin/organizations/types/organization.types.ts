@@ -15,6 +15,7 @@ export interface OrganizationRow {
     logo: string | null;
     status: OrganizationStatus;
     createdAt: string;
+    suspensionEndsAt?: string | null;
 }
 
 export type OrganizationStatusFilter = OrganizationStatus | 'all';
@@ -37,6 +38,7 @@ export interface OrganizationApiResponse {
     status: OrganizationStatus;
     createdAt: string;
     updatedAt: string;
+    suspensionEndsAt?: string | null;
 }
 
 /**

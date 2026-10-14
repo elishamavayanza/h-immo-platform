@@ -31,6 +31,11 @@ use App\Enum\PlatformRole;
 use App\Exception\AccessDeniedException;
 use App\Service\Identity\UserService;
 use App\Service\System\AuditLogService;
+use App\Service\System\DateTimeService;
+use App\Repository\Identity\OrganizationRepository;
+use App\Repository\Identity\UserRepository;
+use App\Command\ExpireSuspensionsCommand;
+use Symfony\Component\Console\Tester\CommandTester;
 use Symfony\Component\DependencyInjection\Compiler\CompilerPassInterface;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
 use Symfony\Component\Security\Core\Authentication\Token\UsernamePasswordToken;
@@ -193,11 +198,17 @@ if ($targetItem !== null && $targetItem->memberships !== []) {
 
 section('Suspension valide + audit + email non bloquant');
 
-$feedbackSuspend = $service->suspend((string) $target->getUuid(), new UserSuspendRequest('Compte dormant depuis plusieurs mois.'));
+$pastEnd = (new DateTimeImmutable('now', new DateTimeZone('UTC')))->modify('-1 minute');
+$feedbackPast = $service->suspend((string) $target->getUuid(), new UserSuspendRequest('Motif.', $pastEnd));
+check('Une échéance passée est rejetée pour un compte', $feedbackPast->getStatus() === 422);
+
+$suspensionEndsAt = (new DateTimeImmutable('now', new DateTimeZone('UTC')))->modify('+15 days');
+$feedbackSuspend = $service->suspend((string) $target->getUuid(), new UserSuspendRequest('Compte dormant depuis plusieurs mois.', $suspensionEndsAt));
 check('La suspension valide renvoie 200', $feedbackSuspend->getStatus() === 200, "obtenu {$feedbackSuspend->getStatus()}");
 $data = $feedbackSuspend->getData();
 check('Le compte exposé est inactif', $data !== null && $data->isActive === false);
 check('La réponse de suspension conserve les rattachements', $data !== null && $data->memberships !== []);
+check('La fin temporaire est renvoyée par l’API', $data?->suspensionEndsAt?->format(DATE_ATOM) === $suspensionEndsAt->format(DATE_ATOM));
 
 $isActiveInDb = $connection->fetchOne('SELECT is_active FROM user WHERE id = :id', ['id' => $target->getId()]);
 check('Le compte est désactivé en base', (int) $isActiveInDb === 0, (string) $isActiveInDb);
@@ -235,6 +246,19 @@ try {
 } catch (AccessDeniedException) {
     check('Un appelant non autorisé est refusé (403 via AccessDeniedException)', true);
 }
+
+section('Expiration automatique d’une suspension échue');
+$target->setSuspensionEndsAt((new DateTimeImmutable('now', new DateTimeZone('UTC')))->modify('-1 minute'));
+$em->flush();
+$expiryCommand = new ExpireSuspensionsCommand($em, new OrganizationRepository($container->get('doctrine')), new UserRepository($container->get('doctrine')), $container->get(AuditLogService::class), new DateTimeService());
+(new CommandTester($expiryCommand))->execute([]);
+$em->refresh($target);
+check('La commande réactive un compte arrivé à échéance', $target->isActive());
+check('La commande efface la date de fin échue', $target->getSuspensionEndsAt() === null);
+check('La réactivation automatique est auditée', (int) $connection->fetchOne('SELECT COUNT(*) FROM audit_log WHERE action = :action', ['action' => 'EXPIRE_USER_SUSPENSION']) === 1);
+$tokenStorage->setToken(new UsernamePasswordToken($superAdmin, 'main', $superAdmin->getRoles()));
+$feedbackIndefinite = $service->suspend((string) $target->getUuid(), new UserSuspendRequest('Suspension indéterminée.'));
+check('Une suspension sans échéance reste indéterminée', $feedbackIndefinite->getData()?->suspensionEndsAt === null);
 
 // Filet de sécurité : rollback explicite (le shutdown function fait le reste).
 $connection->rollBack();

@@ -219,6 +219,9 @@ final readonly class UserService
         }
 
         $this->mapper->copyToEntity($request, $user);
+        if ($request->isActive !== null) {
+            $user->setSuspensionEndsAt(null);
+        }
         $this->em->flush();
 
         return $feedback
@@ -315,10 +318,18 @@ final readonly class UserService
                 ->autoInitFlush();
         }
 
+        $now = $this->dateTimeService->now();
+        if ($request->suspensionEndsAt !== null && $request->suspensionEndsAt <= $now) {
+            return $feedback->addError('suspensionEndsAt', 'La fin doit être postérieure à la date actuelle.')
+                ->setErrorFlushDescription('La période de suspension est invalide.')
+                ->setStatus(422)->autoInitFlush();
+        }
+
         $reason = trim((string) $request->reason);
 
-        $previous = ['isActive' => true];
+        $previous = ['isActive' => true, 'suspensionEndsAt' => null];
         $user->setIsActive(false);
+        $user->setSuspensionEndsAt($request->suspensionEndsAt);
         $user->setUpdatedAt($this->dateTimeService->now());
         $this->em->flush();
 
@@ -329,13 +340,14 @@ final readonly class UserService
             user: $this->security->getCurrentUser(),
             oldValues: $previous,
             newValues: $reason === ''
-                ? ['isActive' => false]
-                : ['isActive' => false, 'reason' => $reason],
+                ? ['isActive' => false, 'suspensionEndsAt' => $request->suspensionEndsAt?->format(DATE_ATOM)]
+                : ['isActive' => false, 'reason' => $reason, 'suspensionEndsAt' => $request->suspensionEndsAt?->format(DATE_ATOM)],
         );
 
         // Notifie l'utilisateur APRÈS le commit : l'email ne doit jamais
         // conditionner la persistance de la suspension.
-        $failed = $this->notificationService->notifyAccountSuspended($user, $reason === '' ? null : $reason);
+        $endsAtLabel = $request->suspensionEndsAt === null ? null : $this->dateTimeService->format($request->suspensionEndsAt, 'd/m/Y à H:i', DateTimeService::PRESENTATION_TIMEZONE);
+        $failed = $this->notificationService->notifyAccountSuspended($user, $reason === '' ? null : $reason, $endsAtLabel);
 
         if ($failed !== []) {
             $feedback->addWarning('emails', count($failed) . ' email(s) de notification n\'ont pas pu être envoyé(s).');
