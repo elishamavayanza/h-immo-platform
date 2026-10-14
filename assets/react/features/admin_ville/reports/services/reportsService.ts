@@ -143,6 +143,7 @@ export function normalizeAdminVilleReport(report: AdminVilleReport): AdminVilleR
         buildings: report.occupancyByBuilding,
         parcels: report.occupancyByParcel,
         arrears: report.arrears,
+        upcomingLeaseExpirations: report.upcomingLeaseExpirations,
         expenses: report.cityExpenses,
         workers: report.workers,
     };

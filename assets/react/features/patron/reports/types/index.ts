@@ -11,9 +11,9 @@
  * `ExpenseSummaryItem`) : on réutilise leurs types plutôt que de les
  * dupliquer. Les montants restent des chaînes décimales (jamais de flottant).
  */
-import type { ArrearsItem, ExpenseSummaryItem, OccupancyItem } from '../../../admin_immobilier/reports/types';
+import type { ArrearsItem, ExpenseSummaryItem, LeaseExpiryItem, OccupancyItem } from '../../../admin_immobilier/reports/types';
 
-export type { ArrearsItem, ExpenseSummaryItem, OccupancyItem };
+export type { ArrearsItem, ExpenseSummaryItem, LeaseExpiryItem, OccupancyItem };
 
 /** Résumé financier d'une période (`FinancialSummaryItem`). */
 export interface FinancialSummaryItem {
@@ -42,6 +42,7 @@ export interface PatronReport {
     occupancyByParcel: OccupancyItem[];
     occupancyByBuilding: OccupancyItem[];
     arrears: ArrearsItem[];
+    upcomingLeaseExpirations: LeaseExpiryItem[];
     expensesByCategory: ExpenseSummaryItem[];
     expensesByCity: ExpenseSummaryItem[];
     totalRevenues: string;
@@ -68,6 +69,7 @@ export interface PatronReportsData {
     cities: OccupancyItem[];
     parcels: OccupancyItem[];
     arrears: ArrearsItem[];
+    upcomingLeaseExpirations: LeaseExpiryItem[];
     expensesByCategory: ExpenseSummaryItem[];
     expensesByCity: ExpenseSummaryItem[];
     financialSummary: FinancialSummaryItem[];

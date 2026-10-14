@@ -6,7 +6,7 @@
  * d'activité quotidienne. Les types bruts proviennent donc du contrat
  * `/v1/reports/admin-immobilier` défini dans `../../reports/types`.
  */
-import type { ArrearsItem, ExpenseSummaryItem, OccupancyItem } from '../../reports/types';
+import type { ArrearsItem, ExpenseSummaryItem, LeaseExpiryItem, OccupancyItem } from '../../reports/types';
 
 /** Carte indicateur du tableau de bord. */
 export interface AdminImmobilierMetric {
@@ -30,6 +30,7 @@ export interface AdminImmobilierDashboardData {
     buildings: OccupancyItem[];
     /** Impayés à traiter, triés par retard côté backend. */
     arrears: ArrearsItem[];
+    upcomingLeaseExpirations: LeaseExpiryItem[];
     /** Dépenses agrégées par niveau du patrimoine. */
     expenses: ExpenseSummaryItem[];
 }

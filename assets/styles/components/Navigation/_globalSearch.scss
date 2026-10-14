@@ -1,0 +1,95 @@
+@use '../../baseVariables/variables' as *;
+
+.global-search {
+    position: relative;
+    z-index: 5;
+    width: min(100%, 34rem);
+    margin: 0 0 $spacing-3 auto;
+
+    &__field {
+        display: flex;
+        align-items: center;
+        gap: $spacing-2;
+        min-height: 42px;
+        padding: 0 $spacing-3;
+        color: $color-text-secondary;
+        background: $color-bg-card;
+        border: 1px solid $color-border;
+        border-radius: $radius-md;
+        transition: border-color $transition-fast, box-shadow $transition-fast;
+
+        &:focus-within {
+            border-color: $color-primary;
+            box-shadow: 0 0 0 3px color-mix(in srgb, #{$color-primary} 18%, transparent);
+        }
+
+        > span:first-child { font-size: 1.35rem; line-height: 1; }
+
+        input {
+            flex: 1;
+            min-width: 0;
+            border: 0;
+            outline: 0;
+            color: $color-text-primary;
+            background: transparent;
+            font: inherit;
+
+            &::placeholder { color: $color-text-muted; }
+        }
+    }
+
+    &__loading {
+        width: 16px;
+        height: 16px;
+        border: 2px solid $color-border-strong;
+        border-top-color: $color-primary;
+        border-radius: 50%;
+        animation: global-search-spin .7s linear infinite;
+    }
+
+    &__results {
+        position: absolute;
+        top: calc(100% + 6px);
+        right: 0;
+        left: 0;
+        max-height: min(60vh, 28rem);
+        overflow: auto;
+        padding: $spacing-1;
+        background: $color-bg-card;
+        border: 1px solid $color-border;
+        border-radius: $radius-md;
+        box-shadow: $shadow-lg;
+    }
+
+    &__message { margin: 0; padding: $spacing-3; color: $color-text-secondary; }
+    &__message--error { color: $color-danger; }
+
+    &__result {
+        display: grid;
+        grid-template-columns: auto minmax(0, 1fr) auto;
+        align-items: center;
+        gap: $spacing-3;
+        width: 100%;
+        padding: $spacing-2 $spacing-3;
+        color: $color-text-primary;
+        text-align: left;
+        background: transparent;
+        border: 0;
+        border-radius: $radius-sm;
+        cursor: pointer;
+
+        &:hover, &:focus-visible { outline: 0; background: $color-bg-card-hover; }
+    }
+
+    &__result-type { color: $color-primary; font-size: $font-size-xs; white-space: nowrap; }
+    &__result-copy { display: grid; min-width: 0; gap: 2px; }
+    &__result-copy strong, &__result-copy small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    &__result-copy small { color: $color-text-muted; }
+}
+
+@keyframes global-search-spin { to { transform: rotate(360deg); } }
+
+@media (max-width: 480px) {
+    .global-search { width: 100%; }
+    .global-search__results { max-height: 50vh; }
+}

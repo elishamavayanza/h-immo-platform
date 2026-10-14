@@ -84,6 +84,7 @@ export async function fetchPatronDashboard(organizationUuid: string): Promise<Pa
         ),
         cities: report.occupancyByCity,
         arrears: report.arrears,
+        upcomingLeaseExpirations: report.upcomingLeaseExpirations,
         expenses: report.expensesByCity,
     };
 }

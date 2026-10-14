@@ -1,6 +1,7 @@
 import { Card } from '../../../../components/UI/Card';
 import { Badge } from '../../../../components/UI/Badge';
 import { InlineSummary } from '../../../shared/components/InlineSummary';
+import { UpcomingLeaseExpirations } from '../../../shared/components/UpcomingLeaseExpirations';
 import { formatInteger, formatMoney, formatPercent } from '../../../../../utils/format.utils';
 import { absoluteCents, amountBarPercent } from '../../../shared/reports/amountChart';
 import type { ArrearsItem, ExpenseSummaryItem, FinancialSummaryItem, OccupancyItem, PatronReportsData } from '../types';
@@ -116,6 +117,7 @@ export function ReportsOverview({ data }: { data: PatronReportsData }) {
     return (
         <div className="reports-page__content">
             <InlineSummary items={data.metrics.map((metric) => ({ label: metric.label, value: metric.value, detail: metric.helper }))} />
+            <UpcomingLeaseExpirations items={data.upcomingLeaseExpirations} />
 
             <section className="reports-lower-grid">
                 <Card className="reports-panel reports-breakdown" padding="medium">

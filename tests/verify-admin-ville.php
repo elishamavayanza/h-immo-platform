@@ -279,6 +279,7 @@ $makeLease = static function (string $ref, Organization $org, Unit $unit, Tenant
         ->setUnit($unit)
         ->setReference($ref . '-' . bin2hex(random_bytes(2)))
         ->setStartDate(new \DateTimeImmutable('now -60 days'))
+        ->setEndDate(new \DateTimeImmutable('now +10 days'))
         ->setMonthlyRent('500.00')
         ->setCurrency(Currency::USD)
         ->setStatus(LeaseStatus::ACTIVE);
@@ -384,6 +385,9 @@ $uuidBuildingB1 = $chainB1['building']->getUuid()->toRfc4122();
 $uuidUnitA1 = $chainA1['unit']->getUuid()->toRfc4122();
 $uuidUnitB1 = $chainB1['unit']->getUuid()->toRfc4122();
 $uuidRentA1 = $rentA1->getUuid()->toRfc4122();
+$uuidLeaseA1 = $leaseA1->getUuid()->toRfc4122();
+$uuidLeaseA2 = $leaseA2->getUuid()->toRfc4122();
+$uuidLeaseB1 = $leaseB1->getUuid()->toRfc4122();
 $uuidTenantLeaseA1 = $tenantLeaseA1->getUuid()->toRfc4122();
 $uuidTenantLeaseA2 = $tenantLeaseA2->getUuid()->toRfc4122();
 $uuidTenantNoLease = $tenantNoLease->getUuid()->toRfc4122();
@@ -601,6 +605,16 @@ check(
     'Rapport : seules les dépenses de A1 sont agrégées (totalExpenses = 120.00, pas 460.00)',
     ($report['totalExpenses'] ?? null) === '120.00',
     'totalExpenses=' . ($report['totalExpenses'] ?? 'null')
+);
+$upcomingLeaseUuids = is_array($report['upcomingLeaseExpirations'] ?? null)
+    ? array_map(static fn ($lease) => $lease['leaseUuid'] ?? null, $report['upcomingLeaseExpirations'])
+    : [];
+check(
+    'Rapport : les échéances proches restent limitées aux baux de la ville attribuée',
+    in_array($uuidLeaseA1, $upcomingLeaseUuids, true)
+        && !in_array($uuidLeaseA2, $upcomingLeaseUuids, true)
+        && !in_array($uuidLeaseB1, $upcomingLeaseUuids, true),
+    'leases=' . implode(',', $upcomingLeaseUuids)
 );
 
 [$status, $payload, $raw] = $request(

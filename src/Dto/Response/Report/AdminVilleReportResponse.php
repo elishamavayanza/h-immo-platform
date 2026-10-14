@@ -68,6 +68,10 @@ final class AdminVilleReportResponse
 
         #[OA\Property(description: 'Devise principale', example: 'CDF')]
         public string $currency = 'CDF',
+
+        /** @var list<LeaseExpiryItem> */
+        #[OA\Property(type: 'array', items: new OA\Items(ref: LeaseExpiryItem::class))]
+        public array $upcomingLeaseExpirations = [],
     ) {
     }
 }

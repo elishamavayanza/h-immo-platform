@@ -29,6 +29,16 @@ export interface ArrearsItem {
     currency: string;
 }
 
+export interface LeaseExpiryItem {
+    leaseUuid: string;
+    leaseReference: string;
+    tenantName: string;
+    unitLabel: string;
+    cityName: string;
+    endDate: string;
+    daysRemaining: number;
+}
+
 export interface ExpenseSummaryItem {
     category: string;
     level: string;
@@ -57,6 +67,7 @@ export interface AdminVilleReport {
     occupancyByParcel: OccupancyItem[];
     occupancyByBuilding: OccupancyItem[];
     arrears: ArrearsItem[];
+    upcomingLeaseExpirations: LeaseExpiryItem[];
     cityExpenses: ExpenseSummaryItem[];
     workers: WorkerActivityItem[];
     totalUnits: number;
@@ -83,6 +94,7 @@ export interface AdminVilleReportsData {
     buildings: OccupancyItem[];
     parcels: OccupancyItem[];
     arrears: ArrearsItem[];
+    upcomingLeaseExpirations: LeaseExpiryItem[];
     expenses: ExpenseSummaryItem[];
     workers: WorkerActivityItem[];
 }

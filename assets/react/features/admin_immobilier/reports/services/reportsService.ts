@@ -175,6 +175,7 @@ export function normalizeAdminImmobilierReport(report: AdminImmobilierReport): A
         metrics,
         buildings: report.occupancyByBuilding,
         arrears: report.arrears,
+        upcomingLeaseExpirations: report.upcomingLeaseExpirations,
         expenses: report.propertyExpenses,
         // 6 derniers mois : le graphe de la page ne montre que ce revenu.
         evolution: report.occupancyEvolution.slice(-12),

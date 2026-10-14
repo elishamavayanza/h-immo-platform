@@ -24,6 +24,7 @@ import { useMediaQuery } from '../../../hooks/useMediaQuery';
 import { MEDIA_QUERIES } from '../../../services/device';
 import { mediaHref } from '../../../features/shared/media/services/mediaService';
 import { WorkspaceSwitcher } from './WorkspaceSwitcher';
+import { GlobalSearch } from '../../../features/shared/components/GlobalSearch';
 
 /**
  * Marque du sidebar : logo + "IMMO" + nom de l'organisation active sur sa propre ligne.
@@ -279,6 +280,7 @@ return (
                         `/app/access-denied`) ni le 403 d'une page réservée à un
                         autre rôle. Le chargement des rôles est déjà traité
                         *avant* ce point par le `Loading` ci-dessus. */}
+                    <GlobalSearch />
                     <Outlet />
                     {isPageTransitionLoading && <div className="main-layout__route-transition" aria-hidden="true" />}
                 </main>

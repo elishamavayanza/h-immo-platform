@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from 'react';
+import { useEffect, useState, type FormEvent } from 'react';
 import { useSearchParams } from 'react-router-dom';
 
 import { OrganizationSummary } from '../../../shared/components/OrganizationSummary';
@@ -74,6 +74,9 @@ export function LocatairesPage({ readOnly = false }: { readOnly?: boolean } = {}
         pending, requestArchive, cancelArchive, confirmArchive, isArchiving,
         createTenant, updateTenant, createLease, activateLease,
     } = useLocataires();
+    useEffect(() => {
+        setSearch(searchParams.get('search') ?? '');
+    }, [searchParams, setSearch]);
     const rows = allRows.filter((row) => (!parcelUuid || row.parcelId === parcelUuid) && (!buildingUuid || row.buildingId === buildingUuid));
 
     const [tenantModalOpen, setTenantModalOpen] = useState(false);

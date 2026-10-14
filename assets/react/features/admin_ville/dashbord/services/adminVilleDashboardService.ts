@@ -83,6 +83,7 @@ export async function fetchAdminVilleDashboard(cityUuid: string): Promise<AdminV
         ),
         buildings: report.occupancyByBuilding,
         arrears: report.arrears,
+        upcomingLeaseExpirations: report.upcomingLeaseExpirations,
         expenses: report.cityExpenses,
     };
 }

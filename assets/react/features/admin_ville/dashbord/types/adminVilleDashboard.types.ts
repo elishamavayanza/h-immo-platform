@@ -6,7 +6,7 @@
  * indicateurs d'activité. Les types bruts proviennent donc du contrat de
  * `../../reports/types`.
  */
-import type { ArrearsItem, ExpenseSummaryItem, OccupancyItem } from '../../reports/types';
+import type { ArrearsItem, ExpenseSummaryItem, LeaseExpiryItem, OccupancyItem } from '../../reports/types';
 
 /** Carte indicateur du tableau de bord. */
 export interface AdminVilleMetric {
@@ -30,6 +30,7 @@ export interface AdminVilleDashboardData {
     buildings: OccupancyItem[];
     /** Impayés à traiter, triés par retard côté backend. */
     arrears: ArrearsItem[];
+    upcomingLeaseExpirations: LeaseExpiryItem[];
     /** Dépenses agrégées par niveau du patrimoine. */
     expenses: ExpenseSummaryItem[];
 }
