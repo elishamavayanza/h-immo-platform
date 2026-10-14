@@ -1,6 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
 
-import { onSessionExpired } from '../../../services/api/interceptors';
+import { onSessionExpired, SESSION_REAUTH_NOTICE_KEY } from '../../../services/api/interceptors';
 import { ApiError, type SessionUserResponse } from '../../../services/api/api.types';
 import { authService } from '../../features/auth/services/authService';
 import { tokenStorage } from '../../../services/storage/storage.service';
@@ -62,9 +62,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             try {
                 const { data } = await authService.me();
                 if (!cancelled) setUser(data);
-            } catch {
+            } catch (cause) {
                 // 401 ou réseau : le jeton n'est plus exploitable. Il est
                 // purgé (le 401 l'a déjà fait via `authErrorInterceptor`).
+                if (cause instanceof ApiError && cause.status === 401) {
+                    try { window.sessionStorage.setItem(SESSION_REAUTH_NOTICE_KEY, 'expired'); } catch { /* stockage désactivé */ }
+                }
                 tokenStorage.clearAll();
                 if (!cancelled) setUser(null);
             } finally {

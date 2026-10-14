@@ -50,7 +50,7 @@ const MOON_ICON = (
     </svg>
 );
 
-export function LoginForm() {
+export function LoginForm({ notice }: { notice?: string | null } = {}) {
     const navigate = useNavigate();
     const [isLightTheme, setIsLightTheme] = useState(
         () => typeof document !== 'undefined' && document.documentElement.dataset.theme === 'light',
@@ -96,6 +96,8 @@ export function LoginForm() {
                     Accédez à votre espace de gestion immobilière.
                 </p>
             </header>
+
+            {notice && <Alert variant="info">{notice}</Alert>}
 
             <Form
                 layout="vertical"
