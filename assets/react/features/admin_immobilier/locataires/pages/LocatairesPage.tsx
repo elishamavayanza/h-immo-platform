@@ -13,6 +13,7 @@ import { Input } from '../../../../components/Forms/Input';
 import { Textarea } from '../../../../components/Forms/Textarea';
 import { FormField } from '../../../../components/Forms/FormField';
 import { Modal } from '../../../../components/UI/Modal';
+import { PrivateDocumentsModal } from '../../../shared/finance/components/PrivateDocumentsModal';
 import { useOrganization } from '../../../../app/providers/OrganizationProvider';
 import { useAdminCity } from '../../../../app/providers/AdminCityProvider';
 import { useLocataires } from '../hooks/useLocataires';
@@ -100,6 +101,7 @@ export function LocatairesPage({ readOnly = false }: { readOnly?: boolean } = {}
     });
     const [leaseFormErrors, setLeaseFormErrors] = useState<Record<string, string>>({});
     const [submittingLease, setSubmittingLease] = useState(false);
+    const [documentsTarget, setDocumentsTarget] = useState<LocataireRow | null>(null);
 
     const openCreate = () => {
         setForm({ ...EMPTY_TENANT_FORM, cityUuid: activeCityUuid });
@@ -226,7 +228,7 @@ export function LocatairesPage({ readOnly = false }: { readOnly?: boolean } = {}
         }
     };
 
-    let body = <LocatairesTable rows={rows} role={organizationRole} onEdit={openEdit} onArchive={requestArchive} onNewLease={openNewLease} onActivateLease={setLeaseToActivate} readOnly={readOnly} />;
+    let body = <LocatairesTable rows={rows} role={organizationRole} onEdit={openEdit} onArchive={requestArchive} onNewLease={openNewLease} onActivateLease={setLeaseToActivate} onDocuments={setDocumentsTarget} readOnly={readOnly} />;
     if (isLoading) {
         body = <EmptyState icon={<Spinner size="large" />} title="Chargement des locataires…" description="Récupération des fiches et de leurs baux en cours." />;
     } else if (error) {
@@ -346,5 +348,16 @@ export function LocatairesPage({ readOnly = false }: { readOnly?: boolean } = {}
                 </FormField>
             </form>
         </Modal>
+        {currentOrganization?.uuid && documentsTarget?.leaseUuid && (
+            <PrivateDocumentsModal
+                open
+                onClose={() => setDocumentsTarget(null)}
+                organizationUuid={currentOrganization.uuid}
+                relatedType="lease"
+                relatedUuid={documentsTarget.leaseUuid}
+                cityUuid={documentsTarget.cityUuid ?? undefined}
+                canDelete={canDo(organizationRole, 'delete_document')}
+            />
+        )}
     </main>;
 }

@@ -420,11 +420,13 @@ check('ADMIN_VILLE ne peut pas modifier le logo de l’organisation', $status ==
 $imageContents = base64_decode('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+j3ioAAAAASUVORK5CYII=', true);
 $uploadedPaths = [];
 $tempUploadPaths = [];
-register_shutdown_function(static function () use (&$uploadedPaths, &$tempUploadPaths): void {
+$privateDocumentPaths = [];
+register_shutdown_function(static function () use (&$uploadedPaths, &$tempUploadPaths, &$privateDocumentPaths): void {
     foreach ($uploadedPaths as $path) {
         @unlink(dirname(__DIR__) . '/public/uploads/' . $path);
     }
     foreach ($tempUploadPaths as $path) @unlink($path);
+    foreach ($privateDocumentPaths as $path) @unlink(dirname(__DIR__) . '/var/private-documents/' . $path);
 });
 $uploadSinglePhoto = static function (string $uri, string $field) use ($kernel, $token, $imageContents, &$tempUploadPaths): array {
     $server = ['REQUEST_METHOD' => 'POST', 'REQUEST_URI' => $uri, 'HTTP_HOST' => 'localhost', 'HTTP_AUTHORIZATION' => 'Bearer ' . $token];
@@ -439,6 +441,92 @@ $uploadSinglePhoto = static function (string $uri, string $field) use ($kernel, 
 
     return $result;
 };
+
+section('Trésorerie : solde d’ouverture et isolation de ville');
+[$status, $cashPayload, $cashRaw] = $request('PUT', '/api/v1/treasury/cash-balance?organizationUuid=' . $uuidOrgA . '&cityUuid=' . $uuidCityA1, [
+    'currency' => 'USD', 'openingBalance' => '1000.25', 'openingDate' => (new \DateTimeImmutable('today'))->format('Y-m-d'),
+], $token);
+check('ADMIN_VILLE initialise la caisse de sa ville avec une somme décimale exacte', $status === 200 && ($cashPayload['data']['openingBalance'] ?? null) === '1000.25', 'obtenu ' . $status . ' | ' . substr($cashRaw, 0, 250));
+[$status, $cashPayload] = $request('GET', '/api/v1/treasury/cash-balance?organizationUuid=' . $uuidOrgA . '&cityUuid=' . $uuidCityA1 . '&currency=USD', null, $token);
+check('ADMIN_VILLE lit le solde courant calculé depuis les mouvements en espèces', $status === 200 && ($cashPayload['data']['balance'] ?? null) === '1000.25', 'obtenu ' . $status);
+[$status] = $request('GET', '/api/v1/treasury/cash-balance?organizationUuid=' . $uuidOrgA . '&cityUuid=' . $uuidCityA2 . '&currency=USD', null, $token);
+check('ADMIN_VILLE ne lit pas le solde d’une ville non attribuée', $status === 403, 'obtenu ' . $status);
+[$status] = $request('PUT', '/api/v1/treasury/cash-balance?organizationUuid=' . $uuidOrgA . '&cityUuid=' . $uuidCityB1, [
+    'currency' => 'USD', 'openingBalance' => '9.00', 'openingDate' => (new \DateTimeImmutable('today'))->format('Y-m-d'),
+], $token);
+check('ADMIN_VILLE ne modifie pas la caisse d’une autre organisation', in_array($status, [403, 422], true), 'obtenu ' . $status);
+
+section('Maintenance : interventions autorisées et isolation stricte par ville');
+$maintenancePayload = [
+    'organizationUuid' => $uuidOrgA, 'cityUuid' => $uuidCityA1,
+    'title' => 'Réparer la clôture', 'description' => 'Inspection et réparation de la clôture.',
+    'priority' => 'normal', 'parcelUuid' => $uuidParcelA1,
+];
+[$status, $maintenanceCreated] = $request('POST', '/api/v1/maintenance/work-orders', $maintenancePayload, $token);
+$maintenanceUuid = $maintenanceCreated['data']['uuid'] ?? null;
+check('ADMIN_VILLE crée une intervention sur un bien de sa ville', $status === 201 && is_string($maintenanceUuid), 'obtenu ' . $status);
+[$status, $maintenanceList] = $request('GET', '/api/v1/maintenance/work-orders?organizationUuid=' . $uuidOrgA . '&cityUuid=' . $uuidCityA1, null, $token);
+check('la liste des interventions est limitée à sa ville attribuée', $status === 200 && count($maintenanceList['data'] ?? []) === 1, 'obtenu ' . $status);
+[$status] = $request('GET', '/api/v1/maintenance/work-orders?organizationUuid=' . $uuidOrgA . '&cityUuid=' . $uuidCityA2, null, $token);
+check('ADMIN_VILLE ne lit pas les interventions d’une ville non attribuée', $status === 403, 'obtenu ' . $status);
+[$status] = $request('POST', '/api/v1/maintenance/work-orders', array_merge($maintenancePayload, ['cityUuid' => $uuidCityA2, 'parcelUuid' => $uuidParcelA2]), $token);
+check('ADMIN_VILLE ne crée pas une intervention dans une ville non attribuée', $status === 403, 'obtenu ' . $status);
+if (is_string($maintenanceUuid)) {
+    [$status] = $request('PATCH', '/api/v1/maintenance/work-orders/' . $maintenanceUuid . '/status', [
+        'organizationUuid' => $uuidOrgA, 'cityUuid' => $uuidCityA1, 'status' => 'in_progress',
+    ], $token);
+    check('ADMIN_VILLE fait démarrer une intervention autorisée', $status === 200, 'obtenu ' . $status);
+    [$status] = $request('PATCH', '/api/v1/maintenance/work-orders/' . $maintenanceUuid . '/status', [
+        'organizationUuid' => $uuidOrgA, 'cityUuid' => $uuidCityA1, 'status' => 'completed',
+    ], $token);
+    check('ADMIN_VILLE termine une intervention démarrée', $status === 200, 'obtenu ' . $status);
+}
+
+section('Documents privés : consultation et upload bornés à la ville');
+[$status, $leaseDocsPayload] = $request('GET', '/api/v1/documents?organizationUuid=' . $uuidOrgA . '&cityUuid=' . $uuidCityA1 . '&relatedType=lease&relatedUuid=' . $uuidLeaseA1, null, $token);
+check('ADMIN_VILLE consulte les documents du bail de sa ville', $status === 200 && is_array($leaseDocsPayload['data'] ?? null), 'obtenu ' . $status);
+[$status] = $request('GET', '/api/v1/documents?organizationUuid=' . $uuidOrgA . '&cityUuid=' . $uuidCityA1 . '&relatedType=lease&relatedUuid=' . $uuidLeaseA2, null, $token);
+check('ADMIN_VILLE ne consulte pas les documents d’un bail d’une autre ville', $status === 403, 'obtenu ' . $status);
+[$status, $docsPayload] = $request('GET', '/api/v1/documents?organizationUuid=' . $uuidOrgA . '&cityUuid=' . $uuidCityA1 . '&relatedType=expense&relatedUuid=' . $uuidExpenseA1, null, $token);
+check('ADMIN_VILLE consulte les pièces de sa ville', $status === 200 && is_array($docsPayload['data'] ?? null), 'obtenu ' . $status);
+[$status] = $request('GET', '/api/v1/documents?organizationUuid=' . $uuidOrgA . '&cityUuid=' . $uuidCityA2 . '&relatedType=expense&relatedUuid=' . $uuidExpenseA2, null, $token);
+check('ADMIN_VILLE ne consulte pas les pièces d’une ville non attribuée', $status === 403, 'obtenu ' . $status);
+$documentPath = tempnam(sys_get_temp_dir(), 'private-document-');
+file_put_contents($documentPath, $imageContents);
+$tempUploadPaths[] = $documentPath;
+$documentFile = new Symfony\Component\HttpFoundation\File\UploadedFile($documentPath, 'facture.png', 'image/png', UPLOAD_ERR_OK, true);
+$documentUri = '/api/v1/documents';
+$documentRequest = Request::create($documentUri, 'POST', [
+    'organizationUuid' => $uuidOrgA, 'relatedType' => 'expense', 'relatedUuid' => $uuidExpenseA1, 'category' => 'invoice',
+], [], ['file' => $documentFile], ['REQUEST_METHOD' => 'POST', 'REQUEST_URI' => $documentUri, 'HTTP_HOST' => 'localhost', 'HTTP_AUTHORIZATION' => 'Bearer ' . $token]);
+$documentResponse = $kernel->handle($documentRequest);
+$status = $documentResponse->getStatusCode();
+$documentPayload = json_decode((string) $documentResponse->getContent(), true);
+$kernel->terminate($documentRequest, $documentResponse);
+check('ADMIN_VILLE ajoute une pièce justificative privée à une dépense autorisée', $status === 201, 'obtenu ' . $status);
+if ($status === 201) {
+    $privateDocumentPaths = $connection->fetchFirstColumn('SELECT storage_name FROM private_document WHERE related_uuid = ?', [$uuidExpenseA1]);
+    $documentUuid = $documentPayload['data']['uuid'] ?? null;
+    [$listStatus, $listedDocuments] = $request('GET', '/api/v1/documents?organizationUuid=' . $uuidOrgA . '&cityUuid=' . $uuidCityA1 . '&relatedType=expense&relatedUuid=' . $uuidExpenseA1, null, $token);
+    check('La pièce ajoutée apparaît dans la liste limitée à la ressource', $listStatus === 200 && count($listedDocuments['data'] ?? []) === 1, 'obtenu ' . $listStatus);
+    if (is_string($documentUuid)) {
+        [$downloadStatus] = $request('GET', '/api/v1/documents/' . $documentUuid . '/download', null, $token);
+        check('ADMIN_VILLE télécharge sa pièce justificative privée', $downloadStatus === 200, 'obtenu ' . $downloadStatus);
+        [$deleteStatus] = $request('DELETE', '/api/v1/documents/' . $documentUuid, null, $token);
+        check('ADMIN_VILLE ne peut pas supprimer une pièce comptable', $deleteStatus === 403, 'obtenu ' . $deleteStatus);
+    }
+}
+$foreignDocumentUri = '/api/v1/documents';
+$foreignDocumentPath = tempnam(sys_get_temp_dir(), 'private-document-foreign-');
+file_put_contents($foreignDocumentPath, $imageContents);
+$tempUploadPaths[] = $foreignDocumentPath;
+$foreignDocumentRequest = Request::create($foreignDocumentUri, 'POST', [
+    'organizationUuid' => $uuidOrgA, 'relatedType' => 'expense', 'relatedUuid' => $uuidExpenseA2, 'category' => 'invoice',
+], [], ['file' => new Symfony\Component\HttpFoundation\File\UploadedFile($foreignDocumentPath, 'facture.png', 'image/png', UPLOAD_ERR_OK, true)], ['REQUEST_METHOD' => 'POST', 'REQUEST_URI' => $foreignDocumentUri, 'HTTP_HOST' => 'localhost', 'HTTP_AUTHORIZATION' => 'Bearer ' . $token]);
+$foreignDocumentResponse = $kernel->handle($foreignDocumentRequest);
+$foreignDocumentStatus = $foreignDocumentResponse->getStatusCode();
+$kernel->terminate($foreignDocumentRequest, $foreignDocumentResponse);
+check('ADMIN_VILLE ne joint pas de document à une ressource d’une ville non attribuée', $foreignDocumentStatus === 403, 'obtenu ' . $foreignDocumentStatus);
 $trackUploadedPaths = static function (array $payload) use (&$uploadedPaths): void {
     foreach (($payload['data']['uploaded'] ?? []) as $file) {
         if (is_string($file['path'] ?? null)) $uploadedPaths[] = $file['path'];
@@ -643,7 +731,7 @@ check(
     "obtenu {$status} | raw=" . substr($raw, 0, 250)
 );
 
-[$status, $payload, $raw] = $request('GET', '/api/v1/reports/admin-ville/' . $uuidCityA1 . '?format=pdf', null, $token);
+[$status, $payload, $raw] = $request('GET', '/api/v1/reports/admin-ville/' . $uuidCityA1 . '?format=pdf&periodFrom=' . gmdate('Y-m-01') . '&periodTo=' . gmdate('Y-m-d'), null, $token);
 check(
     'GET /api/v1/reports/admin-ville/{A1}?format=pdf : flux PDF servi',
     $status === 200 && str_starts_with((string) $raw, '%PDF'),
@@ -829,6 +917,13 @@ check(
 
 // ---------------------------------------------------------------------
 section('Annulation de la transaction');
+
+[$expenseStatus] = $request('POST', '/api/v1/expenses', [
+    'cityUuid' => $uuidCityA1, 'category' => 'maintenance', 'amount' => '25.00', 'currency' => 'USD',
+    'expenseDate' => gmdate('Y-m-d'), 'method' => 'cash', 'notes' => 'Vérification de caisse',
+], $token);
+[$cashStatusAfterExpense, $cashAfterExpense] = $request('GET', '/api/v1/treasury/cash-balance?organizationUuid=' . $uuidOrgA . '&cityUuid=' . $uuidCityA1 . '&currency=USD', null, $token);
+check('Une dépense en espèces réduit exactement le solde de caisse', in_array($expenseStatus, [200, 201], true) && $cashStatusAfterExpense === 200 && ($cashAfterExpense['data']['balance'] ?? null) === '975.25', 'création=' . $expenseStatus . ', solde=' . ($cashAfterExpense['data']['balance'] ?? 'absent'));
 
 $rollback();
 

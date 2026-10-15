@@ -125,7 +125,7 @@ $expected = [
     'audit_log', 'building', 'city', 'exchange_rate', 'expense', 'lease',
     'organization', 'organization_user', 'parcel', 'password_reset_token',
     'payment', 'rent', 'revoked_token', 'tenant', 'unit', 'unit_photo',
-    'user', 'user_city', 'worker', 'worker_assignment',
+    'user', 'user_city', 'worker', 'worker_assignment', 'private_document', 'cash_opening_balance', 'maintenance_work_order',
 ];
 
 $missing = array_values(array_diff($expected, $tables));

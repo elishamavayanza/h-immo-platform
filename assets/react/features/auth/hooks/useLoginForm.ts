@@ -15,6 +15,7 @@ import { useCallback, useState, type FormEvent } from 'react';
 
 import { useAuth } from '../../../app/providers/AuthProvider';
 import { ApiError } from '../../../../services/api/api.types';
+import { queueLoginNetworkError } from '../../../services/clientErrorReporting';
 import type {
     LoginFormErrors,
     LoginFormField,
@@ -40,6 +41,21 @@ function validate(values: LoginFormState['values']): LoginFormErrors {
     }
 
     return errors;
+}
+
+function getLoginErrorMessage(error: unknown): string {
+    if (!(error instanceof ApiError)) {
+        return 'Impossible de joindre le serveur. Vérifiez votre connexion puis réessayez.';
+    }
+
+    if (import.meta.env.DEV && typeof error.data.transportError === 'object' && error.data.transportError !== null) {
+        const cause = error.data.transportError as { name?: unknown; message?: unknown };
+        if (typeof cause.message === 'string' && cause.message !== '') {
+            return `${error.message} (${String(cause.name ?? 'NetworkError')}: ${cause.message})`;
+        }
+    }
+
+    return error.message;
 }
 
 export const INITIAL_LOGIN_TOUCHED: LoginFormTouched = { email: false, password: false };
@@ -92,11 +108,8 @@ export function useLoginForm(onSuccess: () => void): UseLoginFormReturn {
             await login(values.email.trim(), values.password);
             onSuccess();
         } catch (error) {
-            setServerError(
-                error instanceof ApiError
-                    ? error.message
-                    : 'Impossible de joindre le serveur. Vérifiez votre connexion puis réessayez.',
-            );
+            if (error instanceof ApiError) queueLoginNetworkError(error);
+            setServerError(getLoginErrorMessage(error));
         } finally {
             setIsSubmitting(false);
         }

@@ -11,8 +11,8 @@ use Symfony\Component\Validator\Constraints as Assert;
 final readonly class ClientErrorReportRequest
 {
     public function __construct(
-        #[OA\Property(description: 'Origine technique de l’erreur', enum: ['react_render', 'window_error', 'unhandled_rejection'])]
-        #[Assert\Choice(choices: ['react_render', 'window_error', 'unhandled_rejection'])]
+        #[OA\Property(description: 'Origine technique de l’erreur', enum: ['react_render', 'window_error', 'unhandled_rejection', 'api_network'])]
+        #[Assert\Choice(choices: ['react_render', 'window_error', 'unhandled_rejection', 'api_network'])]
         public string $kind,
 
         #[OA\Property(description: 'Message technique, sans données saisies par l’utilisateur', maxLength: 1200)]

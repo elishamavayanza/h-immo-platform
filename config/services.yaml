@@ -17,6 +17,7 @@ parameters:
     # surchargeables dans `.env.local`, et un défaut est fourni dans `.env`.
     app.frontend_url: '%env(APP_FRONTEND_URL)%'
     mailer.from: '%env(MAILER_FROM_ADDRESS)%'
+    app.private_document_retention_days: '%env(int:PRIVATE_DOCUMENT_RETENTION_DAYS)%'
 
 services:
     # default configuration for services in *this* file
@@ -52,3 +53,7 @@ services:
         arguments:
             $jwtSecret: '%env(JWT_SECRET)%'
             $jwtTtl: '%env(int:JWT_TTL)%'
+
+    App\Command\PurgePrivateDocumentsCommand:
+        arguments:
+            $retentionDays: '%app.private_document_retention_days%'

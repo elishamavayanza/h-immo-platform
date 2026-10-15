@@ -1,0 +1,70 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Controller\Api\Expense;
+
+use App\Dto\Feedback;
+use App\Dto\Request\Expense\CashOpeningBalanceRequest;
+use App\Entity\Identity\User;
+use App\Service\Expense\CashBalanceService;
+use App\Trait\FeedbackTrait;
+use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
+use Symfony\Component\HttpFoundation\JsonResponse;
+use Symfony\Component\HttpFoundation\Request;
+use Symfony\Component\HttpKernel\Attribute\MapRequestPayload;
+use Symfony\Component\Routing\Attribute\Route;
+use Symfony\Component\Security\Http\Attribute\IsGranted;
+
+#[Route('/api/v1/treasury/cash-balance', name: 'api_treasury_cash_balance_')]
+#[IsGranted('ROLE_USER')]
+final class CashBalanceController extends AbstractController
+{
+    use FeedbackTrait;
+
+    public function __construct(private readonly CashBalanceService $balances)
+    {
+    }
+
+    #[Route('', name: 'view', methods: ['GET'])]
+    public function view(Request $request): JsonResponse
+    {
+        $user = $this->getUser();
+        if (!$user instanceof User) {
+            return $this->json((new Feedback())->setErrorFlushDescription('Utilisateur non authentifié.')->setStatus(401)->autoInitFlush(), 401);
+        }
+        try {
+            $data = $this->balances->view(
+                $user,
+                (string) $request->query->get('organizationUuid', ''),
+                (string) $request->query->get('cityUuid', ''),
+                (string) $request->query->get('currency', ''),
+            );
+        } catch (\InvalidArgumentException $error) {
+            return $this->json((new Feedback())->addError('scope', $error->getMessage())->setErrorFlushDescription($error->getMessage())->setStatus(422)->autoInitFlush(), 422);
+        }
+
+        return $this->json((new Feedback())->setData($data)->setStatus(200)->autoInitFlush(), 200);
+    }
+
+    #[Route('', name: 'update', methods: ['PUT'])]
+    public function update(Request $request, #[MapRequestPayload] CashOpeningBalanceRequest $payload): JsonResponse
+    {
+        $user = $this->getUser();
+        if (!$user instanceof User) {
+            return $this->json((new Feedback())->setErrorFlushDescription('Utilisateur non authentifié.')->setStatus(401)->autoInitFlush(), 401);
+        }
+        try {
+            $data = $this->balances->set(
+                $user,
+                (string) $request->query->get('organizationUuid', ''),
+                (string) $request->query->get('cityUuid', ''),
+                $payload,
+            );
+        } catch (\InvalidArgumentException $error) {
+            return $this->json((new Feedback())->addError('balance', $error->getMessage())->setErrorFlushDescription($error->getMessage())->setStatus(422)->autoInitFlush(), 422);
+        }
+
+        return $this->json((new Feedback())->setData($data)->setFlushDescription('Solde d’ouverture enregistré.')->setStatus(200)->autoInitFlush(), 200);
+    }
+}

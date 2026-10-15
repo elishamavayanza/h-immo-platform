@@ -568,7 +568,7 @@ final readonly class ReportService
 
             $revenueSeries[] = new RevenuePoint(
                 label: $this->dateTime->format($monthStart, 'M'),
-                revenue: (float) $monthRevenue,
+                revenue: $monthRevenue,
                 subscriptions: $activeOrgs, // approx
             );
         }

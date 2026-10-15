@@ -1226,6 +1226,9 @@ final class SecurityService implements SecurityServiceInterface
             SecurityAction::UPDATE_WORKER_ASSIGNMENT, SecurityAction::DELETE_WORKER_ASSIGNMENT,
 
             SecurityAction::VIEW_EXPENSE, SecurityAction::CREATE_EXPENSE, SecurityAction::UPDATE_EXPENSE, SecurityAction::DELETE_EXPENSE,
+            SecurityAction::VIEW_MAINTENANCE, SecurityAction::CREATE_MAINTENANCE, SecurityAction::UPDATE_MAINTENANCE,
+            SecurityAction::VIEW_DOCUMENT, SecurityAction::CREATE_DOCUMENT, SecurityAction::DELETE_DOCUMENT,
+            SecurityAction::MANAGE_TREASURY_BALANCE,
 
             SecurityAction::VIEW_REPORT, SecurityAction::EXPORT_REPORT,
 
@@ -1277,6 +1280,9 @@ final class SecurityService implements SecurityServiceInterface
             SecurityAction::UPDATE_WORKER_ASSIGNMENT, SecurityAction::DELETE_WORKER_ASSIGNMENT,
 
             SecurityAction::VIEW_EXPENSE, SecurityAction::CREATE_EXPENSE, SecurityAction::UPDATE_EXPENSE,
+            SecurityAction::VIEW_MAINTENANCE, SecurityAction::CREATE_MAINTENANCE, SecurityAction::UPDATE_MAINTENANCE,
+            SecurityAction::VIEW_DOCUMENT, SecurityAction::CREATE_DOCUMENT,
+            SecurityAction::MANAGE_TREASURY_BALANCE,
 
             SecurityAction::VIEW_REPORT, SecurityAction::EXPORT_REPORT,
         ];

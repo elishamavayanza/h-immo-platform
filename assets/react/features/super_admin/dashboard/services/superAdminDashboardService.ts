@@ -56,7 +56,7 @@ function mapKind(kind: string): ActivityKind {
 
 interface SuperAdminDashboardResponse {
     kpis: Array<{ id: string; label: string; value: string; delta: number; trend: string; positive: boolean; helper: string; tone: string; icon: string }>;
-    revenueSeries: Array<{ label: string; revenue: number; subscriptions: number }>;
+    revenueSeries: Array<{ label: string; revenue: string; subscriptions: number }>;
     recentOrganizations: Array<{ uuid: string; name: string; code: string; status: string; cityCount: number; unitCount: number; occupancyRate: number; revenues: string; expenses: string; arrears: string }>;
     activity: Array<{ id: string; actor: string; action: string; target: string; timestamp: string; kind: string }>;
     health: Array<{ id: string; label: string; value: number; unit: string; status: string }>;
@@ -83,7 +83,9 @@ export async function fetchSuperAdminDashboard(): Promise<SuperAdminDashboardDat
 
     const revenueSeries: RevenuePoint[] = data.revenueSeries.map((r) => ({
         label: r.label,
-        revenue: r.revenue,
+        // La réponse API conserve les décimales exactes ; le graphique SVG
+        // a besoin d'un nombre pour calculer les coordonnées des points.
+        revenue: Number(r.revenue),
         subscriptions: r.subscriptions,
     }));
 

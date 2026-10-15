@@ -1,0 +1,160 @@
+@use '../../../baseVariables/variables' as *;
+
+.maintenance-page {
+    display: flex;
+    flex-direction: column;
+    gap: $spacing-4;
+    min-width: 0;
+
+    &__city {
+        display: grid;
+        grid-template-columns: minmax(0, 320px);
+        gap: $spacing-2;
+        min-width: 0;
+        margin-bottom: $spacing-2;
+    }
+
+    &__city > label,
+    .maintenance-form__field > label {
+        color: $color-text-secondary;
+        font-size: $font-size-sm;
+        font-weight: $font-weight-medium;
+    }
+
+    &__city .select-field__wrapper,
+    .maintenance-form .select-field__wrapper {
+        width: 100%;
+        min-width: 0;
+    }
+
+    &__card {
+        min-width: 0;
+        overflow: hidden;
+
+        > .card__body > h2 {
+            margin: 0 0 $spacing-4;
+            color: $color-text-primary;
+            font-size: $font-size-lg;
+        }
+    }
+
+}
+
+.maintenance-page__form-card,
+.maintenance-page__card:last-child { container-type: inline-size; }
+
+.maintenance-list { min-width: 0; }
+.organization-table-scroll {
+    width: 100%;
+    max-width: 100%;
+    overflow-x: auto;
+    overscroll-behavior-inline: contain;
+    scrollbar-gutter: stable;
+}
+.maintenance-table { width: 100%; min-width: 820px; table-layout: auto; }
+.maintenance-table th,
+.maintenance-table td { white-space: normal; vertical-align: middle; }
+.maintenance-table tbody tr:not(:last-child) td { border-bottom: 1px solid $color-border; }
+.maintenance-table th:nth-child(1) { min-width: 190px; }
+.maintenance-table th:nth-child(2) { min-width: 130px; }
+.maintenance-table th:nth-child(3),
+.maintenance-table th:nth-child(4),
+.maintenance-table th:nth-child(5) { min-width: 90px; }
+.maintenance-table th:last-child { min-width: 220px; }
+.maintenance-table td:first-child small { display: block; max-width: 42rem; margin-top: $spacing-1; color: $color-text-muted; white-space: normal; }
+.maintenance-actions { display: flex; flex-wrap: wrap; align-items: center; gap: $spacing-1; }
+.maintenance-list__cards { display: none; gap: $spacing-3; }
+.maintenance-item {
+    min-width: 0;
+    padding: $spacing-4;
+    border: 1px solid $color-border;
+    border-radius: $radius-md;
+    background: $color-bg-card;
+
+    &__heading { display: flex; align-items: flex-start; justify-content: space-between; gap: $spacing-3; }
+    h3 { margin: 0; color: $color-text-primary; font-size: $font-size-md; overflow-wrap: anywhere; }
+    p { margin: $spacing-1 0 0; color: $color-text-muted; font-size: $font-size-sm; overflow-wrap: anywhere; }
+    dl { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: $spacing-3; margin: $spacing-4 0; }
+    dl > div { min-width: 0; }
+    dt { color: $color-text-muted; font-size: $font-size-xs; }
+    dd { margin: $spacing-1 0 0; color: $color-text-primary; font-size: $font-size-sm; overflow-wrap: anywhere; }
+    &__status { flex: 0 0 auto; padding: $spacing-1 $spacing-2; border-radius: $radius-full; background: $color-bg-elevated; color: $color-text-secondary; font-size: $font-size-xs; }
+}
+
+.maintenance-form {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    align-items: end;
+    gap: $spacing-4;
+    min-width: 0;
+
+    &__field {
+        display: grid;
+        gap: $spacing-2;
+        min-width: 0;
+
+        input,
+        textarea {
+            box-sizing: border-box;
+            width: 100%;
+            min-width: 0;
+            border: 1px solid $color-border;
+            border-radius: $radius-md;
+            background: $color-bg-input;
+            color: $color-text-primary;
+            font: inherit;
+            padding: $spacing-3;
+        }
+
+        input { min-height: 2.75rem; }
+        textarea { min-height: 7rem; resize: vertical; }
+
+        input:focus-visible,
+        textarea:focus-visible {
+            outline: 2px solid $color-primary;
+            outline-offset: 2px;
+        }
+
+        &--wide { grid-column: span 2; }
+    }
+
+    &__actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: $spacing-2;
+        min-width: 0;
+    }
+}
+
+@container (max-width: 760px) {
+    .maintenance-form { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .maintenance-form__field--wide { grid-column: 1 / -1; }
+}
+
+@container (max-width: 520px) {
+    .maintenance-form { grid-template-columns: minmax(0, 1fr); }
+    .maintenance-form__field--wide { grid-column: auto; }
+}
+
+@container (max-width: 760px) {
+    .maintenance-list > .organization-table-scroll { display: none; }
+    .maintenance-list__cards { display: grid; gap: $spacing-3; }
+}
+
+@media (max-width: 980px) {
+    .maintenance-form { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .maintenance-form__field--wide { grid-column: 1 / -1; }
+}
+
+@media (max-width: 640px) {
+    .maintenance-page__city { grid-template-columns: minmax(0, 1fr); }
+    .maintenance-form { grid-template-columns: minmax(0, 1fr); gap: $spacing-3; }
+    .maintenance-form__field--wide { grid-column: auto; }
+    .maintenance-form__actions { display: grid; grid-template-columns: minmax(0, 1fr); }
+    .maintenance-form__actions > * { width: 100%; min-width: 0; }
+    .maintenance-page .organization-table-toolbar { align-items: stretch; flex-direction: column; }
+    .maintenance-item { padding: $spacing-3; }
+    .maintenance-item dl { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .maintenance-item .maintenance-actions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .maintenance-item .maintenance-actions > * { min-width: 0; width: 100%; }
+}

@@ -3,6 +3,9 @@ export type FinancialMovementKind = 'income' | 'expense';
 /** Mouvement affiché en valeur signée : une contre-écriture inverse l'opération d'origine. */
 export interface FinancialMovement {
     id: string;
+    relatedType: 'payment' | 'expense';
+    relatedUuid: string;
+    cityUuid?: string;
     date: string;
     kind: FinancialMovementKind;
     type: string;

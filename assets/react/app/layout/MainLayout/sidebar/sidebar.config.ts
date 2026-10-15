@@ -180,6 +180,14 @@ const ADMIN_VILLE_OPERATIONS: AppMenuItem = {
     path: '/app/operations',
 };
 
+const MAINTENANCE: AppMenuItem = {
+    id: 'maintenance',
+    label: 'Maintenance',
+    icon: 'hard-hat',
+    section: 'operations',
+    path: '/app/maintenance',
+};
+
 /**
  * Administration : une entrée. « Équipe » et « Villes assignées » se
  * gèrent depuis la fiche d'un membre de l'équipe (drill-down), pas au menu.
@@ -218,9 +226,9 @@ const RAPPORTS: AppMenuItem = {
  *   lecture seule et les actions correspondantes sont masquées par rôle.
  */
 export const ORGANIZATION_SIDEBAR: Record<OrganizationRole, SidebarMenu> = {
-    patron: [DASHBOARD, RAPPORTS, PATRIMOINE, LOCATAIRES, LOYERS, DEPENSES, VITRINE, ADMINISTRATION],
-    admin_immobilier: [DASHBOARD, RAPPORTS, PATRIMOINE, LOCATAIRES, LOYERS, DEPENSES, VITRINE, PERSONNEL, ADMINISTRATION],
-    admin_ville: [DASHBOARD, RAPPORTS, PATRIMOINE, LOCATAIRES, LOYERS, DEPENSES, ADMIN_VILLE_OPERATIONS],
+    patron: [DASHBOARD, RAPPORTS, PATRIMOINE, LOCATAIRES, LOYERS, DEPENSES, VITRINE, MAINTENANCE, ADMINISTRATION],
+    admin_immobilier: [DASHBOARD, RAPPORTS, PATRIMOINE, LOCATAIRES, LOYERS, DEPENSES, VITRINE, PERSONNEL, MAINTENANCE, ADMINISTRATION],
+    admin_ville: [DASHBOARD, RAPPORTS, PATRIMOINE, LOCATAIRES, LOYERS, DEPENSES, ADMIN_VILLE_OPERATIONS, MAINTENANCE],
 };
 
 /** Menu SUPER_ADMIN : aucune entrée métier d'organisation. */

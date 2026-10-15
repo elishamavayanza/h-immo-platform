@@ -23,11 +23,13 @@ export type SecurityAction =
     | 'view_lease' | 'create_lease' | 'update_lease' | 'delete_lease' | 'activate_lease' | 'terminate_lease' | 'cancel_lease'
     | 'view_rent' | 'create_rent' | 'update_rent' | 'delete_rent' | 'mark_rent_overdue'
     | 'view_payment' | 'create_payment' | 'update_payment' | 'delete_payment' | 'cancel_payment'
+    | 'view_document' | 'create_document' | 'delete_document'
     | 'view_worker' | 'create_worker' | 'update_worker' | 'delete_worker'
     | 'view_worker_assignment' | 'create_worker_assignment' | 'update_worker_assignment' | 'delete_worker_assignment'
     | 'view_expense' | 'create_expense' | 'update_expense' | 'delete_expense'
     | 'view_report' | 'export_report'
-    | 'view_audit_log' | 'export_audit_log';
+    | 'view_audit_log' | 'export_audit_log'
+    | 'view_maintenance' | 'create_maintenance' | 'update_maintenance';
 
 /**
  * Le PATRON administre l'intégralité de son Organization
@@ -48,8 +50,11 @@ const ADMIN_IMMOBILIER_ACTIONS: ReadonlyArray<SecurityAction> = [
     'view_worker', 'create_worker', 'update_worker', 'delete_worker',
     'view_worker_assignment', 'create_worker_assignment', 'update_worker_assignment', 'delete_worker_assignment',
     'view_expense', 'create_expense', 'update_expense', 'delete_expense',
+    'view_document', 'create_document', 'delete_document',
     'view_report', 'export_report',
+    'view_document', 'create_document',
     'view_audit_log', 'export_audit_log',
+    'view_maintenance', 'create_maintenance', 'update_maintenance',
 ];
 
 const ADMIN_VILLE_ACTIONS: ReadonlyArray<SecurityAction> = [
@@ -65,6 +70,7 @@ const ADMIN_VILLE_ACTIONS: ReadonlyArray<SecurityAction> = [
     'view_worker_assignment', 'create_worker_assignment', 'update_worker_assignment', 'delete_worker_assignment',
     'view_expense', 'create_expense', 'update_expense',
     'view_report', 'export_report',
+    'view_maintenance', 'create_maintenance', 'update_maintenance',
 ];
 
 const ROLE_ACTIONS: Record<OrganizationRole, 'all' | ReadonlySet<SecurityAction>> = {

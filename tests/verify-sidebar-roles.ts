@@ -107,9 +107,9 @@ console.log('\n=== Structure du menu par rôle (menu plat) ===\n');
 
 // Menu attendu, ordre compris. « Tableau de bord » est toujours la première
 // entrée (écran de synthèse demandé par le cahier des charges).
-const EXPECTED_PATRON = ['dashboard', 'rapports', 'patrimoine', 'location-locataires', 'location-loyers', 'depenses', 'vitrine', 'administration'];
-const EXPECTED_ADMIN_IMMOBILIER = ['dashboard', 'rapports', 'patrimoine', 'location-locataires', 'location-loyers', 'depenses', 'vitrine', 'personnel', 'administration'];
-const EXPECTED_ADMIN_VILLE = ['dashboard', 'rapports', 'patrimoine', 'location-locataires', 'location-loyers', 'depenses', 'operations'];
+const EXPECTED_PATRON = ['dashboard', 'rapports', 'patrimoine', 'location-locataires', 'location-loyers', 'depenses', 'vitrine', 'maintenance', 'administration'];
+const EXPECTED_ADMIN_IMMOBILIER = ['dashboard', 'rapports', 'patrimoine', 'location-locataires', 'location-loyers', 'depenses', 'vitrine', 'personnel', 'maintenance', 'administration'];
+const EXPECTED_ADMIN_VILLE = ['dashboard', 'rapports', 'patrimoine', 'location-locataires', 'location-loyers', 'depenses', 'operations', 'maintenance'];
 
 check(
     `PATRON : menu exact de ${EXPECTED_PATRON.length} entrées (reçu ${PATRON.length})`,
@@ -138,6 +138,7 @@ check('ADMIN_IMMOBILIER peut créer un ADMIN_VILLE', canDo('admin_immobilier', '
 check('ADMIN_IMMOBILIER ne reçoit pas la gestion générale des membres', !canDo('admin_immobilier', 'manage_users'));
 check('ADMIN_VILLE ne peut pas créer un autre administrateur', !canDo('admin_ville', 'create_city_admin'));
 check('PATRON conserve la création des administrateurs déléguables', canDo('patron', 'create_city_admin'));
+check('les trois rôles peuvent consulter et créer des interventions selon leur périmètre', canDo('patron', 'create_maintenance') && canDo('admin_immobilier', 'create_maintenance') && canDo('admin_ville', 'create_maintenance'));
 
 // ── Menu plat : une relation 1─N du modèle ne crée PAS de sous-menu ──
 const ALL_MENUS = [PATRON, ADMIN_IMMOBILIER, ADMIN_VILLE, PLATFORM];
