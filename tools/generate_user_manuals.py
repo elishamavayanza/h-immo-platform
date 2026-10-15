@@ -42,22 +42,27 @@ for p in SCREENSHOTS.iterdir():
     if p.is_file() and p.name not in used:
         p.unlink()
 
-font='/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf'
-font_b='/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf'
-pdfmetrics.registerFont(TTFont('DejaVu',font)); pdfmetrics.registerFont(TTFont('DejaVu-Bold',font_b))
+font='/usr/share/fonts/truetype/msttcorefonts/Times_New_Roman.ttf'
+font_b='/usr/share/fonts/truetype/msttcorefonts/Times_New_Roman_Bold.ttf'
+font_i='/usr/share/fonts/truetype/msttcorefonts/Times_New_Roman_Italic.ttf'
+font_bi='/usr/share/fonts/truetype/msttcorefonts/Times_New_Roman_Bold_Italic.ttf'
+pdfmetrics.registerFont(TTFont('TimesNewRoman',font)); pdfmetrics.registerFont(TTFont('TimesNewRoman-Bold',font_b))
+pdfmetrics.registerFont(TTFont('TimesNewRoman-Italic',font_i)); pdfmetrics.registerFont(TTFont('TimesNewRoman-BoldItalic',font_bi))
+pdfmetrics.registerFontFamily('TimesNewRoman',normal='TimesNewRoman',bold='TimesNewRoman-Bold',italic='TimesNewRoman-Italic',boldItalic='TimesNewRoman-BoldItalic')
 ink=colors.HexColor('#263640'); teal=colors.HexColor('#287889'); muted=colors.HexColor('#647780'); pale=colors.HexColor('#edf2f1'); line=colors.HexColor('#d1dcdd'); gold=colors.HexColor('#c18b31')
 base=getSampleStyleSheet()
 styles={
- 'cover_title':ParagraphStyle('cover_title',fontName='DejaVu-Bold',fontSize=26,leading=33,textColor=ink,alignment=TA_CENTER,spaceAfter=12),
- 'cover_sub':ParagraphStyle('cover_sub',fontName='DejaVu',fontSize=13,leading=20,textColor=muted,alignment=TA_CENTER),
- 'h1':ParagraphStyle('ManualH1',fontName='DejaVu-Bold',fontSize=17,leading=22,textColor=ink,spaceBefore=10,spaceAfter=8,keepWithNext=True),
- 'h2':ParagraphStyle('ManualH2',fontName='DejaVu-Bold',fontSize=11,leading=15,textColor=teal,spaceBefore=7,spaceAfter=3,keepWithNext=True),
- 'body':ParagraphStyle('ManualBody',fontName='DejaVu',fontSize=9.2,leading=14,textColor=ink,spaceAfter=6),
- 'small':ParagraphStyle('ManualSmall',fontName='DejaVu',fontSize=8,leading=11,textColor=muted,spaceAfter=3),
- 'caption':ParagraphStyle('ManualCaption',fontName='DejaVu',fontSize=8,leading=11,textColor=muted,alignment=TA_CENTER,spaceBefore=4,spaceAfter=8),
- 'note':ParagraphStyle('ManualNote',fontName='DejaVu',fontSize=8.5,leading=13,textColor=ink,backColor=pale,borderColor=line,borderWidth=.6,borderPadding=8,spaceBefore=4,spaceAfter=8),
- 'toc1':ParagraphStyle('TOC1',fontName='DejaVu',fontSize=10,leading=15,textColor=ink,leftIndent=0,firstLineIndent=0,spaceBefore=3),
- 'toc2':ParagraphStyle('TOC2',fontName='DejaVu',fontSize=8.5,leading=12,textColor=muted,leftIndent=14,firstLineIndent=0,spaceBefore=1),
+ 'cover_title':ParagraphStyle('cover_title',fontName='TimesNewRoman-Bold',fontSize=27,leading=33,textColor=ink,alignment=TA_CENTER,spaceAfter=12),
+ 'cover_sub':ParagraphStyle('cover_sub',fontName='TimesNewRoman',fontSize=14,leading=20,textColor=muted,alignment=TA_CENTER),
+ 'h1':ParagraphStyle('ManualH1',fontName='TimesNewRoman-Bold',fontSize=18,leading=23,textColor=ink,spaceBefore=10,spaceAfter=8,keepWithNext=True),
+ 'h2':ParagraphStyle('ManualH2',fontName='TimesNewRoman-Bold',fontSize=14,leading=18,textColor=teal,spaceBefore=8,spaceAfter=4,keepWithNext=True),
+ 'h3':ParagraphStyle('ManualH3',fontName='TimesNewRoman-Bold',fontSize=12,leading=15,textColor=ink,spaceBefore=5,spaceAfter=3,keepWithNext=True),
+ 'body':ParagraphStyle('ManualBody',fontName='TimesNewRoman',fontSize=11.5,leading=16.5,textColor=ink,spaceAfter=7),
+ 'small':ParagraphStyle('ManualSmall',fontName='TimesNewRoman',fontSize=9,leading=12,textColor=muted,spaceAfter=4),
+ 'caption':ParagraphStyle('ManualCaption',fontName='TimesNewRoman-Italic',fontSize=9.5,leading=12,textColor=muted,alignment=TA_CENTER,spaceBefore=5,spaceAfter=9),
+ 'note':ParagraphStyle('ManualNote',fontName='TimesNewRoman',fontSize=11,leading=15.5,textColor=ink,backColor=pale,borderColor=line,borderWidth=.6,borderPadding=8,spaceBefore=4,spaceAfter=8),
+ 'toc1':ParagraphStyle('TOC1',fontName='TimesNewRoman',fontSize=12,leading=17,textColor=ink,leftIndent=0,firstLineIndent=0,spaceBefore=4),
+ 'toc2':ParagraphStyle('TOC2',fontName='TimesNewRoman',fontSize=10.5,leading=14,textColor=muted,leftIndent=14,firstLineIndent=0,spaceBefore=2),
 }
 class ManualDoc(BaseDocTemplate):
  def __init__(self,path,role):
@@ -68,9 +73,9 @@ class ManualDoc(BaseDocTemplate):
   if doc.page==1:return
   canvas.saveState(); w,h=A4
   canvas.setStrokeColor(line);canvas.setLineWidth(.5);canvas.line(21*mm,h-15*mm,w-21*mm,h-15*mm)
-  canvas.setFont('DejaVu-Bold',7.5);canvas.setFillColor(teal);canvas.drawString(21*mm,h-12*mm,'SOFT-IMMO  |  GUIDE UTILISATEUR')
+  canvas.setFont('TimesNewRoman-Bold',9);canvas.setFillColor(teal);canvas.drawString(21*mm,h-12*mm,'SOFT-IMMO  |  GUIDE UTILISATEUR')
   canvas.setStrokeColor(line);canvas.line(21*mm,14*mm,w-21*mm,14*mm)
-  canvas.setFont('DejaVu',7.5);canvas.setFillColor(muted);canvas.drawString(21*mm,9*mm,f"Version {DATA['version']} · {DATA['updatedAt']}")
+  canvas.setFont('TimesNewRoman',9);canvas.setFillColor(muted);canvas.drawString(21*mm,9*mm,f"Version {DATA['version']} · {DATA['updatedAt']}")
   canvas.drawRightString(w-21*mm,9*mm,f"Page {doc.page}")
   canvas.restoreState()
  def afterFlowable(self,flowable):
@@ -83,10 +88,10 @@ def footer_logo(width=38*mm):
  im=PILImage.open(LOGO); ratio=im.height/im.width
  return Image(str(LOGO),width=width,height=width*ratio,kind='proportional')
 def add_bullets(texts):
- return ListFlowable([ListItem(Paragraph(x,styles['body']),leftIndent=11) for x in texts],bulletType='bullet',start='circle',leftIndent=13,bulletFontName='DejaVu',bulletFontSize=7,spaceAfter=4)
+ return ListFlowable([ListItem(Paragraph(x,styles['body']),leftIndent=11) for x in texts],bulletType='bullet',start='circle',leftIndent=13,bulletFontName='TimesNewRoman',bulletFontSize=8,spaceAfter=4)
 def build(role_key,role):
  out=OUT/role['filename']; doc=ManualDoc(out,role); story=[]
- story += [Spacer(1,18*mm),footer_logo(42*mm),Spacer(1,17*mm),Paragraph('MANUEL D’UTILISATION',styles['cover_sub']),Spacer(1,6*mm),Paragraph(role['title'].replace('Manuel d’utilisation — ',''),styles['cover_title']),Spacer(1,4*mm),Paragraph(role['label'],ParagraphStyle('role',parent=styles['cover_sub'],fontName='DejaVu-Bold',textColor=teal,fontSize=12)),Spacer(1,7*mm),Paragraph(role['description'],styles['cover_sub']),Spacer(1,18*mm)]
+ story += [Spacer(1,18*mm),footer_logo(42*mm),Spacer(1,17*mm),Paragraph('MANUEL D’UTILISATION',styles['cover_sub']),Spacer(1,6*mm),Paragraph(role['title'].replace('Manuel d’utilisation — ',''),styles['cover_title']),Spacer(1,4*mm),Paragraph(role['label'],ParagraphStyle('role',parent=styles['cover_sub'],fontName='TimesNewRoman-Bold',textColor=teal,fontSize=12)),Spacer(1,7*mm),Paragraph(role['description'],styles['cover_sub']),Spacer(1,18*mm)]
  t=Table([[Paragraph(f"Version <b>{DATA['version']}</b>",styles['body']),Paragraph(f"Mise à jour <b>{DATA['updatedAt']}</b>",styles['body'])]],colWidths=[75*mm,75*mm]);t.setStyle(TableStyle([('BACKGROUND',(0,0),(-1,-1),pale),('BOX',(0,0),(-1,-1),.6,line),('INNERGRID',(0,0),(-1,-1),.4,line),('VALIGN',(0,0),(-1,-1),'MIDDLE'),('LEFTPADDING',(0,0),(-1,-1),10),('TOPPADDING',(0,0),(-1,-1),10),('BOTTOMPADDING',(0,0),(-1,-1),10)]));story += [t,Spacer(1,20*mm),Paragraph('Document établi à partir des écrans et des règles d’accès de Soft-IMMO. Les libellés peuvent évoluer avec les mises à jour de l’application.',styles['caption']),PageBreak()]
  story += [Paragraph('Table des matières',styles['h1'])]
  toc=TableOfContents();toc.levelStyles=[styles['toc1'],styles['toc2']];toc.dotsMinLevel=0;story += [toc,PageBreak()]
@@ -94,9 +99,8 @@ def build(role_key,role):
  for index,mod in enumerate(role['modules'],1):
   story.append(Paragraph(mod['name'],styles['h1']))
   story += [Paragraph(f"<b>Menu :</b> {mod['menu']}",styles['body']),Paragraph(f"<b>Objectif :</b> {mod['goal']}",styles['body']),Paragraph('Procédure',styles['h2']),add_bullets(mod['steps']),Paragraph(f"<b>Champs et vérifications :</b> {mod['fields']}",styles['body']),Paragraph(f"<b>Résultat attendu :</b> {mod['result']}",styles['body']),Paragraph(f"<b>Accès et limites :</b> {mod['limits']}",styles['note'])]
-  im=SCREENSHOTS/mod['image']; pic=PILImage.open(im); iw,ih=pic.size; maxw=166*mm; maxh=93*mm; scale=min(maxw/iw,maxh/ih)
-  story += [Spacer(1,3*mm),Image(str(im),width=iw*scale,height=ih*scale),Paragraph(f"Capture réelle de l’interface de test — {mod['menu']}. Zone du profil du compte masquée.",styles['caption'])]
-  if index<len(role['modules']): story.append(PageBreak())
+  im=SCREENSHOTS/mod['image']; pic=PILImage.open(im); iw,ih=pic.size; maxw=168*mm; maxh=110*mm; scale=min(maxw/iw,maxh/ih)
+  story += [Spacer(1,3*mm),Image(str(im),width=iw*scale,height=ih*scale),Paragraph(f"Capture d’interface — {mod['menu']}. Consultez les libellés visibles ; les droits et les données peuvent varier selon le compte.",styles['caption']),Spacer(1,5*mm)]
  story += [PageBreak(),Paragraph('Dépannage et bonnes pratiques',styles['h1'])]
  troubleshooting=[('Le menu ou le bouton attendu est absent','Vérifiez l’espace, l’organisation et la ville actifs. Certaines actions nécessitent une autorisation déléguée.'),('La page affiche une erreur ou ne charge pas','Actualisez une fois. Si le problème persiste, notez la route, l’heure, l’identifiant de l’erreur et l’action précédente, puis contactez l’administrateur.'),('Une saisie est refusée','Relisez les champs obligatoires, la date, la devise et les relations avec la ville ou le bien. Le message de validation précise généralement le champ à corriger.'),('Vous ne voyez pas les données attendues','Vérifiez les filtres et le périmètre actif. Les listes sont filtrées par organisation et, selon le rôle, par ville.')]
  for title,body in troubleshooting: story += [Paragraph(title,styles['h2']),Paragraph(body,styles['body'])]
@@ -115,7 +119,7 @@ if __name__=='__main__':
   role_pages=pages_root/key; role_pages.mkdir(parents=True,exist_ok=True)
   with tempfile.TemporaryDirectory(prefix='soft-immo-pages-') as temp:
    prefix=Path(temp)/'page'
-   subprocess.run(['pdftoppm','-jpeg','-r','110','-scale-to','1500','-jpegopt','quality=82',str(OUT/role['filename']),str(prefix)],check=True,stdout=subprocess.DEVNULL,stderr=subprocess.PIPE)
+   subprocess.run(['pdftoppm','-jpeg','-r','150','-scale-to','1800','-jpegopt','quality=88',str(OUT/role['filename']),str(prefix)],check=True,stdout=subprocess.DEVNULL,stderr=subprocess.PIPE)
    rendered=sorted(Path(temp).glob('page-*.jpg'))
    if len(rendered)!=role['pageCount']:
     raise SystemExit(f"Rendu incomplet pour {key}: {len(rendered)}/{role['pageCount']} pages")
