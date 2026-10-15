@@ -199,6 +199,9 @@
     }
 }
 
+.main-layout__global-tools { display: flex; align-items: center; justify-content: flex-end; gap: 10px; }
+.main-layout__global-tools > .global-search { flex: 1 1 auto; min-width: 0; margin-bottom: $spacing-3; }
+
 /* Transition de route non bloquante : l'Outlet reste visible pendant le
    changement. Un voile léger accompagne le nouvel écran sans remplacer toute
    la page par un spinner qui provoquait un clignotement. */

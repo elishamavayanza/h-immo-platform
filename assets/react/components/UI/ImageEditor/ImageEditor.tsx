@@ -126,14 +126,14 @@ export function ImageEditor({ src, onCancel, onApply, aspect = 1, outputSize = 3
                 </div>
                 <div className="image-editor__control">
                     <label>{('Rotation')}</label>
-                    <button onClick={() => setRotation((prev) => prev - 90)}>-90°</button>
-                    <button onClick={() => setRotation((prev) => prev + 90)}>+90°</button>
+                    <button type="button" onClick={() => setRotation((prev) => prev - 90)}>-90°</button>
+                    <button type="button" onClick={() => setRotation((prev) => prev + 90)}>+90°</button>
                 </div>
             </div>
 
             <div className="image-editor__actions">
-                <button onClick={onCancel} disabled={isApplying}>{('Annuler')}</button>
-                <button onClick={handleApply} disabled={isApplying}>{isApplying ? 'Préparation…' : 'Appliquer'}</button>
+                <button type="button" onClick={onCancel} disabled={isApplying}>{('Annuler')}</button>
+                <button type="button" onClick={handleApply} disabled={isApplying}>{isApplying ? 'Préparation…' : 'Appliquer'}</button>
             </div>
         </div>
     );

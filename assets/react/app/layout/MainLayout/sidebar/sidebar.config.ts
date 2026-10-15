@@ -255,6 +255,13 @@ export const PLATFORM_SIDEBAR: SidebarMenu = [
         path: '/app/admin/utilisateurs',
     },
     {
+        id: 'plateforme-publications',
+        label: 'Publications',
+        icon: 'megaphone',
+        section: 'platform',
+        path: '/app/admin/publications',
+    },
+    {
         id: 'plateforme-audit',
         label: 'Journal d\'audit',
         icon: 'audit',

@@ -68,6 +68,12 @@ export function AppRouteGuard({ children }: AppRouteGuardProps) {
         return <>{routeContent}</>;
     }
 
+    // La page de détail est ouverte depuis le centre global de notifications.
+    // L'API vérifie le destinataire exact avant de renvoyer ou marquer la lecture.
+    if (/^\/app\/publications\/[0-9a-f-]{36}$/i.test(location.pathname)) {
+        return <>{routeContent}</>;
+    }
+
     // 2. Feuille du rôle courant.
     if (isPathInMenu(resolveSidebar(platformRole, organizationRole), location.pathname)) {
         return <>{routeContent}</>;

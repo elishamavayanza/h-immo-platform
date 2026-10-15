@@ -266,6 +266,14 @@ export const IconClipboardCheck = (): ReactNode => (
     </svg>
 );
 
+/** Publication/annonce de plateforme. */
+export const IconMegaphone = (): ReactNode => (
+    <svg {...STROKE}>
+        <path d="M3 11v2a2 2 0 0 0 2 2h2l9 5V4l-9 5H5a2 2 0 0 0-2 2Z" />
+        <path d="M7 15l2 6M16 9a3 3 0 0 1 0 6M19 7a6 6 0 0 1 0 10" />
+    </svg>
+);
+
 /** Signature d'un composant d'icône. */
 export type IconComponent = () => ReactNode;
 
@@ -300,4 +308,5 @@ export const SIDEBAR_ICON_MAP: Record<string, IconComponent> = {
     'map-pins': IconMapPins,
     tools: IconTools,
     'clipboard-check': IconClipboardCheck,
+    megaphone: IconMegaphone,
 };
