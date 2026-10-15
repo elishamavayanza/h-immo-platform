@@ -305,6 +305,14 @@ check(
     json_encode($updated['latitude'] ?? null, JSON_THROW_ON_ERROR) . ' / '
         . json_encode($updated['longitude'] ?? null, JSON_THROW_ON_ERROR)
 );
+$parcelId = $connection->fetchOne('SELECT id FROM parcel WHERE uuid = ?', [\Symfony\Component\Uid\Uuid::fromString((string) $uuidCoords)->toBinary()]);
+$updateAudit = $connection->fetchAssociative(
+    'SELECT old_values, new_values FROM audit_log WHERE entity_type = ? AND entity_id = ? AND action = ? ORDER BY created_at DESC LIMIT 1',
+    [Parcel::class, $parcelId, 'UPDATE_PARCEL']
+);
+$oldAuditValues = is_array($updateAudit) ? json_decode((string) $updateAudit['old_values'], true) : null;
+$newAuditValues = is_array($updateAudit) ? json_decode((string) $updateAudit['new_values'], true) : null;
+check('l’historique conserve les coordonnées avant et après modification', is_array($oldAuditValues) && is_array($newAuditValues) && $normCoord((string) ($oldAuditValues['latitude'] ?? '')) === '-0.681' && $normCoord((string) ($newAuditValues['latitude'] ?? '')) === '1.5');
 
 // ---------------------------------------------------------------------
 // 5. Round-trip base de données (round-trip réel hors cache du noyau)
@@ -374,6 +382,28 @@ check(
     $count === 2,
     "compte = {$count}"
 );
+
+// ---------------------------------------------------------------------
+// 9. Suppression logique et trace d'audit atomique
+// ---------------------------------------------------------------------
+section('Suppression logique et audit');
+
+[$deleteStatus] = $request('DELETE', '/api/v1/parcels/' . $uuidCoords, null, $token);
+$deletedRow = $connection->fetchAssociative(
+    'SELECT id, deleted_at FROM parcel WHERE uuid = ?',
+    [\Symfony\Component\Uid\Uuid::fromString((string) $uuidCoords)->toBinary()]
+);
+$auditCount = is_array($deletedRow)
+    ? (int) $connection->fetchOne(
+        'SELECT COUNT(*) FROM audit_log WHERE entity_type = ? AND entity_id = ? AND action = ?',
+        [Parcel::class, $deletedRow['id'], 'SOFT_DELETE_PARCEL']
+    )
+    : 0;
+check('la suppression conserve la parcelle en base avec deleted_at', $deleteStatus === 200 && is_array($deletedRow) && $deletedRow['deleted_at'] !== null);
+check('la suppression est inscrite dans le journal d’audit', $auditCount === 1);
+[$listStatus, $listPayload] = $request('GET', '/api/v1/parcels?limit=100', null, $token);
+$activeParcels = $listPayload['data']['items'] ?? [];
+check('la parcelle supprimée est masquée de la liste normale', $listStatus === 200 && !in_array($uuidCoords, array_column($activeParcels, 'id'), true));
 
 // ---------------------------------------------------------------------
 echo "\nBilan : {$checks} contrôles, " . count($failures) . " échec(s).\n";

@@ -36,7 +36,8 @@ final class AuditLogService
         ?Organization $organization = null,
         ?User $user = null,
         ?array $oldValues = null,
-        ?array $newValues = null
+        ?array $newValues = null,
+        bool $flush = true
     ): AuditLogResponse {
         $auditLog = $this->mapper->createEntity(
             action: $action,
@@ -48,7 +49,7 @@ final class AuditLogService
             newValues: $newValues
         );
 
-        $this->auditLogRepository->save($auditLog, flush: true);
+        $this->auditLogRepository->save($auditLog, flush: $flush);
 
         return $this->mapper->toResponse($auditLog);
     }

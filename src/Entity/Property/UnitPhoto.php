@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Entity\Property;
 
-use App\Entity\Shared\TimestampedEntity;
+use App\Entity\Shared\SoftDeletableEntity;
 use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
 
@@ -25,17 +25,16 @@ use Doctrine\ORM\Mapping as ORM;
  * L'ordre est stocké plutôt que déduit de `createdAt` : réordonner la galerie
  * ne doit pas dépendre de l'horloge ni ressembler à une création.
  *
- * Elle étend `TimestampedEntity` et non `CreatedOnlyEntity` : une photo peut
- * être retirée de la galerie, donc la ligne est supprimée physiquement
- * (suppression physique assumée ici, contrairement aux entités métier). Le
- * `ON DELETE CASCADE` couvre le cas de la suppression physique du bâtiment
- * parent ; il ne se déclenche pas sur un soft delete de `Unit`.
+ * Une photo retirée est masquée logiquement afin de conserver la référence au
+ * fichier et de permettre une restauration ultérieure. Le `ON DELETE CASCADE`
+ * ne s'applique qu'à la suppression physique exceptionnelle de l'unité.
  */
 #[ORM\Entity]
 #[ORM\Table(name: 'unit_photo')]
 #[ORM\Index(name: 'idx_unit_photo_unit_position', columns: ['unit_id', 'position'])]
+#[ORM\Index(name: 'idx_unit_photo_unit_deleted', columns: ['unit_id', 'deleted_at'])]
 #[ORM\UniqueConstraint(name: 'uniq_unit_photo_uuid', columns: ['uuid'])]
-class UnitPhoto extends TimestampedEntity
+class UnitPhoto extends SoftDeletableEntity
 {
     #[ORM\ManyToOne(targetEntity: Unit::class)]
     #[ORM\JoinColumn(

@@ -462,8 +462,6 @@ final readonly class OrganizationUserService
             $this->userCityRepository->deleteByUserAndOrganization($user, $organization);
         }
 
-        $this->em->remove($orgUser);
-        $this->em->flush();
         $this->auditLogService->log(
             action: 'REVOKE_ORGANIZATION_ROLE',
             entityType: OrganizationUser::class,
@@ -472,7 +470,10 @@ final readonly class OrganizationUserService
             user: $this->security->getCurrentUser(),
             oldValues: ['userUuid' => $user->getUuid()->toRfc4122(), 'role' => $currentRole->value],
             newValues: null,
+            flush: false,
         );
+        $this->em->remove($orgUser);
+        $this->em->flush();
 
         return $feedback
             ->setFlushDescription('L\'accès de l\'utilisateur à l\'organisation a été révoqué.')

@@ -15,6 +15,7 @@ use App\Repository\Property\BuildingRepository;
 use App\Repository\Property\UnitRepository;
 use App\Security\SecurityAction;
 use App\Security\SecurityServiceInterface;
+use App\Service\System\AuditLogService;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 use Symfony\Component\Uid\Uuid;
@@ -38,6 +39,7 @@ final readonly class UnitService
         private BuildingRepository $buildingRepository,
         private UnitMapper $unitMapper,
         private SecurityServiceInterface $securityService,
+        private AuditLogService $auditLogService,
         private EntityManagerInterface $entityManager,
         private ValidatorInterface $validator
     ) {
@@ -256,7 +258,15 @@ final readonly class UnitService
             }
         }
 
+        $oldValues = ['reference' => $unitRepository->getReference(), 'type' => $unitRepository->getType()->value, 'floor' => $unitRepository->getFloor(), 'surface' => $unitRepository->getSurface(), 'bedrooms' => $unitRepository->getBedrooms(), 'rooms' => $unitRepository->getRooms(), 'bathrooms' => $unitRepository->getBathrooms(), 'monthlyRent' => $unitRepository->getMonthlyRent(), 'currency' => $unitRepository->getCurrency()->value, 'description' => $unitRepository->getDescription()];
         $this->unitMapper->copyToEntity($request, $unitRepository);
+        $this->auditLogService->log(
+            action: 'UPDATE_UNIT', entityType: Unit::class, entityId: (int) $unitRepository->getId(),
+            organization: $unitRepository->getBuilding()->getParcel()->getCity()->getOrganization(), user: $this->securityService->getCurrentUser(),
+            oldValues: $oldValues,
+            newValues: ['reference' => $unitRepository->getReference(), 'type' => $unitRepository->getType()->value, 'floor' => $unitRepository->getFloor(), 'surface' => $unitRepository->getSurface(), 'bedrooms' => $unitRepository->getBedrooms(), 'rooms' => $unitRepository->getRooms(), 'bathrooms' => $unitRepository->getBathrooms(), 'monthlyRent' => $unitRepository->getMonthlyRent(), 'currency' => $unitRepository->getCurrency()->value, 'description' => $unitRepository->getDescription()],
+            flush: false,
+        );
         $this->entityManager->flush();
 
         return $feedback
@@ -277,7 +287,15 @@ final readonly class UnitService
 
         $this->securityService->checkUnitAccess($unitRepository, SecurityAction::DELETE_UNIT);
 
+        $actor = $this->securityService->getCurrentUser();
         $unitRepository->softDelete();
+        $this->auditLogService->log(
+            action: 'SOFT_DELETE_UNIT', entityType: Unit::class, entityId: (int) $unitRepository->getId(),
+            organization: $unitRepository->getBuilding()->getParcel()->getCity()->getOrganization(), user: $actor,
+            oldValues: ['reference' => $unitRepository->getReference(), 'type' => $unitRepository->getType()->value],
+            newValues: ['deletedAt' => $unitRepository->getDeletedAt()?->format(DATE_ATOM)],
+            flush: false,
+        );
         $this->entityManager->flush();
 
         return $feedback

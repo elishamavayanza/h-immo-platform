@@ -192,15 +192,25 @@ final readonly class PrivateDocumentService
     {
         $document = $this->document($uuid);
         $this->assertDocumentAccess($user, $document, SecurityAction::DELETE_DOCUMENT);
-        $document->setDeletedAt($this->dateTime->now());
-        $this->entityManager->flush();
-        $documentId = $document->getId() ?? throw new \LogicException('Le document n’a pas reçu son identifiant interne.');
-        $this->auditLog->log('DELETE_PRIVATE_DOCUMENT', 'private_document', $documentId, $document->getOrganization(), $user, [
+        $oldValues = [
             'category' => $document->getCategory()->value,
             'relatedType' => $document->getRelatedType()->value,
             'relatedUuid' => $document->getRelatedUuid(),
-        ], null);
-        $this->storage->delete($document->getStorageName());
+            'storageName' => $document->getStorageName(),
+        ];
+        $document->setDeletedAt($this->dateTime->now());
+        $documentId = $document->getId() ?? throw new \LogicException('Le document n’a pas reçu son identifiant interne.');
+        $this->auditLog->log(
+            'SOFT_DELETE_PRIVATE_DOCUMENT',
+            PrivateDocument::class,
+            $documentId,
+            $document->getOrganization(),
+            $user,
+            $oldValues,
+            ['deletedAt' => $document->getDeletedAt()?->format(DATE_ATOM)],
+            false,
+        );
+        $this->entityManager->flush();
     }
 
     /** @return array{organization: Organization, city: City, viewAction: SecurityAction, resource: object}|null */
