@@ -38,6 +38,8 @@ const OrganizationsPage = lazyPage(() => import('../../features/super_admin/orga
 const UsersPage = lazyPage(() => import('../../features/super_admin/users/pages/UsersPage'), 'UsersPage');
 const AuditLogPage = lazyPage(() => import('../../features/super_admin/audit/pages/AuditLogPage'), 'AuditLogPage');
 const SuperAdminReportsPage = lazyPage(() => import('../../features/super_admin/reports/pages/ReportsPage'), 'ReportsPage');
+const PublicationsPage = lazyPage(() => import('../../features/super_admin/publications/pages/PublicationsPage'), 'PublicationsPage');
+const PublicationDetailPage = lazyPage(() => import('../../features/shared/publications/pages/PublicationDetailPage'), 'PublicationDetailPage');
 const OrganizationMenuPage = lazyPage(() => import('./OrganizationMenuPage'), 'OrganizationMenuPage');
 const OrganisationPage = lazyPage(() => import('../../features/patron/administration/pages/OrganisationPage'), 'OrganisationPage');
 const ProfilePage = lazyPage(() => import('../../features/shared/account/profile/pages/ProfilePage'), 'ProfilePage');
@@ -106,6 +108,8 @@ export function AppRoutes() {
                 <Route element={<AppRouteGuard />}>
                     <Route index element={<AppLanding />} />
 
+                    <Route path="publications/:uuid" element={<Suspense fallback={pageFallback}><PublicationDetailPage /></Suspense>} />
+
 {APP_ROUTES.map((route) => {
                         return (
                             <Route
@@ -123,6 +127,8 @@ export function AppRoutes() {
                                                         ? <Suspense fallback={pageFallback}><AuditLogPage /></Suspense>
                                                         : route.path === '/app/admin/rapports'
                                                             ? <Suspense fallback={pageFallback}><SuperAdminReportsPage /></Suspense>
+                                                            : route.path === '/app/admin/publications'
+                                                                ? <Suspense fallback={pageFallback}><PublicationsPage /></Suspense>
                                                             : undefined
                                         : <Suspense fallback={pageFallback}><OrganizationMenuPage path={route.path} /></Suspense>
                                 }

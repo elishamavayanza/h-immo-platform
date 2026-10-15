@@ -27,6 +27,7 @@ import { WorkspaceSwitcher } from './WorkspaceSwitcher';
 import { GlobalSearch } from '../../../features/shared/search/components/GlobalSearch';
 import { rememberLastLocation } from '../../routes/navigationMemory';
 import { ContextualHelp } from '../../../features/shared/help/components/ContextualHelp';
+import { PublicationNotifications } from '../../../features/shared/publications/components/PublicationNotifications';
 
 /**
  * Marque du sidebar : logo + "IMMO" + nom de l'organisation active sur sa propre ligne.
@@ -289,7 +290,7 @@ return (
                         `/app/access-denied`) ni le 403 d'une page réservée à un
                         autre rôle. Le chargement des rôles est déjà traité
                         *avant* ce point par le `Loading` ci-dessus. */}
-                    <GlobalSearch />
+                    <div className="main-layout__global-tools"><GlobalSearch /><PublicationNotifications /></div>
                     <Outlet />
                     <ContextualHelp />
                     {isPageTransitionLoading && <div className="main-layout__route-transition" aria-hidden="true" />}

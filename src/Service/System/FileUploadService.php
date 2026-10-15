@@ -53,7 +53,7 @@ final readonly class FileUploadService
         private readonly DateTimeService $dateTime,
     ) {
         // Créer les sous-dossiers s'ils n'existent pas
-        $subdirs = ['users', 'organizations', 'parcels', 'buildings', 'units'];
+        $subdirs = ['users', 'organizations', 'parcels', 'buildings', 'units', 'publications'];
         foreach ($subdirs as $dir) {
             if (!is_dir($this->uploadsDir . '/' . $dir)) {
                 mkdir($this->uploadsDir . '/' . $dir, 0755, true);
@@ -240,7 +240,7 @@ final readonly class FileUploadService
         $segments = explode('/', $entityType);
         $rootType = array_shift($segments);
 
-        $validTypes = ['users', 'organizations', 'parcels', 'buildings', 'units'];
+        $validTypes = ['users', 'organizations', 'parcels', 'buildings', 'units', 'publications'];
 
         if (!in_array($rootType, $validTypes, true)) {
             throw new \InvalidArgumentException(sprintf(

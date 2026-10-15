@@ -74,6 +74,17 @@ const content: Record<string, Omit<PageHelp, 'path' | 'roles'>> = {
             { id: 'platform-report-empty', question: 'Pourquoi le rapport ne contient-il pas de données ?', answer: 'La période sélectionnée peut ne comporter aucune activité. Vérifiez les filtres et réessayez ; les données apparaissent après leur enregistrement par les espaces concernés.' },
         ],
     },
+    '/app/admin/publications': {
+        title: 'Publications',
+        description: 'Rédigez, ciblez et diffusez les annonces de la plateforme.',
+        questions: [
+            { id: 'publications-draft', question: 'Comment préparer une publication ?', answer: 'Renseignez le titre et le contenu, choisissez une catégorie et enregistrez le brouillon. Vous pouvez ajouter des images et consulter leur aperçu après l’enregistrement.' },
+            { id: 'publications-audience', question: 'Comment choisir les destinataires ?', answer: 'Choisissez tous les utilisateurs actifs, certains rôles ou une organisation. Vérifiez le public cible avant de diffuser : une publication diffusée devient visible dans le centre de notifications des comptes concernés.' },
+            { id: 'publications-schedule', question: 'Comment programmer ou limiter la durée d’une annonce ?', answer: 'Indiquez une date de début pour programmer la diffusion et, facultativement, une date de fin. Sans date de début future, la publication peut être diffusée immédiatement.' },
+            { id: 'publications-publish', question: 'Comment diffuser, retirer ou archiver une publication ?', answer: 'Enregistrez d’abord le brouillon, puis sélectionnez « Publier maintenant » lorsque son contenu et ses destinataires sont corrects. Une publication diffusée peut ensuite être retirée ou archivée depuis son historique.' },
+            { id: 'publications-images', question: 'Quelles images puis-je joindre ?', answer: 'Vous pouvez joindre jusqu’à huit images dans les formats acceptés par le formulaire. Une légende peut être saisie pour chaque image sélectionnée.' },
+        ],
+    },
     '/app/admin/utilisateurs': {
         title: 'Utilisateurs plateforme',
         description: 'Consultez les comptes et gérez leur accès à la plateforme.',
