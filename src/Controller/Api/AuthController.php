@@ -17,10 +17,12 @@ use App\Service\Identity\TokenManager;
 use App\Service\System\AuditLogService;
 use App\Service\System\DateTimeService;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
+use Symfony\Component\DependencyInjection\Attribute\Autowire;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpKernel\Attribute\MapRequestPayload;
+use Symfony\Component\RateLimiter\RateLimiterFactory;
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Security\Core\Authentication\Token\Storage\TokenStorageInterface;
 use OpenApi\Attributes as OA;
@@ -55,6 +57,8 @@ final class AuthController extends AbstractController
         private readonly RevokedTokenRepository $revokedTokenRepository,
         private readonly AuditLogService $auditLogService,
         private readonly DateTimeService $dateTime,
+        #[Autowire(service: 'limiter.password_reset_requests')]
+        private readonly RateLimiterFactory $passwordResetLimiter,
     ) {
     }
 
@@ -120,9 +124,9 @@ final class AuthController extends AbstractController
             organization: null,
             user: $user,
             oldValues: null,
-            newValues: [
-                'email' => $user->getEmail(),
-            ],
+            // L'utilisateur est déjà lié à l'événement d'audit ; l'adresse
+            // email n'ajoute aucune information utile au diagnostic.
+            newValues: null,
         );
 
         // Aucun cookie : le pare-feu est `stateless`. Le jeton ne transite
@@ -277,16 +281,33 @@ final class AuthController extends AbstractController
     #[OA\Post(
         path: '/api/auth/forgot-password',
         summary: 'Demander la réinitialisation de son mot de passe',
-        description: 'Envoie un lien de réinitialisation par email si le compte existe et est actif. Ne révèle pas si l\'email existe.',
+        description: 'Envoie un lien de réinitialisation par email si le compte existe et est actif. Ne révèle pas si l\'email existe. Limité à dix demandes par heure et par adresse IP.',
         requestBody: new OA\RequestBody(content: new OA\JsonContent(ref: '#/components/schemas/ForgotPasswordRequest')),
         responses: [
             new OA\Response(response: 200, description: 'Si l\'email existe, un lien a été envoyé', content: new OA\JsonContent(ref: '#/components/schemas/Feedback')),
+            new OA\Response(response: 429, description: 'Trop de demandes depuis cette adresse IP'),
             new OA\Response(response: 422, description: 'Données invalides', content: new OA\JsonContent(ref: '#/components/schemas/Feedback')),
         ]
     )]
     public function forgotPassword(
-        #[MapRequestPayload] ForgotPasswordRequest $request
+        #[MapRequestPayload] ForgotPasswordRequest $request,
+        Request $httpRequest,
     ): JsonResponse {
+        // La réponse reste générique pour éviter l'énumération ; le quota par
+        // IP limite les envois d'emails déclenchés par une source anonyme.
+        $limit = $this->passwordResetLimiter
+            ->create($httpRequest->getClientIp() ?? 'unknown')
+            ->consume(1);
+        if (!$limit->isAccepted()) {
+            $retryAfter = max(1, $limit->getRetryAfter()->getTimestamp() - $this->dateTime->now()->getTimestamp());
+            $feedback = (new Feedback())
+                ->setFlush('Limite atteinte')
+                ->setFlushDescription('Trop de demandes ont été reçues. Réessayez plus tard.')
+                ->setStatus(Response::HTTP_TOO_MANY_REQUESTS);
+
+            return $this->json($feedback, Response::HTTP_TOO_MANY_REQUESTS, ['Retry-After' => (string) $retryAfter]);
+        }
+
         $feedback = $this->passwordResetService->requestReset($request->email);
 
         // Log d'audit : demande de réinitialisation de mot de passe
@@ -297,9 +318,10 @@ final class AuthController extends AbstractController
             organization: null,
             user: null,
             oldValues: null,
-            newValues: [
-                'email' => $request->email,
-            ],
+            // Ne pas conserver l'adresse fournie à cette route publique :
+            // même une demande visant un email inexistant serait une donnée
+            // personnelle stockée durablement dans le journal d'audit.
+            newValues: null,
         );
 
         return $this->json($feedback, $feedback->getStatus());

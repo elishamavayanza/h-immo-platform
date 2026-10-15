@@ -59,14 +59,17 @@ final readonly class UserService
         // tenants de la plateforme. Un utilisateur ne voit que les comptes
         // d'une Organization dont il est membre ; seul le SUPER_ADMIN peut
         // inventorier l'ensemble des comptes.
-        $paginatedResult = $this->security->isSuperAdmin()
-            ? $this->repository->findPaginatedAll($query->page, $query->limit, $query->search)
-            : $this->repository->findPaginatedByOrganizations(
+        if ($this->security->isSuperAdmin()) {
+            $this->security->requirePlatformRole();
+            $paginatedResult = $this->repository->findPaginatedAll($query->page, $query->limit, $query->search);
+        } else {
+            $paginatedResult = $this->repository->findPaginatedByOrganizations(
                 $this->security->getCurrentUserOrganizations(),
                 $query->page,
                 $query->limit,
                 $query->search
             );
+        }
 
         // Rattachements des comptes de la page en une seule requête : la table
         // affiche organisation + rôle par ligne, et le filtre par organisation
@@ -106,7 +109,7 @@ final readonly class UserService
                 ->autoInitFlush();
         }
 
-        $this->security->checkUserAccess($user, SecurityAction::VIEW_USER);
+        $this->authorizeUserOperation($user, SecurityAction::VIEW_USER);
 
         return $feedback
             ->setData($this->mapper->toResponse($user, $this->membershipsFor($user)))
@@ -175,7 +178,7 @@ final readonly class UserService
                 ->autoInitFlush();
         }
 
-        $this->security->checkUserAccess($user, SecurityAction::UPDATE_USER);
+        $this->authorizeUserOperation($user, SecurityAction::UPDATE_USER);
 
         // Un droit de rôle ne se délègue pas par un PUT sur une fiche.
         // `checkUserAccess()` autorise explicitement l'auto-service, il ne peut
@@ -191,7 +194,7 @@ final readonly class UserService
         // d'une suspension) ni en suspendre un autre. La matrice de rôle refuse
         // déjà ces deux actions aux ADMIN_IMMOBILIER et ADMIN_VILLE.
         if ($request->isActive !== null) {
-            $this->security->checkUserAccess(
+            $this->authorizeUserOperation(
                 $user,
                 $request->isActive
                     ? SecurityAction::ACTIVATE_USER
@@ -261,7 +264,7 @@ final readonly class UserService
                 ->autoInitFlush();
         }
 
-        $this->security->checkUserAccess($user, SecurityAction::DELETE_USER);
+        $this->authorizeUserOperation($user, SecurityAction::DELETE_USER);
 
         $user->softDelete();
         $user->setIsActive(false);
@@ -301,7 +304,7 @@ final readonly class UserService
                 ->setStatus(404);
         }
 
-        $this->security->checkUserAccess($user, SecurityAction::SUSPEND_USER);
+        $this->authorizeUserOperation($user, SecurityAction::SUSPEND_USER);
 
         // La matrice autorise le cas « soi-même » pour `UPDATE_USER` uniquement,
         // jamais pour `SUSPEND_USER` : une auto-suspension de plateforme est un
@@ -408,5 +411,17 @@ final readonly class UserService
     private function membershipsFor(User $user): array
     {
         return $this->membershipsByUser([$user])[(string) $user->getUuid()] ?? [];
+    }
+
+    /** Les actes plateforme sur les comptes exigent une autorisation explicite. */
+    private function authorizeUserOperation(User $user, SecurityAction $action): void
+    {
+        if ($this->security->isSuperAdmin()) {
+            $this->security->requirePlatformRole();
+
+            return;
+        }
+
+        $this->security->checkUserAccess($user, $action);
     }
 }

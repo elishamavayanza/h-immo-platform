@@ -21,6 +21,7 @@ declare(strict_types=1);
  *   php tests/verify-organization-suspend.php
  */
 
+use App\Dto\Request\Identity\OrganizationRequest;
 use App\Dto\Request\Identity\OrganizationSuspendRequest;
 use App\Entity\Identity\Organization;
 use App\Entity\Identity\OrganizationUser;
@@ -159,6 +160,17 @@ $tokenStorage->setToken(new UsernamePasswordToken($superAdmin, 'main', $superAdm
 
 /** @var OrganizationService $service */
 $service = $container->get(OrganizationService::class);
+
+section('Le statut ne peut pas être modifié par le formulaire général');
+$tokenStorage->setToken(new UsernamePasswordToken($member, 'main', $member->getRoles()));
+$genericStatusUpdate = $service->update(
+    $memberUuid,
+    new OrganizationRequest(status: OrganizationStatus::SUSPENDED),
+);
+check('Une suspension sans motif via PUT général est refusée (422)', $genericStatusUpdate->getStatus() === 422, "obtenu {$genericStatusUpdate->getStatus()}");
+$statusAfterGenericUpdate = $connection->fetchOne('SELECT status FROM organization WHERE code = :code', ['code' => 'SUSPEND']);
+check('Le PUT général laisse le statut actif', $statusAfterGenericUpdate === OrganizationStatus::ACTIVE->value, (string) $statusAfterGenericUpdate);
+$tokenStorage->setToken(new UsernamePasswordToken($superAdmin, 'main', $superAdmin->getRoles()));
 
 section('Motif obligatoire');
 

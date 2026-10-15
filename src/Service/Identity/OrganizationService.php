@@ -67,11 +67,13 @@ final readonly class OrganizationService
         // L'Organization est la frontière du multi-tenant : lister sans
         // filtre livrerait à n'importe quel utilisateur authentifié la
         // liste des entreprises clientes de la plateforme. On restreint donc
-        // aux Organizations dont l'appelant est membre, sauf pour le
-        // SUPER_ADMIN qui administre la plateforme.
-        $paginatedResult = $this->security->isSuperAdmin()
-            ? $this->repository->findPaginated($query->page, $query->limit, $query->search)
-            : $this->repository->findPaginatedByUuids(
+        // aux Organizations dont l'appelant est membre ; le SUPER_ADMIN
+        // doit passer explicitement par son rôle plateforme.
+        if ($this->security->isSuperAdmin()) {
+            $this->security->requirePlatformRole();
+            $paginatedResult = $this->repository->findPaginated($query->page, $query->limit, $query->search);
+        } else {
+            $paginatedResult = $this->repository->findPaginatedByUuids(
                 array_map(
                     static fn (Organization $organization): string => $organization->getUuid()->toRfc4122(),
                     $this->security->getCurrentUserOrganizations()
@@ -80,6 +82,7 @@ final readonly class OrganizationService
                 $query->limit,
                 $query->search
             );
+        }
 
         $data = [
             'items' => array_map([$this->mapper, 'toResponse'], $paginatedResult['items']),
@@ -112,7 +115,7 @@ final readonly class OrganizationService
                 ->autoInitFlush();
         }
 
-        $this->security->checkOrganizationAccess($organization, SecurityAction::VIEW_ORGANIZATION);
+        $this->authorizeOrganizationOperation($organization, SecurityAction::VIEW_ORGANIZATION);
 
         return $feedback
             ->setData($this->mapper->toResponse($organization))
@@ -131,12 +134,6 @@ final readonly class OrganizationService
      * active : il ne doit jamais déduire le rôle d'une organisation à
      * partir du rôle global d'un compte (un utilisateur multi-Organization
      * porte un rôle différent par Organization, cf. `getOrganizationRole`).
-     *
-     * `checkOrganizationAccess` départage aussi la lecture d'un
-     * SUPER_ADMIN qui n'est pas membre : le contrôle d'appartenance est
-     * levé pour lui, mais `getOrganizationRole` restera null, donc la
-     * réponse reste un 403 « pas de rôle métier » plutôt qu'un rôle
-     * inventé.
      */
     public function getMembership(string $uuid, ?OrganizationRole $requestedRole = null): Feedback
     {
@@ -223,7 +220,7 @@ final readonly class OrganizationService
         // tout. Trois flushs intermédiaires laissaient un tenant sans PATRON
         // (donc inaccessible) si l'étape suivante échouait.
         $this->em->wrapInTransaction(function () use ($request, &$organization, &$patron, &$orgUser): void {
-            $organization = $this->mapper->copyToEntity($request, new Organization());
+            $organization = $this->mapper->copyToEntity($request, new Organization(), includeStatus: true);
             $this->em->persist($organization);
 
             $patron = new User();
@@ -302,7 +299,7 @@ final readonly class OrganizationService
                 ->autoInitFlush();
         }
 
-        $this->security->checkOrganizationAccess($organization, SecurityAction::UPDATE);
+        $this->authorizeOrganizationOperation($organization, SecurityAction::UPDATE);
 
         $violations = $this->validator->validate($request, groups: ['update']);
         if (count($violations) > 0) {
@@ -350,7 +347,7 @@ final readonly class OrganizationService
                 ->setStatus(404);
         }
 
-        $this->security->checkOrganizationAccess($organization, SecurityAction::SUSPEND_ORGANIZATION);
+        $this->authorizeOrganizationOperation($organization, SecurityAction::SUSPEND_ORGANIZATION);
 
         $violations = $this->validator->validate($request);
         if (count($violations) > 0) {
@@ -451,7 +448,7 @@ final readonly class OrganizationService
                 ->setStatus(404);
         }
 
-        $this->security->checkOrganizationAccess($organization, SecurityAction::ACTIVATE_ORGANIZATION);
+        $this->authorizeOrganizationOperation($organization, SecurityAction::ACTIVATE_ORGANIZATION);
 
         if ($organization->getStatus() !== OrganizationStatus::SUSPENDED) {
             return $feedback
@@ -592,7 +589,7 @@ final readonly class OrganizationService
                 ->autoInitFlush();
         }
 
-        $this->security->checkOrganizationAccess($organization, SecurityAction::DELETE);
+        $this->authorizeOrganizationOperation($organization, SecurityAction::DELETE);
 
         $organization->softDelete();
         $this->em->flush();
@@ -601,5 +598,17 @@ final readonly class OrganizationService
             ->setFlushDescription('L\'organisation a été supprimée avec succès.')
             ->setStatus(200)
             ->autoInitFlush();
+    }
+
+    /** Les opérations plateforme sont explicitement distinguées des droits métier. */
+    private function authorizeOrganizationOperation(Organization $organization, SecurityAction $action): void
+    {
+        if ($this->security->isSuperAdmin()) {
+            $this->security->requirePlatformRole();
+
+            return;
+        }
+
+        $this->security->checkOrganizationAccess($organization, $action);
     }
 }

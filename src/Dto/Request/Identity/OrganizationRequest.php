@@ -99,9 +99,11 @@ final readonly class OrganizationRequest
             description: 'Statut de l\'organisation (ACTIVE, SUSPENDED, INACTIVE)',
             type: 'string',
             example: 'active',
+            nullable: true,
             enum: [OrganizationStatus::ACTIVE, OrganizationStatus::SUSPENDED, OrganizationStatus::INACTIVE]
         )]
-        public OrganizationStatus $status = OrganizationStatus::ACTIVE,
+        #[Assert\IsNull(message: 'Le statut se modifie via les actions dédiées de suspension ou de réactivation.', groups: ['update'])]
+        public ?OrganizationStatus $status = null,
 
         // --- Champs pour la création du PATRON (utilisateur responsable) ---
         #[OA\Property(

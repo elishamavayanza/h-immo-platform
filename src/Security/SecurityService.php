@@ -58,9 +58,9 @@ use Symfony\Component\HttpFoundation\RequestStack;
  *
  * Le SUPER_ADMIN n'hérite PAS des permissions métier des administrateurs
  * immobiliers : il administre les Organizations et les comptes de
- * plateforme. L'accès de lecture aux données métier reste possible (il
- * doit pouvoir diagnostiquer la plateforme) mais il est explicite et
- * tracé via `requirePlatformRole()`.
+ * plateforme. Les accès plateforme à des synthèses ou journaux sont
+ * explicitement autorisés par `requirePlatformRole()` ; ils ne donnent pas
+ * accès aux listes et actions métier des organisations.
  */
 final class SecurityService implements SecurityServiceInterface
 {
@@ -375,11 +375,10 @@ final class SecurityService implements SecurityServiceInterface
     /**
      * Un compte n'est consultable que dans le périmètre de l'appelant.
      *
-     * Trois cas legitimement autorisés : le SUPER_ADMIN (il administre la
-     * plateforme), l'appelant lui-même (son propre profil), et un compte
-     * avec lequel l'appelant partage au moins une Organization. Ce dernier
-     * cas est ce qui permet à un PATRON de gérer les utilisateurs de son
-     * propre société sans jamais voir ceux d'un autre tenant.
+     * Le compte courant peut modifier son profil ; pour les autres comptes,
+     * l'appelant doit partager une Organization et y avoir le rôle adéquat.
+     * Les opérations plateforme sont autorisées explicitement par le service
+     * d'administration, jamais par un accès métier implicite.
      *
      * À l'inverse, l'absence d'appartenance commune rend le compte
      * invisible : le renvoyer en 403 et non 404 évite de laisser deviner
@@ -393,7 +392,7 @@ final class SecurityService implements SecurityServiceInterface
      * seule ligne de la matrice de rôle. Une modification ou une suppression
      * portant sur un AUTRE compte passe donc désormais par
      * `applyRoleRuleOnOrganization()`, qui réserve ces actions au PATRON de
-     * l'Organization concernée (le SUPER_ADMIN étant traité en amont).
+     * l'Organization concernée.
      *
      * Seule `UPDATE_USER` conserve un cas « soi-même » : c'est le fondement de
      * l'auto-service de profil (fiche, téléphone, photo via `MediaService`).
@@ -406,10 +405,6 @@ final class SecurityService implements SecurityServiceInterface
     {
         if (!$this->isAuthenticated()) {
             throw UnauthenticatedException::create();
-        }
-
-        if ($this->isSuperAdmin()) {
-            return;
         }
 
         $currentUser = $this->getCurrentUser();
@@ -482,18 +477,15 @@ final class SecurityService implements SecurityServiceInterface
         Organization $organization,
         SecurityAction $action
     ): void {
-        if ($this->isSuperAdmin()) {
-            return;
-        }
-
-        $this->checkOrganizationActive($organization);
-
         if (!$this->belongsToOrganization($this->getCurrentUser(), $organization)) {
             throw new AccessDeniedException(
                 'Accès refusé : vous n\'appartenez pas à cette organisation.'
             );
         }
 
+        // Vérifier d'abord l'appartenance : un UUID deviné ne doit pas
+        // révéler le nom ni l'état d'une organisation suspendue.
+        $this->checkOrganizationActive($organization);
         $this->applyRoleRuleOnOrganization($organization, $action);
     }
 
@@ -551,10 +543,6 @@ final class SecurityService implements SecurityServiceInterface
      */
     public function checkCityAccess(City $city, SecurityAction $action): void
     {
-        if ($this->isSuperAdmin()) {
-            return;
-        }
-
         $organization = $city->getOrganization();
         $this->checkOrganizationAccess($organization, $action);
 
@@ -606,17 +594,17 @@ final class SecurityService implements SecurityServiceInterface
     /**
      * Villes effectivement accessibles à l'utilisateur courant.
      *
-     * - SUPER_ADMIN : aucune restriction (retourne `null` pour signaler
-     *   « pas de filtre » aux repositories) ;
+     * - SUPER_ADMIN : aucune ville métier (les accès plateforme utilisent
+     *   des opérations dédiées et explicitement autorisées) ;
      * - ADMIN_VILLE : uniquement ses villes attribuées ;
      * - PATRON / ADMIN_IMMOBILIER : toutes les villes de ses Organizations.
      *
-     * @return list<City>|null `null` = SUPER_ADMIN, donc aucun filtre de ville
+     * @return list<City>|null `null` = aucun filtre, réservé aux appelants explicitement autorisés
      */
     public function getAccessibleCities(): ?array
     {
         if ($this->isSuperAdmin()) {
-            return null;
+            return [];
         }
 
         $user = $this->getCurrentUser();
@@ -678,14 +666,7 @@ final class SecurityService implements SecurityServiceInterface
      */
     public function getScopedCities(): array
     {
-        $cities = $this->getAccessibleCities();
-
-        if ($cities !== null) {
-            return $cities;
-        }
-
-        // SUPER_ADMIN : périmètre plateforme, toutes les villes actives.
-        return $this->cityRepository->findAllActive();
+        return $this->getAccessibleCities() ?? [];
     }
 
     /*
@@ -782,10 +763,6 @@ final class SecurityService implements SecurityServiceInterface
     {
         $this->checkOrganizationAccess($tenant->getOrganization(), $action);
 
-        if ($this->isSuperAdmin()) {
-            return;
-        }
-
         $organization = $tenant->getOrganization();
         if ($this->getOrganizationRole($this->getCurrentUser(), $organization) !== OrganizationRole::ADMIN_VILLE) {
             return;
@@ -837,10 +814,6 @@ final class SecurityService implements SecurityServiceInterface
      */
     public function checkLeaseAccess(Lease $lease, SecurityAction $action): void
     {
-        if ($this->isSuperAdmin()) {
-            return;
-        }
-
         $organization = $lease->getOrganization();
         $this->checkOrganizationAccess($organization, $action);
 
@@ -919,10 +892,6 @@ final class SecurityService implements SecurityServiceInterface
      */
     public function checkWorkerAccess(Worker $worker, SecurityAction $action): void
     {
-        if ($this->isSuperAdmin()) {
-            return;
-        }
-
         $organization = $worker->getOrganization();
         $this->checkOrganizationAccess($organization, $action);
 
@@ -952,10 +921,6 @@ final class SecurityService implements SecurityServiceInterface
      */
     public function checkWorkerAssignmentAccess(WorkerAssignment $assignment, SecurityAction $action): void
     {
-        if ($this->isSuperAdmin()) {
-            return;
-        }
-
         $this->checkCityAccess($assignment->getCity(), $action);
     }
 
@@ -986,10 +951,6 @@ final class SecurityService implements SecurityServiceInterface
      */
     public function checkExpenseAccess(Expense $expense, SecurityAction $action): void
     {
-        if ($this->isSuperAdmin()) {
-            return;
-        }
-
         $this->checkCityAccess($expense->getCity(), $action);
     }
 
@@ -1021,6 +982,8 @@ final class SecurityService implements SecurityServiceInterface
 
         if ($organization === null) {
             if ($this->isSuperAdmin()) {
+                $this->requirePlatformRole();
+
                 return;
             }
 
@@ -1042,6 +1005,8 @@ final class SecurityService implements SecurityServiceInterface
     public function checkOrganizationAuditLogAccess(Organization $organization, SecurityAction $action): void
     {
         if ($this->isSuperAdmin()) {
+            $this->requirePlatformRole();
+
             return;
         }
 
@@ -1074,14 +1039,10 @@ final class SecurityService implements SecurityServiceInterface
      */
     public function checkReportAccess(string $reportType, SecurityAction $action): void
     {
-        if ($this->isSuperAdmin()) {
-            return;
-        }
-
         match ($reportType) {
             'patron', 'admin_immobilier' => $this->checkCurrentUserOrganizationActive(),
             'admin_ville' => null, // Checked via city access in controller
-            'super_admin' => null, // Only super admin, already checked above
+            'super_admin' => $this->requirePlatformRole(),
             default => throw new AccessDeniedException(
                 sprintf('Type de rapport inconnu : "%s".', $reportType)
             ),
@@ -1111,10 +1072,6 @@ final class SecurityService implements SecurityServiceInterface
      */
     public function hasPermission(string $permission): bool
     {
-        if ($this->isSuperAdmin()) {
-            return true;
-        }
-
         $action = SecurityAction::tryFrom($permission);
 
         if (!$action) {

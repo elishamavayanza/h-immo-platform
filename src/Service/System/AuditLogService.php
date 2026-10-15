@@ -73,7 +73,9 @@ final class AuditLogService
             $organization = $this->resolveOrganization($filter->organizationUuid);
 
             $this->security->checkOrganizationAuditLogAccess($organization, SecurityAction::VIEW_AUDIT_LOG);
-        } elseif (!$this->security->isSuperAdmin()) {
+        } elseif ($this->security->isSuperAdmin()) {
+            $this->security->requirePlatformRole();
+        } else {
             // Sans Organization demandée, on ne renvoie que les
             // événements des Organizations dont l'appelant est membre.
             // La liste doit être transmise au repository : ne vérifier

@@ -33,7 +33,7 @@ final class OrganizationMapper
      * Mappe les données d'un DTO OrganizationRequest vers une entité Organization.
      * Hydrate l'instance fournie (existante ou nouvelle) à partir du payload validé.
      */
-    public function copyToEntity(OrganizationRequest $dto, Organization $organization): Organization
+    public function copyToEntity(OrganizationRequest $dto, Organization $organization, bool $includeStatus = false): Organization
     {
         if ($dto->name !== null) {
             $organization->setName($dto->name);
@@ -59,7 +59,7 @@ final class OrganizationMapper
         if ($dto->country !== null) {
             $organization->setCountry($dto->country);
         }
-        if ($dto->status !== null) {
+        if ($includeStatus && $dto->status !== null) {
             $organization->setStatus($dto->status);
         }
 

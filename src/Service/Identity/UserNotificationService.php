@@ -65,8 +65,8 @@ final readonly class UserNotificationService
             // Ne journalise aucune donnée personnelle : uniquement les
             // références techniques utiles au diagnostic réseau.
             $this->logger->error('Échec de l\'envoi de l\'email de suspension de compte.', [
-                'userId' => $user->getId(),
-                'exception' => $exception,
+                'user_id' => $user->getId(),
+                'exception_class' => $exception::class,
             ]);
 
             return [$user->getEmail()];
