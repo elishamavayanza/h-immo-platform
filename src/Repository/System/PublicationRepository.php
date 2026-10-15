@@ -8,7 +8,6 @@ use App\Entity\Identity\User;
 use App\Entity\System\Publication;
 use App\Entity\System\PublicationRecipient;
 use App\Enum\PublicationStatus;
-use App\Enum\PlatformRole;
 use App\Repository\UuidParameterTrait;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\Persistence\ManagerRegistry;
@@ -67,29 +66,22 @@ final class PublicationRepository extends ServiceEntityRepository
     {
         $em = $this->getEntityManager();
         $qb = $em->createQueryBuilder()->select('DISTINCT u')->from(User::class, 'u')
-            ->andWhere('u.isActive = true')->andWhere('u.deletedAt IS NULL');
+            ->andWhere('u.isActive = true')->andWhere('u.deletedAt IS NULL')->andWhere('u.platformRole IS NULL');
         if ($publication->getAudience()->value === 'organization') {
             $qb->join('App\\Entity\\Identity\\OrganizationUser', 'ou', 'WITH', 'ou.user = u')
                 ->andWhere('ou.organization = :organization')->setParameter('organization', $publication->getOrganization());
         } elseif ($publication->getAudience()->value === 'roles') {
             $roles = $publication->getAudienceRoles();
             $organizationRoles = array_values(array_intersect($roles, ['patron', 'admin_immobilier', 'admin_ville']));
-            $hasSuperAdmin = in_array('super_admin', $roles, true);
             $conditions = [];
             if ($organizationRoles !== []) {
                 // Une sous-requête évite les doublons pour les comptes multi-organisations
-                // et permet de combiner des rôles métier avec SUPER_ADMIN sans
-                // exclure les comptes plateforme qui n'ont aucune appartenance.
+                // et conserve le ciblage dans les seuls rôles métier.
                 $conditions[] = 'u.id IN (SELECT IDENTITY(ou.user) FROM App\\Entity\\Identity\\OrganizationUser ou JOIN ou.organization org WHERE ou.role IN (:roles) AND org.deletedAt IS NULL)';
                 $qb->setParameter('roles', $organizationRoles);
             }
-            if ($hasSuperAdmin) {
-                $conditions[] = 'u.platformRole = :platformRole';
-                $qb->setParameter('platformRole', PlatformRole::SUPER_ADMIN);
-            }
             if ($conditions === []) return [];
             $qb->andWhere('('.implode(' OR ', $conditions).')');
-            if ($organizationRoles === [] && !in_array('super_admin', $roles, true)) return [];
         }
         return $qb->getQuery()->getResult();
     }

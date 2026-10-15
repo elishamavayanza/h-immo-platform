@@ -58,9 +58,16 @@
 .publication-admin button:disabled { opacity: .6; cursor: wait; }
 .publication-admin__preview { position: sticky; top: 12px; }
 .publication-admin__preview > p { color: $color-text-muted; }
-.publication-admin__preview-card { margin-top: 15px; padding: 16px; border: 1px solid $color-border; border-radius: 12px; overflow-wrap: anywhere; }
+.publication-admin__preview-card { box-sizing: border-box; min-width: 0; max-height: min(72vh, 720px); margin-top: 15px; padding: 16px; border: 1px solid $color-border; border-radius: 12px; overflow: auto; overscroll-behavior: contain; overflow-wrap: anywhere; }
 .publication-admin__preview-card > span, .publication-detail > span { color: $color-primary; font-size: .9rem; }
 .publication-admin__preview-card h3 { margin: 8px 0; }
+.publication-admin__preview-card .publication-content { grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: start; }
+.publication-admin__preview-card .publication-content > p,
+.publication-admin__preview-card .publication-content > ul,
+.publication-admin__preview-card .publication-content > ol { grid-column: 1 / -1; min-width: 0; }
+.publication-admin__preview-card .publication-content__image { min-width: 0; margin: 0; padding: 7px; border: 1px solid $color-border; border-radius: 10px; background: color-mix(in srgb, $color-bg-input 55%, transparent); }
+.publication-admin__preview-card .publication-content__image img { box-sizing: border-box; width: 100%; height: 150px; max-height: 150px; object-fit: contain; border-radius: 6px; }
+.publication-admin__preview-card .publication-content__image figcaption { overflow-wrap: anywhere; font-size: .8rem; }
 .publication-admin__history > header { display: flex; justify-content: space-between; align-items: center; gap: 16px; margin-bottom: 14px; }
 .publication-admin__history h2, .publication-admin__history p { margin: 0 0 5px; }
 .publication-admin__list { display: grid; }
@@ -76,10 +83,25 @@
 .publication-content__image { margin: 8px 0; }
 .publication-content__image img { display: block; max-width: 100%; max-height: 560px; object-fit: contain; border-radius: 10px; }
 .publication-content__image figcaption { margin-top: 5px; color: $color-text-muted; font-size: .9rem; }
-.publication-detail { max-width: 920px; margin: 0 auto; overflow-wrap: anywhere; }
-.publication-detail > a { display: inline-block; margin-bottom: 20px; color: $color-primary; }
-.publication-detail h1 { margin: 8px 0; }
-.publication-detail time { color: $color-text-muted; }
+.publication-detail-page { box-sizing: border-box; width: 100%; min-width: 0; padding: clamp(12px, 2vw, 24px) clamp(8px, 1vw, 14px) $spacing-8; }
+.publication-detail { max-width: 1080px; margin: 0 auto; padding: clamp(18px, 3vw, 32px); overflow-wrap: anywhere; }
+.publication-detail__back { display: inline-flex; align-items: center; gap: 8px; min-height: 40px; margin: 0 0 22px; padding: 7px 12px; border: 1px solid $color-border; border-radius: 10px; background: color-mix(in srgb, $color-bg-input 55%, transparent); color: $color-primary; font-weight: 600; text-decoration: none; transition: background-color .18s ease, border-color .18s ease; }
+.publication-detail__back:hover { border-color: $color-primary; background: color-mix(in srgb, $color-primary 9%, transparent); }
+.publication-detail__back:focus-visible { outline: 3px solid color-mix(in srgb, $color-primary 36%, transparent); outline-offset: 2px; }
+.publication-detail__header { display: grid; gap: 10px; padding-bottom: 20px; border-bottom: 1px solid $color-border; }
+.publication-detail__meta { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; color: $color-text-muted; font-size: .9rem; }
+.publication-detail__category { display: inline-flex; align-items: center; min-height: 28px; padding: 3px 10px; border: 1px solid color-mix(in srgb, $color-primary 32%, transparent); border-radius: 999px; background: color-mix(in srgb, $color-primary 10%, transparent); color: $color-primary; font-weight: 600; }
+.publication-detail h1 { margin: 0; font-size: clamp(1.55rem, 3vw, 2.25rem); line-height: 1.2; }
+.publication-detail .publication-content { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; margin-top: 20px; }
+.publication-detail .publication-content > p,
+.publication-detail .publication-content > ul,
+.publication-detail .publication-content > ol { grid-column: 1 / -1; min-width: 0; }
+.publication-detail .publication-content__image { min-width: 0; margin: 0; padding: 10px; border: 1px solid $color-border; border-radius: 12px; background: color-mix(in srgb, $color-bg-input 55%, transparent); }
+.publication-detail .publication-content__image img { box-sizing: border-box; width: 100%; height: clamp(220px, 30vw, 340px); max-height: none; object-fit: contain; border-radius: 8px; background: $color-bg-input; }
+.publication-detail .publication-content__image figcaption { overflow-wrap: anywhere; }
+.publication-detail--state { max-width: 760px; min-height: 240px; display: flex; flex-direction: column; justify-content: center; align-items: flex-start; gap: 12px; }
+.publication-detail--state h1, .publication-detail--state p { margin: 0; }
+.publication-detail--state .publication-detail__back { margin-bottom: 0; }
 
 @media (max-width: 900px) {
     .publication-admin__grid { grid-template-columns: 1fr; }
@@ -97,4 +119,18 @@
     .publication-admin__roles { min-width: 0; padding: 12px; }
     .publication-admin__actions, .publication-admin__item-actions { width: 100%; flex-direction: column; }
     .publication-admin__actions button, .publication-admin__item-actions button, .publication-admin__history > header > button { width: 100%; }
+    .publication-admin__preview-card { max-height: 62vh; padding: 12px; }
+    .publication-admin__preview-card .publication-content__image img { height: 130px; max-height: 130px; }
+    .publication-detail-page { padding: 8px 6px 20px; }
+    .publication-detail { padding: 17px; }
+    .publication-detail__back { margin-bottom: 16px; }
+    .publication-detail__header { gap: 8px; padding-bottom: 16px; }
+    .publication-detail .publication-content { grid-template-columns: minmax(0, 1fr); gap: 12px; margin-top: 16px; }
+    .publication-detail .publication-content__image img { height: clamp(190px, 62vw, 300px); }
+}
+@media (max-width: 360px) {
+    .publication-admin__preview-card .publication-content { grid-template-columns: minmax(0, 1fr); }
+    .publication-admin__preview-card .publication-content__image img { height: 170px; max-height: 170px; }
+    .publication-detail { padding: 14px; }
+    .publication-detail .publication-content__image { padding: 7px; }
 }

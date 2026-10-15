@@ -6,7 +6,7 @@ import './publications.scss';
 
 const CATEGORY_LABEL: Record<string, string> = { feature: 'Nouvelle fonctionnalité', improvement: 'Amélioration', correction: 'Correction', maintenance: 'Maintenance', important: 'Annonce importante' };
 
-export function PublicationNotifications() {
+export function PublicationNotifications({ disabled = false }: { disabled?: boolean }) {
     const [items, setItems] = useState<Publication[]>([]);
     const [open, setOpen] = useState(false);
     const [loadError, setLoadError] = useState(false);
@@ -14,13 +14,18 @@ export function PublicationNotifications() {
     const navigate = useNavigate();
     useEffect(() => {
         let active = true;
+        if (disabled) {
+            setItems([]);
+            setOpen(false);
+            return () => { active = false; };
+        }
         const load = async () => { try { const rows = await publicationsService.active(); if (active) { setItems(rows); setLoadError(false); } } catch { if (active) setLoadError(true); } };
         void load();
         const timer = window.setInterval(() => { void load(); }, 60_000);
         return () => { active = false; window.clearInterval(timer); };
-    }, [refreshVersion]);
+    }, [refreshVersion, disabled]);
     const unread = items.filter(item => !item.firstViewedAt).length;
-    if (items.length === 0) return null;
+    if (disabled || items.length === 0) return null;
 
     return <div className="publication-notifications">
         <button className="publication-notifications__trigger" type="button" aria-label={`Notifications${unread ? `, ${unread} non lue(s)` : ''}`} aria-expanded={open} onClick={() => setOpen(value => !value)}>

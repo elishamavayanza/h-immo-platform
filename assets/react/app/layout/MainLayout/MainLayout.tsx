@@ -290,7 +290,7 @@ return (
                         `/app/access-denied`) ni le 403 d'une page réservée à un
                         autre rôle. Le chargement des rôles est déjà traité
                         *avant* ce point par le `Loading` ci-dessus. */}
-                    <div className="main-layout__global-tools"><GlobalSearch /><PublicationNotifications /></div>
+                    <div className="main-layout__global-tools"><GlobalSearch /><PublicationNotifications disabled={isPlatform} /></div>
                     <Outlet />
                     <ContextualHelp />
                     {isPageTransitionLoading && <div className="main-layout__route-transition" aria-hidden="true" />}
