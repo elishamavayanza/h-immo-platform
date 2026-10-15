@@ -57,6 +57,7 @@ $patron = (new User())->setEmail('patron-'.$suffix.'@test.local')->setFullName('
 $outsider = (new User())->setEmail('outside-'.$suffix.'@test.local')->setFullName('Outside Test')->setPassword(password_hash('Test-Publication-123!', PASSWORD_BCRYPT))->setIsActive(true);
 foreach ([$organization, $superAdmin, $patron, $outsider] as $entity) $em->persist($entity);
 $em->persist((new OrganizationUser())->setUser($patron)->setOrganization($organization)->setRole(OrganizationRole::PATRON));
+$em->persist((new OrganizationUser())->setUser($superAdmin)->setOrganization($organization)->setRole(OrganizationRole::PATRON));
 $em->flush();
 $adminEmail = $superAdmin->getEmail(); $patronEmail = $patron->getEmail();
 $em->clear();
@@ -79,6 +80,9 @@ $check('le PATRON test peut se connecter', is_string($patronToken));
 if (!$adminToken || !$patronToken) { fwrite(STDERR, "Authentification des comptes éphémères impossible.\n"); exit(1); }
 
 $base = ['title' => 'Annonce de test '.$suffix, 'content' => "Bienvenue\n- Première amélioration\n2. Suivi disponible", 'category' => 'improvement', 'audience' => 'roles', 'audienceRoles' => ['patron'], 'organizationUuid' => null, 'scheduledAt' => null, 'endsAt' => null];
+$superAdminAudience = $base; $superAdminAudience['audienceRoles'] = ['super_admin'];
+[$superAdminAudienceStatus] = $request('POST', '/api/v1/publications', $superAdminAudience, $adminToken);
+$check('le rôle SUPER_ADMIN ne peut pas être ciblé par une publication', $superAdminAudienceStatus === 400);
 [$status, $payload] = $request('POST', '/api/v1/publications', $base, $adminToken);
 $draftUuid = $payload['data']['uuid'] ?? '';
 $check('le SUPER_ADMIN crée un brouillon', $status === 201 && $draftUuid !== '');
@@ -107,6 +111,10 @@ $managedBase = array_values(array_filter($managed['data'] ?? [], static fn (arra
 $check('le tableau de gestion expose les destinataires et consultations', $manageStatus === 200 && ($managedBase['recipientCount'] ?? 0) >= 1 && array_key_exists('viewCount', $managedBase) && array_key_exists('expiredCount', $managedBase));
 [$activePatronStatus, $activePatron] = $request('GET', '/api/v1/publications/active', null, $patronToken);
 $check('les destinataires ciblés voient la notification', $activePatronStatus === 200 && count($activePatron['data'] ?? []) === 1);
+[$activeSuperAdminStatus, $activeSuperAdmin] = $request('GET', '/api/v1/publications/active', null, $adminToken);
+$check('un compte SUPER_ADMIN ne reçoit jamais de publication', $activeSuperAdminStatus === 200 && count($activeSuperAdmin['data'] ?? []) === 0);
+[$openSuperAdminStatus] = $request('GET', '/api/v1/publications/'.$draftUuid, null, $adminToken);
+$check('un SUPER_ADMIN ne peut pas ouvrir directement une publication métier', $openSuperAdminStatus === 404);
 $outsiderToken = $login('outside-'.$suffix.'@test.local');
 [$activeOutsideStatus, $activeOutside] = $request('GET', '/api/v1/publications/active', null, $outsiderToken);
 $check('un utilisateur non ciblé ne reçoit pas la publication', $activeOutsideStatus === 200 && count($activeOutside['data'] ?? []) === 0);
@@ -117,14 +125,16 @@ $organizationDraftUuid = $organizationDraftPayload['data']['uuid'] ?? '';
 [$organizationPublishStatus] = $request('POST', '/api/v1/publications/'.$organizationDraftUuid.'/publish', null, $adminToken);
 [$organizationActiveStatus, $organizationActive] = $request('GET', '/api/v1/publications/active', null, $patronToken);
 [$organizationOutsideStatus, $organizationOutside] = $request('GET', '/api/v1/publications/active', null, $outsiderToken);
-$check('l’audience organisation respecte l’appartenance', $organizationDraftStatus === 201 && $organizationPublishStatus === 200 && count($organizationActive['data'] ?? []) === 2 && count($organizationOutside['data'] ?? []) === 0);
+[$organizationSuperAdminStatus, $organizationSuperAdmin] = $request('GET', '/api/v1/publications/active', null, $adminToken);
+$check('l’audience organisation respecte l’appartenance sans inclure SUPER_ADMIN', $organizationDraftStatus === 201 && $organizationPublishStatus === 200 && count($organizationActive['data'] ?? []) === 2 && count($organizationOutside['data'] ?? []) === 0 && $organizationSuperAdminStatus === 200 && count($organizationSuperAdmin['data'] ?? []) === 0);
 
 $allDraft = $base; $allDraft['title'] .= ' plateforme'; $allDraft['audience'] = 'all'; $allDraft['audienceRoles'] = [];
 [$allDraftStatus, $allDraftPayload] = $request('POST', '/api/v1/publications', $allDraft, $adminToken);
 $allUuid = $allDraftPayload['data']['uuid'] ?? '';
 [$allPublishStatus] = $request('POST', '/api/v1/publications/'.$allUuid.'/publish', null, $adminToken);
 [$allOutsideStatus, $allOutside] = $request('GET', '/api/v1/publications/active', null, $outsiderToken);
-$check('l’audience globale atteint les comptes actifs', $allDraftStatus === 201 && $allPublishStatus === 200 && count($allOutside['data'] ?? []) === 1);
+$allSuperAdmin = $request('GET', '/api/v1/publications/active', null, $adminToken);
+$check('l’audience globale atteint les comptes métier sans le SUPER_ADMIN', $allDraftStatus === 201 && $allPublishStatus === 200 && count($allOutside['data'] ?? []) === 1 && $allSuperAdmin[0] === 200 && count($allSuperAdmin[1]['data'] ?? []) === 0);
 [$archiveStatus] = $request('POST', '/api/v1/publications/'.$allUuid.'/archive', null, $adminToken);
 [$archivedActiveStatus, $archivedActive] = $request('GET', '/api/v1/publications/active', null, $outsiderToken);
 $check('une publication archivée cesse d’être diffusée', $archiveStatus === 200 && $archivedActiveStatus === 200 && count($archivedActive['data'] ?? []) === 0);

@@ -11,6 +11,7 @@ use App\Entity\System\PublicationRecipient;
 use App\Enum\PublicationAudience;
 use App\Enum\PublicationCategory;
 use App\Enum\PublicationStatus;
+use App\Enum\PlatformRole;
 use App\Repository\Identity\OrganizationRepository;
 use App\Repository\System\PublicationRepository;
 use App\Security\SecurityServiceInterface;
@@ -57,7 +58,7 @@ final class PublicationService
         if ($category === null || $audience === null) throw new BadRequestHttpException('Catégorie ou audience invalide.');
         $roles = [];
         if ($audience === PublicationAudience::ROLES) {
-            $allowed = ['super_admin', 'patron', 'admin_immobilier', 'admin_ville'];
+            $allowed = ['patron', 'admin_immobilier', 'admin_ville'];
             if ($dto->audienceRoles === [] || array_filter($dto->audienceRoles, static fn (mixed $role): bool => !is_string($role) || !in_array($role, $allowed, true)) !== []) throw new BadRequestHttpException('Sélectionnez au moins un rôle valide.');
             $roles = array_values(array_unique($dto->audienceRoles));
         } else {
@@ -143,16 +144,19 @@ final class PublicationService
     /** @return list<array<string, mixed>> */
     public function activeForCurrentUser(): array
     {
+        $user = $this->security->getCurrentUser();
+        if ($user->getPlatformRole() === PlatformRole::SUPER_ADMIN) return [];
         $now = $this->dateTime->now();
         return array_map(fn (PublicationRecipient $recipient): array => $this->serialize($recipient->getPublication()) + [
             'firstViewedAt' => $recipient->getFirstViewedAt()?->format(DATE_ATOM),
             'availableAt' => $recipient->getAvailableAt()->format(DATE_ATOM),
-        ], $this->publications->findActiveForUser($this->security->getCurrentUser(), $now));
+        ], $this->publications->findActiveForUser($user, $now));
     }
 
     public function openForCurrentUser(string $uuid): array
     {
         $user = $this->security->getCurrentUser();
+        if ($user->getPlatformRole() === PlatformRole::SUPER_ADMIN) throw new NotFoundHttpException('Publication introuvable.');
         $recipient = $this->publications->findRecipient($user, $uuid);
         if (!$recipient || $recipient->getWithdrawnAt() !== null || $recipient->getPublication()->getStatus() !== PublicationStatus::PUBLISHED) throw new NotFoundHttpException('Publication introuvable.');
         if ($recipient->getFirstViewedAt() === null) {
