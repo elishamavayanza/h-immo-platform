@@ -497,6 +497,14 @@ check(
 [$status] = $request('GET', '/api/v1/reports/super-admin', null, $tokenSuper);
 check('le SUPER_ADMIN lit le rapport plateforme (200)', $status === 200, "obtenu {$status}");
 
+[$status, $dashboard] = $request('GET', '/api/v1/reports/super-admin/dashboard', null, $tokenSuper);
+$firstRevenue = $dashboard['revenueSeries'][0]['revenue'] ?? null;
+check(
+    'les revenus mensuels du tableau SUPER_ADMIN restent des décimales exactes dans le JSON',
+    $status === 200 && is_string($firstRevenue),
+    'HTTP ' . $status . ', valeur reçue : ' . get_debug_type($firstRevenue),
+);
+
 [$status] = $request('GET', '/api/v1/reports/super-admin', null, $tokenPatronA);
 check('un PATRON n\'accède pas au rapport plateforme (403)', $status === 403, "obtenu {$status}");
 

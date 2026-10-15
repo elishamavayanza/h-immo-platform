@@ -32,6 +32,15 @@ const DEFAULT_RETRIES    = 2;
 const DEFAULT_RETRY_DELAY = 300; // base du backoff exponentiel (ms)
 const MAX_RETRY_DELAY    = 10_000; // plafond du backoff (ms)
 
+/** Encode le journal d’actions en valeur ASCII sûre pour un en-tête HTTP. */
+function encodeActionTrailHeader(value: string): string {
+    const normalized = value.replace(/[\r\n]+/g, ' | ').slice(0, 1200);
+    const bytes = new TextEncoder().encode(normalized);
+    let binary = '';
+    for (const byte of bytes) binary += String.fromCharCode(byte);
+    return `base64:${btoa(binary)}`;
+}
+
 // ─────────────────────────────────────────
 // Classe principale
 // ─────────────────────────────────────────
@@ -100,7 +109,7 @@ class HttpClient {
             ...this.config.defaultHeaders,
             ...config.headers,
         };
-        if (actionTrail) headers['X-UI-Action-Trail'] = actionTrail;
+        if (actionTrail) headers['X-UI-Action-Trail'] = encodeActionTrailHeader(actionTrail);
         return headers;
     }
 
@@ -158,7 +167,9 @@ class HttpClient {
             const raw = await fetch(url, fetchOptions);
             clearTimeout(timeoutId);
 
-            const body = await this.parseBody(raw);
+            const body = config.responseType === 'blob' && raw.ok
+                ? await raw.blob()
+                : await this.parseBody(raw);
 
             if (!raw.ok) {
                 const apiError = new ApiError(
@@ -208,11 +219,14 @@ class HttpClient {
             }
 
             // Erreur réseau : retry seulement si le navigateur est en ligne
+            const transportError = err instanceof Error
+                ? { name: err.name, message: err.message.slice(0, 300) }
+                : { name: 'UnknownError', message: String(err).slice(0, 300) };
             const networkError = new ApiError(
                 getNetworkErrorMessage(),
                 0,
                 'Network Error',
-                {},
+                { transportError },
                 config,
             );
             if (this.isRetryableError(networkError) && attempt < this.maxRetries(config)) {
@@ -356,6 +370,10 @@ class HttpClient {
 
     get<T = unknown>(url: string, config?: Omit<RequestConfig, 'url' | 'method'>): Promise<ApiResponse<T>> {
         return this.request<T>({ ...config, url, method: 'GET' });
+    }
+
+    getBlob(url: string, config?: Omit<RequestConfig, 'url' | 'method' | 'responseType'>): Promise<ApiResponse<Blob>> {
+        return this.request<Blob>({ ...config, url, method: 'GET', responseType: 'blob' });
     }
 
     post<T = unknown>(url: string, data?: unknown, config?: Omit<RequestConfig, 'url' | 'method' | 'data'>): Promise<ApiResponse<T>> {

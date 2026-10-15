@@ -47,7 +47,7 @@ final readonly class ErrorReportService
             'Message : '.$this->scrub($exception->getMessage(), 1200),
             '',
             'Actions récentes (aucune valeur de formulaire) :',
-            $this->scrub(mb_substr($request->headers->get('X-UI-Action-Trail', '(aucune interaction récente capturée)'), 0, 1800), 1800),
+            $this->scrub(mb_substr($this->readActionTrailHeader($request), 0, 1800), 1800),
             '',
             'Source (pile PHP) :',
             $this->scrub($exception->getTraceAsString(), 9000),
@@ -90,6 +90,17 @@ final readonly class ErrorReportService
     private function isEnabled(): bool
     {
         return trim($this->recipient) !== '' && trim($this->sender) !== '';
+    }
+
+    /** Décode le header ASCII sans perdre les accents du journal. */
+    private function readActionTrailHeader(Request $request): string
+    {
+        $trail = $request->headers->get('X-UI-Action-Trail', '(aucune interaction récente capturée)');
+        if (!str_starts_with($trail, 'base64:')) return $trail;
+
+        $decoded = base64_decode(substr($trail, 7), true);
+
+        return $decoded === false ? '(journal d’actions illisible)' : $decoded;
     }
 
     private function send(string $subject, string $body, string $errorId): void

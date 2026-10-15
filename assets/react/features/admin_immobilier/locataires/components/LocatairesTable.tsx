@@ -25,6 +25,7 @@ interface LocatairesTableProps {
     onArchive: (row: LocataireRow) => void;
     onNewLease: (row: LocataireRow) => void;
     onActivateLease: (row: LocataireRow) => void;
+    onDocuments: (row: LocataireRow) => void;
     /** Lecture seule (espace PATRON) : masque toute action d'écriture. */
     readOnly?: boolean;
 }
@@ -34,7 +35,7 @@ interface LocatairesTableProps {
  * Archiver = suppression logique (`ARCHIVE_TENANT`). Pas de suppression définitive.
  * `readOnly` masque la colonne d'actions (le Patron consulte sans opérer).
  */
-export function LocatairesTable({ rows, role, onEdit, onArchive, onNewLease, onActivateLease, readOnly = false }: LocatairesTableProps) {
+export function LocatairesTable({ rows, role, onEdit, onArchive, onNewLease, onActivateLease, onDocuments, readOnly = false }: LocatairesTableProps) {
     const columns: DataTableColumn<LocataireRow>[] = [
         {
             key: 'name',
@@ -50,9 +51,11 @@ export function LocatairesTable({ rows, role, onEdit, onArchive, onNewLease, onA
             key: 'actions',
             title: 'Actions',
             render: (row) => {
-                if (readOnly) return '—';
-
                 const items: PopoverMenuItem[] = [
+                    ...(row.leaseUuid && canDo(role, 'view_document')
+                        ? [{ id: 'documents', label: 'Documents du bail', icon: <Icon name="document" />, onClick: () => onDocuments(row) }]
+                        : []),
+                    ...(readOnly ? [] : [
                     ...(canDo(role, 'update_tenant')
                         ? [{ id: 'edit', label: 'Modifier', icon: <Icon name="edit" />, onClick: () => onEdit(row) }]
                         : []),
@@ -65,6 +68,7 @@ export function LocatairesTable({ rows, role, onEdit, onArchive, onNewLease, onA
                     ...(canDo(role, 'archive_tenant')
                         ? [{ id: 'archive', label: 'Archiver', icon: <Icon name="archive" />, danger: true, onClick: () => onArchive(row) }]
                         : []),
+                    ]),
                 ];
 
                 if (items.length === 0) return '—';

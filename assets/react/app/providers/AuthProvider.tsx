@@ -11,6 +11,7 @@ import {
     saveUserPreferences,
 } from '../../services/userPreferences';
 import { settingsService } from '../../features/shared/account/settings/services/settingsService';
+import { flushPendingClientErrors } from '../../services/clientErrorReporting';
 
 interface AuthContextValue {
     user: SessionUserResponse | null;
@@ -37,6 +38,16 @@ interface AuthContextValue {
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 
+/**
+ * Une panne transitoire ne rend pas le JWT invalide : le serveur n'a simplement
+ * pas pu le vérifier. Conserver le jeton permet de restaurer la session après
+ * le rétablissement de l'API, au lieu de forcer une reconnexion inutile.
+ */
+function isTransientApiFailure(cause: unknown): boolean {
+    return cause instanceof ApiError
+        && (cause.status === 0 || cause.status === 408 || cause.status === 429 || cause.status >= 500);
+}
+
 export function AuthProvider({ children }: { children: ReactNode }) {
     const [user, setUser] = useState<SessionUserResponse | null>(null);
     const [isLoading, setIsLoading] = useState(true);
@@ -61,14 +72,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
             try {
                 const { data } = await authService.me();
-                if (!cancelled) setUser(data);
+                if (!cancelled) {
+                    setUser(data);
+                    void flushPendingClientErrors();
+                }
             } catch (cause) {
-                // 401 ou réseau : le jeton n'est plus exploitable. Il est
-                // purgé (le 401 l'a déjà fait via `authErrorInterceptor`).
+                // Une panne réseau ou serveur ne prouve pas que le JWT est
+                // invalide : on le conserve pour la prochaine restauration.
                 if (cause instanceof ApiError && cause.status === 401) {
                     try { window.sessionStorage.setItem(SESSION_REAUTH_NOTICE_KEY, 'expired'); } catch { /* stockage désactivé */ }
                 }
-                tokenStorage.clearAll();
+                if (!isTransientApiFailure(cause)) tokenStorage.clearAll();
                 if (!cancelled) setUser(null);
             } finally {
                 if (!cancelled) setIsLoading(false);
@@ -128,8 +142,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             // ne peut plus être renvoyé par erreur.
             tokenStorage.setAccessToken(data.accessToken, data.expiresIn);
             setUser(data.user);
+            void flushPendingClientErrors();
         } catch (error) {
-            tokenStorage.clearAll();
+            // Ne pas détruire une session conservée si l'API est momentanément
+            // inaccessible pendant la tentative de connexion.
+            if (!isTransientApiFailure(error)) tokenStorage.clearAll();
             setUser(null);
             throw error;
         }

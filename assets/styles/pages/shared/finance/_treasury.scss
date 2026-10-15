@@ -39,14 +39,21 @@
 
 .treasury-cash-note {
     display: grid;
-    grid-template-columns: minmax(12rem, 1fr) auto;
-    align-items: center;
-    gap: 0.25rem 1rem;
+    grid-template-columns: minmax(0, 1fr) minmax(14rem, auto);
+    align-items: start;
+    gap: 0.75rem 1rem;
     margin: 1rem 0;
 
     strong { font-size: 0.95rem; }
-    > span { font-weight: 700; font-variant-numeric: tabular-nums; }
-    p { grid-column: 1 / -1; margin: 0; color: var(--color-text-muted, #7f8992); font-size: 0.82rem; line-height: 1.45; }
+    p { margin: 0.25rem 0 0; color: var(--color-text-muted, #7f8992); font-size: 0.82rem; line-height: 1.45; }
+
+    &__controls, &__form { display: flex; flex-wrap: wrap; align-items: end; gap: 0.65rem; }
+    &__controls > *, &__form > * { flex: 1 1 10rem; min-width: 0; }
+    &__balance { grid-column: 1 / -1; font-size: 1.35rem !important; font-variant-numeric: tabular-nums; }
+    &__form { grid-column: 1 / -1; }
+    &__form label { display: grid; gap: 0.35rem; color: var(--color-text-secondary, #66717b); font-size: 0.8rem; }
+    &__form input { width: 100%; min-height: 2.65rem; padding: 0.55rem 0.7rem; border: 1px solid var(--color-border, #ccd3d7); border-radius: 0.6rem; background: var(--color-bg-input, transparent); color: var(--color-text-primary, inherit); }
+    > p:last-child { grid-column: 1 / -1; }
 }
 
 .treasury-table-card { min-width: 0; }
@@ -110,7 +117,9 @@
 @media (max-width: 520px) {
     .treasury-filters { grid-template-columns: minmax(0, 1fr); }
     .treasury-cash-note { grid-template-columns: minmax(0, 1fr); }
-    .treasury-cash-note p { grid-column: auto; }
+    .treasury-cash-note__controls, .treasury-cash-note__form { flex-direction: column; align-items: stretch; }
+    .treasury-cash-note__controls > *, .treasury-cash-note__form > * { width: 100%; flex: 1 1 auto; }
+    .treasury-cash-note__balance, .treasury-cash-note__form, .treasury-cash-note > p:last-child { grid-column: auto; }
     .treasury-page__actions { width: 100%; }
     .treasury-page__link { flex: 1 1 100%; }
 }

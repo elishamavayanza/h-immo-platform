@@ -33,6 +33,7 @@ const AdminVilleDepensesPage = lazyPage(() => import('../../features/admin_ville
 const AdminVilleReportsPage = lazyPage(() => import('../../features/admin_ville/reports/pages/ReportsPage'), 'ReportsPage');
 const AdminVilleOperationsPage = lazyPage(() => import('../../features/admin_ville/operations/pages/OperationsPage'), 'OperationsPage');
 const TreasuryPage = lazyPage(() => import('../../features/shared/finance/pages/TreasuryPage.tsx'), 'TreasuryPage');
+const MaintenancePage = lazyPage(() => import('../../features/shared/operations/pages/MaintenancePage.tsx'), 'MaintenancePage');
 
 interface OrganizationMenuPageProps { path: string; }
 
@@ -54,6 +55,7 @@ export function OrganizationMenuPage({ path }: OrganizationMenuPageProps) {
             case '/app/vitrine': page = <AdminImmobilierVitrinePage />; break;
             case '/app/personnel': page = <AdminImmobilierPersonnelPage />; break;
             case '/app/administration': page = <AdminImmobilierAdministrationPage />; break;
+            case '/app/maintenance': page = <MaintenancePage />; break;
         }
     } else if (organizationRole === 'admin_ville') {
         switch (path) {
@@ -64,6 +66,7 @@ export function OrganizationMenuPage({ path }: OrganizationMenuPageProps) {
             case '/app/depenses': page = showExpenseManagement ? <AdminVilleDepensesPage /> : <TreasuryPage />; break;
             case '/app/rapports': page = <AdminVilleReportsPage />; break;
             case '/app/operations': page = <AdminVilleOperationsPage />; break;
+            case '/app/maintenance': page = <MaintenancePage />; break;
         }
     } else {
         switch (path) {
@@ -75,6 +78,7 @@ export function OrganizationMenuPage({ path }: OrganizationMenuPageProps) {
             case '/app/rapports': page = <PatronReportsPage />; break;
             case '/app/vitrine': page = <PatronVitrinePage />; break;
             case '/app/administration': page = <PatronAdministrationPage />; break;
+            case '/app/maintenance': page = <MaintenancePage />; break;
         }
     }
 

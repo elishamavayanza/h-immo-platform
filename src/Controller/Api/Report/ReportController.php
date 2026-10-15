@@ -111,7 +111,7 @@ final class ReportController extends AbstractController
             new OA\Response(response: 401, description: 'Non authentifié', content: new OA\JsonContent(ref: new Model(type: Feedback::class))),
         ]
     )]
-    public function patronReport(#[MapQueryString] PatronReportFilterDto $filter): Response
+    public function patronReport(#[MapQueryString(validationFailedStatusCode: 422)] PatronReportFilterDto $filter): Response
     {
         $user = $this->getUser();
 
@@ -178,7 +178,7 @@ final class ReportController extends AbstractController
             new OA\Response(response: 401, description: 'Non authentifié', content: new OA\JsonContent(ref: new Model(type: Feedback::class))),
         ]
     )]
-    public function adminImmobilierReport(#[MapQueryString] AdminImmobilierReportFilterDto $filter): Response
+    public function adminImmobilierReport(#[MapQueryString(validationFailedStatusCode: 422)] AdminImmobilierReportFilterDto $filter): Response
     {
         $user = $this->getUser();
 
@@ -243,7 +243,7 @@ final class ReportController extends AbstractController
             new OA\Response(response: 401, description: 'Non authentifié', content: new OA\JsonContent(ref: new Model(type: Feedback::class))),
         ]
     )]
-    public function adminVilleReport(string $cityUuid, #[MapQueryString] AdminVilleReportFilterDto $filter): Response
+    public function adminVilleReport(string $cityUuid, #[MapQueryString(validationFailedStatusCode: 422)] AdminVilleReportFilterDto $filter): Response
     {
         $user = $this->getUser();
 
@@ -311,7 +311,7 @@ final class ReportController extends AbstractController
             new OA\Response(response: 401, description: 'Non authentifié', content: new OA\JsonContent(ref: new Model(type: Feedback::class))),
         ]
     )]
-    public function superAdminReport(#[MapQueryString] ReportFilterDto $filter): Response
+    public function superAdminReport(#[MapQueryString(validationFailedStatusCode: 422)] ReportFilterDto $filter): Response
     {
         $user = $this->getUser();
 
@@ -366,7 +366,7 @@ final class ReportController extends AbstractController
             new OA\Response(response: 401, description: 'Non authentifié', content: new OA\JsonContent(ref: new Model(type: Feedback::class))),
         ]
     )]
-    public function superAdminDashboard(#[MapQueryString] ReportFilterDto $filter): JsonResponse
+    public function superAdminDashboard(#[MapQueryString(validationFailedStatusCode: 422)] ReportFilterDto $filter): JsonResponse
     {
         $user = $this->getUser();
 

@@ -110,6 +110,19 @@ enum SecurityAction: string
     case UPDATE_EXPENSE = 'update_expense';
     case DELETE_EXPENSE = 'delete_expense';
 
+    // Interventions de maintenance, bornées à l'organisation et à la ville.
+    case VIEW_MAINTENANCE = 'view_maintenance';
+    case CREATE_MAINTENANCE = 'create_maintenance';
+    case UPDATE_MAINTENANCE = 'update_maintenance';
+
+    // Documents privés attachés aux ressources métier
+    case VIEW_DOCUMENT = 'view_document';
+    case CREATE_DOCUMENT = 'create_document';
+    case DELETE_DOCUMENT = 'delete_document';
+
+    // Soldes d'ouverture de caisse, un par ville et devise.
+    case MANAGE_TREASURY_BALANCE = 'manage_treasury_balance';
+
     // Report (rapports)
     case VIEW_REPORT = 'view_report';
     case EXPORT_REPORT = 'export_report';

@@ -29,6 +29,8 @@ export interface RequestConfig {
     timeout?: number;
     /** Signal d'annulation (AbortController) */
     signal?: AbortSignal;
+    /** Format brut réservé aux téléchargements authentifiés. */
+    responseType?: 'json' | 'blob';
     /**
      * Nombre de nouvelles tentatives pour CETTE requête.
      * Sans valeur : retry uniquement pour les requêtes idempotentes

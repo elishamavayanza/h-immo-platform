@@ -1,0 +1,135 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    services:
+      mariadb:
+        image: mariadb:11.8
+        env:
+          MARIADB_DATABASE: gestion_himmo
+          MARIADB_USER: app
+          MARIADB_PASSWORD: ci-password
+          MARIADB_ROOT_PASSWORD: ci-root-password
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="healthcheck.sh --connect --innodb_initialized"
+          --health-interval=5s
+          --health-timeout=5s
+          --health-retries=20
+
+    env:
+      APP_ENV: dev
+      APP_SECRET: ci-only-secret
+      JWT_SECRET: 0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef
+      JWT_TTL: 3600
+      DATABASE_URL: mysql://app:ci-password@127.0.0.1:3306/gestion_himmo?serverVersion=mariadb-11.8.6&charset=utf8mb4
+      MAILER_DSN: null://null
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          extensions: ctype, dom, gd, iconv, intl, mbstring, pdo_mysql, xml, zip
+          coverage: none
+          tools: composer:v2
+
+      - name: Validate Composer metadata and install backend dependencies
+        run: |
+          composer validate --no-check-publish
+          composer install --no-interaction --prefer-dist --no-progress
+
+      - name: Set up Node and Yarn
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: yarn
+
+      - name: Install frontend dependencies
+        run: corepack enable && yarn install --immutable
+
+      - name: Apply database migrations
+        run: php bin/console doctrine:migrations:migrate --no-interaction
+
+      - name: Install MariaDB client for recovery checks
+        run: sudo apt-get update && sudo apt-get install --yes mariadb-client
+
+      - name: Verify backup and isolated restore
+        env:
+          BACKUP_DB_HOST: 127.0.0.1
+          BACKUP_DB_PORT: 3306
+          BACKUP_DB_NAME: gestion_himmo
+          BACKUP_DB_USER: app
+          BACKUP_DB_PASSWORD: ci-password
+          BACKUP_MEDIA_DIR: var/ci-uploads
+          BACKUP_ROOT: var/ci-backups
+          MYSQL_PWD: ci-root-password
+        run: |
+          set -euo pipefail
+          mkdir -p var/ci-uploads
+          printf 'restore-check\n' > var/ci-uploads/restore-check.txt
+          bash scripts/backup-soft-immo.sh
+          mariadb --host=127.0.0.1 --user=root --execute="CREATE DATABASE soft_immo_restore_ci CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci; CREATE USER 'restore_ci'@'%' IDENTIFIED BY 'restore-password'; GRANT ALL PRIVILEGES ON soft_immo_restore_ci.* TO 'restore_ci'@'%'; FLUSH PRIVILEGES;"
+          restore_snapshot="$(find var/ci-backups -mindepth 1 -maxdepth 1 -type d -print -quit)"
+          RESTORE_DB_HOST=127.0.0.1 \
+          RESTORE_DB_PORT=3306 \
+          RESTORE_DB_NAME=soft_immo_restore_ci \
+          RESTORE_DB_USER=restore_ci \
+          RESTORE_DB_PASSWORD=restore-password \
+          RESTORE_MEDIA_DIR=var/ci-restored-uploads \
+            bash scripts/restore-soft-immo.sh "$restore_snapshot" --confirm
+          test "$(cat var/ci-restored-uploads/restore-check.txt)" = 'restore-check'
+          restored_tables="$(MYSQL_PWD=restore-password mariadb --host=127.0.0.1 --user=restore_ci --database=soft_immo_restore_ci --batch --skip-column-names --execute='SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = DATABASE()')"
+          test "$restored_tables" -gt 0
+          rm -rf var/ci-uploads var/ci-backups var/ci-restored-uploads
+
+      - name: Check injected service dependencies
+        run: php tests/check-injected-dependencies.php
+
+      - name: Run backend verification scripts
+        run: |
+          set -euo pipefail
+          for script in \
+            verify-mariadb.php \
+            verify-tenant-isolation.php \
+            verify-http-mapping.php \
+            verify-auth.php \
+            verify-api-token.php \
+            verify-api-doc.php \
+            verify-audit-log-access.php \
+            verify-super-admin.php \
+            verify-password-reset.php \
+            verify-admin-creation-email-failure.php \
+            verify-p0-security.php \
+            verify-p0-7-list-endpoints.php \
+            verify-admin-immobilier.php \
+            verify-admin-ville.php \
+            verify-parcel-coordinates.php \
+            verify-organization-suspend.php \
+            verify-revoked-token-purge.php \
+            verify-user-suspend.php \
+            verify-user-privilege-escalation.php \
+            verify-contre-ecritures.php \
+            verify-datetime-service.php; do
+            php "tests/$script"
+          done
+
+      - name: Run frontend checks and production build
+        run: |
+          yarn type-check
+          node tests/verify-reset-password-form.ts
+          node tests/verify-sidebar-roles.ts
+          yarn build

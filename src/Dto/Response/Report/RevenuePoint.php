@@ -18,8 +18,8 @@ final class RevenuePoint
         #[OA\Property(description: 'Mois', example: 'Jan')]
         public string $label,
 
-        #[OA\Property(description: 'Revenu', type: 'number', example: 21800)]
-        public float $revenue,
+        #[OA\Property(description: 'Revenu décimal exact, en devise de référence', type: 'string', example: '21800.00')]
+        public string $revenue,
 
         #[OA\Property(description: 'Abonnements', type: 'integer', example: 82)]
         public int $subscriptions,

@@ -22,6 +22,15 @@ interface PaymentPage {
     total: number;
 }
 
+export interface CashBalanceSnapshot {
+    cityUuid: string;
+    currency: string;
+    openingBalance: string | null;
+    openingDate: string | null;
+    balance: string | null;
+    updatedAt: string | null;
+}
+
 const EXPENSE_LABELS: Record<string, string> = {
     salary: 'Personnel', tax: 'Taxes et impôts', maintenance: 'Entretien et réparation',
     utility: 'Eau et électricité', insurance: 'Assurance', management_fee: 'Frais de gestion',
@@ -38,6 +47,9 @@ function toExpenseMovement(row: Awaited<ReturnType<typeof fetchDepenses>>['rows'
     const category = EXPENSE_LABELS[row.categoryCode] ?? row.category;
     return {
         id: `expense-${row.id}`,
+        relatedType: 'expense',
+        relatedUuid: row.id,
+        cityUuid: row.cityId,
         date: row.expenseDate,
         kind: 'expense',
         type: row.isReversal ? `Correction · ${category}` : category,
@@ -51,9 +63,12 @@ function toExpenseMovement(row: Awaited<ReturnType<typeof fetchDepenses>>['rows'
     };
 }
 
-function toPaymentMovement(payment: PaymentItem, cityName?: string): FinancialMovement {
+function toPaymentMovement(payment: PaymentItem, cityName?: string, cityUuid?: string): FinancialMovement {
     return {
         id: `payment-${payment.id}`,
+        relatedType: 'payment',
+        relatedUuid: payment.id,
+        cityUuid,
         date: payment.paymentDate,
         kind: 'income',
         type: payment.isReversal ? 'Contre-écriture de loyer' : 'Loyer encaissé',
@@ -94,7 +109,7 @@ export async function fetchTreasuryData(
     const payments = paymentResponse.data.data;
     const movements = [
         ...expenses.rows.map(toExpenseMovement),
-        ...payments.items.map((payment) => toPaymentMovement(payment, cityName)),
+        ...payments.items.map((payment) => toPaymentMovement(payment, cityName, cityUuid)),
     ].sort((a, b) => b.date.localeCompare(a.date));
     const notes: string[] = [];
     if (expenses.note) notes.push(expenses.note);
@@ -114,4 +129,16 @@ export function formatPaymentMethod(method: string | null): string {
         check: 'Chèque', card: 'Carte', other: 'Autre',
     };
     return method ? labels[method] ?? method : 'Non précisé';
+}
+
+export async function fetchCashBalance(organizationUuid: string, cityUuid: string, currency: string): Promise<CashBalanceSnapshot> {
+    const response = await apiClient.get<Feedback<CashBalanceSnapshot>>('/v1/treasury/cash-balance', { params: { organizationUuid, cityUuid, currency } });
+    if (!response.data.data) throw new Error('Le serveur n’a pas renvoyé le solde de caisse.');
+    return response.data.data;
+}
+
+export async function saveCashOpeningBalance(organizationUuid: string, cityUuid: string, payload: { currency: string; openingBalance: string; openingDate: string }): Promise<CashBalanceSnapshot> {
+    const response = await apiClient.put<Feedback<CashBalanceSnapshot>>('/v1/treasury/cash-balance', payload, { params: { organizationUuid, cityUuid } });
+    if (!response.data.data) throw new Error('Le serveur n’a pas renvoyé le solde de caisse.');
+    return response.data.data;
 }
