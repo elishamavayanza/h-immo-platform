@@ -18,6 +18,9 @@ parameters:
     app.frontend_url: '%env(APP_FRONTEND_URL)%'
     mailer.from: '%env(MAILER_FROM_ADDRESS)%'
     app.private_document_retention_days: '%env(int:PRIVATE_DOCUMENT_RETENTION_DAYS)%'
+    app.user_manual_catalog: '%kernel.project_dir%/docs/user-manuals/catalog.json'
+    app.user_manuals_directory: '%kernel.project_dir%/output/pdf'
+    app.user_manual_pages_directory: '%kernel.project_dir%/output/pdf/manual-pages'
 
 services:
     # default configuration for services in *this* file
@@ -57,3 +60,9 @@ services:
     App\Command\PurgePrivateDocumentsCommand:
         arguments:
             $retentionDays: '%app.private_document_retention_days%'
+
+    App\Service\System\UserManualService:
+        arguments:
+            $catalogPath: '%app.user_manual_catalog%'
+            $manualsDirectory: '%app.user_manuals_directory%'
+            $pagesDirectory: '%app.user_manual_pages_directory%'
