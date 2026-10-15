@@ -26,6 +26,7 @@ import { mediaHref } from '../../../features/shared/media/services/mediaService'
 import { WorkspaceSwitcher } from './WorkspaceSwitcher';
 import { GlobalSearch } from '../../../features/shared/search/components/GlobalSearch';
 import { rememberLastLocation } from '../../routes/navigationMemory';
+import { ContextualHelp } from '../../../features/shared/help/components/ContextualHelp';
 
 /**
  * Marque du sidebar : logo + "IMMO" + nom de l'organisation active sur sa propre ligne.
@@ -290,6 +291,7 @@ return (
                         *avant* ce point par le `Loading` ci-dessus. */}
                     <GlobalSearch />
                     <Outlet />
+                    <ContextualHelp />
                     {isPageTransitionLoading && <div className="main-layout__route-transition" aria-hidden="true" />}
                 </main>
 

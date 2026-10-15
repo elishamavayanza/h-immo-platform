@@ -5,6 +5,7 @@
 // ============================================================
 
 import { Outlet } from 'react-router-dom';
+import { ContextualHelp } from '../../../features/shared/help/components/ContextualHelp';
 
 import './AuthLayout.scss';
 
@@ -14,6 +15,7 @@ export function AuthLayout() {
             <div className="auth-page__card">
                 <Outlet />
             </div>
+            <ContextualHelp />
         </div>
     );
 }
