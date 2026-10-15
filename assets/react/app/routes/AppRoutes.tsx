@@ -42,6 +42,7 @@ const OrganizationMenuPage = lazyPage(() => import('./OrganizationMenuPage'), 'O
 const OrganisationPage = lazyPage(() => import('../../features/patron/administration/pages/OrganisationPage'), 'OrganisationPage');
 const ProfilePage = lazyPage(() => import('../../features/shared/account/profile/pages/ProfilePage'), 'ProfilePage');
 const SettingsPage = lazyPage(() => import('../../features/shared/account/settings/pages/SettingsPage'), 'SettingsPage');
+const UserManualPage = lazyPage(() => import('../../features/shared/account/settings/pages/UserManualPage'), 'UserManualPage');
 
 /** Table figée au chargement : le menu est statique dans le bundle. */
 const APP_ROUTES = buildAppRoutes();
@@ -143,6 +144,7 @@ export function AppRoutes() {
                 <Route path="/profile" element={<Suspense fallback={pageFallback}><ProfilePage /></Suspense>} />
                 <Route path="/settings" element={<Suspense fallback={pageFallback}><SettingsPage /></Suspense>} />
                 <Route path="/settings/organisation" element={<Suspense fallback={pageFallback}><SettingsPage /></Suspense>} />
+                <Route path="/settings/manuel" element={<Suspense fallback={pageFallback}><UserManualPage /></Suspense>} />
             </Route>
 
             <Route path="*" element={<Navigate to={APP_ROOT} replace />} />

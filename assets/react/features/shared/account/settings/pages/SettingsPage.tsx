@@ -441,6 +441,7 @@ export function SettingsPage() {
                     </div>
                 </Card></section>}
 
+
                 {!isOrganizationPage && isSuperAdmin && (
                     <section id="settings-platform" className="settings-section"><Card header="Préférences plateforme" className="settings-card settings-card--platform">
                         <div className="setting-row">
@@ -481,17 +482,19 @@ export function SettingsPage() {
                     </Card></section>
                 )}
             </div>
-            <RightSidebar title="Paramètres" size="small" variant="dark" collapsible defaultCollapsed={false} collapsedWidth={48} closeOnSelect className="settings-rightbar" collapsedContent={<div className="settings-rightbar__rail" aria-label="Raccourcis paramètres"><NavigationRailPopover title="Pages des paramètres" label="Ouvrir le menu des paramètres"><nav className="settings-rightbar__nav" aria-label="Pages des paramètres"><Link to="/settings" aria-current={!isOrganizationPage ? 'page' : undefined}>Mon compte</Link>{(organizationRole === 'admin_immobilier' || (organizationRole === 'admin_ville' && fxSettings?.scope === 'city' && fxSettings.enabled)) && <Link to="/settings/organisation" aria-current={isOrganizationPage ? 'page' : undefined}>Organisation</Link>}</nav></NavigationRailPopover>{isOrganizationPage && <CalendarRailPopover title="Historique des taux" label="Ouvrir le calendrier des taux"><Calendar selectedDate={new Date(`${historyDate}T12:00:00`)} onDateSelect={(date) => setHistoryDate(localDateKey(date))} className="settings-calendar__picker" weekdayFormat="compact" /></CalendarRailPopover>}</div>}>
+            <RightSidebar title="Paramètres" size="small" variant="dark" collapsible defaultCollapsed={false} collapsedWidth={48} closeOnSelect className="settings-rightbar" collapsedContent={<div className="settings-rightbar__rail" aria-label="Raccourcis paramètres"><NavigationRailPopover title="Pages des paramètres" label="Ouvrir le menu des paramètres"><nav className="settings-rightbar__nav" aria-label="Pages des paramètres"><Link to="/settings" aria-current={!isOrganizationPage ? 'page' : undefined}>Mon compte</Link>{(organizationRole === 'admin_immobilier' || (organizationRole === 'admin_ville' && fxSettings?.scope === 'city' && fxSettings.enabled)) && <Link to="/settings/organisation" aria-current={isOrganizationPage ? 'page' : undefined}>Organisation</Link>}<Link to="/settings/manuel">Manuel d’utilisation</Link></nav></NavigationRailPopover>{isOrganizationPage && <CalendarRailPopover title="Historique des taux" label="Ouvrir le calendrier des taux"><Calendar selectedDate={new Date(`${historyDate}T12:00:00`)} onDateSelect={(date) => setHistoryDate(localDateKey(date))} className="settings-calendar__picker" weekdayFormat="compact" /></CalendarRailPopover>}</div>}>
                 {isOrganizationPage && <section className="settings-calendar" aria-label="Navigation dans l’historique"><h2>Historique des taux</h2><p>Choisissez une date pour consulter le taux applicable à vos rapports.</p><Calendar selectedDate={new Date(`${historyDate}T12:00:00`)} onDateSelect={(date) => setHistoryDate(localDateKey(date))} className="settings-calendar__picker" weekdayFormat="compact" /></section>}
                 <nav className="settings-rightbar__nav" aria-label="Sections des paramètres">
                     <span className="settings-rightbar__label">Pages</span>
                     <Link to="/settings" aria-current={!isOrganizationPage ? 'page' : undefined}>Mon compte</Link>
                     {(organizationRole === 'admin_immobilier' || (organizationRole === 'admin_ville' && fxSettings?.scope === 'city' && fxSettings.enabled)) && <Link to="/settings/organisation" aria-current={isOrganizationPage ? 'page' : undefined}>Organisation</Link>}
+                    <Link to="/settings/manuel">Manuel d’utilisation</Link>
                     {!isOrganizationPage && <div className="settings-rightbar__subnav" aria-label="Sections du compte">
                         <span className="settings-rightbar__label">Préférences</span>
                         <a href="#settings-display" className={activeSection === 'settings-display' ? 'is-active' : undefined} aria-current={activeSection === 'settings-display' ? 'location' : undefined}>Affichage</a>
                         <a href="#settings-notifications" className={activeSection === 'settings-notifications' ? 'is-active' : undefined} aria-current={activeSection === 'settings-notifications' ? 'location' : undefined}>Notifications</a>
                         <a href="#settings-security" className={activeSection === 'settings-security' ? 'is-active' : undefined} aria-current={activeSection === 'settings-security' ? 'location' : undefined}>Sécurité</a>
+                        <Link to="/settings/manuel">Manuel d’utilisation</Link>
                         {isSuperAdmin && <a href="#settings-platform" className={activeSection === 'settings-platform' ? 'is-active' : undefined} aria-current={activeSection === 'settings-platform' ? 'location' : undefined}>Plateforme</a>}
                     </div>}
                     {isOrganizationPage && <div className="settings-rightbar__subnav" aria-label="Sections de l’organisation">

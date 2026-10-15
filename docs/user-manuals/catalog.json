@@ -1,0 +1,574 @@
+{
+  "version": "1.0.0",
+  "updatedAt": "2026-10-15",
+  "roles": {
+    "super_admin": {
+      "title": "Manuel d’utilisation — Administration de la plateforme",
+      "label": "SUPER_ADMIN",
+      "description": "Administrer les organisations, les comptes de plateforme, les journaux et les rapports globaux.",
+      "filename": "manuel-super-admin.pdf",
+      "modules": [
+        {
+          "name": "Tableau de bord",
+          "menu": "Vue générale → Tableau de bord",
+          "image": "super-dashboard.jpg",
+          "goal": "Suivre l’état général de la plateforme et repérer les indicateurs nécessitant une vérification.",
+          "steps": [
+            "Ouvrez le tableau de bord depuis le menu latéral.",
+            "Lisez les indicateurs et les graphiques affichés.",
+            "Ouvrez les modules concernés pour examiner les détails avant toute intervention."
+          ],
+          "fields": "Aucun formulaire de modification n’est présent sur cette page.",
+          "result": "Les indicateurs globaux disponibles sont affichés selon les données de la plateforme.",
+          "limits": "Les droits SUPER_ADMIN ne donnent pas automatiquement les droits métier d’une organisation."
+        },
+        {
+          "name": "Organisations",
+          "menu": "Administration plateforme → Organisations",
+          "image": "super-organizations.jpg",
+          "goal": "Consulter et administrer les organisations enregistrées sur Soft-IMMO.",
+          "steps": [
+            "Ouvrez Organisations dans le menu.",
+            "Recherchez l’organisation par son nom ou son code.",
+            "Ouvrez sa fiche pour consulter son état et les actions disponibles.",
+            "Pour suspendre ou réactiver, vérifiez le motif et la période avant de confirmer."
+          ],
+          "fields": "Les champs dépendent de l’action choisie. Les motifs de suspension sont obligatoires ; la durée peut être définie ou indéterminée.",
+          "result": "La fiche et l’état de l’organisation sont mis à jour ; les actions d’administration sont tracées.",
+          "limits": "Les ressources métier internes ne sont pas accessibles par le seul rôle plateforme."
+        },
+        {
+          "name": "Utilisateurs",
+          "menu": "Administration plateforme → Utilisateurs",
+          "image": "super-users.jpg",
+          "goal": "Gérer les comptes et les accès de plateforme autorisés.",
+          "steps": [
+            "Ouvrez Utilisateurs.",
+            "Recherchez le compte à administrer.",
+            "Vérifiez son identité et son état avant d’utiliser une action disponible.",
+            "Confirmez l’action et contrôlez le retour affiché."
+          ],
+          "fields": "Les champs dépendent de l’action. Ne partagez jamais de mot de passe ou de jeton.",
+          "result": "Le compte est consulté ou modifié selon l’action autorisée.",
+          "limits": "Les rôles d’organisation sont distincts du rôle SUPER_ADMIN."
+        },
+        {
+          "name": "Journal d’audit",
+          "menu": "Administration plateforme → Audit",
+          "image": "super-audit.jpg",
+          "goal": "Reconstituer les actions sensibles réalisées sur la plateforme.",
+          "steps": [
+            "Ouvrez le journal d’audit.",
+            "Utilisez les filtres disponibles pour réduire la période ou le type d’événement.",
+            "Lisez l’action, la date et le contexte avant d’investiguer.",
+            "Conservez l’identifiant de l’événement pour le support."
+          ],
+          "fields": "Filtres disponibles dans l’interface ; aucune donnée secrète ne doit être copiée dans un rapport.",
+          "result": "Les événements correspondants sont affichés selon les droits plateforme.",
+          "limits": "Le journal est une trace de consultation ; ne modifiez pas les événements historiques."
+        },
+        {
+          "name": "Rapports de la plateforme",
+          "menu": "Vue générale → Rapports",
+          "image": "super-reports.jpg",
+          "goal": "Consulter les synthèses transversales disponibles à l’administration plateforme.",
+          "steps": [
+            "Ouvrez Rapports.",
+            "Choisissez la période et les filtres proposés.",
+            "Lancez l’affichage ou l’export disponible.",
+            "Vérifiez la période, les unités et les totaux avant de partager le document."
+          ],
+          "fields": "Les filtres varient selon le rapport.",
+          "result": "Une synthèse correspondant aux filtres retenus est affichée ou téléchargée.",
+          "limits": "Les rapports ne remplacent pas les pièces comptables des organisations."
+        },
+        {
+          "name": "Profil et préférences",
+          "menu": "Compte → Mon profil / Paramètres",
+          "image": "super-settings.jpg",
+          "goal": "Gérer les préférences personnelles et les informations de son compte.",
+          "steps": [
+            "Ouvrez Paramètres pour le thème, la couleur d’accent et les préférences d’affichage.",
+            "Ouvrez Mon profil pour vérifier les informations du compte.",
+            "Enregistrez les changements et contrôlez le message de confirmation."
+          ],
+          "fields": "Les champs personnels visibles à l’écran ; le mot de passe se modifie via la procédure sécurisée de réinitialisation.",
+          "result": "Les préférences sont sauvegardées pour le compte.",
+          "limits": "Les paramètres personnels ne modifient pas les autorisations de plateforme."
+        }
+      ],
+      "pageCount": 10
+    },
+    "patron": {
+      "title": "Manuel d’utilisation — Espace Patron",
+      "label": "PATRON",
+      "description": "Piloter le patrimoine, les finances et les activités de votre organisation.",
+      "filename": "manuel-patron.pdf",
+      "modules": [
+        {
+          "name": "Tableau de bord",
+          "menu": "Vue générale → Tableau de bord",
+          "image": "patron-dashboard.jpg",
+          "goal": "Suivre les indicateurs importants de votre organisation.",
+          "steps": [
+            "Ouvrez le tableau de bord.",
+            "Vérifiez les indicateurs, graphiques et alertes affichés.",
+            "Utilisez les raccourcis de navigation pour consulter le module concerné."
+          ],
+          "fields": "Aucun formulaire de modification sur la page d’accueil.",
+          "result": "Vue de synthèse selon les données accessibles à votre organisation.",
+          "limits": "Les résultats sont bornés à l’organisation active."
+        },
+        {
+          "name": "Rapports",
+          "menu": "Vue générale → Rapports",
+          "image": "patron-reports.jpg",
+          "goal": "Analyser l’activité et les résultats de l’organisation.",
+          "steps": [
+            "Ouvrez Rapports.",
+            "Choisissez la période et les filtres proposés.",
+            "Consultez les tableaux ou graphiques.",
+            "Téléchargez un rapport si l’action d’export est proposée."
+          ],
+          "fields": "Période et filtres visibles dans le rapport.",
+          "result": "Rapport calculé pour l’organisation et la période sélectionnées.",
+          "limits": "Les sommes doivent être lues avec leur devise d’origine et la devise de référence indiquée."
+        },
+        {
+          "name": "Patrimoine",
+          "menu": "Gestion immobilière → Patrimoine",
+          "image": "patron-property.jpg",
+          "goal": "Consulter les villes, parcelles, bâtiments et unités de l’organisation.",
+          "steps": [
+            "Ouvrez Patrimoine.",
+            "Choisissez l’onglet correspondant aux parcelles, bâtiments ou unités.",
+            "Recherchez un élément ou filtrez par ville.",
+            "Ouvrez la fiche pour consulter ses détails et les actions disponibles.",
+            "Pour créer ou modifier, renseignez les champs obligatoires puis enregistrez."
+          ],
+          "fields": "Les champs varient selon le niveau immobilier ; les relations ville, parcelle, bâtiment et unité doivent être cohérentes.",
+          "result": "La fiche est créée ou mise à jour et apparaît dans la liste filtrée.",
+          "limits": "Une ressource appartient à une organisation et, selon son niveau, à une ville précise."
+        },
+        {
+          "name": "Locataires",
+          "menu": "Gestion immobilière → Locataires",
+          "image": "patron-tenants.jpg",
+          "goal": "Consulter les locataires et les informations de location disponibles.",
+          "steps": [
+            "Ouvrez Locataires.",
+            "Recherchez par nom ou utilisez les filtres.",
+            "Ouvrez une fiche pour consulter ses informations.",
+            "Utilisez les actions de création ou de modification proposées et vérifiez le bail associé."
+          ],
+          "fields": "Les champs obligatoires sont signalés dans le formulaire ; vérifiez les coordonnées et les liens de location.",
+          "result": "La fiche du locataire est enregistrée et visible dans le périmètre actif.",
+          "limits": "Les données sont isolées par organisation ; les locataires sont liés aux baux selon le modèle de l’application."
+        },
+        {
+          "name": "Loyers",
+          "menu": "Finances → Loyers",
+          "image": "patron-rents.jpg",
+          "goal": "Suivre les échéances, paiements et retards des baux.",
+          "steps": [
+            "Ouvrez Loyers.",
+            "Filtrez les échéances par période ou statut.",
+            "Ouvrez une échéance pour vérifier le bail, le locataire, le montant et la devise.",
+            "Enregistrez un paiement depuis l’action prévue puis vérifiez le statut actualisé."
+          ],
+          "fields": "Montant, devise, date et méthode de paiement sont à vérifier avant validation.",
+          "result": "Le paiement est ajouté à l’historique et l’état de l’échéance est recalculé.",
+          "limits": "Un paiement comptabilisé est une trace ; les devises différentes ne doivent pas être additionnées."
+        },
+        {
+          "name": "Trésorerie",
+          "menu": "Finances → Trésorerie",
+          "image": "patron-treasury.jpg",
+          "goal": "Lire les entrées, les sorties et les mouvements financiers visibles pour l’organisation.",
+          "steps": [
+            "Ouvrez Trésorerie.",
+            "Choisissez le type de mouvement ou la période si ces filtres sont présents.",
+            "Consultez les recettes, dépenses et soldes par devise.",
+            "Ouvrez un mouvement pour en vérifier la provenance."
+          ],
+          "fields": "Les mouvements sont associés à un type, une date, un montant, une devise et une source métier.",
+          "result": "La liste et les synthèses reflètent les mouvements enregistrés.",
+          "limits": "Les dépenses et paiements gardent leur devise ; une annulation comptable doit laisser une trace."
+        },
+        {
+          "name": "Vitrine",
+          "menu": "Gestion immobilière → Vitrine",
+          "image": "patron-showcase.jpg",
+          "goal": "Consulter et gérer la présentation publique de l’organisation selon les commandes disponibles.",
+          "steps": [
+            "Ouvrez Vitrine.",
+            "Vérifiez les informations, le contenu et l’état de publication affichés.",
+            "Modifiez uniquement les champs proposés.",
+            "Enregistrez puis vérifiez le résultat public lorsque l’aperçu ou le lien est disponible."
+          ],
+          "fields": "Les champs de présentation sont ceux du formulaire réel ; ne publiez pas de coordonnées internes.",
+          "result": "La présentation est actualisée selon l’état de publication choisi.",
+          "limits": "La vitrine publique ne doit pas exposer de données locatives ou confidentielles."
+        },
+        {
+          "name": "Maintenance",
+          "menu": "Opérations → Maintenance",
+          "image": "patron-maintenance.jpg",
+          "goal": "Planifier et suivre les interventions liées aux biens.",
+          "steps": [
+            "Choisissez la ville active.",
+            "Créez une intervention en sélectionnant le bien, en saisissant son titre et sa description, puis la priorité et l’échéance si nécessaire.",
+            "Consultez la liste pour la ville sélectionnée.",
+            "Utilisez Modifier, Démarrer, Terminer ou Annuler selon l’état de l’intervention."
+          ],
+          "fields": "Bien, titre et priorité sont nécessaires ; responsable et date prévue dépendent du besoin.",
+          "result": "L’intervention apparaît dans la ville choisie et son statut suit les actions enregistrées.",
+          "limits": "La liste est isolée par ville. Vérifiez la ville active avant de créer ou de mettre à jour."
+        },
+        {
+          "name": "Administration de l’organisation",
+          "menu": "Administration → Administration",
+          "image": "patron-administration.jpg",
+          "goal": "Gérer les réglages d’organisation autorisés à votre rôle.",
+          "steps": [
+            "Ouvrez Administration.",
+            "Parcourez les sections disponibles.",
+            "Avant une modification partagée, vérifiez l’organisation active et l’effet annoncé.",
+            "Enregistrez puis vérifiez la confirmation."
+          ],
+          "fields": "Les champs affichés varient selon les réglages activés.",
+          "result": "Le réglage est appliqué au périmètre de l’organisation.",
+          "limits": "Les opérations non disponibles à votre rôle sont absentes ou refusées par le serveur."
+        },
+        {
+          "name": "Profil et paramètres",
+          "menu": "Compte → Mon profil / Paramètres",
+          "image": "patron-settings.jpg",
+          "goal": "Personnaliser votre compte et consulter le présent manuel.",
+          "steps": [
+            "Dans Paramètres, choisissez thème et couleur d’accent.",
+            "Réglez vos préférences personnelles et notifications.",
+            "Ouvrez Manuel d’utilisation pour lire ou télécharger ce guide."
+          ],
+          "fields": "Les préférences se sauvegardent depuis leurs contrôles.",
+          "result": "Les changements personnels sont conservés pour votre compte.",
+          "limits": "Les préférences n’étendent pas les droits métier."
+        }
+      ],
+      "pageCount": 14
+    },
+    "admin_immobilier": {
+      "title": "Manuel d’utilisation — Administration immobilière",
+      "label": "ADMIN_IMMOBILIER",
+      "description": "Administrer les données immobilières, les équipes, les finances et les accès délégués de l’organisation.",
+      "filename": "manuel-admin-immobilier.pdf",
+      "modules": [
+        {
+          "name": "Tableau de bord",
+          "menu": "Vue générale → Tableau de bord",
+          "image": "immo-dashboard.jpg",
+          "goal": "Suivre les indicateurs de l’organisation.",
+          "steps": [
+            "Ouvrez Tableau de bord.",
+            "Consultez les indicateurs et alertes.",
+            "Suivez un raccourci pour examiner un module."
+          ],
+          "fields": "Aucune saisie sur la synthèse.",
+          "result": "Le résultat s’affiche dans la liste ou la fiche après confirmation.",
+          "limits": "Les droits et les données sont limités au rôle et au périmètre actifs."
+        },
+        {
+          "name": "Rapports",
+          "menu": "Vue générale → Rapports",
+          "image": "immo-reports.jpg",
+          "goal": "Analyser l’activité de l’organisation.",
+          "steps": [
+            "Ouvrez Rapports.",
+            "Choisissez période et filtres.",
+            "Lancez le rapport et vérifiez devise et période.",
+            "Utilisez l’export proposé."
+          ],
+          "fields": "Filtres visibles selon le rapport.",
+          "result": "Le rapport reflète les filtres sélectionnés.",
+          "limits": "Les montants de devises différentes restent distincts."
+        },
+        {
+          "name": "Patrimoine",
+          "menu": "Gestion immobilière → Patrimoine",
+          "image": "immo-property.jpg",
+          "goal": "Gérer parcelles, bâtiments et unités.",
+          "steps": [
+            "Ouvrez Patrimoine.",
+            "Choisissez l’onglet et la ville concernés.",
+            "Recherchez ou ajoutez un élément en renseignant les champs requis.",
+            "Ouvrez une fiche pour voir ses détails et actions."
+          ],
+          "fields": "Les relations ville, parcelle, bâtiment et unité doivent être cohérentes.",
+          "result": "La fiche apparaît dans la liste après enregistrement.",
+          "limits": "Les droits et les données sont limités au rôle et au périmètre actifs."
+        },
+        {
+          "name": "Locataires",
+          "menu": "Gestion immobilière → Locataires",
+          "image": "immo-tenants.jpg",
+          "goal": "Consulter et gérer les fiches locataires.",
+          "steps": [
+            "Ouvrez Locataires.",
+            "Recherchez ou filtrez la liste.",
+            "Ouvrez une fiche et vérifiez coordonnées et bail.",
+            "Utilisez les actions proposées puis confirmez."
+          ],
+          "fields": "Les champs obligatoires sont signalés dans le formulaire.",
+          "result": "La fiche mise à jour s’affiche dans la liste.",
+          "limits": "Les droits et les données sont limités au rôle et au périmètre actifs."
+        },
+        {
+          "name": "Loyers",
+          "menu": "Finances → Loyers",
+          "image": "immo-rents.jpg",
+          "goal": "Suivre échéances et paiements.",
+          "steps": [
+            "Ouvrez Loyers.",
+            "Filtrez par période ou statut.",
+            "Vérifiez bail, locataire, montant et devise.",
+            "Ajoutez le paiement par l’action disponible et vérifiez le statut."
+          ],
+          "fields": "Montant, devise, date et méthode selon l’action.",
+          "result": "Le paiement est ajouté à l’historique et le statut est recalculé.",
+          "limits": "Un paiement comptabilisé est une trace et ne se supprime pas."
+        },
+        {
+          "name": "Trésorerie",
+          "menu": "Finances → Trésorerie",
+          "image": "immo-treasury.jpg",
+          "goal": "Lire les entrées, sorties et soldes par devise.",
+          "steps": [
+            "Ouvrez Trésorerie.",
+            "Filtrez la période ou le type de mouvement.",
+            "Examinez recettes et dépenses par devise.",
+            "Ouvrez un mouvement pour contrôler son origine."
+          ],
+          "fields": "Date, source ou catégorie, montant et devise selon le mouvement.",
+          "result": "Les synthèses correspondent aux mouvements enregistrés.",
+          "limits": "N’additionnez pas des devises différentes."
+        },
+        {
+          "name": "Vitrine",
+          "menu": "Gestion immobilière → Vitrine",
+          "image": "immo-showcase.jpg",
+          "goal": "Gérer la présentation publique de l’organisation.",
+          "steps": [
+            "Ouvrez Vitrine.",
+            "Vérifiez le contenu et l’état de publication.",
+            "Modifiez les champs proposés et enregistrez.",
+            "Vérifiez l’aperçu ou le lien public s’il est disponible."
+          ],
+          "fields": "Champs de présentation visibles dans la page.",
+          "result": "La vitrine reflète le contenu enregistré.",
+          "limits": "N’incluez pas de données privées de locataires ou d’équipe."
+        },
+        {
+          "name": "Personnel",
+          "menu": "Opérations → Personnel",
+          "image": "immo-staff.jpg",
+          "goal": "Consulter les ouvriers et leurs affectations.",
+          "steps": [
+            "Ouvrez Personnel.",
+            "Recherchez un membre ou filtrez par ville.",
+            "Consultez les affectations via les actions de ligne.",
+            "Pour ajouter une affectation, choisissez membre et bien puis enregistrez."
+          ],
+          "fields": "Membre, fonction, ville et bien selon l’opération.",
+          "result": "La nouvelle affectation apparaît dans son périmètre.",
+          "limits": "Un membre peut avoir plusieurs affectations ; contrôlez ville et bien."
+        },
+        {
+          "name": "Maintenance",
+          "menu": "Opérations → Maintenance",
+          "image": "admin-immobilier-maintenance.jpg",
+          "goal": "Planifier et suivre les interventions par ville.",
+          "steps": [
+            "Ouvrez Maintenance et choisissez la ville.",
+            "Créez une intervention en indiquant le bien, le titre, la description et la priorité.",
+            "Ajoutez responsable et échéance si nécessaire.",
+            "Depuis la liste, modifiez, démarrez, terminez ou annulez selon le statut."
+          ],
+          "fields": "Bien et titre requis ; priorité, responsable et date selon le formulaire.",
+          "result": "Le statut évolue après chaque action confirmée.",
+          "limits": "La liste est isolée par ville ; vérifiez la ville active."
+        },
+        {
+          "name": "Administration",
+          "menu": "Administration → Administration",
+          "image": "immo-administration.jpg",
+          "goal": "Gérer les réglages de l’organisation autorisés.",
+          "steps": [
+            "Ouvrez Administration.",
+            "Choisissez le réglage concerné.",
+            "Vérifiez l’organisation active et l’effet annoncé.",
+            "Enregistrez et contrôlez la confirmation."
+          ],
+          "fields": "Dépend des sections disponibles.",
+          "result": "Le changement s’applique au périmètre indiqué.",
+          "limits": "L’API applique aussi les droits d’action."
+        },
+        {
+          "name": "Profil et paramètres",
+          "menu": "Compte → Mon profil / Paramètres",
+          "image": "immo-settings.jpg",
+          "goal": "Personnaliser son compte et consulter le manuel.",
+          "steps": [
+            "Dans Paramètres, choisissez thème, accent et préférences.",
+            "Ouvrez Manuel d’utilisation pour consulter ou télécharger ce guide.",
+            "Ouvrez Mon profil pour vérifier vos informations."
+          ],
+          "fields": "Préférences sauvegardées depuis leurs contrôles.",
+          "result": "Les préférences sont enregistrées pour ce compte.",
+          "limits": "Elles ne changent pas les autorisations métier."
+        }
+      ],
+      "pageCount": 15
+    },
+    "admin_ville": {
+      "title": "Manuel d’utilisation — Administration de ville",
+      "label": "ADMIN_VILLE",
+      "description": "Gérer les activités autorisées dans les villes attribuées à votre compte.",
+      "filename": "manuel-admin-ville.pdf",
+      "modules": [
+        {
+          "name": "Tableau de bord",
+          "menu": "Vue générale → Tableau de bord",
+          "image": "ville-dashboard.jpg",
+          "goal": "Suivre les indicateurs des villes attribuées.",
+          "steps": [
+            "Ouvrez Tableau de bord.",
+            "Consultez les indicateurs et alertes.",
+            "Utilisez les liens disponibles pour ouvrir les détails."
+          ],
+          "fields": "Aucune saisie sur la synthèse.",
+          "result": "Les indicateurs sont bornés à vos villes.",
+          "limits": "Les droits et les données sont limités au rôle et au périmètre actifs."
+        },
+        {
+          "name": "Rapports de ville",
+          "menu": "Vue générale → Rapports",
+          "image": "ville-reports.jpg",
+          "goal": "Consulter les rapports de votre périmètre.",
+          "steps": [
+            "Ouvrez Rapports.",
+            "Choisissez période et filtres disponibles.",
+            "Lancez le rapport et vérifiez la ville et la période."
+          ],
+          "fields": "Filtres visibles selon le rapport.",
+          "result": "Les données des autres villes ne sont pas incluses.",
+          "limits": "Les droits et les données sont limités au rôle et au périmètre actifs."
+        },
+        {
+          "name": "Patrimoine",
+          "menu": "Gestion immobilière → Patrimoine",
+          "image": "ville-property.jpg",
+          "goal": "Consulter les biens des villes attribuées.",
+          "steps": [
+            "Ouvrez Patrimoine.",
+            "Sélectionnez une ville qui vous est attribuée.",
+            "Recherchez par parcelle, bâtiment ou unité.",
+            "Ouvrez la fiche pour ses détails."
+          ],
+          "fields": "Filtres adaptés au type de bien.",
+          "result": "Une ville hors périmètre est refusée côté serveur.",
+          "limits": "Les droits et les données sont limités au rôle et au périmètre actifs."
+        },
+        {
+          "name": "Locataires",
+          "menu": "Gestion immobilière → Locataires",
+          "image": "ville-tenants.jpg",
+          "goal": "Consulter les locataires et leur contexte locatif.",
+          "steps": [
+            "Ouvrez Locataires.",
+            "Choisissez une ville attribuée ou utilisez les filtres.",
+            "Consultez la fiche et les liens de location.",
+            "Employez seulement les actions autorisées visibles."
+          ],
+          "fields": "Les champs proposés dépendent de vos droits délégués.",
+          "result": "Périmètre limité aux villes attribuées.",
+          "limits": "Les droits et les données sont limités au rôle et au périmètre actifs."
+        },
+        {
+          "name": "Loyers",
+          "menu": "Finances → Loyers",
+          "image": "ville-rents.jpg",
+          "goal": "Suivre les échéances dans les villes attribuées.",
+          "steps": [
+            "Ouvrez Loyers.",
+            "Filtrez par période ou statut.",
+            "Vérifiez bien, date, montant et devise.",
+            "Enregistrez un paiement uniquement si l’action est disponible."
+          ],
+          "fields": "Champs indiqués par le formulaire.",
+          "result": "Aucune donnée d’une ville hors périmètre.",
+          "limits": "Les droits et les données sont limités au rôle et au périmètre actifs."
+        },
+        {
+          "name": "Trésorerie",
+          "menu": "Finances → Trésorerie",
+          "image": "ville-treasury.jpg",
+          "goal": "Lire les entrées et sorties visibles dans votre périmètre.",
+          "steps": [
+            "Ouvrez Trésorerie.",
+            "Sélectionnez période ou ville si proposés.",
+            "Consultez recettes et dépenses séparées par devise.",
+            "Ouvrez un mouvement pour vérifier son origine."
+          ],
+          "fields": "Les champs de saisie ne sont affichés que si autorisés.",
+          "result": "La devise d’origine et la devise de référence restent distinctes.",
+          "limits": "Les droits et les données sont limités au rôle et au périmètre actifs."
+        },
+        {
+          "name": "Opérations et personnel",
+          "menu": "Opérations → Opérations",
+          "image": "ville-operations.jpg",
+          "goal": "Suivre les membres et leurs affectations aux biens.",
+          "steps": [
+            "Ouvrez Opérations et sélectionnez la ville active.",
+            "Recherchez un membre et vérifiez ses affectations.",
+            "Si Ajouter du personnel est visible, utilisez-le pour les opérations permises.",
+            "Sinon, demandez à votre administrateur immobilier de déléguer cette autorisation."
+          ],
+          "fields": "Ville, fonction, personne et bien selon l’action.",
+          "result": "Une personne peut être affectée à plusieurs biens ; contrôlez les doublons et le périmètre.",
+          "limits": "Les droits et les données sont limités au rôle et au périmètre actifs."
+        },
+        {
+          "name": "Maintenance",
+          "menu": "Opérations → Maintenance",
+          "image": "ville-maintenance.jpg",
+          "goal": "Suivre les interventions d’une ville attribuée.",
+          "steps": [
+            "Choisissez la ville active.",
+            "Créez l’intervention avec bien, titre, priorité et description.",
+            "Vérifiez sa présence dans la liste de cette ville.",
+            "Modifiez, démarrez, terminez ou annulez selon son statut."
+          ],
+          "fields": "Bien et titre ; responsable et date selon le besoin.",
+          "result": "Chaque intervention appartient à la ville sélectionnée.",
+          "limits": "Les droits et les données sont limités au rôle et au périmètre actifs."
+        },
+        {
+          "name": "Profil et paramètres",
+          "menu": "Compte → Mon profil / Paramètres",
+          "image": "ville-settings.jpg",
+          "goal": "Régler ses préférences et consulter son manuel.",
+          "steps": [
+            "Ouvrez Paramètres pour le thème, l’accent et les préférences personnelles.",
+            "Ouvrez Manuel d’utilisation pour lire ou télécharger le guide.",
+            "Consultez Mon profil."
+          ],
+          "fields": "Les réglages organisationnels apparaissent uniquement si votre compte les autorise.",
+          "result": "Vos réglages personnels ne changent pas les droits métier.",
+          "limits": "Les droits et les données sont limités au rôle et au périmètre actifs."
+        }
+      ],
+      "pageCount": 13
+    }
+  }
+}
