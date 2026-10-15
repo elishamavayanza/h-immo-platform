@@ -229,9 +229,8 @@ final readonly class PasswordResetService
             // Le jeton en clair n'apparaît jamais dans le log : il est
             // à usage unique et constitue le seul moyen de prendre le compte.
             $this->logger->error('Échec de l\'envoi de l\'email de réinitialisation de mot de passe.', [
-                'userId' => $user->getId(),
-                'email' => $user->getEmail(),
-                'exception' => $exception,
+                'user_id' => $user->getId(),
+                'exception_class' => $exception::class,
             ]);
 
             return false;

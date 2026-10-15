@@ -853,12 +853,21 @@ try {
     $codes = array_map(static fn (City $c): string => $c->getCode(), $cities);
     sort($codes);
     check(
-        'SUPER_ADMIN : périmètre plateforme complet',
-        $codes === ['A1', 'A2', 'B1'],
+        'SUPER_ADMIN : aucune ville métier n’est incluse implicitement',
+        $codes === [],
         'codes=' . implode(',', $codes)
     );
 } catch (\Throwable $e) {
-    check('SUPER_ADMIN : périmètre plateforme complet', false, $e->getMessage());
+    check('SUPER_ADMIN : aucune ville métier n’est incluse implicitement', false, $e->getMessage());
+}
+
+try {
+    $security->checkCityAccess($cityA1, \App\Security\SecurityAction::VIEW_CITY);
+    check('SUPER_ADMIN sans appartenance ne consulte pas une ville métier', false, 'accès accordé');
+} catch (\App\Exception\AccessDeniedException) {
+    check('SUPER_ADMIN sans appartenance ne consulte pas une ville métier', true);
+} catch (\Throwable $e) {
+    check('SUPER_ADMIN sans appartenance ne consulte pas une ville métier', false, get_class($e) . ': ' . $e->getMessage());
 }
 
 $tokenStorage->setToken(null);

@@ -97,8 +97,13 @@ $newPassword = 'NouveauMotDePasse!2026';
 
 $jar = [];
 
-$request = static function (string $method, string $uri, ?array $json = null) use ($kernel, &$jar): array {
-    $server = ['REQUEST_METHOD' => $method, 'REQUEST_URI' => $uri, 'HTTP_HOST' => 'localhost'];
+$request = static function (string $method, string $uri, ?array $json = null, string $clientIp = '127.0.0.1') use ($kernel, &$jar): array {
+    $server = [
+        'REQUEST_METHOD' => $method,
+        'REQUEST_URI' => $uri,
+        'HTTP_HOST' => 'localhost',
+        'REMOTE_ADDR' => $clientIp,
+    ];
 
     if ($jar !== []) {
         $pairs = [];
@@ -196,6 +201,15 @@ $createUser();
 check('Le endpoint ne renvoie plus 500', $status !== 500, "obtenu {$status} : " . substr($body, 0, 200));
 check('Le endpoint renvoie 200', $status === 200, "obtenu {$status} : " . substr($body, 0, 200));
 check('Le message reste générique', str_contains($body, 'Si cette adresse existe'), $body);
+$forgotAuditValues = $em->getConnection()->fetchOne(
+    'SELECT new_values FROM audit_log WHERE action = :action ORDER BY id DESC LIMIT 1',
+    ['action' => 'FORGOT_PASSWORD'],
+);
+check(
+    'Le journal ne conserve pas l’adresse saisie sur la route publique',
+    $forgotAuditValues === false || $forgotAuditValues === null || !str_contains((string) $forgotAuditValues, $email),
+    (string) $forgotAuditValues,
+);
 
 $em->clear();
 $tokens = $tokenRepository->findBy(['user' => $repository->findOneBy(['email' => $email])]);
@@ -360,6 +374,21 @@ $container->get('cache.rate_limiter')->clear();
 [$status, $body] = $request('POST', '/api/auth/login', ['email' => $email, 'password' => $newPassword]);
 check('Le nouveau mot de passe permet de se connecter (200)', $status === 200, "obtenu {$status} : " . substr($body, 0, 160));
 check('Aucune fuite du mot de passe dans la réponse', !str_contains($body, $newPassword) && !str_contains($body, 'password'), $body);
+
+// --- 6. Limitation des demandes publiques par adresse IP -----------------
+echo "\n=== Limitation des demandes de récupération ===\n";
+
+$container->get('cache.rate_limiter')->clear();
+$acceptedRequests = 0;
+for ($attempt = 1; $attempt <= 10; $attempt++) {
+    [$status] = $request('POST', '/api/auth/forgot-password', [
+        'email' => sprintf('unknown-%d@plateforme.test', $attempt),
+    ]);
+    $acceptedRequests += $status === 200 ? 1 : 0;
+}
+[$limitedStatus] = $request('POST', '/api/auth/forgot-password', ['email' => 'unknown-11@plateforme.test']);
+check('Dix demandes anonymes sont acceptées sans révéler le compte', $acceptedRequests === 10, "{$acceptedRequests}/10 acceptées");
+check('La demande suivante est limitée (429)', $limitedStatus === 429, "obtenu {$limitedStatus}");
 
 $cleanup();
 

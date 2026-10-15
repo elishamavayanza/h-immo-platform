@@ -63,8 +63,8 @@ final readonly class OrganizationNotificationService
                 // Ne journalise aucune donnée personnelle : uniquement les
                 // références techniques utiles au diagnostic réseau.
                 $this->logger->error('Échec de l\'envoi de l\'email de suspension d\'organisation.', [
-                    'organizationName' => $organizationName,
-                    'exception' => $exception,
+                    'organization_id' => $organization->getId(),
+                    'exception_class' => $exception::class,
                 ]);
 
                 $failed[] = $email;
