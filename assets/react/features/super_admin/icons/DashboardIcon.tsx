@@ -17,6 +17,7 @@ const PATHS: Record<DashboardIconName, string> = {
     warning: 'M10.3 3.9 2.6 17.2A2 2 0 0 0 4.3 20h15.4a2 2 0 0 0 1.7-2.8L13.7 3.9a2 2 0 0 0-3.4 0zM12 9v4m0 4h.01',
     trash: 'M3 6h18m-2 0-1 15H6L5 6m3 0V4h8v2m-5 4v7m4-7v7',
     login: 'M10 17l5-5-5-5m5 5H3m9-9h6a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-6',
+    refresh: 'M20 7v5h-5M4 17v-5h5m11-1a8 8 0 0 0-14.6-4M4 13a8 8 0 0 0 14.6 4',
 };
 
 export interface DashboardIconProps {

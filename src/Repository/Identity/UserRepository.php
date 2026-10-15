@@ -204,6 +204,27 @@ class UserRepository extends ServiceEntityRepository
             ->getSingleScalarResult();
     }
 
+    /** @return array{total: int, active: int, disabled: int} */
+    public function getPlatformCounts(): array
+    {
+        $counts = ['total' => 0, 'active' => 0, 'disabled' => 0];
+        $rows = $this->createQueryBuilder('u')
+            ->select('u.isActive AS active, COUNT(u.id) AS total')
+            ->andWhere('u.deletedAt IS NULL')
+            ->groupBy('u.isActive')
+            ->getQuery()
+            ->getScalarResult();
+
+        foreach ($rows as $row) {
+            $isActive = filter_var($row['active'], FILTER_VALIDATE_BOOLEAN);
+            $count = (int) $row['total'];
+            $counts[$isActive ? 'active' : 'disabled'] = $count;
+            $counts['total'] += $count;
+        }
+
+        return $counts;
+    }
+
     /**
      * @param list<Organization> $organizations
      * @return list<int>

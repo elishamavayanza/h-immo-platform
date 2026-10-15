@@ -1,16 +1,16 @@
+import type { PlatformMetric } from '../types';
 import { KpiCard } from './KpiCard';
-import type { KpiMetric } from '../types';
 
 export interface KpiGridProps {
-    metrics: KpiMetric[];
+    organizations: PlatformMetric;
+    users: PlatformMetric;
 }
 
-export function KpiGrid({ metrics }: KpiGridProps) {
+export function KpiGrid({ organizations, users }: KpiGridProps) {
     return (
-        <section className="sa-kpi-grid" aria-label="Indicateurs clés">
-            {metrics.map((m) => (
-                <KpiCard key={m.id} metric={m} />
-            ))}
+        <section className="sa-kpi-grid" aria-label="Indicateurs de la plateforme">
+            <KpiCard title="Organisations" icon="building" metric={organizations} />
+            <KpiCard title="Comptes utilisateurs" icon="users" metric={users} />
         </section>
     );
 }

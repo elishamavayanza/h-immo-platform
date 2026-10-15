@@ -147,4 +147,26 @@ class AuditLogRepository extends ServiceEntityRepository
 
         return $this->fetchPaginated($qb, $page, $limit);
     }
+
+    /**
+     * Retourne uniquement les événements d'administration de la plateforme.
+     * Les opérations métier d'une organisation ne figurent pas au tableau global.
+     *
+     * @param list<string> $actions
+     * @return list<AuditLog>
+     */
+    public function findRecentPlatformActions(array $actions, int $limit = 10): array
+    {
+        if ($actions === []) {
+            return [];
+        }
+
+        return $this->createQueryBuilder('a')
+            ->andWhere('a.action IN (:actions)')
+            ->setParameter('actions', $actions)
+            ->orderBy('a.createdAt', 'DESC')
+            ->setMaxResults(max(1, min($limit, 50)))
+            ->getQuery()
+            ->getResult();
+    }
 }

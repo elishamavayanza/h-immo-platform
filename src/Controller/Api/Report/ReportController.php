@@ -354,19 +354,15 @@ final class ReportController extends AbstractController
     #[OA\Get(
         path: '/api/v1/reports/super-admin/dashboard',
         summary: 'Tableau de bord temps réel pour SUPER_ADMIN',
-        description: 'Retourne les KPIs, séries de revenus, organisations récentes, flux d\'activité, santé système et top villes pour la plateforme entière.',
+        description: 'Retourne les compteurs globaux des organisations et comptes, ainsi que les événements d’administration plateforme. Aucun indicateur métier détaillé d’organisation n’est inclus.',
         security: [['bearer' => []]],
-        parameters: [
-            new OA\Parameter(name: 'periodFrom', in: 'query', schema: new OA\Schema(type: 'string', format: 'date'), description: 'Date de début'),
-            new OA\Parameter(name: 'periodTo', in: 'query', schema: new OA\Schema(type: 'string', format: 'date'), description: 'Date de fin'),
-        ],
         responses: [
             new OA\Response(response: 200, description: 'Tableau de bord généré', content: new OA\JsonContent(ref: new Model(type: SuperAdminDashboardResponse::class))),
             new OA\Response(response: 403, description: 'Accès réservé à SUPER_ADMIN', content: new OA\JsonContent(ref: new Model(type: Feedback::class))),
             new OA\Response(response: 401, description: 'Non authentifié', content: new OA\JsonContent(ref: new Model(type: Feedback::class))),
         ]
     )]
-    public function superAdminDashboard(#[MapQueryString(validationFailedStatusCode: 422)] ReportFilterDto $filter): JsonResponse
+    public function superAdminDashboard(): JsonResponse
     {
         $user = $this->getUser();
 
@@ -379,7 +375,7 @@ final class ReportController extends AbstractController
 
         $this->securityService->requirePlatformRole(\App\Enum\PlatformRole::SUPER_ADMIN);
 
-        $dashboard = $this->reportService->generateSuperAdminDashboard($filter);
+        $dashboard = $this->reportService->generateSuperAdminDashboard();
 
         return $this->json($dashboard);
     }

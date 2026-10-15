@@ -2,9 +2,8 @@
 // Page : Tableau de bord SUPER_ADMIN.
 // Route  : /app/admin/dashboard (cf. PLATFORM_SIDEBAR).
 //
-// Vue plateforme : aucune donnée d'organisation métier, uniquement
-// l'activité globale (organisations, utilisateurs, revenus, santé).
-// Données mockées — l'appel API viendra plus tard.
+// Vue plateforme : compteurs globaux et activité d'administration,
+// sans indicateurs métier détaillés des organisations.
 // ============================================================
 
 import type { ReactNode } from 'react';
@@ -19,10 +18,6 @@ import {
     ActivityFeed,
     DashboardHeader,
     KpiGrid,
-    OrganizationsTable,
-    RevenueChart,
-    SystemHealthPanel,
-    TopCitiesPanel,
 } from '../components';
 import { useSuperAdminDashboard } from '../hooks/useSuperAdminDashboard';
 
@@ -68,44 +63,16 @@ export function SuperAdminDashboardPage() {
 
     return (
         <div className="sa-dashboard">
-            <DashboardHeader onReload={reload} isRefreshing={isLoading} />
+            <DashboardHeader onReload={reload} isRefreshing={isLoading} generatedAt={data.generatedAt} />
 
-            <KpiGrid metrics={data.kpis} />
+            <KpiGrid organizations={data.organizations} users={data.users} />
 
-            <section className="sa-grid sa-grid--2-1">
-                <DashboardPanel
-                    title="Croissance"
-                    description="Revenu mensuel récurrent et abonnements sur 12 mois."
-                >
-                    <RevenueChart series={data.revenueSeries} />
-                </DashboardPanel>
-
-                <DashboardPanel title="Santé système" description="Infrastructure & API">
-                    <SystemHealthPanel metrics={data.health} />
-                </DashboardPanel>
-            </section>
-
-            <section className="sa-grid sa-grid--2-1">
-                <DashboardPanel
-                    title="Organisations récentes"
-                    description="Dernières inscriptions sur la plateforme."
-                >
-                    <OrganizationsTable organizations={data.recentOrganizations} />
-                </DashboardPanel>
-
-                <DashboardPanel title="Activité" description="Journal temps réel">
-                    <ActivityFeed entries={data.activity} />
-                </DashboardPanel>
-            </section>
-
-            <section className="sa-grid sa-grid--1">
-                <DashboardPanel
-                    title="Top villes"
-                    description="Répartition géographique des propriétés publiées."
-                >
-                    <TopCitiesPanel cities={data.topCities} />
-                </DashboardPanel>
-            </section>
+            <DashboardPanel
+                title="Activité d’administration"
+                description="Créations, suspensions et réactivations des comptes et organisations."
+            >
+                <ActivityFeed entries={data.activity} />
+            </DashboardPanel>
         </div>
     );
 }

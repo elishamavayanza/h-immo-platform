@@ -38,6 +38,9 @@
     color: var(--sa-text);
     padding: $spacing-5 clamp(8px, 1vw, 14px) $spacing-8;
     min-height: 100%;
+    width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
 }
 
 // ------------------------------------------------------------
@@ -79,6 +82,11 @@
         @include flex(row, center, flex-end, 12px);
         flex-wrap: wrap;
     }
+
+    &__updated {
+        color: var(--sa-text-muted);
+        font-size: 12px;
+    }
 }
 
 // Sélecteur segmenté (périodes)
@@ -117,11 +125,9 @@
 // ------------------------------------------------------------
 .sa-kpi-grid {
     display: grid;
-    grid-template-columns: repeat(4, minmax(0, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 360px), 1fr));
     gap: $spacing-4;
-
-    @media (max-width: 1100px) { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-    @media (max-width: 560px)  { grid-template-columns: 1fr; }
+    min-width: 0;
 }
 
 .sa-kpi {
@@ -168,6 +174,28 @@
         @include flex-between;
         gap: 8px;
         font-size: 12.5px;
+    }
+
+    &__breakdown {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px 18px;
+        list-style: none;
+        margin: 0;
+        padding: 0;
+    }
+
+    &__status {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        color: var(--sa-text-muted);
+        font-size: 12.5px;
+
+        strong { color: var(--sa-text); font-size: inherit; }
+        &--success strong { color: var(--sa-success); }
+        &--warning strong { color: var(--sa-warning); }
+        &--muted strong { color: var(--sa-text-soft); }
     }
 
     &__trend {
@@ -473,6 +501,13 @@
     &__time { font-size: 11.5px; color: var(--sa-text-muted); }
 }
 
+.sa-feed__empty {
+    margin: 0;
+    padding: 24px 8px;
+    color: var(--sa-text-muted);
+    text-align: center;
+}
+
 // ------------------------------------------------------------
 // 8. Top villes
 // ------------------------------------------------------------
@@ -546,7 +581,7 @@
     }
 }
 
-@media (max-width: 600px) {
+@media (max-width: $breakpoint-tablet) {
     .sa-dashboard {
         gap: $spacing-3;
         padding: $spacing-3 0 $spacing-5;
@@ -554,18 +589,32 @@
 
     .sa-header {
         gap: $spacing-3;
+        align-items: stretch;
 
-        &__intro { min-width: 0; }
+        &__intro { flex: 1 1 100%; min-width: 0; }
         &__title { font-size: 22px; }
-        &__actions { width: 100%; justify-content: flex-start; }
+        &__actions { width: 100%; justify-content: space-between; }
     }
 
-    .sa-kpi-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: $spacing-2; }
+    .sa-kpi-grid { gap: $spacing-2; }
     .sa-kpi .card__body { padding: $spacing-3; }
     .sa-kpi__value { margin: $spacing-2 0; font-size: 20px; }
     .sa-grid { gap: $spacing-2; }
 }
 
-@media (max-width: 360px) {
-    .sa-kpi-grid { grid-template-columns: 1fr; }
+@media (max-width: $breakpoint-mobile) {
+    .sa-dashboard {
+        gap: $spacing-3;
+        padding: $spacing-3 8px $spacing-5;
+    }
+
+    .sa-header {
+        &__actions { align-items: flex-start; }
+        &__updated { align-self: center; }
+    }
+
+    .sa-kpi-grid { grid-template-columns: minmax(0, 1fr); }
+    .sa-kpi__breakdown { gap: 8px 12px; }
+    .sa-dashboard-card { height: auto; }
+    .sa-feed__line { overflow-wrap: anywhere; }
 }

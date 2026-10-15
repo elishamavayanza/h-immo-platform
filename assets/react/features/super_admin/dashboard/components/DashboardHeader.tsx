@@ -1,29 +1,19 @@
 // ============================================================
 // En-tête du tableau de bord SUPER_ADMIN : contexte plateforme,
-// sélecteur de période et action « rafraîchir ».
+// heure de mise à jour et action « actualiser ».
 // ============================================================
-
-import { useState } from 'react';
 
 import { Button } from '../../../../components/UI/Button';
 import { DashboardIcon } from '../../icons/DashboardIcon';
 
-const PERIODS = [
-    { id: '7d', label: '7 jours' },
-    { id: '30d', label: '30 jours' },
-    { id: '12m', label: '12 mois' },
-] as const;
-
-type PeriodId = (typeof PERIODS)[number]['id'];
-
 export interface DashboardHeaderProps {
     onReload?: () => void;
     isRefreshing?: boolean;
+    generatedAt: string;
 }
 
-export function DashboardHeader({ onReload, isRefreshing }: DashboardHeaderProps) {
-    const [period, setPeriod] = useState<PeriodId>('12m');
-
+export function DashboardHeader({ onReload, isRefreshing, generatedAt }: DashboardHeaderProps) {
+    const updatedAt = new Date(generatedAt);
     return (
         <header className="sa-header">
             <div className="sa-header__intro">
@@ -33,34 +23,21 @@ export function DashboardHeader({ onReload, isRefreshing }: DashboardHeaderProps
                 </span>
                 <h1 className="sa-header__title">Tableau de bord</h1>
                 <p className="sa-header__subtitle">
-                    Synthèse de l’activité, de la croissance et de la santé de la
-                    plateforme.
+                    Vue d’ensemble des organisations, des comptes et des actions de la plateforme.
                 </p>
             </div>
 
             <div className="sa-header__actions">
-                <div className="sa-segmented" role="tablist" aria-label="Période">
-                    {PERIODS.map((p) => (
-                        <button
-                            key={p.id}
-                            type="button"
-                            role="tab"
-                            aria-selected={period === p.id}
-                            className={
-                                'sa-segmented__btn' +
-                                (period === p.id ? ' is-active' : '')
-                            }
-                            onClick={() => setPeriod(p.id)}
-                        >
-                            {p.label}
-                        </button>
-                    ))}
-                </div>
+                <span className="sa-header__updated">
+                    {Number.isNaN(updatedAt.getTime())
+                        ? 'Données à jour'
+                        : `Mis à jour à ${new Intl.DateTimeFormat('fr-FR', { hour: '2-digit', minute: '2-digit' }).format(updatedAt)}`}
+                </span>
 
                 <Button
                     variant="outline"
                     size="small"
-                    icon={<DashboardIcon name="sparkle" size={16} />}
+                    icon={<DashboardIcon name="refresh" size={16} />}
                     onClick={onReload}
                     disabled={isRefreshing}
                 >
