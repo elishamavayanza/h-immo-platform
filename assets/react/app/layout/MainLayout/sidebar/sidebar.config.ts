@@ -175,7 +175,7 @@ const PERSONNEL: AppMenuItem = {
 const ADMIN_VILLE_OPERATIONS: AppMenuItem = {
     id: 'operations',
     label: 'Opérations',
-    icon: 'hard-hat',
+    icon: 'clipboard-check',
     section: 'operations',
     path: '/app/operations',
 };
@@ -183,7 +183,7 @@ const ADMIN_VILLE_OPERATIONS: AppMenuItem = {
 const MAINTENANCE: AppMenuItem = {
     id: 'maintenance',
     label: 'Maintenance',
-    icon: 'hard-hat',
+    icon: 'tools',
     section: 'operations',
     path: '/app/maintenance',
 };

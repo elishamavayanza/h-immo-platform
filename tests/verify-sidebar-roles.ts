@@ -513,6 +513,43 @@ check(
     `depenses=${String(iconOf('depenses'))}, loyers=${String(iconOf('location-loyers'))}`
 );
 
+for (const [roleName, menu] of [
+    ['PATRON', PATRON],
+    ['ADMIN_IMMOBILIER', ADMIN_IMMOBILIER],
+    ['ADMIN_VILLE', ADMIN_VILLE],
+    ['SUPER_ADMIN', PLATFORM],
+] as const) {
+    const icons = menu.flatMap(item => item.icon ? [{ id: item.id, icon: item.icon }] : []);
+    const repeated = icons.filter((entry, index) => icons.findIndex(candidate => candidate.icon === entry.icon) !== index);
+    check(
+        `${roleName} : aucune icône répétée entre deux rubriques du sidebar`,
+        repeated.length === 0,
+        repeated.map(entry => `${entry.id} → ${entry.icon}`).join(', ')
+    );
+}
+
+const iconExpectations: Array<[string, string]> = [
+    ['dashboard', 'gauge'],
+    ['rapports', 'report'],
+    ['patrimoine', 'building'],
+    ['location-locataires', 'user-single'],
+    ['location-loyers', 'calendar-due'],
+    ['depenses', 'wallet'],
+    ['vitrine', 'storefront'],
+    ['personnel', 'hard-hat'],
+    ['operations', 'clipboard-check'],
+    ['maintenance', 'tools'],
+    ['administration', 'id-badge'],
+];
+for (const [id, expected] of iconExpectations) {
+    const menusWithEntry = ALL_MENUS.filter(menu => menu.some(item => item.id === id));
+    check(
+        `${id} utilise l’icône adaptée (${expected})`,
+        menusWithEntry.length > 0 && menusWithEntry.every(menu => menu.find(item => item.id === id)?.icon === expected),
+        menusWithEntry.map(menu => menu.find(item => item.id === id)?.icon).join(', ')
+    );
+}
+
 console.log('\n' + '-'.repeat(60) + '\n');
 
 if (failures.length > 0) {
