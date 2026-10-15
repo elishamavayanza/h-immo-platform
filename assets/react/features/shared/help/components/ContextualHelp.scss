@@ -40,12 +40,19 @@
     &__close { display: grid; place-items: center; width: 2.5rem; height: 2.5rem; color: var(--color-text-secondary); background: transparent; border: 1px solid var(--color-border); border-radius: .65rem; font-size: 1.5rem; cursor: pointer; &:hover { color: var(--color-text-primary); background: var(--color-bg-card-hover); } &:focus-visible { outline: 3px solid var(--color-focus-ring); outline-offset: 2px; } }
     &__description { margin: 1rem 0; color: var(--color-text-secondary); line-height: 1.5; }
     &__search-label { margin-block-end: .4rem; font-size: .82rem; font-weight: 600; }
-    &__search { width: 100%; min-height: 2.75rem; padding: .65rem .8rem; color: var(--color-text-primary); background: var(--color-bg-input); border: 1px solid var(--color-border); border-radius: .65rem; font: inherit; &:focus-visible { outline: 3px solid var(--color-focus-ring); outline-offset: 1px; border-color: var(--color-primary); } &::placeholder { color: var(--color-text-muted); } }
+    &__search { width: 100%; min-height: 2.75rem; padding: .65rem .8rem; color: var(--color-text-primary); background: var(--color-bg-input); border: 1px solid var(--color-border); border-radius: .65rem; font: inherit; &:focus-visible { outline: 2px solid color-mix(in srgb, var(--color-primary) 28%, transparent); outline-offset: 2px; border-color: var(--color-primary); } &::placeholder { color: var(--color-text-muted); } }
     &__questions { flex: 1; min-height: 0; margin-block-start: 1rem; overflow-y: auto; overscroll-behavior: contain; }
     &__item { border-block-end: 1px solid var(--color-border); h3 { margin: 0; font-size: .95rem; } h3 button { display: flex; align-items: center; justify-content: space-between; gap: .8rem; width: 100%; padding: .9rem .15rem; color: var(--color-text-primary); background: transparent; border: 0; text-align: start; font: inherit; cursor: pointer; &:hover { color: var(--color-primary); } &:focus-visible { outline: 2px solid var(--color-focus-ring); outline-offset: -2px; } span { flex: 0 0 auto; color: var(--color-primary); font-size: 1.15rem; } } }
     &__answer { padding: 0 .15rem .9rem; color: var(--color-text-secondary); line-height: 1.6; p { margin: 0; } }
     &__empty { display: grid; place-items: center; flex: 1; align-content: center; gap: .65rem; color: var(--color-text-secondary); text-align: center; button { padding: .5rem .7rem; color: var(--color-primary); background: transparent; border: 1px solid var(--color-border); border-radius: .5rem; cursor: pointer; } }
     &__footer { margin-block-start: auto; padding-block-start: .9rem; color: var(--color-text-muted); border-block-start: 1px solid var(--color-border); font-size: .78rem; line-height: 1.45; }
+}
+
+// Le panneau reprend les surfaces des cartes du thème clair, avec un mélange
+// supplémentaire du fond général pour éviter un aplat trop blanc.
+html[data-theme='light'] .contextual-help__panel {
+    background: color-mix(in srgb, var(--color-bg-card) 55%, var(--color-bg-base));
+    border-color: color-mix(in srgb, var(--color-border) 72%, var(--color-bg-base));
 }
 
 @media (max-width: 600px) {
