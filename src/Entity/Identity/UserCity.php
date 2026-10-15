@@ -17,8 +17,8 @@ use Doctrine\ORM\Mapping as ORM;
  * Table de liaison N-N entre User et City, utilisée pour restreindre
  * le périmètre d'accès d'un utilisateur ADMIN_VILLE aux seules villes
  * qui lui sont explicitement attribuées, à l'intérieur d'une même
- * Organization. Ligne créée une fois, jamais modifiée : hérite de
- * CreatedOnlyEntity.
+ * Organization. Le périmètre reste stable ; seule la délégation de création
+ * du personnel peut être ajustée sur cette liaison.
  */
 #[ORM\Entity]
 #[ORM\Table(name: 'user_city')]
@@ -38,6 +38,9 @@ class UserCity extends CreatedOnlyEntity
     #[ORM\ManyToOne(targetEntity: City::class)]
     #[ORM\JoinColumn(name: 'city_id', referencedColumnName: 'id', nullable: false)]
     private City $city;
+
+    #[ORM\Column(name: 'can_manage_personnel', type: 'boolean', options: ['default' => false])]
+    private bool $canManagePersonnel = false;
 
     public function getUser(): User
     {
@@ -59,6 +62,18 @@ class UserCity extends CreatedOnlyEntity
     public function setCity(City $city): static
     {
         $this->city = $city;
+
+        return $this;
+    }
+
+    public function canManagePersonnel(): bool
+    {
+        return $this->canManagePersonnel;
+    }
+
+    public function setCanManagePersonnel(bool $canManagePersonnel): static
+    {
+        $this->canManagePersonnel = $canManagePersonnel;
 
         return $this;
     }

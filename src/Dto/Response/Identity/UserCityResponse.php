@@ -32,6 +32,8 @@ final readonly class UserCityResponse
 
         #[OA\Property(description: 'Horodatage de création du rattachement', format: 'date-time', example: '2026-02-10T14:20:00Z')]
         public \DateTimeImmutable $createdAt,
+        #[OA\Property(description: 'Autorisation de créer des membres du personnel dans cette ville')]
+        public bool $canManagePersonnel = false,
     ) {
     }
 
@@ -42,6 +44,7 @@ final readonly class UserCityResponse
             userId: (string) $userCity->getUser()->getUuid(),
             cityId: (string) $userCity->getCity()->getUuid(),
             createdAt: $userCity->getCreatedAt(),
+            canManagePersonnel: $userCity->canManagePersonnel(),
         );
     }
 }

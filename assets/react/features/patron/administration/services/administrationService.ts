@@ -169,4 +169,8 @@ export const administrationService = {
     async revokeUserCity(linkUuid: string): Promise<void> {
         await apiClient.delete<Feedback<null>>(`/v1/identity/user-cities/${linkUuid}`);
     },
+
+    async setUserCityPersonnelPermission(linkUuid: string, canManagePersonnel: boolean): Promise<void> {
+        await apiClient.put<Feedback<UserCityLink>>(`/v1/identity/user-cities/${linkUuid}/personnel-permission`, { canManagePersonnel });
+    },
 };

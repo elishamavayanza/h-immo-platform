@@ -16,6 +16,7 @@ import {
     type UpdateWorkerPayload,
 } from '../services/personnelService';
 import type { PersonnelData } from '../types/personnel.types';
+import { useAdminCity } from '../../../../app/providers/AdminCityProvider';
 
 function actionErrorMessage(cause: unknown): string {
     return cause instanceof ApiError ? cause.message : 'Une erreur inattendue est survenue. Réessayez.';
@@ -43,7 +44,8 @@ const runAction = async (push: ReturnType<typeof useToast>['push'], successMessa
  * chargé.
  */
 export function usePersonnel() {
-    const { currentOrganization } = useOrganization();
+    const { currentOrganization, organizationRole } = useOrganization();
+    const { activeCityUuid, isLoading: isAdminCityLoading } = useAdminCity();
     const organizationUuid = currentOrganization?.uuid ?? null;
     const { push } = useToast();
 
@@ -61,16 +63,22 @@ export function usePersonnel() {
 
             return;
         }
+        if (organizationRole === 'admin_ville' && (isAdminCityLoading || !activeCityUuid)) {
+            setData(null);
+            setLoading(isAdminCityLoading);
+            return;
+        }
+        if (organizationRole === 'admin_ville') setData(null);
         setLoading(true);
         setError(null);
         try {
-            setData(await fetchPersonnel(organizationUuid));
+            setData(await fetchPersonnel(organizationUuid, activeCityUuid || undefined));
         } catch (cause) {
             setError(cause instanceof ApiError ? cause.message : 'Impossible de charger le personnel de l’organisation.');
         } finally {
             setLoading(false);
         }
-    }, [organizationUuid]);
+    }, [organizationUuid, organizationRole, activeCityUuid, isAdminCityLoading]);
 
     useEffect(() => { void reload(); }, [reload]);
 

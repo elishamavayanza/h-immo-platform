@@ -60,6 +60,33 @@
     &__list svg {
         color: $color-text-secondary;
     }
+
+    &__city {
+        display: grid;
+        gap: $spacing-2;
+        min-width: 0;
+    }
+
+    &__city > span {
+        display: flex;
+        align-items: center;
+        gap: $spacing-2;
+    }
+
+    &__city label {
+        display: flex;
+        align-items: flex-start;
+        gap: $spacing-2;
+        color: $color-text-secondary;
+        font-size: $font-size-sm;
+        line-height: 1.4;
+    }
+
+    &__city input {
+        flex: 0 0 auto;
+        margin-top: 2px;
+        accent-color: $color-primary;
+    }
 }
 
 /* Responsive */

@@ -13,6 +13,7 @@ use App\Entity\Staff\Worker;
 use App\Enum\OrganizationRole;
 use App\Mapper\Staff\WorkerMapper;
 use App\Repository\Identity\OrganizationRepository;
+use App\Repository\Identity\UserCityRepository;
 use App\Repository\Property\CityRepository;
 use App\Repository\Staff\WorkerRepository;
 use App\Security\SecurityAction;
@@ -46,7 +47,8 @@ final readonly class WorkerService
         private SecurityServiceInterface $securityService,
         private EntityManagerInterface $entityManager,
         private ValidatorInterface $validator,
-        private AuditLogService $auditLogService
+        private AuditLogService $auditLogService,
+        private UserCityRepository $userCityRepository,
     ) {
     }
 
@@ -70,8 +72,20 @@ final readonly class WorkerService
             return $feedback->autoInitFlush();
         }
 
-        // Vérifier l'accès CREATE_WORKER sur l'Organization
-        $this->securityService->checkOrganizationAccess($organization, SecurityAction::CREATE_WORKER);
+        $role = $this->securityService->getOrganizationRole($currentUser, $organization);
+        if ($role === OrganizationRole::ADMIN_VILLE) {
+            $city = $request->cityUuid !== null ? $this->cityRepository->findOneByUuid(Uuid::fromString($request->cityUuid)) : null;
+            if ($city === null || $city->getOrganization() !== $organization) {
+                throw new \App\Exception\AccessDeniedException('Une ville autorisée est requise pour créer du personnel.');
+            }
+            $this->securityService->checkCityAccess($city, SecurityAction::VIEW_WORKER_ASSIGNMENT);
+            $cityGrant = $this->userCityRepository->findOneForUserAndCity($currentUser, $city);
+            if ($cityGrant === null || !$cityGrant->canManagePersonnel()) {
+                throw new \App\Exception\AccessDeniedException('Votre administrateur immobilier ne vous a pas autorisé à ajouter du personnel dans cette ville.');
+            }
+        } else {
+            $this->securityService->checkOrganizationAccess($organization, SecurityAction::CREATE_WORKER);
+        }
 
         // Vérifier l'unicité nationalId par Organization si fourni
         if ($request->nationalId !== null && $request->nationalId !== '') {
@@ -200,7 +214,7 @@ final readonly class WorkerService
             ->autoInitFlush();
     }
 
-    public function listWorkers(?string $organizationId = null, int $page = 1, int $limit = 20): Feedback
+    public function listWorkers(?string $organizationId = null, int $page = 1, int $limit = 20, ?string $cityUuid = null): Feedback
     {
         $feedback = new Feedback();
 
@@ -235,9 +249,18 @@ final readonly class WorkerService
                 // La liste ne doit révéler que les personnes rattachées aux
                 // villes UserCity autorisées ; un filtre d'affichage client
                 // laisserait fuiter les travailleurs des autres villes.
-                $result = $this->workerRepository->findByCities(
-                    $this->securityService->getAccessibleCitiesForOrganization($org)
-                );
+                if ($cityUuid !== null) {
+                    $city = $this->cityRepository->findOneByUuid(Uuid::fromString($cityUuid));
+                    if ($city === null || $city->getOrganization() !== $org) {
+                        return $feedback->addError('cityUuid', 'Ville non accessible.')
+                            ->setFlushDescriptionWithError('Vous n’avez pas accès à cette ville.')
+                            ->setStatus(403)->autoInitFlush();
+                    }
+                    $this->securityService->checkCityAccess($city, SecurityAction::VIEW_WORKER_ASSIGNMENT);
+                    $result = $this->workerRepository->findByOrganizationAndCity($org, $city);
+                } else {
+                    $result = $this->workerRepository->findByCities($this->securityService->getAccessibleCitiesForOrganization($org));
+                }
             } else {
                 $result = $this->workerRepository->findByOrganization($org);
             }

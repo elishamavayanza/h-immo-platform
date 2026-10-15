@@ -157,8 +157,8 @@ export function fetchExpenses(from?: string, to?: string, cityIds?: string[]): P
 }
 
 /** Travailleurs de l'organisation, pour les libellés d'affectation. */
-export function fetchWorkers(organizationId: string): Promise<ListPage<WorkerItem>> {
-    return getList<WorkerItem>('/v1/workers', organizationId);
+export function fetchWorkers(organizationId: string, cityUuid?: string): Promise<ListPage<WorkerItem>> {
+    return getList<WorkerItem>('/v1/workers', organizationId, cityUuid ? { cityUuid } : {});
 }
 
 /**
@@ -167,10 +167,10 @@ export function fetchWorkers(organizationId: string): Promise<ListPage<WorkerIte
  * `WorkerAssignmentFilterDto` n'expose pas d'`organizationId` : le périmètre
  * est appliqué côté serveur (villes des organisations accessibles).
  */
-export function fetchWorkerAssignments(): Promise<ListPage<WorkerAssignmentItem>> {
+export function fetchWorkerAssignments(cityIds?: string[]): Promise<ListPage<WorkerAssignmentItem>> {
+    const params = new URLSearchParams({ limit: String(REFERENCE_LIMIT), sortBy: 'startDate', sortOrder: 'DESC' });
+    cityIds?.forEach((cityId) => params.append('cityIds[]', cityId));
     return apiClient
-        .get<Feedback<ListPage<WorkerAssignmentItem>>>('/v1/worker-assignments', {
-            params: { limit: REFERENCE_LIMIT, sortBy: 'startDate', sortOrder: 'DESC' },
-        })
+        .get<Feedback<ListPage<WorkerAssignmentItem>>>(`/v1/worker-assignments?${params.toString()}`)
         .then((response) => response.data.data);
 }

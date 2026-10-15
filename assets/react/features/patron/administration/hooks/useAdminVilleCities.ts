@@ -89,5 +89,16 @@ export function useAdminVilleCities(userUuid: string | null) {
         }
     };
 
-    return { assigned, available, isLoading, error, reload, assign, revoke };
+    const setPersonnelPermission = async (linkUuid: string, enabled: boolean): Promise<void> => {
+        try {
+            await administrationService.setUserCityPersonnelPermission(linkUuid, enabled);
+            await reload();
+            push('success', enabled ? 'Ajout de personnel autorisé pour cette ville.' : 'Autorisation d’ajout de personnel retirée.');
+        } catch (cause) {
+            push('error', actionErrorMessage(cause));
+            throw cause;
+        }
+    };
+
+    return { assigned, available, isLoading, error, reload, assign, revoke, setPersonnelPermission };
 }

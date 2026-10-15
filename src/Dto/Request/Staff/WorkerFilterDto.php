@@ -32,6 +32,10 @@ final readonly class WorkerFilterDto
         #[OA\Property(description: 'Nombre d\'éléments par page', default: 20)]
         #[Assert\Range(min: 1, max: 100)]
         public int $limit = 20,
+
+        #[OA\Property(description: 'Limiter aux travailleurs affectés à cette ville', format: 'uuid', nullable: true)]
+        #[Assert\Uuid]
+        public ?string $cityUuid = null,
     ) {
     }
 }

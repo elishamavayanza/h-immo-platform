@@ -1245,7 +1245,9 @@ final class SecurityService implements SecurityServiceInterface
      * dépense, ni gestion des rôles, ni journal d'audit, ni
      * activation/désactivation de villes.
      *
-     * Sur le personnel, il ne dispose que de VIEW_WORKER : la fiche d'un
+     * Sur le personnel, il ne dispose que de VIEW_WORKER pour les fiches ;
+     * CREATE_WORKER reste une délégation portée par UserCity, vérifiée
+     * séparément dans WorkerService. La fiche d'un
      * travailleur n'est rattachée à aucune ville, et `checkWorkerAccess()`
      * lui refuse toute action. Il agit par affectation, dont la ville est
      * connue. Les suppressions d'affectation lui restent ouvertes car une

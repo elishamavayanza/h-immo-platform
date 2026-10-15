@@ -6,6 +6,7 @@ namespace App\Service\Identity;
 
 use App\Dto\Feedback;
 use App\Dto\Request\Identity\UserCityRequest;
+use App\Dto\Request\Identity\UserCityPersonnelPermissionRequest;
 use App\Dto\Request\PaginationQuery;
 use App\Entity\Identity\UserCity;
 use App\Enum\OrganizationRole;
@@ -88,6 +89,13 @@ final readonly class UserCityService
             ->setFlushDescription('Villes attribuées récupérées avec succès.')
             ->setStatus(200)
             ->autoInitFlush();
+    }
+
+    public function listMine(): Feedback
+    {
+        $items = $this->userCityRepository->findWithCitiesForUser($this->security->getCurrentUser());
+
+        return (new Feedback())->setData(['items' => array_map([$this->mapper, 'toResponse'], $items), 'total' => count($items), 'page' => 1, 'limit' => count($items)])->setStatus(200)->setFlushDescription('Vos villes attribuées ont été récupérées.')->autoInitFlush();
     }
 
     /**
@@ -197,5 +205,39 @@ final readonly class UserCityService
             ->setFlushDescription('Attribution de la ville révoquée avec succès.')
             ->setStatus(200)
             ->autoInitFlush();
+    }
+
+    public function updatePersonnelPermission(string $uuid, UserCityPersonnelPermissionRequest $request): Feedback
+    {
+        $feedback = new Feedback();
+        $violations = $this->validator->validate($request);
+        if (count($violations) > 0) {
+            return $feedback->bind($violations)->setStatus(422)->autoInitFlush();
+        }
+        $link = $this->userCityRepository->findOneBy(['uuid' => $uuid]);
+        if (!$link) {
+            return $feedback->addError('uuid', 'Attribution de ville introuvable.')->setStatus(404)->autoInitFlush();
+        }
+        $this->security->checkUserAccess($link->getUser(), SecurityAction::ASSIGN_USER_CITY);
+        $this->security->checkCityAccess($link->getCity(), SecurityAction::ASSIGN_USER_CITY);
+        $memberships = $this->organizationUserRepository->findByOrganizationAndUser($link->getCity()->getOrganization(), $link->getUser());
+        if (!array_filter($memberships, static fn ($membership): bool => $membership->getRole() === OrganizationRole::ADMIN_VILLE)) {
+            throw new AccessDeniedException('Cette attribution ne correspond pas à un administrateur de ville.');
+        }
+        $previous = $link->canManagePersonnel();
+        $next = $request->canManagePersonnel ?? false;
+        $link->setCanManagePersonnel($next);
+        $this->em->flush();
+        $this->auditLogService->log(
+            action: 'UPDATE_USER_CITY_PERSONNEL_PERMISSION',
+            entityType: UserCity::class,
+            entityId: $link->getId(),
+            organization: $link->getCity()->getOrganization(),
+            user: $this->security->getCurrentUser(),
+            oldValues: ['canManagePersonnel' => $previous],
+            newValues: ['canManagePersonnel' => $next, 'cityUuid' => (string) $link->getCity()->getUuid(), 'adminVilleUuid' => (string) $link->getUser()->getUuid()],
+        );
+
+        return $feedback->setData($this->mapper->toResponse($link))->setFlushDescription('Autorisation de gestion du personnel mise à jour.')->setStatus(200)->autoInitFlush();
     }
 }

@@ -28,10 +28,10 @@ export function roleLabel(role: string): string {
     return ROLE_LABEL[role] ?? role;
 }
 
-export async function fetchPersonnel(organizationUuid: string): Promise<PersonnelData> {
+export async function fetchPersonnel(organizationUuid: string, cityUuid?: string): Promise<PersonnelData> {
     const [workers, assignments, cities, parcels, buildings, units] = await Promise.all([
-        fetchWorkers(organizationUuid),
-        fetchWorkerAssignments(),
+        fetchWorkers(organizationUuid, cityUuid),
+        fetchWorkerAssignments(cityUuid ? [cityUuid] : undefined),
         fetchCities(organizationUuid),
         fetchParcels(organizationUuid),
         fetchBuildings(organizationUuid),
@@ -72,9 +72,19 @@ export async function fetchPersonnel(organizationUuid: string): Promise<Personne
         assignmentsByWorker.set(assignment.workerId, current);
     }
 
-    const rows: PersonnelRow[] = organizationWorkers.map((worker) => {
+    const rows: PersonnelRow[] = organizationWorkers.filter(worker => !cityUuid || assignmentsByWorker.has(worker.id)).map((worker) => {
         const workerAssignments = assignmentsByWorker.get(worker.id) ?? [];
         const latest = workerAssignments[0];
+        const parcelIds = [...new Set(workerAssignments.flatMap((assignment) => {
+            if (assignment.parcelId) return [assignment.parcelId];
+            const buildingId = assignment.buildingId ?? (assignment.unitId ? unitById.get(assignment.unitId)?.buildingId : undefined);
+            const parcelId = buildingId ? buildingById.get(buildingId)?.parcelId : undefined;
+            return parcelId ? [parcelId] : [];
+        }))];
+        const assignmentPlaces = [...new Set(workerAssignments.map((assignment) => {
+            const parcelId = assignment.parcelId ?? (assignment.buildingId ? buildingById.get(assignment.buildingId)?.parcelId : undefined) ?? (assignment.unitId ? buildingById.get(unitById.get(assignment.unitId)?.buildingId ?? '')?.parcelId : undefined);
+            return parcelId ? `${cityById.get(assignment.cityId)?.name ?? 'Ville'} · ${parcelById.get(parcelId)?.name ?? 'Parcelle'}` : `${cityById.get(assignment.cityId)?.name ?? 'Ville'} · affectation`;
+        }))];
 
         return {
             id: worker.id,
@@ -82,9 +92,10 @@ export async function fetchPersonnel(organizationUuid: string): Promise<Personne
             role: latest ? roleLabel(latest.role) : '—',
             city: latest ? (cityById.get(latest.cityId)?.name ?? '—') : '—',
             assignments: workerAssignments.length,
+            assignmentPlaces,
             parcelId: latest?.parcelId ?? null,
             buildingId: latest?.buildingId ?? null,
-            parcelIds: [...new Set(workerAssignments.flatMap((assignment) => assignment.parcelId ? [assignment.parcelId] : assignment.buildingId && buildingById.has(assignment.buildingId) ? [buildingById.get(assignment.buildingId)!.parcelId] : []))],
+            parcelIds,
             buildingIds: [...new Set(workerAssignments.flatMap((assignment) => assignment.buildingId ? [assignment.buildingId] : []))],
             phone: worker.phone,
             email: worker.email,
@@ -124,6 +135,7 @@ export const CURRENCY_OPTIONS = [
 /** Payload pour créer un travailleur. */
 export interface CreateWorkerPayload {
     organizationUuid: string;
+    cityUuid?: string;
     fullName: string;
     phone: string;
     email?: string;

@@ -70,6 +70,23 @@ final class WorkerRepository extends ServiceEntityRepository
             ->innerJoin('w.assignments', 'wa')
             ->andWhere('wa.city = :city')
             ->andWhere('wa.endDate IS NULL OR wa.endDate >= :now')
+            ->andWhere('wa.startDate <= :now')
+            ->setParameter('city', $city)
+            ->setParameter('now', $this->dateTime->now())
+            ->distinct()
+            ->getQuery()
+            ->getResult();
+    }
+
+    public function findByOrganizationAndCity(\App\Entity\Identity\Organization $organization, City $city): array
+    {
+        return $this->createQueryBuilder('w')
+            ->innerJoin('w.assignments', 'wa')
+            ->andWhere('w.organization = :organization')
+            ->andWhere('wa.city = :city')
+            ->andWhere('wa.startDate <= :now')
+            ->andWhere('wa.endDate IS NULL OR wa.endDate >= :now')
+            ->setParameter('organization', $organization)
             ->setParameter('city', $city)
             ->setParameter('now', $this->dateTime->now())
             ->distinct()

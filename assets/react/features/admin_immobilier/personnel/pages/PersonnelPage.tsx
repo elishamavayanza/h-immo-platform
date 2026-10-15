@@ -14,6 +14,7 @@ import { Textarea } from '../../../../components/Forms/Textarea';
 import { FormField } from '../../../../components/Forms/FormField';
 import { Modal } from '../../../../components/UI/Modal';
 import { useOrganization } from '../../../../app/providers/OrganizationProvider';
+import { useAdminCity } from '../../../../app/providers/AdminCityProvider';
 import { usePersonnel } from '../hooks/usePersonnel';
 import { PersonnelTable } from '../components/PersonnelTable';
 import { fieldErrorMap } from '../../../shared/utils/actionErrors';
@@ -30,6 +31,7 @@ export function PersonnelPage() {
     const parcelUuid = searchParams.get('parcelUuid');
     const buildingUuid = searchParams.get('buildingUuid');
     const { organizationRole, currentOrganization } = useOrganization();
+    const { activeCity, activeCityUuid } = useAdminCity();
     const {
         data, rows: allRows, availableCities, isLoading, error, reload,
         search, setSearch, city, setCity,
@@ -86,7 +88,7 @@ export function PersonnelPage() {
     const [submittingAssignment, setSubmittingAssignment] = useState(false);
 
     const openCreateWorker = () => {
-        setForm({ fullName: '', phone: '', email: '', nationalId: '', address: '', notes: '', cityUuid: '', targetType: 'parcel', parcelUuid: '', buildingUuid: '', unitUuid: '', role: 'gardien', monthlySalary: '', currency: 'USD' });
+        setForm({ fullName: '', phone: '', email: '', nationalId: '', address: '', notes: '', cityUuid: organizationRole === 'admin_ville' ? activeCityUuid : '', targetType: 'parcel', parcelUuid: '', buildingUuid: '', unitUuid: '', role: 'gardien', monthlySalary: '', currency: 'USD' });
         setFormErrors({});
         setEditTarget(null);
         setWorkerModalOpen(true);
@@ -144,7 +146,7 @@ export function PersonnelPage() {
                 });
                 if (Object.keys(changes).length > 0) await updateWorker(editTarget.id, changes);
             } else {
-                const worker = await createWorker({ ...payload, organizationUuid: currentOrganization!.uuid });
+                const worker = await createWorker({ ...payload, organizationUuid: currentOrganization!.uuid, ...(organizationRole === 'admin_ville' ? { cityUuid: activeCityUuid } : {}) });
                 await createAssignment({
                     workerUuid: worker.id,
                     cityUuid: form.cityUuid,
@@ -292,7 +294,7 @@ export function PersonnelPage() {
 
     return <main className="organization-page organization-operational-page"><header className="organization-page__header"><div><span className="organization-page__eyebrow">ÉQUIPE OPÉRATIONNELLE</span><h1>{isCityAssignmentContext ? 'Affecter un employé' : 'Personnel'}</h1><p>{isCityAssignmentContext ? `Choisissez un employé autorisé pour l’affecter à ${assignmentBuilding?.name ?? assignmentParcel?.name ?? 'ce bien'}.` : 'Consultez les ouvriers et leurs affectations sur vos biens.'}</p></div></header>
         <OrganizationSummary items={[{ label: 'Membres affichés', value: <>{rows.length}</> }, { label: 'Affectations visibles', value: <>{rows.reduce((total, row) => total + row.assignments, 0)}</> }, { label: 'Villes couvertes', value: <>{new Set(rows.map((row) => row.city).filter((value) => value !== '—')).size}</> }]} />
-        <Card className="organization-table-card" padding="medium"><div className="organization-table-toolbar"><div><h2>Équipe</h2><p>{data?.note ?? 'La fonction et la ville indiquées proviennent de la dernière affectation.'}</p></div><div className="organization-filters organization-filters--tenant"><SearchInput value={search} onSearch={setSearch} placeholder="Rechercher un membre…" fullWidth /><Select aria-label="Filtrer par ville" value={city} onChange={(event) => setCity(event.target.value)} options={[{ value: 'all', label: 'Toutes les villes' }, ...availableCities.map((value) => ({ value, label: value }))]} />{canDo(organizationRole, 'create_worker') && <Button onClick={openCreateWorker}>＋ Ajouter un ouvrier</Button>}</div></div>{body}</Card>
+        <Card className="organization-table-card" padding="medium"><div className="organization-table-toolbar"><div><h2>Équipe{organizationRole === 'admin_ville' && activeCity ? ` · ${activeCity.name}` : ''}</h2><p>{data?.note ?? 'Les personnes sont affichées selon leurs affectations dans la ville active. Un membre peut intervenir sur plusieurs biens.'}</p></div><div className="organization-filters organization-filters--tenant"><SearchInput value={search} onSearch={setSearch} placeholder="Rechercher un membre…" fullWidth />{organizationRole !== 'admin_ville' && <Select aria-label="Filtrer par ville" value={city} onChange={(event) => setCity(event.target.value)} options={[{ value: 'all', label: 'Toutes les villes' }, ...availableCities.map((value) => ({ value, label: value }))]} />}{(canDo(organizationRole, 'create_worker') || (organizationRole === 'admin_ville' && activeCity?.canManagePersonnel)) && <Button onClick={openCreateWorker}>＋ Ajouter un ouvrier</Button>}</div></div>{body}</Card>
         <Modal
             isOpen={workerModalOpen}
             onClose={closeWorkerModal}
@@ -323,7 +325,7 @@ export function PersonnelPage() {
                 {!editTarget && <>
                     <div className="organization-management-form__section"><h3>Affectation obligatoire</h3><p>Chaque nouveau membre est rattaché à une ville et à un bien.</p></div>
                     <FormField label="Ville" htmlFor="worker-city" required error={formErrors.cityUuid}>
-                        <Select id="worker-city" value={form.cityUuid} onChange={(event) => setForm((current) => ({ ...current, cityUuid: event.target.value, parcelUuid: '', buildingUuid: '', unitUuid: '' }))} options={(data?.cities ?? []).map((city) => ({ value: city.id, label: city.name }))} placeholder="Sélectionner une ville" required />
+                        <Select id="worker-city" value={form.cityUuid} onChange={(event) => setForm((current) => ({ ...current, cityUuid: event.target.value, parcelUuid: '', buildingUuid: '', unitUuid: '' }))} options={(data?.cities ?? []).filter((city) => organizationRole !== 'admin_ville' || city.id === activeCityUuid).map((city) => ({ value: city.id, label: city.name }))} placeholder="Sélectionner une ville" required disabled={organizationRole === 'admin_ville'} />
                     </FormField>
                     <FormField label="Type de rattachement" htmlFor="worker-target-type" required>
                         <Select id="worker-target-type" value={form.targetType} onChange={(event) => setForm((current) => ({ ...current, targetType: event.target.value as 'parcel' | 'building' | 'unit', parcelUuid: '', buildingUuid: '', unitUuid: '' }))} options={[{ value: 'parcel', label: 'Parcelle' }, { value: 'building', label: 'Bâtiment' }, { value: 'unit', label: 'Unité' }]} />

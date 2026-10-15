@@ -1,1 +1,20 @@
 @use '../base';
+@use '../../../baseVariables/variables' as *;
+
+.personnel-assignment-summary {
+    display: grid;
+    gap: 2px;
+    min-width: 0;
+}
+
+.personnel-assignment-summary strong {
+    color: $color-text-primary;
+    font-size: $font-size-sm;
+    font-weight: $font-weight-medium;
+}
+
+.personnel-assignment-summary small {
+    color: $color-text-muted;
+    line-height: 1.35;
+    overflow-wrap: anywhere;
+}
