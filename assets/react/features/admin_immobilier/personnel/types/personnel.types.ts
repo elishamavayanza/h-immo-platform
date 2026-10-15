@@ -17,6 +17,7 @@ export interface PersonnelRow {
     city: string;
     /** Nombre d'affectations de ce travailleur. */
     assignments: number;
+    assignmentPlaces: string[];
     parcelId: string | null;
     buildingId: string | null;
     parcelIds: string[];

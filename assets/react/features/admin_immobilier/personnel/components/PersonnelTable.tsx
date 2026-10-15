@@ -16,7 +16,7 @@ export function PersonnelTable({ rows, role, onEdit, onAssign, onEditAssignment,
         { key: 'name', title: 'Membre du personnel', sortable: true, render: (row) => <div className="organization-property-name"><strong>{row.name}</strong><small>{row.email ?? row.phone}</small></div> },
         { key: 'role', title: 'Fonction', sortable: true, render: (row) => row.role },
         { key: 'city', title: 'Ville', sortable: true, render: (row) => row.city },
-        { key: 'assignments', title: 'Affectations', sortable: true },
+        { key: 'assignments', title: 'Affectations', sortable: true, render: (row) => <span className="personnel-assignment-summary"><strong>{row.assignments} affectation{row.assignments === 1 ? '' : 's'} · {row.parcelIds.length} parcelle{row.parcelIds.length === 1 ? '' : 's'}</strong>{row.assignmentPlaces.length > 0 && <small>{row.assignmentPlaces.join(' · ')}</small>}</span> },
         { key: 'phone', title: 'Téléphone', sortable: true },
         {
             key: 'actions',

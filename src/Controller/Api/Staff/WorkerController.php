@@ -85,7 +85,8 @@ final class WorkerController extends AbstractController
         $feedback = $this->workerService->listWorkers(
             organizationId: $filter->organizationId,
             page: $filter->page,
-            limit: $filter->limit
+            limit: $filter->limit,
+            cityUuid: $filter->cityUuid,
         );
 
         return $this->json($feedback, $feedback->getStatus());

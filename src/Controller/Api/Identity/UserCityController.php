@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Controller\Api\Identity;
 
 use App\Dto\Request\Identity\UserCityRequest;
+use App\Dto\Request\Identity\UserCityPersonnelPermissionRequest;
 use App\Dto\Request\PaginationQuery;
 use App\Service\Identity\UserCityService;
 use App\Trait\FeedbackTrait;
@@ -52,6 +53,14 @@ final class UserCityController extends AbstractController
         return $this->json($feedback, $feedback->getStatus());
     }
 
+    #[Route('/me', name: 'list_mine', methods: ['GET'])]
+    public function listMine(): JsonResponse
+    {
+        $feedback = $this->userCityService->listMine();
+
+        return $this->json($feedback, $feedback->getStatus());
+    }
+
     /**
      * Endpoint API assignant une ville spécifique à un utilisateur.
      * Enregistre l'attribution territoriale dans la table de liaison.
@@ -73,6 +82,14 @@ final class UserCityController extends AbstractController
     public function revoke(string $uuid): JsonResponse
     {
         $feedback = $this->userCityService->revokeCity($uuid);
+
+        return $this->json($feedback, $feedback->getStatus());
+    }
+
+    #[Route('/{uuid}/personnel-permission', name: 'personnel_permission', methods: ['PUT'])]
+    public function updatePersonnelPermission(string $uuid, #[MapRequestPayload] UserCityPersonnelPermissionRequest $request): JsonResponse
+    {
+        $feedback = $this->userCityService->updatePersonnelPermission($uuid, $request);
 
         return $this->json($feedback, $feedback->getStatus());
     }

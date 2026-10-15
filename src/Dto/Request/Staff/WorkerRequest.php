@@ -81,6 +81,10 @@ final readonly class WorkerRequest
             example: 'Disponible pour affectations multiples'
         )]
         public ?string $notes = null,
+
+        #[OA\Property(description: 'Ville de création pour un administrateur ville autorisé', format: 'uuid', nullable: true)]
+        #[Assert\Uuid(groups: ['create'])]
+        public ?string $cityUuid = null,
     ) {
     }
 }

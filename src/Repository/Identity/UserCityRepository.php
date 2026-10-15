@@ -84,6 +84,18 @@ class UserCityRepository extends ServiceEntityRepository
             ->getOneOrNullResult();
     }
 
+    public function findOneForUserAndCity(User $user, City $city): ?UserCity
+    {
+        return $this->findOneBy(['user' => $user, 'city' => $city]);
+    }
+
+    /** @return list<UserCity> */
+    public function findWithCitiesForUser(User $user): array
+    {
+        return $this->createQueryBuilder('uc')->innerJoin('uc.city', 'c')->addSelect('c')
+            ->andWhere('uc.user = :user')->setParameter('user', $user)->orderBy('c.name', 'ASC')->getQuery()->getResult();
+    }
+
     /**
      * Liste paginée des affectations de villes d'un utilisateur.
      *

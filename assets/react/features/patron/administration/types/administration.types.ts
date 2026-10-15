@@ -104,6 +104,7 @@ export interface UserCityLink {
     userId: string;
     cityId: string;
     createdAt: string;
+    canManagePersonnel: boolean;
 }
 
 /** Ville sélectionnable pour l'affectation d'un ADMIN_VILLE (`CityItem`). */

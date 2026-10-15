@@ -4,7 +4,7 @@ import { apiClient } from '../../../services/api/client';
 import type { Feedback } from '../../../services/api/api.types';
 import { useOrganization } from './OrganizationProvider';
 
-export interface AdminCityOption { id: string; name: string }
+export interface AdminCityOption { id: string; name: string; canManagePersonnel: boolean }
 
 interface AdminCityContextValue {
     cities: AdminCityOption[];
@@ -36,9 +36,11 @@ export function AdminCityProvider({ children }: { children: ReactNode }) {
         setIsLoading(true);
         void apiClient.get<Feedback<{ items: Array<{ id: string; name: string }> }>>('/v1/property/cities', {
             params: { organizationId: organizationUuid, limit: 100 },
-        }).then(({ data }) => {
+        }).then(async ({ data }) => {
             if (!active) return;
-            const allowedCities = data.data.items.map(({ id, name }) => ({ id, name }));
+            const { data: mine } = await apiClient.get<Feedback<{ items: Array<{ cityId: string; canManagePersonnel: boolean }> }>>('/v1/identity/user-cities/me');
+            const permissions = new Map(mine.data.items.map(({ cityId, canManagePersonnel }) => [cityId, canManagePersonnel]));
+            const allowedCities = data.data.items.map(({ id, name }) => ({ id, name, canManagePersonnel: permissions.get(id) ?? false }));
             setCities(allowedCities);
             let saved = '';
             try { saved = localStorage.getItem(`h-immo:active-city:${organizationUuid}`) ?? ''; } catch { /* stockage non disponible */ }

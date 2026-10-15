@@ -25,7 +25,7 @@ interface CityAssignmentModalProps {
  * l'API et recharge la liste réelle.
  */
 export function CityAssignmentModal({ member, onClose }: CityAssignmentModalProps) {
-    const { assigned, available, isLoading, error, reload, assign, revoke } = useAdminVilleCities(member?.id ?? null);
+    const { assigned, available, isLoading, error, reload, assign, revoke, setPersonnelPermission } = useAdminVilleCities(member?.id ?? null);
     const [selected, setSelected] = useState('');
     const [pending, setPending] = useState(false);
     const [cityToRemove, setCityToRemove] = useState<string | null>(null);
@@ -95,8 +95,10 @@ export function CityAssignmentModal({ member, onClose }: CityAssignmentModalProp
                 ) : (
                     <ul className="patron-city-assignment__list">
                         {assigned.map(({ link, city }) => (
-                            <li key={link.id}>
-                                <span><Icon name="mapPin" /> {city?.name ?? 'Ville inconnue'}</span>
+                            <li key={link.id} className="patron-city-assignment__item">
+                                <div className="patron-city-assignment__city"><span><Icon name="mapPin" /> {city?.name ?? 'Ville inconnue'}</span>
+                                    <label><input type="checkbox" checked={link.canManagePersonnel} disabled={pending} onChange={async (event) => { setPending(true); try { await setPersonnelPermission(link.id, event.target.checked); } catch { /* toast */ } finally { setPending(false); } }} /> Autoriser l’ajout de personnel</label>
+                                </div>
                                 <IconButton
                                     ariaLabel="Retirer la ville"
                                     icon={<Icon name="trash" />}

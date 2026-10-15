@@ -567,6 +567,14 @@ check(
     $status === 200 && in_array($uuidWorkerA1, $workerIds, true) && !in_array($uuidWorkerA2, $workerIds, true),
     "obtenu {$status} | liste=" . implode(',', $workerIds) . ' | raw=' . substr($rawWorkers, 0, 350)
 );
+[$statusA1, $workersA1] = $request('GET', '/api/v1/workers?organizationId=' . $uuidOrgA . '&cityUuid=' . $uuidCityA1, null, $token);
+[$statusOutsideCity] = $request('GET', '/api/v1/workers?organizationId=' . $uuidOrgA . '&cityUuid=' . $uuidCityA2, null, $token);
+check('Personnel filtré côté serveur sur la ville active', $statusA1 === 200 && in_array($uuidWorkerA1, $payloadIds($workersA1), true) && !in_array($uuidWorkerA2, $payloadIds($workersA1), true), 'obtenu ' . $statusA1);
+check('Le filtre personnel refuse une ville non attribuée', $statusOutsideCity === 403, 'obtenu ' . $statusOutsideCity);
+[$status, $myCityLinks] = $request('GET', '/api/v1/identity/user-cities/me', null, $token);
+check('ADMIN_VILLE consulte uniquement ses propres villes et son droit personnel', $status === 200 && count($myCityLinks['data']['items'] ?? []) === 1 && ($myCityLinks['data']['items'][0]['canManagePersonnel'] ?? null) === false, 'obtenu ' . $status);
+[$status] = $request('PUT', '/api/v1/identity/user-cities/' . ($myCityLinks['data']['items'][0]['id'] ?? 'invalide') . '/personnel-permission', ['canManagePersonnel' => true], $token);
+check('ADMIN_VILLE ne peut pas s’accorder lui-même le droit d’ajout de personnel', $status === 403, 'obtenu ' . $status);
 
 [$status, $createdAssignment, $rawCreatedAssignment] = $request('POST', '/api/v1/worker-assignments', [
     'workerUuid' => $uuidWorkerA3,
