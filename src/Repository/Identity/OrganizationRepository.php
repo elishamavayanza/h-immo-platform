@@ -207,4 +207,29 @@ class OrganizationRepository extends ServiceEntityRepository
             ->getQuery()
             ->getResult();
     }
+
+    /** @return array{total: int, active: int, suspended: int, inactive: int} */
+    public function getPlatformCounts(): array
+    {
+        $counts = ['total' => 0, 'active' => 0, 'suspended' => 0, 'inactive' => 0];
+        $rows = $this->createQueryBuilder('o')
+            ->select('o.status AS status, COUNT(o.id) AS total')
+            ->andWhere('o.deletedAt IS NULL')
+            ->groupBy('o.status')
+            ->getQuery()
+            ->getScalarResult();
+
+        foreach ($rows as $row) {
+            $status = $row['status'] instanceof OrganizationStatus
+                ? $row['status']->value
+                : (string) $row['status'];
+            $count = (int) $row['total'];
+            if (array_key_exists($status, $counts)) {
+                $counts[$status] = $count;
+                $counts['total'] += $count;
+            }
+        }
+
+        return $counts;
+    }
 }

@@ -19,12 +19,8 @@ use App\Dto\Response\Report\SuperAdminReportResponse;
 use App\Dto\Response\Report\SuperAdminDashboardResponse;
 use App\Dto\Response\Report\WorkerActivityItem;
 use App\Dto\Response\Report\OrganizationSummaryItem;
-use App\Dto\Response\Report\KpiMetric;
 use App\Dto\Response\Report\LeaseExpiryItem;
-use App\Dto\Response\Report\RevenuePoint;
-use App\Dto\Response\Report\ActivityEntry;
-use App\Dto\Response\Report\SystemHealthMetric;
-use App\Dto\Response\Report\CityShare;
+use App\Dto\Response\Report\PlatformActivityEntry;
 use App\Entity\Expense\Expense;
 use App\Entity\Identity\Organization;
 use App\Entity\Property\City;
@@ -355,333 +351,43 @@ final readonly class ReportService
     /**
      * Tableau de bord temps réel pour SUPER_ADMIN.
      */
-    public function generateSuperAdminDashboard(ReportFilterDto $filter): SuperAdminDashboardResponse
+    public function generateSuperAdminDashboard(): SuperAdminDashboardResponse
     {
-        $periodFrom = $filter->periodFrom ?? $this->dateTime->startOfCurrentYear();
-        $periodTo = $filter->periodTo ?? $this->dateTime->endOfCurrentYear();
+        $organizationCounts = $this->organizationRepository->getPlatformCounts();
+        $userCounts = $this->userRepository->getPlatformCounts();
 
-        $organizations = $this->organizationRepository->findAllActive();
-        $citiesByOrganization = $this->indexActiveCitiesByOrganization($organizations);
-        $cityIdsByOrganization = [];
-        $allCityIds = [];
-        foreach ($organizations as $organization) {
-            $cities = $citiesByOrganization[$organization->getId()];
-            $cityIds = array_map(static fn (City $city): int => $city->getId(), $cities);
-            $cityIdsByOrganization[$organization->getId()] = $cityIds;
-            array_push($allCityIds, ...$cityIds);
-        }
-        $occupancyByCity = [];
-        foreach ($this->unitRepository->getCurrentOccupancyByCityIds($allCityIds) as $row) {
-            $occupancyByCity[$row['cityId']] = $row;
-        }
-
-        $orgSummaries = [];
-        $totalArrears = '0.00';
-
-        foreach ($organizations as $org) {
-            $cities = $citiesByOrganization[$org->getId()];
-            $cityIds = $cityIdsByOrganization[$org->getId()];
-
-            $orgRevenue = $this->sumRevenues($org->getId(), $cityIds, $periodFrom, $periodTo);
-            $orgExpense = $this->sumExpenses($org->getId(), $cityIds, $periodFrom, $periodTo);
-            $orgArrears = $this->sumArrears($org->getId(), $cityIds, $periodTo);
-
-            $totalArrears = bcadd($totalArrears, $orgArrears, 2);
-
-            $orgSummaries[] = new OrganizationSummaryItem(
-                uuid: $org->getUuid()->toRfc4122(),
-                name: $org->getName(),
-                code: $org->getCode(),
-                status: $org->getStatus()->value,
-                cityCount: count($cities),
-                unitCount: $this->sumCityOccupancy($cityIds, $occupancyByCity, 'totalUnits'),
-                occupancyRate: $this->occupancyRateForCities($cityIds, $occupancyByCity),
-                revenues: $orgRevenue,
-                expenses: $orgExpense,
-                arrears: $orgArrears,
-                currency: $org->getCurrency()->value,
-            );
-        }
-
-        // KPIs — métriques plateforme significatives pour SUPER_ADMIN
-        $totalOrgs = count($organizations);
-        $orgsByStatus = [];
-        foreach ($organizations as $org) {
-            $status = $org->getStatus()->value;
-            $orgsByStatus[$status] = ($orgsByStatus[$status] ?? 0) + 1;
-        }
-        $activeOrgs = $orgsByStatus['active'] ?? 0;
-        $suspendedOrgs = $orgsByStatus['suspended'] ?? 0;
-        $inactiveOrgs = $orgsByStatus['inactive'] ?? 0;
-
-        $totalUsers = $this->userRepository->countAll();
-
-        // Agrégats globaux
-        $totalUnits = 0;
-        $totalCities = 0;
-        $totalActiveLeases = 0;
-        $totalOccupiedUnits = 0;
-
-        foreach ($organizations as $org) {
-            $cities = $citiesByOrganization[$org->getId()];
-            $cityIds = $cityIdsByOrganization[$org->getId()];
-            $totalCities += count($cities);
-            $totalUnits += $this->sumCityOccupancy($cityIds, $occupancyByCity, 'totalUnits');
-            $occupied = $this->sumCityOccupancy($cityIds, $occupancyByCity, 'occupiedUnits');
-            $totalActiveLeases += $occupied;
-            $totalOccupiedUnits += $occupied;
-        }
-
-        $globalOccupancyRate = $totalUnits > 0 ? round(($totalOccupiedUnits / $totalUnits) * 100, 1) : 0.0;
-
-        // Impayés globaux
-        $globalArrears = $totalArrears;
-
-        // Revenus mensuels attendus (loyers du mois courant)
-        $currentMonthStart = $this->dateTime->startOfCurrentMonth();
-        $currentMonthEnd = $this->dateTime->endOfCurrentMonth();
-        $expectedMonthlyRevenue = '0.00';
-        foreach ($organizations as $org) {
-            $cityIds = $cityIdsByOrganization[$org->getId()];
-            $expectedMonthlyRevenue = bcadd($expectedMonthlyRevenue, $this->sumExpectedRents($org->getId(), $cityIds, $currentMonthStart, $currentMonthEnd), 2);
-        }
-
-        // Delta placeholders (seraient calculés vs mois précédent en prod)
-        $kpis = [
-            new KpiMetric(
-                id: 'organizations',
-                label: 'Organisations',
-                value: (string) $totalOrgs,
-                delta: 0.0,
-                trend: 'flat',
-                positive: true,
-                helper: "Actives: {$activeOrgs} • Suspendues: {$suspendedOrgs} • Inactives: {$inactiveOrgs}",
-                tone: 'primary',
-                icon: 'building',
-            ),
-            new KpiMetric(
-                id: 'users',
-                label: 'Utilisateurs plateforme',
-                value: number_format($totalUsers, 0, ',', ' '),
-                delta: 0.0,
-                trend: 'flat',
-                positive: true,
-                helper: 'Tous rôles confondus',
-                tone: 'info',
-                icon: 'users',
-            ),
-            new KpiMetric(
-                id: 'units',
-                label: 'Unités / Logements',
-                value: number_format($totalUnits, 0, ',', ' '),
-                delta: 0.0,
-                trend: 'flat',
-                positive: true,
-                helper: "{$totalCities} villes • {$totalOccupiedUnits} occupées",
-                tone: 'success',
-                icon: 'briefcase',
-            ),
-            new KpiMetric(
-                id: 'leases',
-                label: 'Baux actifs',
-                value: number_format($totalActiveLeases, 0, ',', ' '),
-                delta: 0.0,
-                trend: 'flat',
-                positive: true,
-                helper: "Taux occupation: {$globalOccupancyRate} %",
-                tone: 'warning',
-                icon: 'pulse',
-            ),
-            new KpiMetric(
-                id: 'arrears',
-                label: 'Impayés globaux',
-                value: $globalArrears . ' $',
-                delta: 0.0,
-                trend: bccomp($globalArrears, '0', 2) > 0 ? 'up' : 'flat',
-                positive: bccomp($globalArrears, '0', 2) <= 0,
-                helper: 'Montant total dû non perçu',
-                tone: bccomp($globalArrears, '0', 2) > 0 ? 'danger' : 'success',
-                icon: 'warning',
-            ),
-            new KpiMetric(
-                id: 'expected_revenue',
-                label: 'Revenus attendus (mois)',
-                value: $expectedMonthlyRevenue . ' $',
-                delta: 0.0,
-                trend: 'flat',
-                positive: true,
-                helper: 'Loyers du mois en cours',
-                tone: 'info',
-                icon: 'revenue',
-            ),
-        ];
-
-        // Revenue series (12 mois)
-        $revenueSeries = [];
-        $current = $this->dateTime->startOfCurrentYear();
-        $end = $this->dateTime->endOfCurrentYear();
-        $monthTotals = [];
-        for ($i = 0; $i < 12; $i++) {
-            $monthStart = $current->modify('first day of +' . $i . ' month');
-            if ($monthStart > $end) break;
-
-            $monthTotals[$this->dateTime->format($monthStart, 'Y-m')] = '0.00';
-        }
-
-        $yearEnd = $end->modify('last day of this month 23:59:59');
-        foreach ($organizations as $org) {
-            $cityIds = $cityIdsByOrganization[$org->getId()];
-            $referenceCurrency = $this->getReferenceCurrency($org->getId(), $cityIds);
-            $rows = $this->paymentRepository->getFinancialSummary(
-                [$org->getId()],
-                $cityIds ?: null,
-                $current,
-                $yearEnd,
-            );
-
-            foreach ($rows as $row) {
-                $period = (string) $row['period'];
-                if (!isset($monthTotals[$period])) {
-                    continue;
-                }
-
-                $currency = $row['currency'] instanceof \BackedEnum
-                    ? $row['currency']->value
-                    : (string) $row['currency'];
-                $amount = $this->convertToReferenceCurrency(
-                    (string) $row['total'],
-                    Currency::from($currency),
-                    $referenceCurrency,
-                    $this->periodStart($period, $current),
-                    isset($row['cityId']) ? (int) $row['cityId'] : null,
-                );
-                $monthTotals[$period] = bcadd($monthTotals[$period], $amount, 2);
-            }
-        }
-
-        for ($i = 0; $i < 12; $i++) {
-            $monthStart = $current->modify('first day of +' . $i . ' month');
-            if ($monthStart > $end) break;
-            $period = $this->dateTime->format($monthStart, 'Y-m');
-            $monthRevenue = '0.00';
-            $monthRevenue = $monthTotals[$period] ?? $monthRevenue;
-
-            $revenueSeries[] = new RevenuePoint(
-                label: $this->dateTime->format($monthStart, 'M'),
-                revenue: $monthRevenue,
-                subscriptions: $activeOrgs, // approx
-            );
-        }
-
-        // Recent organizations (5 dernières créées)
-        $recentOrgs = array_slice($orgSummaries, 0, 5);
-
-        // Activity feed : événements métier significatifs pour SUPER_ADMIN
-        // On filtre les actions d'audit pertinentes (pas les simples LOGIN/LOGOUT)
-        $auditLogs = $this->auditLogRepository->findByFilter(
-            null,
-            null, // action = null -> on filtre côté PHP pour plus de contrôle
-            null,
-            null,
-            null,
-            1,
-            50, // on récupère plus large pour filtrer
-            null
-        );
-
-        $importantActions = [
-            'CREATE_ORGANIZATION' => ['label' => 'Nouvelle organisation', 'kind' => 'create'],
-            'SUSPEND_ORGANIZATION' => ['label' => 'Organisation suspendue', 'kind' => 'alert'],
-            'ACTIVATE_ORGANIZATION' => ['label' => 'Organisation réactivée', 'kind' => 'create'],
-            'EXPIRE_ORGANIZATION_SUSPENSION' => ['label' => 'Suspension d’organisation arrivée à échéance', 'kind' => 'create'],
-            'CREATE_ADMIN' => ['label' => 'Administrateur créé', 'kind' => 'create'],
-            'SUSPEND_USER' => ['label' => 'Utilisateur suspendu', 'kind' => 'alert'],
-            'EXPIRE_USER_SUSPENSION' => ['label' => 'Suspension de compte arrivée à échéance', 'kind' => 'create'],
-            'CREATE_LEASE' => ['label' => 'Bail créé', 'kind' => 'create'],
-            'TERMINATE_LEASE' => ['label' => 'Bail terminé', 'kind' => 'delete'],
-            'CANCEL_LEASE' => ['label' => 'Bail annulé', 'kind' => 'delete'],
-            'CREATE_PAYMENT' => ['label' => 'Paiement reçu', 'kind' => 'create'],
-            'CANCEL_PAYMENT' => ['label' => 'Paiement annulé', 'kind' => 'delete'],
-            'CREATE_EXPENSE' => ['label' => 'Dépense enregistrée', 'kind' => 'create'],
-            'CREATE_WORKER' => ['label' => 'Personnel ajouté', 'kind' => 'create'],
-            'UPDATE_RENT' => ['label' => 'Échéance mise à jour', 'kind' => 'update'],
+        $platformActions = [
+            'CREATE_ORGANIZATION' => ['action' => 'Nouvelle organisation créée', 'kind' => 'create'],
+            'SUSPEND_ORGANIZATION' => ['action' => 'Organisation suspendue', 'kind' => 'alert'],
+            'ACTIVATE_ORGANIZATION' => ['action' => 'Organisation réactivée', 'kind' => 'create'],
+            'EXPIRE_ORGANIZATION_SUSPENSION' => ['action' => 'Suspension d’organisation arrivée à échéance', 'kind' => 'update'],
+            'CREATE_ADMIN' => ['action' => 'Administrateur ajouté', 'kind' => 'create'],
+            'SUSPEND_USER' => ['action' => 'Compte désactivé', 'kind' => 'alert'],
+            'ACTIVATE_USER' => ['action' => 'Compte réactivé', 'kind' => 'create'],
+            'EXPIRE_USER_SUSPENSION' => ['action' => 'Suspension de compte arrivée à échéance', 'kind' => 'update'],
         ];
 
         $activity = [];
-        foreach ($auditLogs['items'] as $log) {
-            $action = $log->getAction();
-            if (!isset($importantActions[$action])) {
-                continue; // ignore LOGIN, LOGOUT, LOGIN_FAILED, etc.
-            }
-
-            $meta = $importantActions[$action];
-            $actor = $log->getUser()?->getFullName() ?? 'Système';
-            $target = $this->formatAuditTarget($log);
-            $newValues = $log->getNewValues();
-            $detail = $newValues && is_array($newValues) ? $this->extractDetail($newValues) : '';
-
-            $activity[] = new ActivityEntry(
-                id: (string) $log->getUuid(),
-                actor: $actor,
-                action: $meta['label'],
-                target: $target . ($detail ? ' — ' . $detail : ''),
+        foreach ($this->auditLogRepository->findRecentPlatformActions(array_keys($platformActions), 10) as $log) {
+            $meta = $platformActions[$log->getAction()];
+            $activity[] = new PlatformActivityEntry(
+                id: $log->getUuid()->toRfc4122(),
+                action: $meta['action'],
                 timestamp: $this->formatRelativeTime($log->getCreatedAt()),
                 kind: $meta['kind'],
-            );
-
-            if (count($activity) >= 10) {
-                break; // limite à 10 entrées
-            }
-        }
-
-        // Si pas d'activité significative, message par défaut
-        if (empty($activity)) {
-            $activity[] = new ActivityEntry(
-                id: 'none',
-                actor: '—',
-                action: 'Aucun événement métier récent',
-                target: '—',
-                timestamp: '—',
-                kind: 'update',
-            );
-        }
-
-        // Health metrics (statiques - en production viendraient d'un système de monitoring)
-        $health = [
-            new SystemHealthMetric(id: 'cpu', label: 'CPU', value: 38, unit: '%', status: 'healthy'),
-            new SystemHealthMetric(id: 'latency', label: 'Latence p95', value: 172, unit: 'ms', status: 'healthy'),
-            new SystemHealthMetric(id: 'storage', label: 'Stockage', value: 71, unit: '%', status: 'warning'),
-            new SystemHealthMetric(id: 'errors', label: 'Erreurs 5xx', value: 0.4, unit: '%', status: 'healthy'),
-        ];
-
-        // Top cities across all organizations
-        $cityCounts = [];
-        foreach ($occupancyByCity as $row) {
-            $cityCounts[$row['cityName']] = ($cityCounts[$row['cityName']] ?? 0) + $row['totalUnits'];
-        }
-        arsort($cityCounts);
-        $totalUnits = array_sum($cityCounts);
-        $topCities = [];
-        foreach (array_slice($cityCounts, 0, 5, true) as $name => $count) {
-            $topCities[] = new CityShare(
-                name: $name,
-                count: $count,
-                share: $totalUnits > 0 ? round($count / $totalUnits, 2) : 0,
             );
         }
 
         return new SuperAdminDashboardResponse(
-            periodCovered: $this->dateTime->format($periodFrom, 'Y-m-d') . ' to ' . $this->dateTime->format($periodTo, 'Y-m-d'),
             generatedAt: $this->dateTime->now(),
-            kpis: $kpis,
-            revenueSeries: $revenueSeries,
-            recentOrganizations: $recentOrgs,
+            totalOrganizations: $organizationCounts['total'],
+            activeOrganizations: $organizationCounts['active'],
+            suspendedOrganizations: $organizationCounts['suspended'],
+            inactiveOrganizations: $organizationCounts['inactive'],
+            totalUsers: $userCounts['total'],
+            activeUsers: $userCounts['active'],
+            disabledUsers: $userCounts['disabled'],
             activity: $activity,
-            health: $health,
-            topCities: $topCities,
-            totalOrganizations: $totalOrgs,
-            activeOrganizations: $activeOrgs,
-            totalUsers: $totalUsers,
         );
     }
 
