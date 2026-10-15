@@ -303,4 +303,17 @@ final class UnitController extends AbstractController
 
         return $this->json($feedback, $feedback->getStatus());
     }
+
+    #[Route('/{uuid}/photos/{photoUuid}/restore', name: 'restore_photo', methods: ['POST'])]
+    #[OA\Post(summary: 'Restaurer une photo retirée de la galerie')]
+    #[OA\Response(response: 200, description: 'Photo restaurée', content: new OA\JsonContent(ref: new Model(type: Feedback::class)))]
+    #[OA\Response(response: 403, description: 'Accès refusé')]
+    #[OA\Response(response: 409, description: 'La galerie a atteint sa limite')]
+    #[OA\Response(response: 422, description: 'Photo supprimée introuvable')]
+    public function restorePhoto(string $uuid, string $photoUuid): JsonResponse
+    {
+        $feedback = $this->publicShowcaseManagementService->restorePhoto($uuid, $photoUuid);
+
+        return $this->json($feedback, $feedback->getStatus());
+    }
 }

@@ -221,24 +221,39 @@ final readonly class UserService
             }
         }
 
-        $wasInactive = !$user->isActive();
+        $wasActive = $user->isActive();
+        $oldValues = [
+            'email' => $user->getEmail(),
+            'fullName' => $user->getFullName(),
+            'phone' => $user->getPhone(),
+            'platformRole' => $user->getPlatformRole()?->value,
+            'isActive' => $wasActive,
+        ];
         $this->mapper->copyToEntity($request, $user);
         if ($request->isActive !== null) {
             $user->setSuspensionEndsAt(null);
             $user->setUpdatedAt($this->dateTimeService->now());
         }
+        $action = $request->isActive !== null && $request->isActive !== $wasActive
+            ? ($request->isActive ? 'ACTIVATE_USER' : 'SUSPEND_USER')
+            : 'UPDATE_USER';
+        $this->auditLogService->log(
+            action: $action,
+            entityType: User::class,
+            entityId: (int) $user->getId(),
+            user: $this->security->getCurrentUser(),
+            oldValues: $oldValues,
+            newValues: [
+                'email' => $user->getEmail(),
+                'fullName' => $user->getFullName(),
+                'phone' => $user->getPhone(),
+                'platformRole' => $user->getPlatformRole()?->value,
+                'isActive' => $user->isActive(),
+                'suspensionEndsAt' => $user->getSuspensionEndsAt()?->format(DATE_ATOM),
+            ],
+            flush: false,
+        );
         $this->em->flush();
-
-        if ($wasInactive && $request->isActive === true) {
-            $this->auditLogService->log(
-                action: 'ACTIVATE_USER',
-                entityType: User::class,
-                entityId: $user->getId(),
-                user: $this->security->getCurrentUser(),
-                oldValues: ['isActive' => false],
-                newValues: ['isActive' => true, 'suspensionEndsAt' => null],
-            );
-        }
 
         return $feedback
             ->setData($this->mapper->toResponse($user, $this->membershipsFor($user)))
@@ -266,8 +281,16 @@ final readonly class UserService
 
         $this->authorizeUserOperation($user, SecurityAction::DELETE_USER);
 
+        $actor = $this->security->getCurrentUser();
+        $oldValues = ['isActive' => $user->isActive()];
         $user->softDelete();
         $user->setIsActive(false);
+        $this->auditLogService->log(
+            action: 'SOFT_DELETE_USER', entityType: User::class, entityId: (int) $user->getId(),
+            user: $actor, oldValues: $oldValues,
+            newValues: ['isActive' => false, 'deletedAt' => $user->getDeletedAt()?->format(DATE_ATOM)],
+            flush: false,
+        );
         $this->em->flush();
 
         return $feedback

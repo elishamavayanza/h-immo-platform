@@ -166,6 +166,10 @@ check(
 // `position` est indexé avec `unit_id` : la galerie est lue par unité et
 // ordonnée, c'est le couple qui doit être indexé.
 $unitPhotoIndexes = $sm->listTableIndexes('unit_photo');
+$unitPhotoColumns = array_map(
+    static fn ($column): string => $column->getName(),
+    $sm->listTableColumns('unit_photo'),
+);
 $indexedColumns = [];
 
 foreach ($unitPhotoIndexes as $index) {
@@ -177,6 +181,12 @@ foreach ($unitPhotoIndexes as $index) {
 check(
     'unit_photo est indexé sur (unit_id, position)',
     in_array('unit_id', $indexedColumns, true) && in_array('position', $indexedColumns, true),
+);
+check('unit_photo conserve deleted_at pour retrait restaurable', in_array('deleted_at', $unitPhotoColumns, true));
+check(
+    'unit_photo indexe ses photos actives par unité',
+    isset($unitPhotoIndexes['idx_unit_photo_unit_deleted'])
+        && $unitPhotoIndexes['idx_unit_photo_unit_deleted']->getColumns() === ['unit_id', 'deleted_at'],
 );
 
 $migrations = $sm->listTableNames();

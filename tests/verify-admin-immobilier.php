@@ -469,6 +469,32 @@ $trackUploadedPhotoPaths($unitPhotoPayload ?? []);
 check('ADMIN_IMMOBILIER ajoute une photo à une unité', $status === 201 && count($unitPhotoPayload['data'] ?? []) === 1, 'obtenu ' . $status);
 [$status, $unitPhotosPayload] = $request('GET', '/api/v1/units/' . $uuidUnitA . '/photos', null, $token);
 check('ADMIN_IMMOBILIER liste les photos de son unité', $status === 200 && is_string($unitPhotosPayload['data'][0]['uuid'] ?? null), 'obtenu ' . $status);
+if ($status === 200 && is_string($unitPhotosPayload['data'][0]['uuid'] ?? null)) {
+    $unitPhotoUuid = $unitPhotosPayload['data'][0]['uuid'];
+    $unitPhotoUrl = (string) ($unitPhotosPayload['data'][0]['url'] ?? '');
+    $unitPhotoPath = parse_url($unitPhotoUrl, PHP_URL_PATH);
+    $unitPhotoFile = is_string($unitPhotoPath) ? dirname(__DIR__) . '/public' . $unitPhotoPath : '';
+    [$removePhotoStatus] = $request('DELETE', '/api/v1/units/' . $uuidUnitA . '/photos/' . $unitPhotoUuid, null, $token);
+    [$visiblePhotosStatus, $visiblePhotos] = $request('GET', '/api/v1/units/' . $uuidUnitA . '/photos', null, $token);
+    $unitPhotoRow = $connection->fetchAssociative(
+        'SELECT id, deleted_at FROM unit_photo WHERE uuid = ?',
+        [\Symfony\Component\Uid\Uuid::fromString($unitPhotoUuid)->toBinary()]
+    );
+    check('retirer une photo la masque sans supprimer son fichier', $removePhotoStatus === 200 && $visiblePhotosStatus === 200 && ($visiblePhotos['data'] ?? []) === [] && is_array($unitPhotoRow) && $unitPhotoRow['deleted_at'] !== null && is_file($unitPhotoFile));
+    [$restorePhotoStatus, $restoredPhotos] = $request('POST', '/api/v1/units/' . $uuidUnitA . '/photos/' . $unitPhotoUuid . '/restore', null, $token);
+    $restoredPhotoRow = $connection->fetchAssociative(
+        'SELECT id, deleted_at FROM unit_photo WHERE uuid = ?',
+        [\Symfony\Component\Uid\Uuid::fromString($unitPhotoUuid)->toBinary()]
+    );
+    $photoAuditCount = is_array($restoredPhotoRow)
+        ? (int) $connection->fetchOne(
+            'SELECT COUNT(*) FROM audit_log WHERE entity_type = ? AND entity_id = ? AND action IN (?, ?)',
+            [App\Entity\Property\UnitPhoto::class, $restoredPhotoRow['id'], 'LISTING_PHOTO_REMOVED', 'RESTORE_UNIT_PHOTO']
+        )
+        : 0;
+    check('restaurer une photo la réaffiche et conserve sa ligne', $restorePhotoStatus === 200 && count($restoredPhotos['data'] ?? []) === 1 && is_array($restoredPhotoRow) && $restoredPhotoRow['deleted_at'] === null && is_file($unitPhotoFile));
+    check('les événements de retrait et restauration restent dans l’audit', $photoAuditCount === 2, 'événements trouvés : ' . $photoAuditCount);
+}
 [$status] = $request('GET', '/api/v1/units/' . $uuidUnitB . '/photos', null, $token);
 check('ADMIN_IMMOBILIER ne lit pas une galerie hors organisation', in_array($status, [403, 404], true), 'obtenu ' . $status);
 

@@ -216,6 +216,16 @@ final readonly class TenantService
         // autorisé en observant un 200 au lieu d'un refus.
         $this->securityService->checkTenantAccess($tenant, SecurityAction::UPDATE_TENANT);
 
+        $oldValues = [
+            'type' => $tenant->getType()->value,
+            'fullName' => $tenant->getFullName(),
+            'companyName' => $tenant->getCompanyName(),
+            'phone' => $tenant->getPhone(),
+            'email' => $tenant->getEmail(),
+            'address' => $tenant->getAddress(),
+            'cityUuid' => $tenant->getCity()?->getUuid()->toRfc4122(),
+        ];
+
         if ($request->cityUuid !== null) {
             $city = $this->resolveTenantCity($request->cityUuid, $tenant->getOrganization(), $feedback, false);
             if ($city === null) {
@@ -245,7 +255,24 @@ final readonly class TenantService
         }
 
         $this->tenantMapper->copyToEntity($request, $tenant);
-
+        $this->auditLogService->log(
+            action: 'UPDATE_TENANT',
+            entityType: Tenant::class,
+            entityId: (int) $tenant->getId(),
+            organization: $tenant->getOrganization(),
+            user: $this->securityService->getCurrentUser(),
+            oldValues: $oldValues,
+            newValues: [
+                'type' => $tenant->getType()->value,
+                'fullName' => $tenant->getFullName(),
+                'companyName' => $tenant->getCompanyName(),
+                'phone' => $tenant->getPhone(),
+                'email' => $tenant->getEmail(),
+                'address' => $tenant->getAddress(),
+                'cityUuid' => $tenant->getCity()?->getUuid()->toRfc4122(),
+            ],
+            flush: false,
+        );
         $this->entityManager->flush();
 
         return $feedback
@@ -397,8 +424,6 @@ final readonly class TenantService
         }
 
         $tenant->softDelete();
-        $this->entityManager->flush();
-
         $this->auditLogService->log(
             action: 'ARCHIVE_TENANT',
             entityType: Tenant::class,
@@ -415,8 +440,10 @@ final readonly class TenantService
                 'deletedAt' => $tenant->getDeletedAt() !== null
                     ? $this->dateTime->format($tenant->getDeletedAt(), 'Y-m-d H:i:s')
                     : null,
-            ]
+            ],
+            flush: false,
         );
+        $this->entityManager->flush();
 
         return $feedback
             ->setData($this->tenantMapper->toResponse($tenant))

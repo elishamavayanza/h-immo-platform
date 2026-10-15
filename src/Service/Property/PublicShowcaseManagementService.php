@@ -14,6 +14,7 @@ use App\Repository\Rental\LeaseRepository;
 use App\Security\SecurityAction;
 use App\Security\SecurityServiceInterface;
 use App\Service\System\AuditLogService;
+use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\HttpFoundation\File\UploadedFile;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 use Symfony\Component\HttpKernel\Exception\UnprocessableEntityException;
@@ -43,6 +44,7 @@ final readonly class PublicShowcaseManagementService
         private SecurityServiceInterface $security,
         private AuditLogService $auditLogService,
         private UnitPhotoService $unitPhotoService,
+        private EntityManagerInterface $entityManager,
     ) {
     }
 
@@ -171,7 +173,6 @@ final readonly class PublicShowcaseManagementService
         }
 
         $this->unitPhotoService->removePhoto($photo);
-
         $this->auditLogService->log(
             'LISTING_PHOTO_REMOVED',
             UnitPhoto::class,
@@ -182,12 +183,61 @@ final readonly class PublicShowcaseManagementService
                 'unitUuid' => (string) $unit->getUuid(),
                 'photoUuid' => (string) $photo->getUuid(),
             ],
-            null
+            null,
+            false,
         );
+        $this->entityManager->flush();
 
         return (new Feedback())
             ->setData($this->unitPhotoService->listForUnit($unit))
             ->setFlushDescription('Photo retirée de la galerie.')
+            ->setStatus(200)
+            ->autoInitFlush();
+    }
+
+    public function restorePhoto(string $unitUuid, string $photoUuid): Feedback
+    {
+        $unit = $this->findUnitOrFail($unitUuid);
+        $this->security->checkUnitPublishAccess($unit, SecurityAction::PUBLISH_LISTING);
+
+        try {
+            $photo = $this->unitPhotoRepository->findDeletedOneByUnitAndUuid(
+                $unit,
+                Uuid::fromString($photoUuid)
+            );
+        } catch (\InvalidArgumentException) {
+            $photo = null;
+        }
+
+        if ($photo === null) {
+            throw new UnprocessableEntityException('Photo supprimée introuvable pour cette unité.');
+        }
+
+        if ($this->unitPhotoService->countForUnit($unit) >= 12) {
+            return (new Feedback())
+                ->addError('photos', 'La galerie contient déjà le nombre maximal de photos.')
+                ->setFlushDescription('Restauration impossible : la galerie est pleine.')
+                ->setStatus(409)
+                ->autoInitFlush();
+        }
+
+        $deletedAt = $photo->getDeletedAt()?->format(DATE_ATOM);
+        $this->unitPhotoService->restorePhoto($photo);
+        $this->auditLogService->log(
+            'RESTORE_UNIT_PHOTO',
+            UnitPhoto::class,
+            (int) $photo->getId(),
+            $unit->getBuilding()->getParcel()->getCity()->getOrganization(),
+            $this->security->getCurrentUser(),
+            ['unitUuid' => (string) $unit->getUuid(), 'photoUuid' => (string) $photo->getUuid(), 'deletedAt' => $deletedAt],
+            ['deletedAt' => null, 'position' => $photo->getPosition()],
+            false,
+        );
+        $this->entityManager->flush();
+
+        return (new Feedback())
+            ->setData($this->unitPhotoService->listForUnit($unit))
+            ->setFlushDescription('Photo restaurée dans la galerie.')
             ->setStatus(200)
             ->autoInitFlush();
     }

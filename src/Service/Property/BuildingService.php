@@ -15,6 +15,7 @@ use App\Repository\Property\ParcelRepository;
 use App\Repository\Property\BuildingRepository;
 use App\Security\SecurityAction;
 use App\Security\SecurityServiceInterface;
+use App\Service\System\AuditLogService;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\Uid\Uuid;
 use Symfony\Component\Validator\Validator\ValidatorInterface;
@@ -37,6 +38,7 @@ final readonly class BuildingService
         private ParcelRepository $parcelRepository,
         private BuildingMapper $buildingMapper,
         private SecurityServiceInterface $securityService,
+        private AuditLogService $auditLogService,
         private EntityManagerInterface $entityManager,
         private ValidatorInterface $validator
     ) {
@@ -255,7 +257,15 @@ final readonly class BuildingService
             }
         }
 
+        $oldValues = ['reference' => $buildingRepository->getReference(), 'name' => $buildingRepository->getName(), 'type' => $buildingRepository->getType()->value, 'numberOfFloors' => $buildingRepository->getNumberOfFloors(), 'description' => $buildingRepository->getDescription()];
         $this->buildingMapper->copyToEntity($request, $buildingRepository);
+        $this->auditLogService->log(
+            action: 'UPDATE_BUILDING', entityType: Building::class, entityId: (int) $buildingRepository->getId(),
+            organization: $buildingRepository->getParcel()->getCity()->getOrganization(), user: $this->securityService->getCurrentUser(),
+            oldValues: $oldValues,
+            newValues: ['reference' => $buildingRepository->getReference(), 'name' => $buildingRepository->getName(), 'type' => $buildingRepository->getType()->value, 'numberOfFloors' => $buildingRepository->getNumberOfFloors(), 'description' => $buildingRepository->getDescription()],
+            flush: false,
+        );
         $this->entityManager->flush();
 
         return $feedback
@@ -276,7 +286,15 @@ final readonly class BuildingService
 
         $this->securityService->checkBuildingAccess($buildingRepository, SecurityAction::DELETE_BUILDING);
 
+        $actor = $this->securityService->getCurrentUser();
         $buildingRepository->softDelete();
+        $this->auditLogService->log(
+            action: 'SOFT_DELETE_BUILDING', entityType: Building::class, entityId: (int) $buildingRepository->getId(),
+            organization: $buildingRepository->getParcel()->getCity()->getOrganization(), user: $actor,
+            oldValues: ['name' => $buildingRepository->getName(), 'reference' => $buildingRepository->getReference()],
+            newValues: ['deletedAt' => $buildingRepository->getDeletedAt()?->format(DATE_ATOM)],
+            flush: false,
+        );
         $this->entityManager->flush();
 
         return $feedback

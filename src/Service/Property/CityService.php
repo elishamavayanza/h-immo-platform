@@ -14,6 +14,7 @@ use App\Repository\Identity\OrganizationRepository;
 use App\Repository\Property\CityRepository;
 use App\Security\SecurityAction;
 use App\Security\SecurityServiceInterface;
+use App\Service\System\AuditLogService;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\Uid\Uuid;
 use Symfony\Component\Validator\Validator\ValidatorInterface;
@@ -38,6 +39,7 @@ final readonly class CityService
         private OrganizationRepository $organizationRepository,
         private CityMapper $mapper,
         private SecurityServiceInterface $securityService,
+        private AuditLogService $auditLogService,
         private ValidatorInterface $validator
     ) {
     }
@@ -239,7 +241,15 @@ final readonly class CityService
             }
         }
 
+        $oldValues = ['name' => $city->getName(), 'code' => $city->getCode(), 'province' => $city->getProvince(), 'country' => $city->getCountry(), 'status' => $city->getStatus()->value];
         $this->mapper->copyToEntity($request, $city);
+        $this->auditLogService->log(
+            action: 'UPDATE_CITY', entityType: City::class, entityId: (int) $city->getId(),
+            organization: $city->getOrganization(), user: $this->securityService->getCurrentUser(),
+            oldValues: $oldValues,
+            newValues: ['name' => $city->getName(), 'code' => $city->getCode(), 'province' => $city->getProvince(), 'country' => $city->getCountry(), 'status' => $city->getStatus()->value],
+            flush: false,
+        );
         $this->em->flush();
 
         return $feedback
@@ -267,7 +277,15 @@ final readonly class CityService
 
         $this->securityService->checkCityAccess($city, SecurityAction::DELETE_CITY);
 
+        $actor = $this->securityService->getCurrentUser();
         $city->softDelete();
+        $this->auditLogService->log(
+            action: 'SOFT_DELETE_CITY', entityType: City::class, entityId: (int) $city->getId(),
+            organization: $city->getOrganization(), user: $actor,
+            oldValues: ['name' => $city->getName(), 'code' => $city->getCode()],
+            newValues: ['deletedAt' => $city->getDeletedAt()?->format(DATE_ATOM)],
+            flush: false,
+        );
         $this->em->flush();
 
         return $feedback

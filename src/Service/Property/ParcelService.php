@@ -14,6 +14,7 @@ use App\Repository\Property\CityRepository;
 use App\Repository\Property\ParcelRepository;
 use App\Security\SecurityAction;
 use App\Security\SecurityServiceInterface;
+use App\Service\System\AuditLogService;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\Uid\Uuid;
 use Symfony\Component\Validator\Validator\ValidatorInterface;
@@ -36,6 +37,7 @@ final readonly class ParcelService
         private CityRepository $cityRepository,
         private ParcelMapper $parcelMapper,
         private SecurityServiceInterface $securityService,
+        private AuditLogService $auditLogService,
         private EntityManagerInterface $entityManager,
         private ValidatorInterface $validator
     ) {
@@ -262,7 +264,15 @@ final readonly class ParcelService
             }
         }
 
+        $oldValues = ['reference' => $parcelRepository->getReference(), 'titleNumber' => $parcelRepository->getTitleNumber(), 'name' => $parcelRepository->getName(), 'address' => $parcelRepository->getAddress(), 'quarter' => $parcelRepository->getQuarter(), 'area' => $parcelRepository->getArea(), 'latitude' => $parcelRepository->getLatitude(), 'longitude' => $parcelRepository->getLongitude(), 'description' => $parcelRepository->getDescription()];
         $this->parcelMapper->copyToEntity($request, $parcelRepository);
+        $this->auditLogService->log(
+            action: 'UPDATE_PARCEL', entityType: Parcel::class, entityId: (int) $parcelRepository->getId(),
+            organization: $parcelRepository->getCity()->getOrganization(), user: $this->securityService->getCurrentUser(),
+            oldValues: $oldValues,
+            newValues: ['reference' => $parcelRepository->getReference(), 'titleNumber' => $parcelRepository->getTitleNumber(), 'name' => $parcelRepository->getName(), 'address' => $parcelRepository->getAddress(), 'quarter' => $parcelRepository->getQuarter(), 'area' => $parcelRepository->getArea(), 'latitude' => $parcelRepository->getLatitude(), 'longitude' => $parcelRepository->getLongitude(), 'description' => $parcelRepository->getDescription()],
+            flush: false,
+        );
         $this->entityManager->flush();
 
         return $feedback
@@ -283,7 +293,15 @@ final readonly class ParcelService
 
         $this->securityService->checkParcelAccess($parcelRepository, SecurityAction::DELETE_PARCEL);
 
+        $actor = $this->securityService->getCurrentUser();
         $parcelRepository->softDelete();
+        $this->auditLogService->log(
+            action: 'SOFT_DELETE_PARCEL', entityType: Parcel::class, entityId: (int) $parcelRepository->getId(),
+            organization: $parcelRepository->getCity()->getOrganization(), user: $actor,
+            oldValues: ['reference' => $parcelRepository->getReference()],
+            newValues: ['deletedAt' => $parcelRepository->getDeletedAt()?->format(DATE_ATOM)],
+            flush: false,
+        );
         $this->entityManager->flush();
 
         return $feedback

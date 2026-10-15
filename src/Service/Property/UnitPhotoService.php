@@ -72,23 +72,16 @@ final readonly class UnitPhotoService
         return $photo;
     }
 
-    /**
-     * Retire une photo de la galerie : ligne et fichier.
-     *
-     * Le fichier est supprimé après le flush de la ligne, et non avant : si
-     * l'écriture échoue, la photo reste référencée et visible plutôt que
-     * pointer vers un lien mort.
-     *
-     * Le chemin vient de la base et non du client, mais `FileUploadService`
-     * refuse de toute façon toute sortie du répertoire d'uploads.
-     */
+    /** Marque la photo comme retirée sans détruire le fichier stocké. */
     public function removePhoto(UnitPhoto $photo): void
     {
-        $relativePath = $photo->getPath();
+        $this->unitPhotoRepository->remove($photo);
+    }
 
-        $this->unitPhotoRepository->remove($photo, flush: true);
-
-        $this->fileUploadService->delete($relativePath);
+    public function restorePhoto(UnitPhoto $photo): void
+    {
+        $photo->setPosition($this->nextPosition($photo->getUnit()));
+        $this->unitPhotoRepository->restore($photo);
     }
 
     /**

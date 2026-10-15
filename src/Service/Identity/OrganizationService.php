@@ -310,7 +310,36 @@ final readonly class OrganizationService
                 ->autoInitFlush();
         }
 
+        $oldValues = [
+            'name' => $organization->getName(),
+            'code' => $organization->getCode(),
+            'email' => $organization->getEmail(),
+            'phone' => $organization->getPhone(),
+            'address' => $organization->getAddress(),
+            'city' => $organization->getCity(),
+            'country' => $organization->getCountry(),
+            'currency' => $organization->getCurrency()->value,
+        ];
         $this->mapper->copyToEntity($request, $organization);
+        $this->auditLogService->log(
+            action: 'UPDATE_ORGANIZATION',
+            entityType: Organization::class,
+            entityId: (int) $organization->getId(),
+            organization: $organization,
+            user: $this->security->getCurrentUser(),
+            oldValues: $oldValues,
+            newValues: [
+                'name' => $organization->getName(),
+                'code' => $organization->getCode(),
+                'email' => $organization->getEmail(),
+                'phone' => $organization->getPhone(),
+                'address' => $organization->getAddress(),
+                'city' => $organization->getCity(),
+                'country' => $organization->getCountry(),
+                'currency' => $organization->getCurrency()->value,
+            ],
+            flush: false,
+        );
         $this->em->flush();
 
         return $feedback
@@ -591,7 +620,15 @@ final readonly class OrganizationService
 
         $this->authorizeOrganizationOperation($organization, SecurityAction::DELETE);
 
+        $actor = $this->security->getCurrentUser();
         $organization->softDelete();
+        $this->auditLogService->log(
+            action: 'SOFT_DELETE_ORGANIZATION', entityType: Organization::class, entityId: (int) $organization->getId(),
+            organization: $organization, user: $actor,
+            oldValues: ['name' => $organization->getName(), 'status' => $organization->getStatus()->value],
+            newValues: ['deletedAt' => $organization->getDeletedAt()?->format(DATE_ATOM)],
+            flush: false,
+        );
         $this->em->flush();
 
         return $feedback

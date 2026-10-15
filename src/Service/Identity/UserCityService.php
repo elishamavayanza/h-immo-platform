@@ -198,6 +198,13 @@ final readonly class UserCityService
             throw new AccessDeniedException('Les villes ne peuvent être retirées qu’au périmètre d’un administrateur de ville de la même organisation.');
         }
 
+        $this->auditLogService->log(
+            action: 'REVOKE_USER_CITY', entityType: UserCity::class, entityId: (int) $userCity->getId(),
+            organization: $userCity->getCity()->getOrganization(), user: $this->security->getCurrentUser(),
+            oldValues: ['userUuid' => $userCity->getUser()->getUuid()->toRfc4122(), 'cityUuid' => $userCity->getCity()->getUuid()->toRfc4122(), 'canManagePersonnel' => $userCity->canManagePersonnel()],
+            newValues: null,
+            flush: false,
+        );
         $this->em->remove($userCity);
         $this->em->flush();
 

@@ -34,13 +34,32 @@ class UnitPhotoRepository extends ServiceEntityRepository
         }
     }
 
-    /**
-     * Suppression physique assumée : une photo retirée de la galerie n'a pas à
-     * être conservée. Le fichier est supprimé par le service appelant.
-     */
     public function remove(UnitPhoto $entity, bool $flush = false): void
     {
-        $this->getEntityManager()->remove($entity);
+        $entity->softDelete();
+        $this->getEntityManager()->persist($entity);
+
+        if ($flush) {
+            $this->getEntityManager()->flush();
+        }
+    }
+
+    public function findDeletedOneByUnitAndUuid(Unit $unit, Uuid $uuid): ?UnitPhoto
+    {
+        return $this->createQueryBuilder('p')
+            ->andWhere('p.unit = :unit')
+            ->andWhere('p.uuid = :uuid')
+            ->andWhere('p.deletedAt IS NOT NULL')
+            ->setParameter('unit', $unit)
+            ->setParameter('uuid', $this->bindableUuid($uuid))
+            ->getQuery()
+            ->getOneOrNullResult();
+    }
+
+    public function restore(UnitPhoto $entity, bool $flush = false): void
+    {
+        $entity->restore();
+        $this->getEntityManager()->persist($entity);
 
         if ($flush) {
             $this->getEntityManager()->flush();
@@ -61,6 +80,7 @@ class UnitPhotoRepository extends ServiceEntityRepository
     {
         return $this->createQueryBuilder('p')
             ->andWhere('p.unit = :unit')
+            ->andWhere('p.deletedAt IS NULL')
             ->setParameter('unit', $unit)
             ->orderBy('p.position', 'ASC')
             ->addOrderBy('p.id', 'ASC')
@@ -80,6 +100,7 @@ class UnitPhotoRepository extends ServiceEntityRepository
         return $this->createQueryBuilder('p')
             ->andWhere('p.unit = :unit')
             ->andWhere('p.uuid = :uuid')
+            ->andWhere('p.deletedAt IS NULL')
             ->setParameter('unit', $unit)
             ->setParameter('uuid', $this->bindableUuid($uuid))
             ->getQuery()
@@ -91,6 +112,7 @@ class UnitPhotoRepository extends ServiceEntityRepository
         return (int) $this->createQueryBuilder('p')
             ->select('COUNT(p.id)')
             ->andWhere('p.unit = :unit')
+            ->andWhere('p.deletedAt IS NULL')
             ->setParameter('unit', $unit)
             ->getQuery()
             ->getSingleScalarResult();
@@ -104,6 +126,7 @@ class UnitPhotoRepository extends ServiceEntityRepository
         $max = $this->createQueryBuilder('p')
             ->select('MAX(p.position)')
             ->andWhere('p.unit = :unit')
+            ->andWhere('p.deletedAt IS NULL')
             ->setParameter('unit', $unit)
             ->getQuery()
             ->getSingleScalarResult();
