@@ -14,7 +14,7 @@ export function PublicationDetailPage() {
     const returnPath = defaultPathFor(platformRole, organizationRole);
     const [publication, setPublication] = useState<Publication | null>(null);
     const [error, setError] = useState(false);
-    useEffect(() => { let active = true; void publicationsService.open(uuid).then(item => { if (active) setPublication(item); }).catch(() => { if (active) setError(true); }); return () => { active = false; }; }, [uuid]);
+    useEffect(() => { let active = true; void publicationsService.open(uuid).then(item => { if (active) { setPublication(item); window.dispatchEvent(new Event('soft-immo:publication-read')); } }).catch(() => { if (active) setError(true); }); return () => { active = false; }; }, [uuid]);
     if (error) return <main className="publication-detail-page"><section className="publication-detail publication-detail--state"><h1>Publication indisponible</h1><p>Elle a peut-être expiré ou a été retirée.</p><Link className="publication-detail__back" to={returnPath}>← Retour à l’application</Link></section></main>;
     if (!publication) return <main className="publication-detail-page"><section className="publication-detail publication-detail--state" role="status">Chargement de la publication…</section></main>;
     return <main className="publication-detail-page"><article className="publication-detail">

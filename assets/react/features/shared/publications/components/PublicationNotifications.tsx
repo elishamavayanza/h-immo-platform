@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { publicationsService } from '../services/publicationsService';
 import type { Publication } from '../types/publication.types';
 import './publications.scss';
@@ -12,6 +12,7 @@ export function PublicationNotifications({ disabled = false }: { disabled?: bool
     const [loadError, setLoadError] = useState(false);
     const [refreshVersion, setRefreshVersion] = useState(0);
     const navigate = useNavigate();
+    const location = useLocation();
     useEffect(() => {
         let active = true;
         if (disabled) {
@@ -20,10 +21,12 @@ export function PublicationNotifications({ disabled = false }: { disabled?: bool
             return () => { active = false; };
         }
         const load = async () => { try { const rows = await publicationsService.active(); if (active) { setItems(rows); setLoadError(false); } } catch { if (active) setLoadError(true); } };
+        const refreshAfterRead = () => { void load(); };
         void load();
+        window.addEventListener('soft-immo:publication-read', refreshAfterRead);
         const timer = window.setInterval(() => { void load(); }, 60_000);
-        return () => { active = false; window.clearInterval(timer); };
-    }, [refreshVersion, disabled]);
+        return () => { active = false; window.clearInterval(timer); window.removeEventListener('soft-immo:publication-read', refreshAfterRead); };
+    }, [refreshVersion, disabled, location.pathname]);
     const unread = items.filter(item => !item.firstViewedAt).length;
     if (disabled || items.length === 0) return null;
 
