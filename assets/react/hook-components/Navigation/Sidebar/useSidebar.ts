@@ -12,6 +12,7 @@ export interface UseSidebarProps {
     variant?: 'default' | 'dark' | 'light';
     collapsible?: boolean;
     defaultCollapsed?: boolean;
+    onCollapsedChange?: (collapsed: boolean) => void;
     /** Largeur du menu (CSS) : surchargée par la variable CSS `--sidebar-width`. */
     width?: string;
     activeId?: string;
@@ -40,6 +41,7 @@ export function useSidebar({
                                variant = 'default',
                                collapsible = false,
                                defaultCollapsed = false,
+                               onCollapsedChange,
                                width = '280px',
                                activeId,
                                onItemClick,
@@ -192,7 +194,11 @@ export function useSidebar({
         };
     }, [isMobileOpen, isMobile]);
 
-    const toggleCollapse = () => setIsCollapsed((prev) => !prev);
+    const toggleCollapse = () => setIsCollapsed((prev) => {
+        const next = !prev;
+        onCollapsedChange?.(next);
+        return next;
+    });
 
     /**
      * Sections à ouvrir d'emblée, déduites des items (`defaultOpen`).

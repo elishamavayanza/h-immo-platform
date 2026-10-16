@@ -246,7 +246,8 @@ body {
 
 html[data-compact-tables='true'] .datatable__table th,
 html[data-compact-tables='true'] .datatable__table td {
-    padding-block: .45rem;
+    padding-block: .32rem;
+    line-height: 1.3;
 }
 
 html[data-reduced-motion='true'],

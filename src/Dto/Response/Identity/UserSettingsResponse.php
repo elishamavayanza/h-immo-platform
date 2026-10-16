@@ -47,6 +47,9 @@ final class UserSettingsResponse
 
         #[OA\Property(description: 'Taille de page par défaut pour les listes', example: 20, nullable: true)]
         public ?int $defaultPageSize = null,
+
+        #[OA\Property(description: 'Menu latéral replié par défaut', example: false, nullable: true)]
+        public ?bool $sidebarCollapsed = null,
     ) {
     }
 
@@ -67,6 +70,7 @@ final class UserSettingsResponse
             reducedMotion: $settings['reducedMotion'] ?? false,
             auditLogRetentionDays: $settings['auditLogRetentionDays'] ?? null,
             defaultPageSize: $settings['defaultPageSize'] ?? 20,
+            sidebarCollapsed: $settings['sidebarCollapsed'] ?? false,
         );
     }
 }

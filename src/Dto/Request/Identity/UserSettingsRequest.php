@@ -51,9 +51,13 @@ final class UserSettingsRequest
         #[Assert\Range(min: 30, max: 2555, groups: ['update'])]
         public ?int $auditLogRetentionDays = null,
 
+        // Réglage personnel, modifiable par tous les comptes.
         #[OA\Property(description: 'Taille de page par défaut pour les listes', example: 20, nullable: true)]
         #[Assert\Range(min: 10, max: 100, groups: ['update'])]
         public ?int $defaultPageSize = null,
+
+        #[OA\Property(description: 'Menu latéral replié par défaut', example: false, nullable: true)]
+        public ?bool $sidebarCollapsed = null,
     ) {
     }
 }

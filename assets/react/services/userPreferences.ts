@@ -75,6 +75,15 @@ export function saveUserPreferences(settings: UserSettings): void {
     document.documentElement.dataset.reducedMotion = String(settings.reducedMotion);
     applyTheme(settings.theme);
     applyAccentPalette(settings.accentPalette);
+    window.dispatchEvent(new Event('h-immo:user-preferences-updated'));
+}
+
+/** Enregistre un réglage local de navigation immédiatement, avant sa synchronisation API. */
+export function saveSidebarCollapsedPreference(collapsed: boolean): void {
+    if (typeof window === 'undefined') return;
+    const current = readUserPreferences();
+    window.localStorage.setItem(STORAGE_KEY, JSON.stringify({ ...current, sidebarCollapsed: collapsed }));
+    window.dispatchEvent(new Event('h-immo:user-preferences-updated'));
 }
 
 export function readUserPreferences(): Partial<UserSettings> {
