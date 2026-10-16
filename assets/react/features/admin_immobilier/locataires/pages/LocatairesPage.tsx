@@ -70,6 +70,7 @@ export function LocatairesPage({ readOnly = false }: { readOnly?: boolean } = {}
     const { organizationRole, currentOrganization } = useOrganization();
     const { activeCityUuid, activeCity } = useAdminCity();
     const isCityAdmin = organizationRole === 'admin_ville';
+    const localOperationsReadOnly = readOnly || !isCityAdmin;
     const {
         data, rows: allRows, isLoading, error, reload,
         search, setSearch, type, setType, housingFilter, setHousingFilter,
@@ -239,7 +240,7 @@ export function LocatairesPage({ readOnly = false }: { readOnly?: boolean } = {}
         }
     };
 
-    let body = <LocatairesTable rows={rows} role={organizationRole} onEdit={openEdit} onArchive={requestArchive} onNewLease={openNewLease} onActivateLease={setLeaseToActivate} onDocuments={setDocumentsTarget} onHistory={setHistoryTarget} readOnly={readOnly} />;
+    let body = <LocatairesTable rows={rows} role={organizationRole} onEdit={openEdit} onArchive={requestArchive} onNewLease={openNewLease} onActivateLease={setLeaseToActivate} onDocuments={setDocumentsTarget} onHistory={setHistoryTarget} readOnly={localOperationsReadOnly} />;
     if (isLoading) {
         body = <EmptyState icon={<Spinner size="large" />} title="Chargement des locataires…" description="Récupération des fiches et de leurs baux en cours." />;
     } else if (error) {
@@ -251,9 +252,10 @@ export function LocatairesPage({ readOnly = false }: { readOnly?: boolean } = {}
         />;
     }
 
-    return <main className="organization-page organization-operational-page"><header className="organization-page__header"><div><span className="organization-page__eyebrow">GESTION LOCATIVE</span><h1>Locataires</h1><p>Retrouvez les occupants, leurs baux et leur situation.</p></div></header>
+    return <main className="organization-page organization-operational-page"><header className="organization-page__header"><div><span className="organization-page__eyebrow">GESTION LOCATIVE</span><h1>Locataires</h1><p>{isCityAdmin ? `Suivez les occupants, les baux et les mouvements de ${activeCity?.name ?? 'votre ville'}.` : 'Vue consolidée des occupants, des baux et des mouvements de votre organisation.'}</p></div></header>
+        {!isCityAdmin && <p className="organization-management-form__hint">Consultation et supervision uniquement. Les entrées, départs, transferts et corrections sont enregistrés par l’ADMIN_VILLE responsable de la ville.</p>}
         <OrganizationSummary items={[{ label: 'Locataires', value: <>{data?.total ?? 0}</> }, { label: 'Baux en cours', value: <>{data?.activeLeases ?? 0}</> }, { label: 'Personnes morales', value: <>{(data?.rows ?? []).filter((row) => row.type === 'company').length}</> }]} />
-        <Card className="organization-table-card" padding="medium"><div className="organization-table-toolbar"><div><h2>Liste des locataires</h2><p>{data?.note ?? 'La fin du bail affichée correspond au bail actif du locataire.'}</p></div><div className="organization-filters organization-filters--tenant"><SearchInput value={search} onSearch={setSearch} placeholder="Rechercher un locataire…" fullWidth /><Select aria-label="Filtrer par type" value={type} onChange={(event) => setType(event.target.value)} options={[{ value: 'all', label: 'Tous les types' }, { value: 'individual', label: 'Personnes physiques' }, { value: 'company', label: 'Personnes morales' }]} /><Select aria-label="Filtrer par occupation ou mouvement" value={housingFilter} onChange={(event) => setHousingFilter(event.target.value as typeof housingFilter)} options={[{ value: 'all', label: 'Toutes les situations' }, { value: 'currently_housed', label: 'Occupants actuels' }, { value: 'former', label: 'Sans bail actif' }, { value: 'multiple_homes', label: 'Plusieurs logements' }, { value: 'expiring_soon', label: 'Bail finissant sous 30 jours' }, { value: 'departure_pending', label: 'Départs annoncés à confirmer' }, { value: 'recent_movement', label: 'Mouvements des 30 derniers jours' }, { value: 'late_movement', label: 'Mouvements saisis tardivement' }]} />{!readOnly && canDo(organizationRole, 'create_tenant') && <Button onClick={openCreate}>＋ Ajouter un locataire</Button>}</div></div>{body}</Card>
+        <Card className="organization-table-card" padding="medium"><div className="organization-table-toolbar"><div><h2>Liste des locataires</h2><p>{data?.note ?? 'La fin du bail affichée correspond au bail actif du locataire.'}</p></div><div className="organization-filters organization-filters--tenant"><SearchInput value={search} onSearch={setSearch} placeholder="Rechercher un locataire…" fullWidth /><Select aria-label="Filtrer par type" value={type} onChange={(event) => setType(event.target.value)} options={[{ value: 'all', label: 'Tous les types' }, { value: 'individual', label: 'Personnes physiques' }, { value: 'company', label: 'Personnes morales' }]} /><Select aria-label="Filtrer par occupation ou mouvement" value={housingFilter} onChange={(event) => setHousingFilter(event.target.value as typeof housingFilter)} options={[{ value: 'all', label: 'Toutes les situations' }, { value: 'currently_housed', label: 'Occupants actuels' }, { value: 'former', label: 'Sans bail actif' }, { value: 'multiple_homes', label: 'Plusieurs logements' }, { value: 'expiring_soon', label: 'Bail finissant sous 30 jours' }, { value: 'departure_pending', label: 'Départs annoncés à confirmer' }, { value: 'recent_movement', label: 'Mouvements des 30 derniers jours' }, { value: 'late_movement', label: 'Mouvements saisis tardivement' }]} />{!localOperationsReadOnly && canDo(organizationRole, 'create_tenant') && <Button onClick={openCreate}>＋ Ajouter un locataire</Button>}</div></div>{body}</Card>
         <ConfirmDialog
             isOpen={pending !== null}
             onClose={cancelArchive}
@@ -417,7 +419,7 @@ export function LocatairesPage({ readOnly = false }: { readOnly?: boolean } = {}
             units={data?.units ?? []}
             leases={data?.leases ?? []}
             tenants={allRows.map(({ id, name }) => ({ id, name }))}
-            canRecord={!readOnly && canDo(organizationRole, 'update_tenant')}
+            canRecord={!localOperationsReadOnly && canDo(organizationRole, 'update_tenant')}
             onReload={reload}
             onClose={() => setHistoryTarget(null)}
         />

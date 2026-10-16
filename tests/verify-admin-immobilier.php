@@ -424,6 +424,19 @@ if (is_string($uuidCityLink)) {
     check('ADMIN_IMMOBILIER : retirer une seule ville du périmètre', $status === 200, "obtenu {$status}");
 }
 
+$adminImmobilierToken = $token;
+[$localLoginStatus, $localLoginPayload] = $request('POST', '/api/auth/login', [
+    'email' => 'ville.a.' . $suffix . '@test.local',
+    'password' => 'MotDePasse!123',
+]);
+$localToken = is_array($localLoginPayload) ? ($localLoginPayload['accessToken'] ?? null) : null;
+check('Connexion de l’ADMIN_VILLE de A pour les opérations locales', $localLoginStatus === 200 && is_string($localToken), 'obtenu ' . $localLoginStatus);
+if (!is_string($localToken)) {
+    $rollback();
+    exit(1);
+}
+$token = $localToken;
+
 $photoContents = base64_decode('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+j3ioAAAAASUVORK5CYII=', true);
 $uploadedPhotoPaths = [];
 $photoTempPaths = [];
@@ -456,7 +469,7 @@ $trackUploadedPhotoPaths = static function (array $payload) use (&$uploadedPhoto
 };
 
 section('Photos : upload unique et rattachement à l’organisation');
-[$status] = $request('DELETE', '/api/v1/media/organizations/' . $uuidOrgA . '/logo', null, $token);
+[$status] = $request('DELETE', '/api/v1/media/organizations/' . $uuidOrgA . '/logo', null, $adminImmobilierToken);
 check('ADMIN_IMMOBILIER peut gérer le logo de son organisation sans droit général de modification', $status === 404, 'obtenu ' . $status . ' (404 attendu car aucun logo n’est encore enregistré)');
 [$status, $parcelPhotoPayload] = $uploadSinglePhoto('/api/v1/media/parcels/' . $uuidParcelA . '/photos', 'files');
 $trackUploadedPhotoPaths($parcelPhotoPayload ?? []);
@@ -508,7 +521,10 @@ $payloadIds = static function (array $payload): array {
 // ---------------------------------------------------------------------
 section('Locataires : liste, recherche, périmètre, archivage');
 
-[$status, $payload, $rawTenants] = $request('GET', '/api/v1/tenants', null, $token);
+[$adminImmoArchiveStatus] = $request('PATCH', '/api/v1/tenants/' . $uuidTenantA . '/archive', null, $adminImmobilierToken);
+check('ADMIN_IMMOBILIER ne peut pas archiver directement un locataire d’une ville', $adminImmoArchiveStatus === 403, 'obtenu ' . $adminImmoArchiveStatus);
+
+[$status, $payload, $rawTenants] = $request('GET', '/api/v1/tenants', null, $adminImmobilierToken);
 check(
     'GET /api/v1/tenants : 200',
     $status === 200,
@@ -520,14 +536,14 @@ check(
     'liste=' . implode(',', $payloadIds($payload)) . ' | raw=' . substr($rawTenants, 0, 500)
 );
 
-[$status, $payload] = $request('GET', '/api/v1/tenants?organizationId=' . $uuidOrgB, null, $token);
+[$status, $payload] = $request('GET', '/api/v1/tenants?organizationId=' . $uuidOrgB, null, $adminImmobilierToken);
 check(
     'GET /api/v1/tenants?organizationId=<B> : liste vide pour A (pas d\'énumération)',
     $status === 200 && $payloadIds($payload) === [],
     "obtenu {$status}, items=" . implode(',', $payloadIds($payload))
 );
 
-[$status, $payload] = $request('GET', '/api/v1/tenants?search=' . $suffix, null, $token);
+[$status, $payload] = $request('GET', '/api/v1/tenants?search=' . $suffix, null, $adminImmobilierToken);
 check(
     'GET /api/v1/tenants?search=<suffix> : ne remonte que le locataire de A',
     $payloadIds($payload) === [$uuidTenantA],
@@ -558,7 +574,7 @@ $auditCount = (int) $em->getRepository(AuditLog::class)->createQueryBuilder('a')
     ->getSingleScalarResult();
 check('Audit : une entrée ARCHIVE_TENANT a été tracée', $auditCount === 1, "count={$auditCount}");
 
-[$status, $payload] = $request('GET', '/api/v1/tenants', null, $token);
+[$status, $payload] = $request('GET', '/api/v1/tenants', null, $adminImmobilierToken);
 check(
     'GET /api/v1/tenants : le locataire archivé disparaît de la liste',
     $status === 200 && $payloadIds($payload) === [],
@@ -687,10 +703,10 @@ check(
     'organizationUuid' => $uuidOrgA,
     'fullName' => 'Ouvrier affecté ' . $suffix,
     'phone' => '+243990000099',
-], $token);
+], $adminImmobilierToken);
 $uuidCreatedWorker = is_array($payload) ? ($payload['data']['id'] ?? null) : null;
 check(
-    'POST /api/v1/workers : l’organisation active est prise en compte',
+    'POST /api/v1/workers : l’ADMIN_IMMOBILIER crée un collaborateur organisationnel',
     $status === 200 && is_string($uuidCreatedWorker),
     "obtenu {$status} : " . substr($rawCreatedWorker, 0, 250)
 );
@@ -752,70 +768,24 @@ check(
 );
 
 // ---------------------------------------------------------------------
-section('Villes : CRUD, unicité du code, isolation inter-organisation');
-
-$newCityCode = 'CIT' . strtoupper(substr($suffix, 0, 8));
-
-[$status, $payload, $raw] = $request('POST', '/api/v1/property/cities', [
-    'organizationUuid' => $uuidOrgA,
-    'name' => 'Ville Créée',
-    'code' => $newCityCode,
-    'province' => 'Nord-Kivu',
-    'country' => 'RDC',
-], $token);
-$uuidCreatedCity = is_array($payload) ? ($payload['data']['id'] ?? null) : null;
-check(
-    'POST /api/v1/property/cities : ville créée (200 — D14 : autoInitFlush écrase le 201)',
-    $status === 200 && is_string($uuidCreatedCity),
-    "obtenu {$status} : " . substr($raw, 0, 300)
-);
+section('Villes : l’ADMIN_IMMOBILIER consulte, l’ADMIN_VILLE ne modifie pas le catalogue des villes');
 
 [$status, $payload] = $request('POST', '/api/v1/property/cities', [
     'organizationUuid' => $uuidOrgA,
-    'name' => 'Doublon',
-    'code' => $newCityCode,
-], $token);
-check(
-    'POST /api/v1/property/cities : code déjà utilisé refusé (422 — D14 écrase le 409)',
-    $status === 422 && isset($payload['errors']['code']),
-    "obtenu {$status} : " . substr(json_encode($payload), 0, 300)
-);
+    'name' => 'Ville non autorisée',
+    'code' => 'NO' . strtoupper(substr($suffix, 0, 6)),
+    'country' => 'CD',
+], $adminImmobilierToken);
+check('ADMIN_IMMOBILIER ne crée pas directement une ville', $status === 403, 'obtenu ' . $status);
 
-[$status, $payload] = $request('POST', '/api/v1/property/cities', [
-    'organizationUuid' => $uuidOrgB,
-    'name' => 'Intrusion',
-    'code' => 'INTRUS' . strtoupper(substr($suffix, 0, 4)),
-], $token);
-check(
-    'POST /api/v1/property/cities dans une autre organization : 403',
-    $status === 403,
-    "obtenu {$status}"
-);
+[$status] = $request('PUT', '/api/v1/property/cities/' . $uuidCityA, [
+    'name' => 'Ville modifiée hors responsabilité locale',
+    'code' => 'EDIT' . strtoupper(substr($suffix, 0, 4)),
+], $adminImmobilierToken);
+check('ADMIN_IMMOBILIER ne modifie pas une ville opérationnelle', $status === 403, 'obtenu ' . $status);
 
-if (is_string($uuidCreatedCity)) {
-    [$status, $payload] = $request('PUT', '/api/v1/property/cities/' . $uuidCreatedCity, [
-        'name' => 'Ville Modifiée',
-        'code' => $newCityCode,
-        'status' => 'inactive',
-    ], $token);
-    check(
-        'PUT /api/v1/property/cities/{uuid} : 200 et nom modifié',
-        $status === 200 && (($payload['data']['name'] ?? null) === 'Ville Modifiée'),
-        "obtenu {$status}"
-    );
-
-    [$status, $payload] = $request('DELETE', '/api/v1/property/cities/' . $uuidCreatedCity, null, $token);
-    check('DELETE /api/v1/property/cities/{uuid} : 200', $status === 200, "obtenu {$status}");
-}
-
-[$status, $payload] = $request('PUT', '/api/v1/property/cities/' . $uuidCityB, [
-    'name' => 'Piratage',
-    'code' => 'HACK' . strtoupper(substr($suffix, 0, 4)),
-], $token);
-check('PUT ville d\'une autre organization : 403', $status === 403, "obtenu {$status}");
-
-[$status, $payload] = $request('DELETE', '/api/v1/property/cities/' . $uuidCityB, null, $token);
-check('DELETE ville d\'une autre organization : 403', $status === 403, "obtenu {$status}");
+[$status] = $request('DELETE', '/api/v1/property/cities/' . $uuidCityA, null, $adminImmobilierToken);
+check('ADMIN_IMMOBILIER ne supprime pas une ville opérationnelle', $status === 403, 'obtenu ' . $status);
 
 // Les dates métier rétroactives restent distinctes de la saisie serveur.
 section('Dates opérationnelles : paiement, bail et intervention');
@@ -832,7 +802,7 @@ check(
     'un paiement rétroactif conserve date métier, auteur et date de saisie',
     $status === 201
         && str_starts_with((string) ($payment['paymentDate'] ?? ''), $paymentDate)
-        && ($payment['createdByName'] ?? null) === 'Admin Immobilier A'
+        && ($payment['createdByName'] ?? null) === 'Admin Ville A'
         && isset($payment['createdAt']),
     "HTTP {$status}, paymentDate=" . ($payment['paymentDate'] ?? 'absente') . ', createdByName=' . ($payment['createdByName'] ?? 'absent') . ', createdAt=' . ($payment['createdAt'] ?? 'absente')
 );
@@ -900,7 +870,7 @@ check(
     'un signalement rétroactif garde date, auteur et horodatage d’enregistrement',
     $maintenanceStatus === 201
         && ($maintenance['reportedAt'] ?? null) === $reportedDate
-        && ($maintenance['createdBy'] ?? null) === 'Admin Immobilier A'
+        && ($maintenance['createdBy'] ?? null) === 'Admin Ville A'
         && isset($maintenance['createdAt']),
     "HTTP {$maintenanceStatus}, reportedAt=" . ($maintenance['reportedAt'] ?? 'absente')
 );

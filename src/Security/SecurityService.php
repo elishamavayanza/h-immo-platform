@@ -1133,20 +1133,46 @@ final class SecurityService implements SecurityServiceInterface
     }
 
     /**
-     * Le PATRON administre l'intégralité de son Organization. Son
-     * périmètre est déjà borné à cette Organization par
-     * `checkOrganizationAccess()` : aucune restriction d'action
-     * supplémentaire n'est nécessaire.
+     * Le PATRON pilote l'organisation et consulte les résultats. Les écritures
+     * métier quotidiennes restent aux équipes opérationnelles ; aucune action
+     * stratégique spécifique n'est accordée sans permission dédiée.
      */
     private function checkPatronAction(SecurityAction $action): void
     {
+        $allowed = [
+            SecurityAction::VIEW,
+            SecurityAction::VIEW_ORGANIZATION,
+            SecurityAction::VIEW_USER,
+            SecurityAction::MANAGE_ORGANIZATION_LOGO,
+            SecurityAction::MANAGE_EXCHANGE_RATE,
+            SecurityAction::VIEW_CITY,
+            SecurityAction::VIEW_PARCEL,
+            SecurityAction::VIEW_BUILDING,
+            SecurityAction::VIEW_UNIT,
+            SecurityAction::VIEW_TENANT,
+            SecurityAction::VIEW_LEASE,
+            SecurityAction::VIEW_RENT,
+            SecurityAction::VIEW_PAYMENT,
+            SecurityAction::VIEW_WORKER,
+            SecurityAction::VIEW_WORKER_ASSIGNMENT,
+            SecurityAction::VIEW_EXPENSE,
+            SecurityAction::VIEW_MAINTENANCE,
+            SecurityAction::VIEW_DOCUMENT,
+            SecurityAction::VIEW_REPORT,
+            SecurityAction::EXPORT_REPORT,
+            SecurityAction::VIEW_AUDIT_LOG,
+            SecurityAction::EXPORT_AUDIT_LOG,
+        ];
+
+        $this->denyIfNotAllowed($action, $allowed, 'Patron');
     }
 
     /**
-     * L'ADMIN_IMMOBILIER gère le patrimoine et la location, consulte
-     * l'Organization en lecture seule et peut inviter des ADMIN_VILLE dans
-     * son organisation. Cette permission dédiée ne donne pas accès à la
-     * gestion générale des membres.
+     * L'ADMIN_IMMOBILIER supervise l'organisation et son portefeuille. Les
+     * actions localisées (patrimoine, location, personnel, dépenses et
+     * maintenance) sont exécutées par l'ADMIN_VILLE de la ville concernée.
+     * Il peut gérer les affectations de ville et inviter des ADMIN_VILLE ;
+     * cela ne donne pas accès à la gestion générale des membres.
      */
     private function checkAdminImmobilierAction(SecurityAction $action): void
     {
@@ -1158,38 +1184,22 @@ final class SecurityService implements SecurityServiceInterface
             SecurityAction::ASSIGN_USER_CITY, SecurityAction::REVOKE_USER_CITY,
             SecurityAction::MANAGE_EXCHANGE_RATE,
 
-            SecurityAction::VIEW_CITY, SecurityAction::CREATE_CITY, SecurityAction::UPDATE_CITY,
-            SecurityAction::DELETE_CITY, SecurityAction::ACTIVATE_CITY, SecurityAction::DEACTIVATE_CITY,
-
-            SecurityAction::VIEW_PARCEL, SecurityAction::CREATE_PARCEL, SecurityAction::UPDATE_PARCEL, SecurityAction::DELETE_PARCEL,
-
-            SecurityAction::VIEW_BUILDING, SecurityAction::CREATE_BUILDING, SecurityAction::UPDATE_BUILDING, SecurityAction::DELETE_BUILDING,
-
-            SecurityAction::VIEW_UNIT, SecurityAction::CREATE_UNIT, SecurityAction::UPDATE_UNIT, SecurityAction::DELETE_UNIT,
-            SecurityAction::PUBLISH_LISTING,
-
-            SecurityAction::VIEW_TENANT, SecurityAction::CREATE_TENANT, SecurityAction::UPDATE_TENANT, SecurityAction::DELETE_TENANT, SecurityAction::ARCHIVE_TENANT,
-
-            SecurityAction::VIEW_LEASE, SecurityAction::CREATE_LEASE, SecurityAction::UPDATE_LEASE, SecurityAction::DELETE_LEASE,
-            SecurityAction::ACTIVATE_LEASE, SecurityAction::TERMINATE_LEASE, SecurityAction::CANCEL_LEASE,
-
-            SecurityAction::VIEW_RENT, SecurityAction::CREATE_RENT, SecurityAction::UPDATE_RENT, SecurityAction::DELETE_RENT, SecurityAction::MARK_RENT_OVERDUE,
-
-            SecurityAction::VIEW_PAYMENT, SecurityAction::CREATE_PAYMENT, SecurityAction::UPDATE_PAYMENT, SecurityAction::DELETE_PAYMENT, SecurityAction::CANCEL_PAYMENT,
-
+            SecurityAction::VIEW_CITY,
+            SecurityAction::VIEW_PARCEL,
+            SecurityAction::VIEW_BUILDING,
+            SecurityAction::VIEW_UNIT,
+            SecurityAction::VIEW_TENANT,
+            SecurityAction::VIEW_LEASE,
+            SecurityAction::VIEW_RENT,
+            SecurityAction::VIEW_PAYMENT,
             SecurityAction::VIEW_WORKER, SecurityAction::CREATE_WORKER, SecurityAction::UPDATE_WORKER, SecurityAction::DELETE_WORKER,
-
-            SecurityAction::VIEW_WORKER_ASSIGNMENT, SecurityAction::CREATE_WORKER_ASSIGNMENT,
-            SecurityAction::UPDATE_WORKER_ASSIGNMENT, SecurityAction::DELETE_WORKER_ASSIGNMENT,
-
-            SecurityAction::VIEW_EXPENSE, SecurityAction::CREATE_EXPENSE, SecurityAction::UPDATE_EXPENSE, SecurityAction::DELETE_EXPENSE,
-            SecurityAction::VIEW_MAINTENANCE, SecurityAction::CREATE_MAINTENANCE, SecurityAction::UPDATE_MAINTENANCE,
-            SecurityAction::VIEW_DOCUMENT, SecurityAction::CREATE_DOCUMENT, SecurityAction::DELETE_DOCUMENT,
-            SecurityAction::MANAGE_TREASURY_BALANCE,
+            SecurityAction::VIEW_WORKER_ASSIGNMENT,
+            SecurityAction::VIEW_EXPENSE,
+            SecurityAction::VIEW_MAINTENANCE,
+            SecurityAction::VIEW_DOCUMENT,
+            SecurityAction::VIEW_AUDIT_LOG, SecurityAction::EXPORT_AUDIT_LOG,
 
             SecurityAction::VIEW_REPORT, SecurityAction::EXPORT_REPORT,
-
-            SecurityAction::VIEW_AUDIT_LOG, SecurityAction::EXPORT_AUDIT_LOG,
         ];
 
         $this->denyIfNotAllowed($action, $allowed, 'Administrateur immobilier');

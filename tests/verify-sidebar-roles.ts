@@ -137,8 +137,11 @@ console.log('\n=== Permissions de création des Admin ville ===\n');
 check('ADMIN_IMMOBILIER peut créer un ADMIN_VILLE', canDo('admin_immobilier', 'create_city_admin'));
 check('ADMIN_IMMOBILIER ne reçoit pas la gestion générale des membres', !canDo('admin_immobilier', 'manage_users'));
 check('ADMIN_VILLE ne peut pas créer un autre administrateur', !canDo('admin_ville', 'create_city_admin'));
-check('PATRON conserve la création des administrateurs déléguables', canDo('patron', 'create_city_admin'));
-check('les trois rôles peuvent consulter et créer des interventions selon leur périmètre', canDo('patron', 'create_maintenance') && canDo('admin_immobilier', 'create_maintenance') && canDo('admin_ville', 'create_maintenance'));
+check('PATRON consulte les locataires, sans créer ni modifier leurs données', canDo('patron', 'view_tenant') && !canDo('patron', 'create_tenant') && !canDo('patron', 'update_tenant'));
+check('PATRON ne reçoit pas les opérations quotidiennes de maintenance ou de finance', !canDo('patron', 'create_maintenance') && !canDo('patron', 'create_payment') && !canDo('patron', 'create_expense'));
+check('ADMIN_IMMOBILIER supervise les locataires sans effectuer les opérations locales', canDo('admin_immobilier', 'view_tenant') && !canDo('admin_immobilier', 'create_tenant') && !canDo('admin_immobilier', 'update_tenant') && !canDo('admin_immobilier', 'create_lease') && !canDo('admin_immobilier', 'create_payment'));
+check('ADMIN_IMMOBILIER garde la gestion des affectations ADMIN_VILLE', canDo('admin_immobilier', 'create_city_admin') && canDo('admin_immobilier', 'assign_user_city') && canDo('admin_immobilier', 'revoke_user_city'));
+check('ADMIN_VILLE est responsable des opérations locatives et de maintenance de sa ville', canDo('admin_ville', 'create_tenant') && canDo('admin_ville', 'create_lease') && canDo('admin_ville', 'create_payment') && canDo('admin_ville', 'create_maintenance'));
 
 // ── Menu plat : une relation 1─N du modèle ne crée PAS de sous-menu ──
 const ALL_MENUS = [PATRON, ADMIN_IMMOBILIER, ADMIN_VILLE, PLATFORM];

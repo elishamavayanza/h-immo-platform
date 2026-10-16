@@ -214,6 +214,7 @@ $makeUser = static function (string $email, string $fullName, ?PlatformRole $rol
 $superAdmin = $makeUser('root@plateforme.test', 'Root Plateforme', PlatformRole::SUPER_ADMIN);
 $patronA = $makeUser('patron.a@orga-a.test', 'Patron A', null);
 $patronB = $makeUser('patron.b@orga-b.test', 'Patron B', null);
+$adminImmobilierA = $makeUser('immo.a@orga-a.test', 'Admin Immobilier A', null);
 $adminVilleA = $makeUser('ville.a@orga-a.test', 'Admin Ville A', null);
 
 $makeOrg = static function (string $name, string $code) use ($em): Organization {
@@ -246,6 +247,7 @@ $membership = static function (User $user, Organization $org, OrganizationRole $
 
 $membership($patronA, $orgA, OrganizationRole::PATRON);
 $membership($patronB, $orgB, OrganizationRole::PATRON);
+$membership($adminImmobilierA, $orgA, OrganizationRole::ADMIN_IMMOBILIER);
 // Admin de ville rattaché à l'organization A, mais avec une seule ville.
 $membership($adminVilleA, $orgA, OrganizationRole::ADMIN_VILLE);
 
@@ -266,11 +268,24 @@ $cityA1 = $makeCity('Ville A1', 'A1', $orgA);
 $cityA2 = $makeCity('Ville A2', 'A2', $orgA);
 $cityB1 = $makeCity('Ville B1', 'B1', $orgB);
 
+// Compte dédié aux scénarios de mouvements entre A1 et A2. Le compte
+// adminVilleA reste strictement limité à A1 pour les contrôles de périmètre.
+$adminVilleMovement = $makeUser('mouvements.a@orga.test', 'Admin mouvements A', null);
+$membership($adminVilleMovement, $orgA, OrganizationRole::ADMIN_VILLE);
+
 // L'admin de ville n\'est attribué qu\'à A1.
 $userCity = new \App\Entity\Identity\UserCity();
 $userCity->setUser($adminVilleA);
 $userCity->setCity($cityA1);
 $em->persist($userCity);
+$movementCityA1 = new \App\Entity\Identity\UserCity();
+$movementCityA1->setUser($adminVilleMovement);
+$movementCityA1->setCity($cityA1);
+$em->persist($movementCityA1);
+$movementCityA2 = new \App\Entity\Identity\UserCity();
+$movementCityA2->setUser($adminVilleMovement);
+$movementCityA2->setCity($cityA2);
+$em->persist($movementCityA2);
 
 $makeParcel = static function (string $ref, City $city) use ($em): Parcel {
     $p = new Parcel();
@@ -899,6 +914,18 @@ $tokenAdminVille = new \Symfony\Component\Security\Core\Authentication\Token\Use
     $adminVilleA->getRoles()
 );
 
+$tokenAdminVilleMovement = new \Symfony\Component\Security\Core\Authentication\Token\UsernamePasswordToken(
+    $adminVilleMovement,
+    'main',
+    $adminVilleMovement->getRoles()
+);
+
+$tokenAdminImmobilier = new \Symfony\Component\Security\Core\Authentication\Token\UsernamePasswordToken(
+    $adminImmobilierA,
+    'main',
+    $adminImmobilierA->getRoles()
+);
+
 $tokenSuperAdmin = new \Symfony\Component\Security\Core\Authentication\Token\UsernamePasswordToken(
     $superAdmin,
     'main',
@@ -944,6 +971,42 @@ try {
     check('Patron A peut lire un bail de son organization', false, $e->getMessage());
 }
 
+foreach ([
+    ['modifier une fiche locataire', fn () => $security->checkTenantAccess($tenantA, \App\Security\SecurityAction::UPDATE_TENANT)],
+    ['créer un bail', fn () => $security->checkOrganizationAccess($orgA, \App\Security\SecurityAction::CREATE_LEASE)],
+    ['enregistrer un paiement', fn () => $security->checkOrganizationAccess($orgA, \App\Security\SecurityAction::CREATE_PAYMENT)],
+] as [$actionLabel, $assertion]) {
+    try {
+        $assertion();
+        check('Patron A ne peut pas ' . $actionLabel, false, 'aucune exception levée');
+    } catch (\App\Exception\AccessDeniedException) {
+        check('Patron A ne peut pas ' . $actionLabel, true);
+    } catch (\Throwable $e) {
+        check('Patron A ne peut pas ' . $actionLabel, false, get_class($e) . ': ' . $e->getMessage());
+    }
+}
+
+$tokenStorage->setToken($tokenAdminImmobilier);
+try {
+    $security->checkTenantAccess($tenantA, \App\Security\SecurityAction::VIEW_TENANT);
+    check('ADMIN_IMMOBILIER consulte les locataires de son organisation', true);
+} catch (\Throwable $e) {
+    check('ADMIN_IMMOBILIER consulte les locataires de son organisation', false, $e->getMessage());
+}
+try {
+    $security->checkTenantAccess($tenantA, \App\Security\SecurityAction::UPDATE_TENANT);
+    check('ADMIN_IMMOBILIER ne modifie pas les opérations locatives locales', false, 'aucune exception levée');
+} catch (\App\Exception\AccessDeniedException) {
+    check('ADMIN_IMMOBILIER ne modifie pas les opérations locatives locales', true);
+} catch (\Throwable $e) {
+    check('ADMIN_IMMOBILIER ne modifie pas les opérations locatives locales', false, get_class($e) . ': ' . $e->getMessage());
+}
+
+$tokenStorage->setToken($tokenPatronA);
+
+// Les changements résidentiels locaux sont exécutés par l'ADMIN_VILLE, pas
+// par le PATRON qui vient seulement de consulter la vue consolidée ci-dessus.
+$tokenStorage->setToken($tokenAdminVilleMovement);
 try {
     /** @var \App\Service\Rental\ResidentialMovementService $movementService */
     $movementService = $container->get(\App\Service\Rental\ResidentialMovementService::class);
@@ -955,7 +1018,7 @@ try {
         ->setMonthlyRent('400.00')->setCurrency(Currency::USD)->setStatus(LeaseStatus::DRAFT);
     $em->persist($leaseUnavailable);
     $em->flush();
-    $blockedActivation = $leaseService->activateLease((string) $leaseUnavailable->getUuid(), $patronA);
+    $blockedActivation = $leaseService->activateLease((string) $leaseUnavailable->getUuid(), $adminVilleMovement);
     $em->refresh($leaseUnavailable);
     check('Un bail ne peut pas être activé sur une unité en travaux',
         $blockedActivation->getStatus() === 409 && $leaseUnavailable->getStatus() === LeaseStatus::DRAFT,
@@ -978,7 +1041,7 @@ try {
             effectiveDate: new \DateTimeImmutable('2026-10-14'),
         ),
     );
-    check('Patron A peut consigner un mouvement dans son organization', $feedback->getStatus() === 201, 'status=' . $feedback->getStatus());
+    check('ADMIN_VILLE peut consigner un mouvement dans sa ville attribuée', $feedback->getStatus() === 201, 'status=' . $feedback->getStatus());
     $historyFeedback = $movementService->history((string) $tenantA->getUuid());
     check('L’historique renvoie le mouvement et sa date réelle',
         $historyFeedback->getStatus() === 200
@@ -1096,9 +1159,9 @@ try {
     $em->persist($occupantLease);
     $em->flush();
     $occupantDepartureRequest = new \App\Dto\Request\Rental\LeaseOccupantDepartureRequest('2026-10-15', 'Départ individuel de test');
-    $occupantDeparture = $leaseService->recordOccupantDeparture((string) $occupantLease->getUuid(), (string) $occupantLeaving->getUuid(), $occupantDepartureRequest, $patronA);
+    $occupantDeparture = $leaseService->recordOccupantDeparture((string) $occupantLease->getUuid(), (string) $occupantLeaving->getUuid(), $occupantDepartureRequest, $adminVilleMovement);
     $em->refresh($occupantLease);
-    $duplicateOccupantDeparture = $leaseService->recordOccupantDeparture((string) $occupantLease->getUuid(), (string) $occupantLeaving->getUuid(), $occupantDepartureRequest, $patronA);
+    $duplicateOccupantDeparture = $leaseService->recordOccupantDeparture((string) $occupantLease->getUuid(), (string) $occupantLeaving->getUuid(), $occupantDepartureRequest, $adminVilleMovement);
     check('Le départ d’un colocataire conserve le bail et les autres présences actives',
         $occupantDeparture->getStatus() === 200 && $occupantLease->getStatus() === LeaseStatus::ACTIVE
             && $occupantLeaving->getEndDate()?->format('Y-m-d') === '2026-10-15' && $occupantStaying->getEndDate() === null,
@@ -1107,22 +1170,23 @@ try {
     check('Un départ individuel déjà enregistré est refusé sans second effet', $duplicateOccupantDeparture->getStatus() === 409, 'status=' . $duplicateOccupantDeparture->getStatus() . ', errors=' . json_encode($duplicateOccupantDeparture->getErrors()));
     $overlappingReturn = $leaseService->addOccupant((string) $occupantLease->getUuid(), new \App\Dto\Request\Rental\LeaseOccupantRequest(
         (string) $tenantAOccupant->getUuid(), 'occupant', '2026-10-15',
-    ), $patronA);
+    ), $adminVilleMovement);
     check('Un retour ne peut pas chevaucher la présence clôturée', $overlappingReturn->getStatus() === 422, 'status=' . $overlappingReturn->getStatus());
     $validReturn = $leaseService->addOccupant((string) $occupantLease->getUuid(), new \App\Dto\Request\Rental\LeaseOccupantRequest(
         (string) $tenantAOccupant->getUuid(), 'occupant', '2026-10-16',
-    ), $patronA);
+    ), $adminVilleMovement);
     check('Un retour après le départ crée une nouvelle période et conserve l’ancienne',
         $validReturn->getStatus() === 201
             && count(array_filter($occupantLease->getOccupants()->toArray(), static fn ($entry): bool => $entry->getTenant() === $tenantAOccupant)) === 2,
         'status=' . $validReturn->getStatus());
 } catch (\Throwable $e) {
-    check('Patron A peut consigner et lire un mouvement résidentiel', false, get_class($e) . ': ' . $e->getMessage());
+    check('ADMIN_VILLE peut consigner et lire un mouvement résidentiel', false, get_class($e) . ': ' . $e->getMessage());
 }
 
 // ---------------------------------------------------------------------
 // getMembership : le rôle est résolu POUR l'organization demandée
 // ---------------------------------------------------------------------
+$tokenStorage->setToken($tokenPatronA);
 /** @var \App\Service\Identity\OrganizationService $organizationService */
 $organizationService = $container->get(\App\Service\Identity\OrganizationService::class);
 

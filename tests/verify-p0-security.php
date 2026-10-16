@@ -771,7 +771,7 @@ $rentUuidA = $rentA->getUuid()->toRfc4122();
     'PATCH',
     "/api/v1/rents/{$rentUuidA}",
     ['dueDate' => '2026-02-05', 'amount' => '500.00', 'currency' => 'USD'],
-    $tokenImmoA
+    $tokenVilleA
 );
 check(
     "le PATCH d'une échéance est accepté (200)",
@@ -862,7 +862,7 @@ check(
         'currency' => 'USD',
         'status' => 'DRAFT',
     ],
-    $tokenImmoA
+    $tokenVilleA
 );
 check(
     "un PATCH ne peut pas faire tomber un bail actif en brouillon",
@@ -882,7 +882,7 @@ check(
 );
 
 // Les transitions dédiées existent et sont soumises à leur contrôle.
-[$status] = $request('PATCH', "/api/v1/leases/{$leaseUuidA}/terminate", ['reason' => 'Test'], $tokenImmoA);
+[$status] = $request('PATCH', "/api/v1/leases/{$leaseUuidA}/terminate", ['reason' => 'Test'], $tokenVilleA);
 check('la résiliation d\'un bail actif réussit (200)', $status === 200, "obtenu {$status}");
 
 $em->clear();
@@ -895,14 +895,14 @@ check(
     'statut=' . ($bailApresResiliation?->getStatus()->value ?? 'null')
 );
 
-[$status] = $request('PATCH', "/api/v1/leases/{$leaseUuidA}/activate", null, $tokenImmoA);
+[$status] = $request('PATCH', "/api/v1/leases/{$leaseUuidA}/activate", null, $tokenVilleA);
 check(
     'un bail résilié ne peut plus être activé (409)',
     $status === 409,
     "obtenu {$status}"
 );
 
-[$status] = $request('PATCH', "/api/v1/leases/{$leaseUuidA}/cancel", ['reason' => 'Test'], $tokenImmoA);
+[$status] = $request('PATCH', "/api/v1/leases/{$leaseUuidA}/cancel", ['reason' => 'Test'], $tokenVilleA);
 check(
     'un bail résilié ne peut plus être annulé (409)',
     $status === 409,
@@ -930,24 +930,26 @@ $em->persist($leaseDraft);
 $em->flush();
 $leaseDraftUuid = $leaseDraft->getUuid()->toRfc4122();
 
-// Le PATRON administre toute son organisation : l'activation par lui est
-// voulue. Ce qui ne l'est pas, c'est piloter un bail d'une AUTRE
-// organisation — c'est la frontière à éprouver.
+// Les transitions de bail sont locales : elles sont réservées à l'ADMIN_VILLE
+// affecté à la ville du bail, même pour le PATRON de l'organisation.
 [$status] = $request('PATCH', "/api/v1/leases/{$leaseDraftUuid}/activate", null, $tokenPatronB);
 check(
-    "le PATRON de B n'active pas un bail de A (403)",
+    "le PATRON de B ne peut pas activer un bail de A (403)",
     $status === 403,
     "obtenu {$status}"
 );
 
 [$status] = $request('PATCH', "/api/v1/leases/{$leaseDraftUuid}/activate", null, $tokenPatronA);
 check(
-    "le PATRON de A active un bail de SA propre organisation (200)",
-    $status === 200,
+    "le PATRON de A ne réalise pas l'opération locale (403)",
+    $status === 403,
     "obtenu {$status}"
 );
 
-[$status] = $request('PATCH', "/api/v1/leases/{$leaseDraftUuid}/activate", null, $tokenImmoA);
+[$status] = $request('PATCH', "/api/v1/leases/{$leaseDraftUuid}/activate", null, $tokenVilleA);
+check('l’ADMIN_VILLE attribué active le bail de sa ville (200)', $status === 200, "obtenu {$status}");
+
+[$status] = $request('PATCH', "/api/v1/leases/{$leaseDraftUuid}/activate", null, $tokenVilleA);
 check(
     "un bail déjà actif ne s'active pas deux fois (409)",
     $status === 409,
@@ -964,7 +966,7 @@ check(
     'statut=' . ($bailActive?->getStatus()->value ?? 'null')
 );
 
-[$status] = $request('PATCH', "/api/v1/leases/{$leaseDraftUuid}/cancel", ['reason' => 'Erreur de saisie'], $tokenImmoA);
+[$status] = $request('PATCH', "/api/v1/leases/{$leaseDraftUuid}/cancel", ['reason' => 'Erreur de saisie'], $tokenVilleA);
 check(
     'un bail actif ne s\'annule pas mais se résilie (409)',
     $status === 409,

@@ -153,78 +153,76 @@
           "name": "Locataires",
           "menu": "Gestion immobilière → Locataires",
           "image": "patron-tenants.jpg",
-          "goal": "Consulter les locataires et les informations de location disponibles.",
+          "goal": "Suivre les occupants, les baux et les indicateurs locatifs de l’organisation.",
           "steps": [
             "Ouvrez Locataires.",
             "Recherchez par nom puis filtrez par type, occupation actuelle, plusieurs logements, bail finissant sous 30 jours, départ annoncé, mouvement des 30 derniers jours ou saisie tardive. Si l’organisation dépasse la limite chargée, l’indication de liste partielle précise que les filtres portent sur les données affichées.",
-            "Recherchez par nom ou utilisez les filtres.",
-            "Ouvrez une fiche pour consulter ses informations.",
-            "Utilisez les actions de création ou de modification proposées et vérifiez le bail associé.",
-            "Tant qu’un mouvement n’est pas réalisé, utilisez « Corriger » pour modifier ses informations ou le passer à « Annulé » ; indiquez le motif obligatoire. Un mouvement réalisé est verrouillé pour préserver le bail et les paiements déjà traités."
+            "Consultez l’historique résidentiel et les documents visibles pour vérifier les occupations et les contrats.",
+            "Comparez les situations par ville à partir des rapports et des filtres disponibles.",
+            "Transmettez les entrées, départs, transferts et corrections locales à l’ADMIN_VILLE responsable de la ville."
           ],
-          "fields": "Les champs obligatoires sont signalés dans le formulaire ; vérifiez les coordonnées et les liens de location.",
-          "result": "La fiche du locataire est enregistrée et visible dans le périmètre actif.",
-          "limits": "Les données sont isolées par organisation ; les locataires sont liés aux baux selon le modèle de l’application."
+          "fields": "Les filtres décrivent le type de personne, le logement, le bail et les mouvements récents.",
+          "result": "La vue consolidée reflète les locataires et leurs occupations dans l’organisation.",
+          "limits": "Le PATRON consulte et pilote ; il n’enregistre pas les opérations quotidiennes des villes. Les écritures locales restent réservées à l’ADMIN_VILLE affecté."
         },
         {
           "name": "Loyers",
           "menu": "Finances → Loyers",
           "image": "patron-rents.jpg",
-          "goal": "Suivre les échéances, paiements et retards des baux.",
+          "goal": "Suivre les échéances, paiements et retards de l’organisation.",
           "steps": [
             "Ouvrez Loyers.",
             "Filtrez les échéances par période ou statut.",
             "Ouvrez une échéance pour vérifier le bail, le locataire, le montant et la devise.",
-            "Enregistrez un paiement depuis l’action prévue puis vérifiez le statut actualisé."
+            "Consultez les paiements liés et les retards à traiter par les ADMIN_VILLE concernés.",
+            "Transmettez une erreur de saisie à l’ADMIN_VILLE responsable pour correction selon la procédure locale."
           ],
-          "fields": "Montant, devise, date et méthode de paiement sont à vérifier avant validation.",
-          "result": "Le paiement est ajouté à l’historique et l’état de l’échéance est recalculé.",
-          "limits": "Un paiement comptabilisé est une trace ; les devises différentes ne doivent pas être additionnées."
+          "fields": "Les tableaux présentent les échéances, paiements, devises et statuts calculés.",
+          "result": "Vous disposez d’une vue de suivi des encaissements et des risques locatifs.",
+          "limits": "Le PATRON consulte et pilote ; la saisie et la correction des paiements sont réservées à l’ADMIN_VILLE."
         },
         {
           "name": "Trésorerie",
           "menu": "Finances → Trésorerie",
           "image": "patron-treasury.jpg",
-          "goal": "Lire les entrées, les sorties et les mouvements financiers visibles pour l’organisation.",
+          "goal": "Suivre les entrées, sorties et soldes consolidés de l’organisation.",
           "steps": [
             "Ouvrez Trésorerie.",
             "Choisissez le type de mouvement ou la période si ces filtres sont présents.",
             "Consultez les recettes, dépenses et soldes par devise.",
-            "Ouvrez un mouvement pour en vérifier la provenance."
+            "Ouvrez un mouvement pour vérifier sa provenance et demandez à l’équipe locale toute explication nécessaire."
           ],
           "fields": "Les mouvements sont associés à un type, une date, un montant, une devise et une source métier.",
           "result": "La liste et les synthèses reflètent les mouvements enregistrés.",
-          "limits": "Les dépenses et paiements gardent leur devise ; une annulation comptable doit laisser une trace."
+          "limits": "La consultation consolidée n’autorise pas la saisie ni l’annulation d’écritures locales."
         },
         {
           "name": "Vitrine",
           "menu": "Gestion immobilière → Vitrine",
           "image": "patron-showcase.jpg",
-          "goal": "Consulter et gérer la présentation publique de l’organisation selon les commandes disponibles.",
+          "goal": "Consulter la présentation publique de l’organisation.",
           "steps": [
             "Ouvrez Vitrine.",
             "Vérifiez les informations, le contenu et l’état de publication affichés.",
-            "Modifiez uniquement les champs proposés.",
-            "Enregistrez puis vérifiez le résultat public lorsque l’aperçu ou le lien est disponible."
+            "Vérifiez les informations et signalez les changements nécessaires à l’ADMIN_VILLE responsable."
           ],
           "fields": "Les champs de présentation sont ceux du formulaire réel ; ne publiez pas de coordonnées internes.",
-          "result": "La présentation est actualisée selon l’état de publication choisi.",
-          "limits": "La vitrine publique ne doit pas exposer de données locatives ou confidentielles."
+          "result": "Vous contrôlez la présentation publique et repérez les informations à corriger.",
+          "limits": "Le PATRON n’effectue pas les modifications opérationnelles de la vitrine."
         },
         {
           "name": "Maintenance",
           "menu": "Opérations → Maintenance",
           "image": "patron-maintenance.jpg",
-          "goal": "Planifier et suivre les interventions liées aux biens.",
+          "goal": "Suivre les interventions et leur avancement dans l’organisation.",
           "steps": [
             "Choisissez la ville active.",
-            "Créez une intervention en sélectionnant le bien, en saisissant son titre et sa description, puis la priorité et l’échéance si nécessaire.",
-            "Consultez la liste pour la ville sélectionnée.",
-            "Utilisez Modifier, Démarrer, Terminer ou Annuler selon l’état de l’intervention."
+            "Consultez la liste pour vérifier le bien, le responsable, la priorité, l’échéance et le statut.",
+            "Transmettez toute demande ou correction à l’ADMIN_VILLE de la ville."
           ],
-          "fields": "Bien, titre et priorité sont nécessaires ; responsable et date prévue dépendent du besoin.",
-          "result": "L’intervention apparaît dans la ville choisie et son statut suit les actions enregistrées.",
-          "limits": "La liste est isolée par ville. Vérifiez la ville active avant de créer ou de mettre à jour."
+          "fields": "La vue récapitule les ordres de travail enregistrés par les équipes locales.",
+          "result": "Le suivi consolidé permet d’identifier les retards et les interventions importantes.",
+          "limits": "La création et les transitions d’intervention relèvent de l’ADMIN_VILLE affecté."
         },
         {
           "name": "Administration de l’organisation",
@@ -297,114 +295,108 @@
           "name": "Patrimoine",
           "menu": "Gestion immobilière → Patrimoine",
           "image": "immo-property.jpg",
-          "goal": "Décrire le patrimoine réel de la parcelle au bâtiment, au niveau et aux espaces locatifs, puis gérer les accès physiques.",
+          "goal": "Consulter et comparer la structure du patrimoine entre les villes de l’organisation.",
           "steps": [
-            "Ouvrez Patrimoine, puis sélectionnez la ville et la parcelle concernées.",
-            "Ajoutez les bâtiments indépendants réellement présents sur la parcelle.",
-            "Dans chaque bâtiment, créez une unité par espace réellement louable ; utilisez le numéro et le libellé du niveau pour ordonner des désignations comme sous-sol, rez-de-chaussée ou mezzanine.",
-            "Pour une maison subdivisée, reliez les espaces enfants à leur parent. Un parent ou ses subdivisions ne peuvent pas être loués simultanément.",
-            "Dans Bâtiments, choisissez « Gérer les entrées de la parcelle » pour les accès extérieurs. Dans Unités, ouvrez un bâtiment et choisissez « Gérer les accès » pour ses portes ; cochez les unités desservies par un accès partagé.",
-            "Dans Locataires, créez le bail sur un ou plusieurs espaces de la même ville et ajoutez les cotitulaires ou occupants avec leurs dates."
+            "Ouvrez Patrimoine et sélectionnez la ville, la parcelle ou le bâtiment à examiner.",
+            "Comparez les unités, niveaux, usages et disponibilités enregistrés par les équipes locales.",
+            "Ouvrez les accès liés pour consulter les baux, occupants et indicateurs disponibles.",
+            "Transmettez à l’ADMIN_VILLE toute correction de parcelle, bâtiment, niveau, unité ou accès."
           ],
-          "fields": "Les champs dépendent du niveau immobilier. Déclarez les niveaux d’un bâtiment avec une référence, un libellé, un ordre et une description, puis associez-y les unités. Un libellé libre reste possible pour les cas particuliers ; les accès, usages commerciaux et occupants ne sont renseignés que lorsque nécessaire. Pour un magasin, bureau, restaurant, entrepôt ou atelier, renseignez aussi l’activité exercée ; elle est facultative pour les autres espaces.",
-          "result": "Les espaces, baux et accès sont rattachés à leurs parents et restent bornés au périmètre autorisé.",
-          "limits": "Avant de restructurer des espaces, vérifiez les baux actifs. Les paiements historiques restent associés au bail et ne sont pas modifiés par un changement d’occupation."
+          "fields": "Les informations visibles décrivent les structures, usages, accès et relations entre espaces.",
+          "result": "La vue consolidée aide à suivre le portefeuille et à identifier les données à corriger.",
+          "limits": "L’ADMIN_IMMOBILIER consulte et supervise ; la gestion du patrimoine local est réservée à l’ADMIN_VILLE affecté."
         },
         {
           "name": "Locataires",
           "menu": "Gestion immobilière → Locataires",
           "image": "immo-tenants.jpg",
-          "goal": "Gérer les personnes, leurs occupations et leurs contrats sur les unités autorisées.",
+          "goal": "Superviser les locataires, les occupations et les contrats dans l’organisation.",
           "steps": [
             "Ouvrez Locataires dans le périmètre actif.",
             "Recherchez par nom puis filtrez par type, occupation actuelle, plusieurs logements, bail finissant sous 30 jours, départ annoncé, mouvement des 30 derniers jours ou saisie tardive. Si l’organisation dépasse la limite chargée, l’indication de liste partielle précise que les filtres portent sur les données affichées.",
-            "Créez une fiche par personne, puis démarrez la création du bail pour le titulaire principal.",
-            "Choisissez l’unité louée ; ajoutez d’autres espaces de la même ville si le contrat les réunit réellement.",
-            "Ajoutez les cotitulaires et occupants, leur rôle et leurs dates d’entrée et de sortie.",
-            "Enregistrez le bail, puis consultez l’historique résidentiel pour suivre les mouvements.",
-            "Pour un transfert effectif, créez un bail brouillon à destination avec ses conditions, puis dans l’historique choisissez le bail source, le bail brouillon et la date réelle. La validation clôt le premier et active le second.",
-            "Pour le départ d’un seul cotitulaire ou occupant, utilisez le formulaire de sortie individuelle : seule sa période se termine, le bail et les autres présences continuent.",
-            "Si un ancien occupant revient dans un bail encore actif, choisissez « Réintégrer un ancien occupant » dans l’historique et saisissez sa nouvelle date d’entrée. Une nouvelle période est créée après contrôle des chevauchements ; l’ancienne période reste conservée.",
-            "Tant qu’un mouvement n’est pas réalisé, utilisez « Corriger » pour modifier ses informations ou le passer à « Annulé » ; indiquez le motif obligatoire. Un mouvement réalisé est verrouillé pour préserver le bail et les paiements déjà traités."
+            "Ouvrez une fiche, son bail ou son historique pour vérifier la situation enregistrée.",
+            "Consultez les rapports consolidés pour repérer les villes sans mouvement, les départs en attente et les contrats à surveiller.",
+            "Coordonnez avec l’ADMIN_VILLE de la ville concernée toute entrée, création ou modification de bail, transfert, départ, retour ou correction.",
+            "N’intervenez pas directement sur une opération locale : aucune procédure d’exception n’est accordée par défaut."
           ],
-          "fields": "Le titulaire principal porte les conditions financières du bail. Les personnes supplémentaires sont reliées comme cotitulaires ou occupants avec leurs périodes propres.",
-          "result": "Le contrat conserve ses unités, son titulaire, ses occupants et ses dates ; les échéances et paiements restent rattachés au contrat.",
-          "limits": "Les personnes et unités doivent appartenir à l’organisation et à la ville autorisées. Les occupations incompatibles avec un bail actif sont refusées."
+          "fields": "Les filtres et détails présentent les dates, personnes, logements, statuts et conditions contractuelles accessibles.",
+          "result": "La supervision consolidée permet de comparer les résultats des villes et de suivre les anomalies.",
+          "limits": "L’ADMIN_IMMOBILIER supervise l’organisation. Les opérations locales sont exécutées par l’ADMIN_VILLE ; voir une donnée ne donne pas le droit de la modifier."
         },
         {
           "name": "Loyers",
           "menu": "Finances → Loyers",
           "image": "immo-rents.jpg",
-          "goal": "Suivre échéances et paiements.",
+          "goal": "Superviser les échéances, paiements et retards entre villes.",
           "steps": [
             "Ouvrez Loyers.",
             "Filtrez par période ou statut.",
             "Vérifiez bail, locataire, montant et devise.",
-            "Ajoutez le paiement par l’action disponible et vérifiez le statut."
+            "Repérez les retards et transmettez les opérations à traiter à l’ADMIN_VILLE compétent."
           ],
-          "fields": "Montant, devise, date et méthode selon l’action.",
-          "result": "Le paiement est ajouté à l’historique et le statut est recalculé.",
-          "limits": "Un paiement comptabilisé est une trace et ne se supprime pas."
+          "fields": "Les vues présentent montant, devise, date, bail et statut calculé.",
+          "result": "Vous comparez les résultats locatifs à l’échelle de l’organisation.",
+          "limits": "La saisie et la correction des paiements sont réservées à l’ADMIN_VILLE ; aucune intervention locale n’est accordée par défaut."
         },
         {
           "name": "Trésorerie",
           "menu": "Finances → Trésorerie",
           "image": "immo-treasury.jpg",
-          "goal": "Lire les entrées, sorties et soldes par devise.",
+          "goal": "Suivre les entrées, sorties et soldes consolidés par devise.",
           "steps": [
             "Ouvrez Trésorerie.",
             "Filtrez la période ou le type de mouvement.",
             "Examinez recettes et dépenses par devise.",
-            "Ouvrez un mouvement pour contrôler son origine."
+            "Ouvrez un mouvement pour contrôler son origine et demandez une explication au responsable local si nécessaire."
           ],
           "fields": "Date, source ou catégorie, montant et devise selon le mouvement.",
           "result": "Les synthèses correspondent aux mouvements enregistrés.",
-          "limits": "N’additionnez pas des devises différentes."
+          "limits": "La consultation ne permet pas de saisir ou d’annuler une écriture locale. N’additionnez pas des devises différentes."
         },
         {
           "name": "Vitrine",
           "menu": "Gestion immobilière → Vitrine",
           "image": "immo-showcase.jpg",
-          "goal": "Gérer la présentation publique de l’organisation.",
+          "goal": "Superviser la présentation publique de l’organisation.",
           "steps": [
             "Ouvrez Vitrine.",
             "Vérifiez le contenu et l’état de publication.",
-            "Modifiez les champs proposés et enregistrez.",
-            "Vérifiez l’aperçu ou le lien public s’il est disponible."
+            "Signalez à l’ADMIN_VILLE responsable les informations à corriger.",
+            "Vérifiez l’aperçu ou le lien public après la mise à jour par l’équipe locale."
           ],
           "fields": "Champs de présentation visibles dans la page.",
-          "result": "La vitrine reflète le contenu enregistré.",
-          "limits": "N’incluez pas de données privées de locataires ou d’équipe."
+          "result": "La supervision permet de contrôler l’exactitude des informations publiques.",
+          "limits": "La publication et les modifications d’unités sont des opérations locales réservées à l’ADMIN_VILLE."
         },
         {
           "name": "Personnel",
           "menu": "Opérations → Personnel",
           "image": "immo-staff.jpg",
-          "goal": "Consulter les ouvriers et leurs affectations.",
+          "goal": "Gérer le répertoire organisationnel des collaborateurs et consulter leurs affectations.",
           "steps": [
             "Ouvrez Personnel.",
             "Recherchez un membre ou filtrez par ville.",
             "Consultez les affectations via les actions de ligne.",
-            "Pour ajouter une affectation, choisissez membre et bien puis enregistrez."
+            "Créez ou mettez à jour la fiche d’un collaborateur si nécessaire.",
+            "Confiez à l’ADMIN_VILLE toute affectation locale à une ville ou à un bien."
           ],
           "fields": "Membre, fonction, ville et bien selon l’opération.",
-          "result": "La nouvelle affectation apparaît dans son périmètre.",
-          "limits": "Un membre peut avoir plusieurs affectations ; contrôlez ville et bien."
+          "result": "Le répertoire partagé reste à jour et les affectations sont suivies localement.",
+          "limits": "L’ADMIN_IMMOBILIER gère les fiches organisationnelles ; l’ADMIN_VILLE gère les affectations de sa ville."
         },
         {
           "name": "Maintenance",
           "menu": "Opérations → Maintenance",
           "image": "admin-immobilier-maintenance.jpg",
-          "goal": "Planifier et suivre les interventions par ville.",
+          "goal": "Superviser les interventions et leur avancement par ville.",
           "steps": [
             "Ouvrez Maintenance et choisissez la ville.",
-            "Créez une intervention en indiquant le bien, le titre, la description et la priorité.",
-            "Ajoutez responsable et échéance si nécessaire.",
-            "Depuis la liste, modifiez, démarrez, terminez ou annulez selon le statut."
+            "Consultez le bien, le responsable, la priorité, l’échéance et le statut.",
+            "Signalez les retards à l’ADMIN_VILLE qui gère l’intervention."
           ],
-          "fields": "Bien et titre requis ; priorité, responsable et date selon le formulaire.",
-          "result": "Le statut évolue après chaque action confirmée.",
-          "limits": "La liste est isolée par ville ; vérifiez la ville active."
+          "fields": "La liste présente les interventions enregistrées par les équipes locales.",
+          "result": "La vue consolidée facilite la détection des retards et des anomalies.",
+          "limits": "La création et les transitions locales sont réservées à l’ADMIN_VILLE affecté."
         },
         {
           "name": "Administration",
@@ -436,7 +428,7 @@
           "limits": "Elles ne changent pas les autorisations métier."
         }
       ],
-      "pageCount": 16
+      "pageCount": 15
     },
     "admin_ville": {
       "title": "Manuel d’utilisation — Administration de ville",
