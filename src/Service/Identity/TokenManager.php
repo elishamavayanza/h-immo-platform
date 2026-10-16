@@ -23,7 +23,8 @@ use Firebase\JWT\Key;
  * 1. Un changement de rôle (promotion, rétrogradation, désactivation) ne
  *    s'applique qu'aux jetons émis APRÈS ce changement. Un jeton déjà
  *    délivré reste valable jusqu'à expiration. La durée de vie est donc
- *    courte (1 h par défaut) et non renouvelable indefiniment.
+ *    courte (1 h par défaut) ; un jeton de renouvellement séparé, rotatif
+ *    et limité à 30 jours permet de prolonger une session active.
  *    `ApiTokenAuthenticator` recharge l'utilisateur en base à chaque
  *    requête et refuse un compte désactivé ou supprimé, ce qui referme
  *    le risque le plus grave indépendamment du contenu du jeton.
@@ -39,6 +40,7 @@ use Firebase\JWT\Key;
 final class TokenManager
 {
     private const ALGORITHM = 'HS256';
+    private const REFRESH_TTL_SECONDS = 2_592_000; // 30 jours
 
     private readonly string $jwtSecret;
 
@@ -91,6 +93,7 @@ final class TokenManager
         $jti = bin2hex(random_bytes(16));
 
         $claims = [
+            'tokenType' => 'access',
             'iss' => 'himmo',
             'aud' => 'himmo-api',
             'sub' => $user->uuid,
@@ -120,6 +123,34 @@ final class TokenManager
             'token' => JWT::encode($claims, $this->jwtSecret, self::ALGORITHM),
             'jti' => $jti,
             'issuedAt' => $issuedAt,
+            'expiresAt' => $expiresAt,
+        ];
+    }
+
+    /**
+     * Émet un jeton de renouvellement distinct, à usage unique.
+     * Son `jti` est consommé dans `revoked_token` à chaque rotation.
+     *
+     * @return array{token: string, jti: string, expiresAt: \DateTimeImmutable}
+     */
+    public function issueRefreshToken(SessionUserResponse $user): array
+    {
+        $issuedAt = $this->dateTime->now();
+        $expiresAt = $issuedAt->add(new \DateInterval('PT' . self::REFRESH_TTL_SECONDS . 'S'));
+        $jti = bin2hex(random_bytes(16));
+        $claims = [
+            'tokenType' => 'refresh',
+            'iss' => 'himmo',
+            'aud' => 'himmo-api',
+            'sub' => $user->uuid,
+            'jti' => $jti,
+            'iat' => $issuedAt->getTimestamp(),
+            'exp' => $expiresAt->getTimestamp(),
+        ];
+
+        return [
+            'token' => JWT::encode($claims, $this->jwtSecret, self::ALGORITHM),
+            'jti' => $jti,
             'expiresAt' => $expiresAt,
         ];
     }

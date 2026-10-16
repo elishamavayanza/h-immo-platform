@@ -73,8 +73,9 @@ final class ApiTokenAuthenticator extends AbstractAuthenticator implements Authe
 
         $jti = $claims['jti'] ?? null;
         $sub = $claims['sub'] ?? null;
+        $tokenType = $claims['tokenType'] ?? 'access';
 
-        if (!\is_string($jti) || !\is_string($sub)) {
+        if (!\is_string($jti) || !\is_string($sub) || $tokenType !== 'access') {
             throw new InvalidApiTokenException('Le jeton est incomplet.');
         }
 

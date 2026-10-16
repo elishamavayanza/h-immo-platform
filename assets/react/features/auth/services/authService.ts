@@ -9,9 +9,11 @@
 // ============================================================
 
 import { apiClient } from '../../../../services/api/client';
+import { tokenStorage } from '../../../../services/storage/storage.service';
 import type {
     LoginRequest,
     LoginResponse,
+    RefreshTokenResponse,
     LogoutResponse,
     Feedback,
     PlatformRole,
@@ -36,6 +38,11 @@ export const authService = {
         return apiClient.post<LoginResponse>('/auth/login', request);
     },
 
+    /** Renouvelle la session à partir du jeton de renouvellement rotatif. */
+    refresh(refreshToken: string) {
+        return apiClient.post<RefreshTokenResponse>('/auth/refresh', { refreshToken });
+    },
+
     /** `GET /api/auth/me` — identité re-lue en base, sans enveloppe `Feedback`. */
     me() {
         return apiClient.get<SessionUserResponse>('/auth/me');
@@ -43,7 +50,9 @@ export const authService = {
 
     /** `POST /api/auth/logout` — révoque le `jti` du jeton côté serveur. */
     logout() {
-        return apiClient.post<LogoutResponse>('/auth/logout');
+        return apiClient.post<LogoutResponse>('/auth/logout', {
+            refreshToken: tokenStorage.getRefreshToken(),
+        });
     },
 
     /**
