@@ -24,8 +24,8 @@ automatique ne serait pas sûre.
 - Pour charger un jeu, Symfony doit être en `dev` ou `test` et la base doit se
   terminer par `_dev`, `_test` ou `_demo`. Le chargeur refuse les autres noms de
   base et refuse toujours l’environnement `prod`.
-- Les commandes n’affichent aucun mot de passe ni secret. Aucun compte
-  authentifiable n’est créé.
+- Les comptes de test ne sont créés que sur demande, dans une organisation démo
+  d’une base autorisée. Le mot de passe choisi reste masqué dans le terminal.
 - Le slug réservé est une étiquette machine explicite, pas une détection par
   nom de personne ou par texte « test/demo/exemple ».
 
@@ -38,9 +38,43 @@ php bin/console app:system:check
 php bin/console app:demo:load --scenario=small --seed=20261016 --dry-run
 php bin/console app:demo:load --scenario=complete --seed=20261016 --dry-run
 php bin/console app:demo:load --scenario=complete --seed=20261016
+php bin/console app:demo:accounts --scenario=complete --seed=20261016
+php bin/console app:demo:tenants --scenario=complete --seed=20261016 --count=3
 php bin/console app:demo:status
 php bin/console app:demo:check
 ```
+
+Pour activer les comptes de test sur le jeu `complete` déjà créé avec la seed
+`20261021`, demande un mot de passe temporaire masqué dans le terminal, puis
+lance la commande :
+
+```bash
+read -rsp 'Mot de passe temporaire (6 caractères minimum) : ' DEMO_TEST_PASSWORD
+printf '\n'
+export DEMO_TEST_PASSWORD
+DATABASE_URL="$DATABASE_URL_TEST" php bin/console app:demo:accounts --scenario=complete --seed=20261021 --env=dev
+unset DEMO_TEST_PASSWORD
+```
+
+La commande crée un SUPER_ADMIN et quatre membres de l’organisation : un
+PATRON, un ADMIN_IMMOBILIER et deux ADMIN_VILLE affectés chacun à une ville
+différente. Le même mot de passe temporaire est haché pour ces cinq comptes ;
+la commande ne l’affiche jamais. Elle refuse une création partielle si des
+adresses réservées sont déjà utilisées. Si les comptes existent déjà, elle ne
+change ni les rôles ni les mots de passe.
+
+Pour ajouter trois locataires fictifs au même jeu (et de façon idempotente) :
+
+```bash
+DATABASE_URL="$DATABASE_URL_TEST" php bin/console app:demo:tenants --scenario=complete --seed=20261021 --count=3 --env=dev
+DATABASE_URL="$DATABASE_URL_TEST" php bin/console app:demo:check --env=dev
+DATABASE_URL="$DATABASE_URL_TEST" php bin/console app:demo:status --env=dev
+```
+
+Les adresses des locataires utilisent le domaine réservé `example.invalid`.
+`--count` accepte de 1 à 50 ; répéter la commande avec la même seed et le même
+nombre ne duplique pas les locataires. Un nombre supérieur ajoute uniquement
+les locataires manquants.
 
 Sur une base dédiée dont le nom se termine par `_test`, `_dev` ou `_demo`, le
 script `php tests/verify-demo-commands.php` vérifie les scénarios `small` et
@@ -68,19 +102,19 @@ paramètres n’ajoutent donc pas de doublons ni ne modifient les données.
 volumes prévus sans écrire.
 
 `app:demo:status` présente des agrégats uniquement, sans e-mails, noms ou autres
-données personnelles. `app:demo:check` vérifie le rattachement des éléments
-immobiliers au jeu marqué et l’absence de publication de la vitrine.
+données personnelles. `app:demo:check` vérifie les relations immobilières et
+de locataires, le périmètre des ADMIN_VILLE et la séparation du SUPER_ADMIN.
 
 ## Limites connues
 
-Cette première version ne génère pas d’utilisateurs PATRON/ADMIN_IMMOBILIER/
-ADMIN_VILLE, de baux, de mouvements résidentiels, de loyers, de paiements,
-dépenses, opérations de trésorerie ni rapports financiers. Elle ne prétend donc
-pas valider les calculs monétaires ou l’isolation API par rôle. Ces écritures
-doivent emprunter les services métier existants (notamment les transitions de
-bail et l’enregistrement immuable des paiements), et nécessitent un jeu de tests
-spécifique avant d’être ajoutées au générateur. Les comptes de test et mots de
-passe n’existent pas.
+Les commandes créent maintenant les comptes de test et les locataires
+supplémentaires. Elles ne génèrent pas encore de baux, de mouvements
+résidentiels, de loyers, de paiements, de dépenses, d’opérations de trésorerie
+ni de rapports financiers. Les comptes facilitent les essais d’interface, mais
+ils ne remplacent pas des tests d’isolation API automatisés pour chaque rôle.
+Les opérations financières devront emprunter les services métier existants
+(notamment les transitions de bail et l’enregistrement immuable des paiements)
+et être vérifiées par des scripts de test dédiés.
 
 La réinitialisation est volontairement absente : `app:demo:reset` ne doit être
 ajoutée qu’avec une traçabilité fiable de toutes les données créées, un plan de

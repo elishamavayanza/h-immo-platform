@@ -11,13 +11,14 @@ encore. Pour les commandes déjà disponibles, voir
 
 Le dépôt utilise Symfony 7.4, Doctrine ORM et MariaDB. Les rôles sont des enums
 et les accès métier sont vérifiés par `SecurityService`. Les commandes
-`app:system:init`, `app:system:check`, `app:demo:load`, `app:demo:check` et
-`app:demo:status` sont disponibles.
+`app:system:init`, `app:system:check`, `app:demo:load`, `app:demo:accounts`,
+`app:demo:tenants`, `app:demo:check` et `app:demo:status` sont disponibles.
 
-Le générateur crée actuellement une organisation non publiée, des villes,
-parcelles, bâtiments, niveaux, unités disponibles et locataires. Il ne crée
-pas de comptes, baux, mouvements résidentiels ni transactions financières.
-Il n’existe pas de commande de réinitialisation.
+Le générateur crée une organisation non publiée, des villes, parcelles,
+bâtiments, niveaux, unités disponibles et locataires. Les commandes démo
+peuvent aussi créer les comptes des rôles et ajouter des locataires. Les baux,
+mouvements résidentiels et transactions financières ne sont pas encore
+générés. Il n’existe pas de commande de réinitialisation.
 
 ## 2. Préparer une base réservée aux tests
 
@@ -60,9 +61,23 @@ réutiliser ses seeds réservées si elles existent déjà dans cette base. Pour
 consulter les volumes `small` et `complete` ainsi que l’idempotence, lancer
 également ce script après chaque changement du générateur.
 
-## 4. Ajouter les comptes et les périmètres par rôle
+## 4. Préparer les comptes et tester les périmètres par rôle
 
-Avant de modifier le générateur, relire les entités et services réels :
+La commande `app:demo:accounts --scenario=complete --seed=<seed>` crée déjà cinq
+comptes actifs : un SUPER_ADMIN, un PATRON, un ADMIN_IMMOBILIER et deux
+ADMIN_VILLE affectés chacun à une ville. Elle exige `DEMO_TEST_PASSWORD` (6
+caractères minimum), n’affiche pas le mot de passe et refuse les bases hors
+`dev`/`test` ou dont le nom n’a pas un suffixe sûr. Pour l’utiliser dans une
+base dédiée, suivre les commandes de `demo-data.md`.
+
+Le script `tests/verify-demo-commands.php` contrôle leur nombre, leurs rôles,
+leurs périmètres, le hash du mot de passe, et l’idempotence sans laisser de
+données après le rollback. Il ne vérifie pas encore le parcours de connexion
+HTTP ni les réponses des endpoints métier pour chaque rôle ; c’est la suite de
+cette étape.
+
+Avant d’ajouter d’autres comptes ou de modifier leurs permissions, relire les
+entités et services réels :
 
 - `User`, `OrganizationUser` et `UserCity` ;
 - `UserService`, `OrganizationUserService` et `UserCityService` ;
@@ -74,14 +89,11 @@ Puis procéder ainsi :
 1. Définir un jeu comprenant deux organisations fictives et plusieurs villes
    dans chacune. Une seule organisation ne permet pas de prouver l’isolation
    inter-organisation.
-2. Créer des membres distincts pour `PATRON`, `ADMIN_IMMOBILIER` et
-   `ADMIN_VILLE`, rattachés par `OrganizationUser`. Ajouter au moins deux
-   comptes `ADMIN_VILLE` avec des périmètres `UserCity` disjoints.
-3. Décider explicitement du mode d’authentification des comptes de test. Ne
-   jamais inclure de mot de passe réutilisable dans le code, les fixtures, la
-   documentation ou les logs. Si des mots de passe temporaires sont nécessaires
-   pour les tests HTTP, les injecter par variable d’environnement de test et ne
-   les utiliser que sur la base dédiée.
+2. Laisser les comptes créés par la commande dédiés à l’organisation sélectionnée.
+   Ne pas réutiliser les comptes entre organisations pour les tests d’isolation.
+3. Garder les mots de passe hors du code, des fixtures, de la documentation et
+   des logs. La commande les reçoit par variable d’environnement et ne les
+   affiche pas ; pour les tests HTTP, utiliser exclusivement une base dédiée.
 4. Garantir que chaque compte de test est rattaché uniquement aux organisations
    fictives concernées. L’e-mail étant globalement unique, produire des adresses
    stables avec un domaine réservé aux tests (`example.invalid`).
@@ -90,11 +102,18 @@ Puis procéder ainsi :
 6. Étendre `app:demo:check` pour signaler les membres sans organisation, les
    rôles incohérents et les administrateurs de ville sans périmètre.
 
-## 5. Générer les occupations et l’historique résidentiel
+## 5. Compléter les locataires, puis générer les occupations
 
-Relire `LeaseService`, `ResidentialMovementService`, les DTOs et les entités
-`Lease`, `LeaseUnit`, `LeaseOccupant` et `ResidentialMovement` avant d’écrire
-des fixtures. Utiliser les services métier existants pour créer et faire
+La commande `app:demo:tenants --scenario=complete --seed=<seed> --count=<n>`
+ajoute des locataires fictifs à l’organisation déjà créée. Elle est
+idempotente, lie les locataires à des villes de cette organisation et limite
+`--count` à 50. Le test transactionnel couvre l’ajout et la répétition de la
+commande.
+
+Pour les contrats et mouvements, relire `LeaseService`,
+`ResidentialMovementService`, les DTOs et les entités `Lease`, `LeaseUnit`,
+`LeaseOccupant` et `ResidentialMovement` avant d’écrire des fixtures.
+Utiliser les services métier existants pour créer et faire
 transitionner les baux ; ne pas dupliquer leurs règles dans la commande.
 
 Construire ensuite, par seed, plusieurs cas distincts : unité vacante, bail
@@ -194,8 +213,8 @@ une base de production.
 ## Critères pour déclarer le travail terminé
 
 - `small` et `complete` sont reproductibles, transactionnels et idempotents ;
-- des comptes des quatre rôles permettent de tester les permissions sans
-  secrets codés en dur ;
+- des comptes des quatre rôles existent et leurs parcours de connexion et
+  permissions API sont testés sans secrets codés en dur ;
 - les organisations et villes concurrentes prouvent les refus d’accès API ;
 - les baux et mouvements sont cohérents avec les unités et leurs dates ;
 - échéances, paiements partiels/complets, retards, dépenses et rapports sont

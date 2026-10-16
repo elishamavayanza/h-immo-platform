@@ -1,10 +1,20 @@
 # Rapport de contrôle qualité des manuels Soft-IMMO
 
-**Révision :** 1.2.0 — 16 octobre 2026
+**Révision :** 1.3.2 — 16 octobre 2026
 **Sources :** `catalog.json` et `tools/generate_user_manuals.py`  
 **PDF concernés :** SUPER_ADMIN, PATRON, ADMIN_IMMOBILIER et ADMIN_VILLE.
 
-## Modifications effectuées
+## Révision 1.3.2 — Alignement des PDF sur le manuel web
+
+- Régénération des quatre guides depuis le catalogue partagé avec le lecteur web : mêmes écrans, étapes, champs à vérifier, résultats attendus et limites d’accès.
+- Ajout d’une entrée de table des matières pour chaque action décrite sur les écrans, afin de retrouver directement une procédure.
+- Ajout d’encadrés textuels par écran pour la préparation, la réussite et les erreurs, avec des pictogrammes vectoriels nets.
+- Retrait des captures d’écran des quatre PDF et des références aux captures dans le catalogue. Seul le logo de couverture reste une image ; le contenu opérationnel est du texte sélectionnable.
+- Conservation des images de pages générées depuis le PDF pour le lecteur web : elles sont des rendus du document, et non des captures de l’interface.
+- Contrôles exécutés : génération des quatre PDF, extraction du texte, vérification de chaque écran et de chaque étape par rôle, 199 contrôles PHP sans échec, rendu de toutes les pages et revue visuelle des quatre documents.
+- Pagination après enrichissement : 11 pages (SUPER_ADMIN), 17 (PATRON), 19 (ADMIN_IMMOBILIER) et 17 (ADMIN_VILLE).
+
+## Modifications effectuées lors des révisions précédentes
 
 - Remplacement de DejaVu Sans par Times New Roman dans les quatre documents, avec polices normale, grasse et italique intégrées.
 - Mise à jour de la hiérarchie : couverture 27 pt, chapitres 18 pt, sous-titres 14 pt, texte 11,5 pt, légendes 9,5 pt, en-têtes et pieds de page 9 pt.
@@ -47,7 +57,11 @@
 - Connexion réellement vérifiée dans le navigateur pour les quatre rôles avec des comptes et des données synthétiques sur `gestion_himmo_security_test` : SUPER_ADMIN, PATRON, ADMIN_IMMOBILIER et ADMIN_VILLE. Les quatre tableaux de bord se sont ouverts en thème clair ; le tableau ADMIN_VILLE affichait le périmètre Bukavu.
 - Contrôle de la console navigateur après ces parcours : aucune erreur console relevée. Ce contrôle ne couvre pas chaque action de chaque module.
 
-## Points restant à traiter avant une validation complète
+## Constats des révisions antérieures à 1.3.2
+
+Les points ci-dessous décrivent l’état antérieur à la présente révision. Les remarques sur les captures ne s’appliquent plus aux PDF régénérés en version 1.3.2.
+
+## Points restant à traiter avant une validation complète des parcours métier
 
 - Les 36 captures conservées dans les PDF n’ont pas toutes été reprises depuis l’application pendant cette révision. Les captures de SUPER_ADMIN, PATRON et ADMIN_VILLE sont encore en thème sombre ; celles d’ADMIN_IMMOBILIER sont en thème clair. Le critère « toutes les captures en thème clair » n’est donc pas satisfait.
 - Les captures ne comportent pas encore de flèches, cercles ou numéros d’étapes vérifiés sur les vrais contrôles. Les légendes ne remplacent pas ces annotations.
