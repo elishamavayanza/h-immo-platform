@@ -30,6 +30,9 @@ final readonly class PaymentResponse
         #[OA\Property(description: 'UUID public de l\'agent ayant enregistré le paiement', format: 'uuid', example: 'd5e6f7a8-b9c0-1d2e-3f4a-5b6c7d8e9f0a')]
         public string $createdById,
 
+        #[OA\Property(description: 'Nom affichable de l\'utilisateur ayant enregistré le paiement')]
+        public string $createdByName,
+
         #[OA\Property(description: 'Montant versé', example: '450.00')]
         public string $amount,
 
@@ -45,8 +48,8 @@ final readonly class PaymentResponse
         #[OA\Property(description: 'Devise d\'origine du montant. Null si pas de conversion.', type: 'string', example: 'USD', enum: Currency::class, nullable: true)]
         public ?Currency $originalCurrency,
 
-        #[OA\Property(description: 'Date effectuation du paiement', format: 'date-time', example: '2026-03-02T10:15:00Z')]
-        public \DateTimeImmutable $paymentDate,
+        #[OA\Property(description: 'Date civile réelle du paiement', format: 'date', example: '2026-03-02')]
+        public string $paymentDate,
 
         #[OA\Property(description: 'Mode de règlement utilisé', type: 'string', example: 'mobile_money', enum: PaymentMethod::class)]
         public PaymentMethod $method,
@@ -80,12 +83,13 @@ final readonly class PaymentResponse
             id: (string) $payment->getUuid(),
             rentId: (string) $payment->getRent()->getUuid(),
             createdById: (string) $payment->getCreatedBy()->getUuid(),
+            createdByName: $payment->getCreatedBy()->getFullName(),
             amount: $payment->getAmount(),
             currency: $payment->getCurrency(),
             exchangeRate: $payment->getExchangeRate(),
             originalAmount: $payment->getOriginalAmount(),
             originalCurrency: $payment->getOriginalCurrency(),
-            paymentDate: $payment->getPaymentDate(),
+            paymentDate: $payment->getPaymentDate()->format('Y-m-d'),
             method: $payment->getMethod(),
             reference: $payment->getReference(),
             receiptNumber: $payment->getReceiptNumber(),

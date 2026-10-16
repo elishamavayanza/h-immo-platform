@@ -81,7 +81,7 @@ final class MaintenanceWorkOrderController extends AbstractController
             return $this->feedbackError('Utilisateur non authentifié.', 401);
         }
         try {
-            $data = $this->workOrders->transition($user, $uuid, $request->organizationUuid, $request->cityUuid, $request->status);
+            $data = $this->workOrders->transition($user, $uuid, $request->organizationUuid, $request->cityUuid, $request->status, $request->completedAt);
         } catch (\InvalidArgumentException $error) {
             return $this->feedbackError($error->getMessage(), 422);
         }

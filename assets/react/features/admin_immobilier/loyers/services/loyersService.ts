@@ -107,6 +107,8 @@ export interface LoyerPaymentActivity {
     amount: string;
     currency: string;
     paymentDate: string;
+    createdAt: string;
+    createdByName: string;
     isReversal: boolean;
     isReversed: boolean;
 }

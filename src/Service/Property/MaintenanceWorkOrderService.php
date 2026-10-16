@@ -63,6 +63,10 @@ final readonly class MaintenanceWorkOrderService
         [$organization, $city] = $this->scope($user, $request->organizationUuid, $request->cityUuid, SecurityAction::CREATE_MAINTENANCE);
         [$parcel, $building, $unit] = $this->resolveAsset($request, $city);
         $assignment = $this->resolveAssignment($request->workerAssignmentUuid, $city);
+        $reportedAt = $request->reportedAt === null ? $this->dateTime->today() : $this->dateTime->parseDate($request->reportedAt);
+        if ($reportedAt === null || $reportedAt > $this->dateTime->today()) {
+            throw new \InvalidArgumentException('La date du signalement doit être une date valide, aujourd’hui ou antérieure.');
+        }
         $dueDate = $request->dueDate === null ? null : $this->dateTime->parseDate($request->dueDate);
         if ($request->dueDate !== null && ($dueDate === null || $dueDate < $this->dateTime->today())) {
             throw new \InvalidArgumentException('La date prévue doit être valide et ne peut pas être passée.');
@@ -78,12 +82,12 @@ final readonly class MaintenanceWorkOrderService
         $workOrder = (new MaintenanceWorkOrder())
             ->setOrganization($organization)->setCity($city)->setParcel($parcel)->setBuilding($building)->setUnit($unit)
             ->setWorkerAssignment($assignment)->setCreatedBy($user)->setTitle(trim($request->title))
-            ->setDescription(trim($request->description))->setPriority($priority)->setReportedAt($this->dateTime->today())->setDueDate($dueDate);
+            ->setDescription(trim($request->description))->setPriority($priority)->setReportedAt($reportedAt)->setDueDate($dueDate);
         $this->entityManager->persist($workOrder);
         $this->entityManager->flush();
         $id = $workOrder->getId() ?? throw new \LogicException('L’intervention de maintenance n’a pas reçu son identifiant.');
         $this->auditLog->log('CREATE_MAINTENANCE_WORK_ORDER', MaintenanceWorkOrder::class, $id, $organization, $user, null, [
-            'cityUuid' => $city->getUuid()->toRfc4122(), 'priority' => $priority->value, 'target' => $this->targetType($parcel, $building, $unit),
+            'cityUuid' => $city->getUuid()->toRfc4122(), 'priority' => $priority->value, 'reportedAt' => $reportedAt->format('Y-m-d'), 'target' => $this->targetType($parcel, $building, $unit),
         ]);
 
         return $this->present($workOrder);
@@ -99,6 +103,10 @@ final readonly class MaintenanceWorkOrderService
             throw new \InvalidArgumentException('Une intervention terminée ou annulée ne peut plus être modifiée.');
         }
         $assignment = $this->resolveAssignment($request->workerAssignmentUuid, $city);
+        $reportedAt = $request->reportedAt === null ? $workOrder->getReportedAt() : $this->dateTime->parseDate($request->reportedAt);
+        if ($reportedAt === null || $reportedAt > $this->dateTime->today()) {
+            throw new \InvalidArgumentException('La date du signalement doit être une date valide, aujourd’hui ou antérieure.');
+        }
         $dueDate = $request->dueDate === null ? null : $this->dateTime->parseDate($request->dueDate);
         if ($request->dueDate !== null && ($dueDate === null || $dueDate < $this->dateTime->today())) {
             throw new \InvalidArgumentException('La date prévue doit être valide et ne peut pas être passée.');
@@ -110,19 +118,19 @@ final readonly class MaintenanceWorkOrderService
         if (trim($request->title) === '' || trim($request->description) === '') {
             throw new \InvalidArgumentException('Le titre et la description sont obligatoires.');
         }
-        $old = ['title' => $workOrder->getTitle(), 'priority' => $workOrder->getPriority()->value, 'dueDate' => $workOrder->getDueDate()?->format('Y-m-d')];
+        $old = ['title' => $workOrder->getTitle(), 'priority' => $workOrder->getPriority()->value, 'reportedAt' => $workOrder->getReportedAt()->format('Y-m-d'), 'dueDate' => $workOrder->getDueDate()?->format('Y-m-d')];
         $workOrder->setTitle(trim($request->title))->setDescription(trim($request->description))->setPriority($priority)
-            ->setWorkerAssignment($assignment)->setDueDate($dueDate)->setUpdatedAt($this->dateTime->now());
+            ->setWorkerAssignment($assignment)->setReportedAt($reportedAt)->setDueDate($dueDate)->setUpdatedAt($this->dateTime->now());
         $this->entityManager->flush();
         $this->auditLog->log('UPDATE_MAINTENANCE_WORK_ORDER', MaintenanceWorkOrder::class, $workOrder->getId() ?? 0, $organization, $user, $old, [
-            'title' => $workOrder->getTitle(), 'priority' => $priority->value, 'dueDate' => $dueDate?->format('Y-m-d'),
+            'title' => $workOrder->getTitle(), 'priority' => $priority->value, 'reportedAt' => $reportedAt->format('Y-m-d'), 'dueDate' => $dueDate?->format('Y-m-d'),
         ]);
 
         return $this->present($workOrder);
     }
 
     /** @return array<string, mixed> */
-    public function transition(User $user, string $uuid, string $organizationUuid, string $cityUuid, string $status): array
+    public function transition(User $user, string $uuid, string $organizationUuid, string $cityUuid, string $status, ?string $completedAt = null): array
     {
         $workOrder = $this->find($uuid);
         [$organization, $city] = $this->scope($user, $organizationUuid, $cityUuid, SecurityAction::UPDATE_MAINTENANCE);
@@ -132,9 +140,25 @@ final readonly class MaintenanceWorkOrderService
             throw new \InvalidArgumentException('Transition d’état non autorisée.');
         }
         $previous = $workOrder->getStatus();
-        $workOrder->setStatus($next)->setCompletedAt($next === MaintenanceStatus::COMPLETED ? $this->dateTime->today() : null)->setUpdatedAt($this->dateTime->now());
+        $completionDate = null;
+        if ($next === MaintenanceStatus::COMPLETED) {
+            $completionDate = $completedAt === null ? $this->dateTime->today() : $this->dateTime->parseDate($completedAt);
+            if ($completionDate === null || $completionDate > $this->dateTime->today() || $completionDate < $workOrder->getReportedAt()) {
+                throw new \InvalidArgumentException('La date d’achèvement doit être valide, comprise entre le signalement et aujourd’hui.');
+            }
+        }
+        $previousCompletionDate = $workOrder->getCompletedAt()?->format('Y-m-d');
+        $workOrder->setStatus($next)->setCompletedAt($completionDate)->setUpdatedAt($this->dateTime->now());
         $this->entityManager->flush();
-        $this->auditLog->log('TRANSITION_MAINTENANCE_WORK_ORDER', MaintenanceWorkOrder::class, $workOrder->getId() ?? 0, $organization, $user, ['status' => $previous->value], ['status' => $next->value]);
+        $this->auditLog->log(
+            'TRANSITION_MAINTENANCE_WORK_ORDER',
+            MaintenanceWorkOrder::class,
+            $workOrder->getId() ?? 0,
+            $organization,
+            $user,
+            ['status' => $previous->value, 'completedAt' => $previousCompletionDate],
+            ['status' => $next->value, 'completedAt' => $completionDate?->format('Y-m-d')],
+        );
 
         return $this->present($workOrder);
     }
@@ -232,7 +256,8 @@ final readonly class MaintenanceWorkOrderService
             'workerAssignmentUuid' => $workOrder->getWorkerAssignment()?->getUuid()->toRfc4122(),
             'workerName' => $workOrder->getWorkerAssignment()?->getWorker()->getFullName(),
             'reportedAt' => $workOrder->getReportedAt()->format('Y-m-d'), 'dueDate' => $workOrder->getDueDate()?->format('Y-m-d'),
-            'completedAt' => $workOrder->getCompletedAt()?->format('Y-m-d'), 'createdBy' => $workOrder->getCreatedBy()->getFullName(),
+            'completedAt' => $workOrder->getCompletedAt()?->format('Y-m-d'), 'createdAt' => $workOrder->getCreatedAt()->format(DATE_ATOM),
+            'createdBy' => $workOrder->getCreatedBy()->getFullName(),
         ];
     }
 

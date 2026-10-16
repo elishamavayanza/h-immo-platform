@@ -120,6 +120,11 @@ final readonly class PaymentService
                 $payment->setRent($lockedRent);
                 $payment->setCreatedBy($currentUser);
                 $this->paymentMapper->copyToEntity($request, $payment);
+                $paymentDate = $request->paymentDate === null ? null : $this->dateTime->parseDate($request->paymentDate);
+                if ($paymentDate === null) {
+                    throw new \LogicException('La date du paiement a passé la validation sans être interprétable.');
+                }
+                $payment->setPaymentDate($paymentDate);
 
                 $this->entityManager->persist($payment);
                 // L'identifiant interne est nécessaire pour rattacher le journal
@@ -163,8 +168,8 @@ final readonly class PaymentService
 
         return $feedback
             ->setFlushDescription('Le paiement a été enregistré avec succès.')
-            ->setStatus(201)
-            ->autoInitFlush();
+            ->autoInitFlush()
+            ->setStatus(201);
     }
 
     /**
@@ -174,6 +179,15 @@ final readonly class PaymentService
      */
     private function preValidatePayment(Rent $rent, PaymentRequest $request): ?array
     {
+        $paymentDate = $request->paymentDate === null ? null : $this->dateTime->parseDate($request->paymentDate);
+        if ($paymentDate === null || $paymentDate > $this->dateTime->today()) {
+            return [
+                'field' => 'paymentDate',
+                'message' => 'La date du paiement doit être valide et ne peut pas être dans le futur.',
+                'status' => 422,
+            ];
+        }
+
         // 1) Bail doit être ACTIVE
         $lease = $rent->getLease();
         if ($lease->getStatus() !== \App\Enum\LeaseStatus::ACTIVE) {

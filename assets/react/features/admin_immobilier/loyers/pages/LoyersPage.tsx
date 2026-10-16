@@ -15,6 +15,7 @@ import { FormField } from '../../../../components/Forms/FormField';
 import { Modal } from '../../../../components/UI/Modal';
 import { RightSidebar } from '../../../../components/Navigation/RightSidebar';
 import { useOrganization } from '../../../../app/providers/OrganizationProvider';
+import { formatCivilDate, localDateInputValue } from '../../../../utils/dateUtils';
 import { useLoyers } from '../hooks/useLoyers';
 import { LoyersTable } from '../components/LoyersTable';
 import { fieldErrorMap } from '../../../shared/utils/actionErrors';
@@ -85,7 +86,7 @@ export function LoyersPage({ readOnly = false }: { readOnly?: boolean } = {}) {
         : recentRows;
     const calendarEvents: ActivityCalendarEvent[] = [
         ...filteredMonthRents.map((row) => ({ date: row.dueDate, title: `Échéance · ${row.tenant}`, detail: `${row.amount} ${row.currency} · ${row.status === 'overdue' ? 'En retard' : row.status}`, tone: row.status === 'overdue' ? 'error' as const : 'info' as const })),
-        ...paymentEvents.map((payment) => ({ date: payment.paymentDate, title: payment.isReversal ? 'Contre-écriture de paiement' : 'Paiement de loyer', detail: `${payment.amount} ${payment.currency}`, tone: payment.isReversal ? 'warning' as const : 'success' as const })),
+        ...paymentEvents.map((payment) => ({ date: payment.paymentDate, title: payment.isReversal ? 'Contre-écriture de paiement' : 'Paiement de loyer', detail: `${payment.amount} ${payment.currency} · effectué le ${formatCivilDate(payment.paymentDate)} · enregistré le ${new Date(payment.createdAt).toLocaleString('fr-FR')} par ${payment.createdByName}`, tone: payment.isReversal ? 'warning' as const : 'success' as const })),
     ];
 
     const [paymentModalOpen, setPaymentModalOpen] = useState(false);
@@ -117,7 +118,7 @@ export function LoyersPage({ readOnly = false }: { readOnly?: boolean } = {}) {
         setPaymentForm({
             amount: target.amount,
             currency: target.currency as 'USD' | 'CDF',
-            paymentDate: new Date().toISOString().split('T')[0],
+            paymentDate: localDateInputValue(),
             method: '',
             reference: '',
             notes: '',
@@ -234,6 +235,7 @@ export function LoyersPage({ readOnly = false }: { readOnly?: boolean } = {}) {
         >
             <form id="payment-form" className="organization-management-form" onSubmit={submitPayment}>
                 <p className="organization-management-form__hint">Le montant ne doit pas dépasser le solde dû de l'échéance.</p>
+                <p className="organization-management-form__hint">Indiquez la date réelle du paiement. Vous pouvez choisir une date passée si le paiement a été saisi plus tard; la date d’enregistrement et votre identité sont conservées automatiquement.</p>
                 <FormField label="Montant" htmlFor="payment-amount" required error={paymentFormErrors.amount}>
                     <Input id="payment-amount" type="number" step="0.01" min="0.01" inputMode="decimal" value={paymentForm.amount} onChange={(event) => setPaymentForm((current) => ({ ...current, amount: event.target.value }))} placeholder="Ex. : 500.00" required fullWidth />
                 </FormField>
