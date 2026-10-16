@@ -101,17 +101,17 @@ export function useLoyers() {
     useEffect(() => { void reload(); }, [reload]);
 
     const recordPaymentAction = useCallback(async (payload: RecordPaymentPayload): Promise<void> => {
-        await runAction(push, 'Paiement enregistré.', () => recordPayment(payload));
+        await runAction(push, 'Le paiement du loyer a été enregistré.', () => recordPayment(payload));
         await reload();
     }, [push, reload]);
 
     const markOverdueAction = useCallback(async (rentUuid: string): Promise<void> => {
-        await runAction(push, 'Échéance marquée comme impayée.', () => markRentOverdue(rentUuid));
+        await runAction(push, 'L’échéance de loyer a été marquée comme impayée.', () => markRentOverdue(rentUuid));
         await reload();
     }, [push, reload]);
 
     const updateRentAction = useCallback(async (rentUuid: string, payload: UpdateRentPayload): Promise<void> => {
-        await runAction(push, 'Échéance mise à jour.', () => updateRent(rentUuid, payload));
+        await runAction(push, 'Les informations de l’échéance de loyer ont été modifiées.', () => updateRent(rentUuid, payload));
         await reload();
     }, [push, reload]);
 

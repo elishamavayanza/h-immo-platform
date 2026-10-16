@@ -92,22 +92,22 @@ export function useLocataires() {
     }, [pending, reload, push]);
 
     const createTenantAction = useCallback(async (payload: CreateTenantPayload): Promise<void> => {
-        await runAction(push, 'Locataire créé.', () => createTenant(payload));
+        await runAction(push, 'La fiche du locataire a été créée.', () => createTenant(payload));
         await reload();
     }, [push, reload]);
 
     const updateTenantAction = useCallback(async (uuid: string, payload: UpdateTenantPayload): Promise<void> => {
-        await runAction(push, 'Locataire mis à jour.', () => updateTenant(uuid, payload));
+        await runAction(push, 'La fiche du locataire a été mise à jour.', () => updateTenant(uuid, payload));
         await reload();
     }, [push, reload]);
 
     const createLeaseAction = useCallback(async (payload: CreateLeasePayload): Promise<void> => {
-        await runAction(push, 'Bail créé.', () => createLease(payload));
+        await runAction(push, 'Le bail de location a été créé.', () => createLease(payload));
         await reload();
     }, [push, reload]);
 
     const activateLeaseAction = useCallback(async (leaseUuid: string): Promise<void> => {
-        await runAction(push, 'Bail activé.', () => activateLease(leaseUuid));
+        await runAction(push, 'Le bail de location a été activé.', () => activateLease(leaseUuid));
         await reload();
     }, [push, reload]);
 

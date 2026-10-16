@@ -73,15 +73,17 @@ export function RoleAssignmentsPanel() {
             push('error', 'Choisissez au moins une ville pour l’accès Administrateur de ville.');
             return;
         }
+        const candidate = eligibleCandidates.find(item => item.uuid === candidateUuid);
+        const roleLabel = ROLE_LABEL[role];
         setSaving(true);
         try {
             const message = await administrationService.assignExistingRole({ organizationUuid, userUuid: candidateUuid, role, cityUuids: role === 'admin_ville' ? cityUuids : [] });
-            push('success', message ?? 'Le nouvel espace a été attribué.');
+            push('success', message ?? `L’accès ${roleLabel} a été attribué à ${candidate?.name ?? 'ce membre'}.`);
             setCandidateUuid('');
             setCityUuids([]);
             await reload();
         } catch (cause) {
-            push('error', cause instanceof Error ? cause.message : 'L’affectation a échoué.');
+            push('error', cause instanceof Error ? `Impossible d’attribuer l’accès ${roleLabel} : ${cause.message}` : `Impossible d’attribuer l’accès ${roleLabel}.`);
         } finally {
             setSaving(false);
         }
@@ -89,14 +91,15 @@ export function RoleAssignmentsPanel() {
 
     const revoke = async () => {
         if (!pendingRevoke || revoking) return;
+        const assignment = pendingRevoke;
         setRevoking(true);
         try {
-            const message = await administrationService.revokeRole(pendingRevoke.assignmentUuid);
-            push('success', message ?? 'L’affectation a été retirée.');
+            const message = await administrationService.revokeRole(assignment.assignmentUuid);
+            push('success', message ?? `L’accès ${ROLE_LABEL[assignment.role]} de ${assignment.name} a été retiré.`);
             setPendingRevoke(null);
             await reload();
         } catch (cause) {
-            push('error', cause instanceof Error ? cause.message : 'La révocation a échoué.');
+            push('error', cause instanceof Error ? `Impossible de retirer l’accès ${ROLE_LABEL[assignment.role]} de ${assignment.name} : ${cause.message}` : `Impossible de retirer l’accès ${ROLE_LABEL[assignment.role]} de ${assignment.name}.`);
         } finally {
             setRevoking(false);
         }

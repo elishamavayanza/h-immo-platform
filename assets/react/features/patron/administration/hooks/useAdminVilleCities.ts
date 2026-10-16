@@ -68,10 +68,11 @@ export function useAdminVilleCities(userUuid: string | null) {
 
     const assign = async (cityUuid: string): Promise<void> => {
         if (!userUuid) return;
+        const cityName = cities.find((city) => city.uuid === cityUuid)?.name ?? 'la ville sélectionnée';
         try {
             await administrationService.assignUserCity(userUuid, cityUuid);
             await reload();
-            push('success', 'La ville a été attribuée.');
+            push('success', `L’accès de l’administrateur a été attribué à ${cityName}.`);
         } catch (cause) {
             push('error', actionErrorMessage(cause));
             throw cause;
@@ -79,10 +80,12 @@ export function useAdminVilleCities(userUuid: string | null) {
     };
 
     const revoke = async (linkUuid: string): Promise<void> => {
+        const cityName = links.find((link) => link.id === linkUuid)?.cityId;
+        const cityLabel = cities.find((city) => city.uuid === cityName)?.name ?? 'la ville';
         try {
             await administrationService.revokeUserCity(linkUuid);
             await reload();
-            push('success', 'La ville a été retirée.');
+            push('success', `L’accès de l’administrateur à ${cityLabel} a été retiré.`);
         } catch (cause) {
             push('error', actionErrorMessage(cause));
             throw cause;
@@ -90,10 +93,14 @@ export function useAdminVilleCities(userUuid: string | null) {
     };
 
     const setPersonnelPermission = async (linkUuid: string, enabled: boolean): Promise<void> => {
+        const cityId = links.find((link) => link.id === linkUuid)?.cityId;
+        const cityName = cities.find((city) => city.uuid === cityId)?.name ?? 'cette ville';
         try {
             await administrationService.setUserCityPersonnelPermission(linkUuid, enabled);
             await reload();
-            push('success', enabled ? 'Ajout de personnel autorisé pour cette ville.' : 'Autorisation d’ajout de personnel retirée.');
+            push('success', enabled
+                ? `L’ajout de personnel est autorisé pour l’administrateur de ${cityName}.`
+                : `L’autorisation d’ajouter du personnel à ${cityName} a été retirée.`);
         } catch (cause) {
             push('error', actionErrorMessage(cause));
             throw cause;

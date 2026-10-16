@@ -27,6 +27,8 @@ interface PhotoGalleryProps {
 
 export function PhotoGallery({ entityUuid, entityType, photos: initialPhotos, mode, disabled, onChange }: PhotoGalleryProps) {
     const { push } = useToast();
+    const entityDestination = entityType === 'parcel' ? 'à la parcelle' : entityType === 'unit' ? 'à l’unité' : 'au bâtiment';
+    const entitySource = entityType === 'parcel' ? 'de la parcelle' : entityType === 'unit' ? 'de l’unité' : 'du bâtiment';
     const inputRef = useRef<HTMLInputElement>(null);
     const [editing, setEditing] = useState<string | null>(null);
     const [isUploading, setIsUploading] = useState(false);
@@ -90,17 +92,19 @@ export function PhotoGallery({ entityUuid, entityType, photos: initialPhotos, mo
             // Pour le mode multiple, on upload directement tous les fichiers
             setIsUploading(true);
             try {
-                let result = 'Photo(s) ajoutée(s).';
+                let uploadedCount = files.length;
                 if (entityType === 'parcel') {
-                    result = await mediaService.uploadParcelPhotos(entityUuid, files);
+                    await mediaService.uploadParcelPhotos(entityUuid, files);
                 } else if (entityType === 'unit') {
-                    for (const file of files.slice(0, maxPhotos - photos.length)) {
-                        result = await mediaService.uploadUnitPhoto(entityUuid, file);
+                    const selected = files.slice(0, maxPhotos - photos.length);
+                    uploadedCount = selected.length;
+                    for (const file of selected) {
+                        await mediaService.uploadUnitPhoto(entityUuid, file);
                     }
                 } else {
-                    result = await mediaService.uploadBuildingPhotos(entityUuid, files);
+                    await mediaService.uploadBuildingPhotos(entityUuid, files);
                 }
-                push('success', result);
+                push('success', `${uploadedCount} photo${uploadedCount > 1 ? 's ont été ajoutées' : ' a été ajoutée'} ${entityDestination}.`);
                 await loadPhotos();
                 onChange?.();
             } catch (cause) {
@@ -115,15 +119,14 @@ export function PhotoGallery({ entityUuid, entityType, photos: initialPhotos, mo
         if (!file) return;
         setIsUploading(true);
         try {
-            let result;
             if (entityType === 'parcel') {
-                result = await mediaService.uploadParcelPhotos(entityUuid, [file]);
+                await mediaService.uploadParcelPhotos(entityUuid, [file]);
             } else if (entityType === 'unit') {
-                result = await mediaService.uploadUnitPhoto(entityUuid, file);
+                await mediaService.uploadUnitPhoto(entityUuid, file);
             } else {
-                result = await mediaService.uploadBuildingPhotos(entityUuid, [file]);
+                await mediaService.uploadBuildingPhotos(entityUuid, [file]);
             }
-            push('success', result);
+            push('success', `La photo « ${file.name} » a été ajoutée ${entityDestination}.`);
             await loadPhotos();
             onChange?.();
         } catch (cause) {
@@ -145,7 +148,8 @@ export function PhotoGallery({ entityUuid, entityType, photos: initialPhotos, mo
             } else {
                 await mediaService.deleteBuildingPhoto(entityUuid, photo.deleteId);
             }
-            push('success', 'Photo retirée.');
+            const photoName = photo.url.split('/').pop() ?? 'photo';
+            push('success', `La photo « ${photoName} » a été retirée ${entitySource}.`);
             await loadPhotos();
             onChange?.();
         } catch (cause) {

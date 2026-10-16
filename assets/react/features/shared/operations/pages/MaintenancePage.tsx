@@ -120,7 +120,9 @@ export function MaintenancePage() {
             if (editingUuid) await editMaintenanceWorkOrder(editingUuid, input);
             else await createMaintenanceWorkOrder(input);
             setEditingUuid(null); setTitle(''); setDescription(''); setDueDate(''); setAssignmentUuid(''); setReportedAt(localDateInputValue());
-            push('success', editingUuid ? 'Intervention modifiée.' : 'Intervention ajoutée.');
+            push('success', editingUuid
+                ? `L’intervention « ${input.title} » a été modifiée.`
+                : `L’intervention « ${input.title} » a été ajoutée.`);
             await reload();
         } catch (reason) { push('error', reason instanceof Error ? reason.message : 'Impossible d’enregistrer l’intervention.'); }
         finally { setSaving(false); }
@@ -129,9 +131,12 @@ export function MaintenancePage() {
     async function changeStatus(item: MaintenanceWorkOrder, status: MaintenanceWorkOrder['status']) {
         try {
             await updateMaintenanceStatus(item, status);
-            push('success', 'État de l’intervention mis à jour.');
+            const statusLabels: Record<MaintenanceWorkOrder['status'], string> = {
+                open: 'à traiter', in_progress: 'en cours', completed: 'terminée', cancelled: 'annulée',
+            };
+            push('success', `L’intervention « ${item.title} » est maintenant ${statusLabels[status]}.`);
             await reload();
-        } catch (reason) { push('error', reason instanceof Error ? reason.message : 'La mise à jour a échoué.'); }
+        } catch (reason) { push('error', reason instanceof Error ? `Impossible de modifier l’état de l’intervention « ${item.title} » : ${reason.message}` : `Impossible de modifier l’état de l’intervention « ${item.title} ».`); }
     }
 
     async function completeMaintenance(event: FormEvent<HTMLFormElement>) {
@@ -140,9 +145,9 @@ export function MaintenancePage() {
         try {
             await updateMaintenanceStatus(completionTarget, 'completed', completionDate);
             setCompletionTarget(null);
-            push('success', 'Intervention terminée.');
+            push('success', `L’intervention « ${completionTarget.title} » a été terminée le ${completionDate}.`);
             await reload();
-        } catch (reason) { push('error', reason instanceof Error ? reason.message : 'La mise à jour a échoué.'); }
+        } catch (reason) { push('error', reason instanceof Error ? `Impossible de terminer l’intervention « ${completionTarget.title} » : ${reason.message}` : `Impossible de terminer l’intervention « ${completionTarget.title} ».`); }
     }
 
     function beginEdit(item: MaintenanceWorkOrder) {
