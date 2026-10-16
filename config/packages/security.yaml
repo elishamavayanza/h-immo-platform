@@ -73,6 +73,10 @@ security:
     access_control:
         # Public : on ne peut pas exiger un jeton pour obtenir un jeton.
         - { path: ^/api/auth/login$, roles: PUBLIC_ACCESS }
+        # Le jeton de renouvellement est une preuve d'authentification
+        # dédiée, à usage unique et rotative; l'accès métier exige toujours
+        # un JWT d'accès via le pare-feu.
+        - { path: ^/api/auth/refresh$, roles: PUBLIC_ACCESS }
         - { path: ^/api/doc, roles: PUBLIC_ACCESS }
         - { path: ^/api/docs, roles: PUBLIC_ACCESS }
 

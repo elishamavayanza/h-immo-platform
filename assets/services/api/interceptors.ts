@@ -2,14 +2,9 @@
 // upload/services/api/interceptors.ts
 // Pipeline d'intercepteurs request/response (pattern Axios-like)
 //
-// ⚠️ Volontairement ABSENT : le renouvellement de jeton.
-// H-Immo n'émet qu'un jeton d'accès, valable `JWT_TTL` (1 h par défaut).
-// Il n'existe ni endpoint de refresh, ni refresh token, ni rotation :
-// `AuthController::login()` renvoie `accessToken` / `tokenType` /
-// `expiresIn` et rien d'autre. Ajouter ici une logique de refresh
-// enverrait le client vers une route inexistante (404) et donnerait
-// l'illusion d'une session renouvelable. À l'expiration, on rejoue
-// un login — c'est aussi ce que le serveur déciderait de toute façon.
+// Le renouvellement est déclenché par AuthProvider avant l'expiration,
+// via la route protégée `/auth/refresh`; l'intercepteur continue d'attacher
+// le jeton courant à chaque requête.
 //
 // Également absent : le CSRF. Le pare-feu `main` est `stateless: true`,
 // n'émet aucun cookie et ne lit aucune session ; le jeton voyage dans
@@ -87,12 +82,14 @@ class InterceptorManager<T> {
 /**
  * Intercepteur : injecte le jeton JWT dans l'en-tête `Authorization`.
  *
- * Aucun appel réseau ici : il n'y a pas de refresh à tenter. Le client
- * envoie le jeton qu'il a, et laisse le serveur trancher (401 → session
- * terminée, cf. `authErrorInterceptor`).
+ * Aucun appel réseau ici : le renouvellement proactif est centralisé dans
+ * AuthProvider. L'intercepteur attache simplement le jeton courant.
  */
 export const jwtInterceptor: RequestInterceptor = {
     onFulfilled: (config: RequestConfig): RequestConfig => {
+        // Le renouvellement s'authentifie avec son corps JSON. Ne pas joindre
+        // un JWT d'accès expiré, que le firewall pourrait rejeter d'abord.
+        if (config.url === '/auth/login' || config.url === '/auth/refresh') return config;
         const token = tokenStorage.getAccessToken();
         let activeWorkspace: { uuid?: string; role?: string } | null = null;
         try {

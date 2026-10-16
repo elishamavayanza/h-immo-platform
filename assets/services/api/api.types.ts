@@ -284,15 +284,23 @@ export interface LoginRequest {
 /**
  * Réponse de `POST /api/auth/login`.
  *
- * Il n'existe pas de refresh token : `accessToken` est le seul jeton
- * délivré, valable `expiresIn` secondes. Passer `expiresIn` à
- * `tokenStorage.setAccessToken()` pour que le client l'efface à temps.
+ * `accessToken` est valable `expiresIn` secondes et peut être renouvelé
+ * avec `POST /api/auth/refresh` avant son expiration.
  */
 export interface LoginResponse {
     accessToken: string;
     tokenType: 'Bearer';
     expiresIn: number;
+    refreshToken: string;
     user: SessionUserResponse;
+}
+
+/** Réponse de `POST /api/auth/refresh`. */
+export interface RefreshTokenResponse {
+    accessToken: string;
+    tokenType: 'Bearer';
+    expiresIn: number;
+    refreshToken: string;
 }
 
 /** Réponse de `POST /api/auth/logout`. */

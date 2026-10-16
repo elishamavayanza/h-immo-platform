@@ -207,33 +207,50 @@ export const memStorage = new StorageService('memory');
 // Helpers pour le jeton d'authentification
 // ─────────────────────────────────────────
 //
-// H-Immo n'a qu'un seul jeton : `POST /api/auth/login` renvoie
-// `accessToken` / `tokenType` / `expiresIn`, et il n'existe AUCUN
-// refresh token (ni endpoint, ni révocation par rotation). La durée de
-// vie est courte par conception (`JWT_TTL`, 1 h par défaut) et
-// `ApiTokenAuthenticator` recharge le compte en base à chaque requête.
-//
-// Conséquence côté client : à l'expiration, il faut rejouer un login.
-// Le stockage d'un « refresh_token » ici serait un champ mort qui
-// donnerait l'illusion d'une session renouvelable.
+// Le JWT d'accès est court; un jeton distinct à usage unique est tourné
+// par `/api/auth/refresh`. Les deux restent dans sessionStorage pour ne
+// pas persister la session après fermeture de l'onglet. Aucun mot de passe
+// n'est conservé.
 
 const ACCESS_TOKEN_KEY = 'access_token';
+const REFRESH_TOKEN_KEY = 'refresh_token';
 
 export const tokenStorage = {
-    getAccessToken: (): string | null => storage.get<string>(ACCESS_TOKEN_KEY),
+	getAccessToken: (): string | null => {
+		const tabToken = tabStorage.get<string>(ACCESS_TOKEN_KEY);
+		if (tabToken) return tabToken;
+
+		// Migration douce des sessions encore stockées en localStorage par
+		// les versions précédentes, sans conserver le jeton après ce passage.
+		const legacyToken = storage.get<string>(ACCESS_TOKEN_KEY);
+		if (legacyToken) {
+			tabStorage.set(ACCESS_TOKEN_KEY, legacyToken);
+			storage.remove(ACCESS_TOKEN_KEY);
+		}
+		return legacyToken;
+	},
 
     /**
      * @param ttlSeconds Durée de vie côté client. Passer la valeur
      *   `expiresIn` de la réponse de login : le jeton est alors effacé
      *   de lui-même à l'expiration, donc jamais renvoyé par erreur.
      */
-    setAccessToken: (token: string, ttlSeconds?: number): void =>
-        storage.set(ACCESS_TOKEN_KEY, token, ttlSeconds),
+	setAccessToken: (token: string, ttlSeconds?: number): void =>
+		tabStorage.set(ACCESS_TOKEN_KEY, token, ttlSeconds),
 
-    removeAccessToken: (): void => storage.remove(ACCESS_TOKEN_KEY),
+	getRefreshToken: (): string | null => tabStorage.get<string>(REFRESH_TOKEN_KEY),
+
+	setRefreshToken: (token: string, ttlSeconds?: number): void =>
+		tabStorage.set(REFRESH_TOKEN_KEY, token, ttlSeconds),
+
+	removeAccessToken: (): void => tabStorage.remove(ACCESS_TOKEN_KEY),
+	removeRefreshToken: (): void => tabStorage.remove(REFRESH_TOKEN_KEY),
 
     clearAll: (): void => {
-        storage.clear();
+		tabStorage.remove(ACCESS_TOKEN_KEY);
+		tabStorage.remove(REFRESH_TOKEN_KEY);
+		storage.remove(ACCESS_TOKEN_KEY);
+		storage.remove(REFRESH_TOKEN_KEY);
     },
 };
 

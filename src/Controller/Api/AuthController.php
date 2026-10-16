@@ -6,10 +6,12 @@ namespace App\Controller\Api;
 
 use App\Dto\Feedback;
 use App\Dto\Request\Auth\ForgotPasswordRequest;
+use App\Dto\Request\Auth\RefreshTokenRequest;
 use App\Dto\Request\Auth\ResetPasswordRequest;
 use App\Dto\Response\HttpErrorResponsePayload;
 use App\Entity\Identity\User;
 use App\Repository\Identity\RevokedTokenRepository;
+use App\Repository\Identity\UserRepository;
 use App\Service\Identity\PasswordResetService;
 use App\Dto\Response\Identity\SessionUserResponse;
 use App\Service\Identity\SessionUserResponseFactory;
@@ -25,6 +27,7 @@ use Symfony\Component\HttpKernel\Attribute\MapRequestPayload;
 use Symfony\Component\RateLimiter\RateLimiterFactory;
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Security\Core\Authentication\Token\Storage\TokenStorageInterface;
+use Symfony\Component\Uid\Uuid;
 use OpenApi\Attributes as OA;
 use Nelmio\ApiDocBundle\Attribute\Model;
 
@@ -45,6 +48,9 @@ use Nelmio\ApiDocBundle\Attribute\Model;
  * - POST /api/auth/login           : authentification (firewall `json_login`)
  * - POST /api/auth/logout          : déconnexion (révoque le jeton)
  * - GET  /api/auth/me              : utilisateur courant
+ *
+ * Le renouvellement est public au niveau du firewall, mais exige un jeton
+ * rotatif signé et à usage unique ; aucun droit métier n'est accordé par lui.
  */
 #[OA\Tag(name: 'Auth', description: 'Authentification, session et gestion des mots de passe.')]
 final class AuthController extends AbstractController
@@ -55,6 +61,7 @@ final class AuthController extends AbstractController
         private readonly SessionUserResponseFactory $sessionUserResponseFactory,
         private readonly TokenManager $tokenManager,
         private readonly RevokedTokenRepository $revokedTokenRepository,
+        private readonly UserRepository $userRepository,
         private readonly AuditLogService $auditLogService,
         private readonly DateTimeService $dateTime,
         #[Autowire(service: 'limiter.password_reset_requests')]
@@ -78,7 +85,7 @@ final class AuthController extends AbstractController
     #[OA\Post(
         path: '/api/auth/login',
         summary: 'Connexion par email et mot de passe',
-        description: 'Authentifie l\'utilisateur et retourne un jeton d\'API (JWT HS256) ainsi que ses informations de session. Le jeton se transmet ensuite dans l\'en-tête `Authorization: Bearer <token>` ; il n\'est stocké ni dans un cookie ni dans une session serveur.',
+        description: 'Authentifie l\'utilisateur et retourne un jeton d\'accès JWT ainsi qu\'un jeton de renouvellement rotatif et ses informations de session. Les jetons sont conservés côté navigateur dans la session de l\'onglet.',
         requestBody: new OA\RequestBody(
             required: true,
             content: new OA\JsonContent(
@@ -95,6 +102,7 @@ final class AuthController extends AbstractController
                     new OA\Property(property: 'accessToken', type: 'string', description: 'Jeton à envoyer dans l\'en-tête Authorization: Bearer.'),
                     new OA\Property(property: 'tokenType', type: 'string', example: 'Bearer'),
                     new OA\Property(property: 'expiresIn', type: 'integer', description: 'Durée de validité en secondes.', example: 3600),
+                    new OA\Property(property: 'refreshToken', type: 'string', description: 'Jeton de renouvellement à usage unique, valable 30 jours.'),
                     new OA\Property(property: 'user', ref: new Model(type: SessionUserResponse::class, name: 'SessionUserResponse')),
                 ]
             )),
@@ -115,6 +123,7 @@ final class AuthController extends AbstractController
 
         $sessionUser = $this->sessionUserResponseFactory->create($user);
         $issued = $this->tokenManager->issue($sessionUser);
+        $refresh = $this->tokenManager->issueRefreshToken($sessionUser);
 
         // Log d'audit : connexion utilisateur
         $this->auditLogService->log(
@@ -135,7 +144,78 @@ final class AuthController extends AbstractController
             'accessToken' => $issued['token'],
             'tokenType' => 'Bearer',
             'expiresIn' => $this->tokenManager->ttl(),
+            'refreshToken' => $refresh['token'],
             'user' => $sessionUser,
+        ]);
+    }
+
+    /**
+     * Fait tourner le jeton de renouvellement à usage unique. Cela permet de
+     * reprendre après une veille où le JWT d'accès a déjà expiré.
+     */
+    #[Route(
+        path: '/api/auth/refresh',
+        name: 'api_auth_refresh',
+        methods: ['POST'],
+    )]
+    #[OA\Post(
+        path: '/api/auth/refresh',
+        summary: 'Renouveler le jeton de session',
+        description: 'Émet un nouveau jeton d’accès et fait tourner le jeton de renouvellement à usage unique, conservé uniquement dans la session de l’onglet.',
+        requestBody: new OA\RequestBody(required: true, content: new OA\JsonContent(ref: new Model(type: RefreshTokenRequest::class))),
+        responses: [
+            new OA\Response(response: 200, description: 'Jeton renouvelé.', content: new OA\JsonContent(properties: [
+                new OA\Property(property: 'accessToken', type: 'string'),
+                new OA\Property(property: 'tokenType', type: 'string', example: 'Bearer'),
+                new OA\Property(property: 'expiresIn', type: 'integer', example: 3600),
+                new OA\Property(property: 'refreshToken', type: 'string'),
+            ])),
+            new OA\Response(response: 401, description: 'Jeton absent, expiré ou révoqué.'),
+        ]
+    )]
+    public function refresh(#[MapRequestPayload] RefreshTokenRequest $request): JsonResponse
+    {
+        try {
+            $claims = $this->tokenManager->parse($request->refreshToken);
+        } catch (\Throwable) {
+            return $this->failure();
+        }
+
+        $jti = $claims['jti'] ?? null;
+        $subject = $claims['sub'] ?? null;
+        $expiresAt = $claims['exp'] ?? null;
+        // Un seul renouvellement de transition accepte un ancien JWT d'accès
+        // (avant l'ajout de tokenType), afin de ne pas déconnecter les sessions
+        // déjà ouvertes lors du déploiement de la rotation.
+        if ((($claims['tokenType'] ?? null) !== 'refresh' && isset($claims['tokenType']))
+            || !\is_string($jti)
+            || !\is_string($subject)
+            || !\is_int($expiresAt)
+            || $this->revokedTokenRepository->isRevoked($jti)) {
+            return $this->failure();
+        }
+
+        try {
+            $user = $this->userRepository->findOneByUuid(Uuid::fromString($subject));
+        } catch (\InvalidArgumentException) {
+            return $this->failure();
+        }
+        if (!$user instanceof User || !$user->isActive()) {
+            return $this->failure();
+        }
+        if (!$this->revokedTokenRepository->revoke($jti, $this->dateTime->now()->setTimestamp($expiresAt))) {
+            return $this->failure();
+        }
+
+        $sessionUser = $this->sessionUserResponseFactory->create($user);
+        $issued = $this->tokenManager->issue($sessionUser);
+        $refresh = $this->tokenManager->issueRefreshToken($sessionUser);
+
+        return new JsonResponse([
+            'accessToken' => $issued['token'],
+            'tokenType' => 'Bearer',
+            'expiresIn' => $this->tokenManager->ttl(),
+            'refreshToken' => $refresh['token'],
         ]);
     }
 
@@ -164,6 +244,9 @@ final class AuthController extends AbstractController
         // la déconnexion réelle, et elle repose sur le `jti` porté par le
         // jeton que le client présente.
         $revoked = $this->revokePresentedToken($request);
+        if ($user instanceof User) {
+            $this->revokePresentedRefreshToken($request, $user);
+        }
 
         // Log d'audit : déconnexion utilisateur
         if ($user instanceof User) {
@@ -220,6 +303,34 @@ final class AuthController extends AbstractController
         );
     }
 
+    /** Révoque le jeton de renouvellement de la session déconnectée. */
+    private function revokePresentedRefreshToken(Request $request, User $user): bool
+    {
+        $refreshToken = $request->getPayload()->get('refreshToken');
+        if (!\is_string($refreshToken) || $refreshToken === '') {
+            return false;
+        }
+
+        try {
+            $claims = $this->tokenManager->parse($refreshToken);
+        } catch (\Throwable) {
+            return false;
+        }
+
+        $jti = $claims['jti'] ?? null;
+        $subject = $claims['sub'] ?? null;
+        $expiresAt = $claims['exp'] ?? null;
+        $sessionUser = $this->sessionUserResponseFactory->create($user);
+        if (($claims['tokenType'] ?? null) !== 'refresh'
+            || !\is_string($jti)
+            || $subject !== $sessionUser->uuid
+            || !\is_int($expiresAt)) {
+            return false;
+        }
+
+        return $this->revokedTokenRepository->revoke($jti, $this->dateTime->now()->setTimestamp($expiresAt));
+    }
+
     /**
      * Permet au client de vérifier la validité de sa session sans
      * déclencher d'écriture.
@@ -232,7 +343,7 @@ final class AuthController extends AbstractController
     #[OA\Get(
         path: '/api/auth/me',
         summary: 'Utilisateur de la session courante',
-        description: 'Retourne l\'identité et les droits de l\'utilisateur authentifié par le cookie de session. Permet à un client de restaurer son état au rechargement de la page sans relancer une connexion.',
+        description: 'Retourne l\'identité et les droits de l\'utilisateur authentifié par jeton Bearer. Permet au client de restaurer son état après rechargement.',
         security: [['bearer' => []]],
         responses: [
             new OA\Response(response: 200, description: 'Session courante', content: new OA\JsonContent(ref: new Model(type: SessionUserResponse::class, name: 'SessionUserResponse'))),
