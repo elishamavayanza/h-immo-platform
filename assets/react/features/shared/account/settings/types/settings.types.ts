@@ -7,6 +7,8 @@ export interface UserSettings {
     dateFormat: string;
     inAppNotifications: boolean;
     reducedMotion: boolean;
+    /** Replie le menu latéral par défaut sur les écrans où il reste dans le flux. */
+    sidebarCollapsed: boolean;
     auditLogRetentionDays?: number;
     defaultPageSize?: number;
 }

@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Badge } from '../../../../../components/UI/Badge';
 import { Button } from '../../../../../components/UI/Button';
 import { Card } from '../../../../../components/UI/Card';
 import { FormField } from '../../../../../components/Forms/FormField';
@@ -34,14 +33,12 @@ export function SettingsPage() {
     const { currentOrganization, organizationRole } = useOrganization();
     const { push } = useToast();
     const { settings, update, isLoading, error, reload } = useAccountSettings();
-    const [saved, setSaved] = useState(false);
     const [retentionDraft, setRetentionDraft] = useState<string | null>(null);
     const [retentionError, setRetentionError] = useState<string | null>(null);
     const isSuperAdmin = user?.platformRole === 'super_admin';
     const [fxSettings, setFxSettings] = useState<{scope: string; organizationCurrency: 'USD' | 'CDF'; organizationRate: FxRate | null; cityAdmins: FxAdmin[]; enabled?: boolean; cities?: FxCity[]} | null>(null);
     const [fxLoading, setFxLoading] = useState(false);
     const [fxError, setFxError] = useState<string | null>(null);
-    const [fxSuccess, setFxSuccess] = useState<string | null>(null);
     const [fxBusy, setFxBusy] = useState(false);
     const [fxRateDraft, setFxRateDraft] = useState('');
     const [organizationCurrencyDraft, setOrganizationCurrencyDraft] = useState<'USD' | 'CDF'>('CDF');
@@ -141,12 +138,10 @@ export function SettingsPage() {
     const saveOrganizationCurrency = async () => {
         if (!currentOrganization || !fxSettings || organizationCurrencyDraft === fxSettings.organizationCurrency) return;
         setFxBusy(true);
-        setFxSuccess(null);
         try {
             await apiClient.put(`/v1/exchange-rates/organizations/${currentOrganization.uuid}/currency`, { currency: organizationCurrencyDraft });
             setFxSettings((previous) => previous ? { ...previous, organizationCurrency: organizationCurrencyDraft } : previous);
             setFxError(null);
-            setFxSuccess('La devise de référence a été mise à jour pour l’organisation et ses rapports.');
             push('success', 'La devise de référence de l’organisation a été mise à jour.');
         } catch (cause) {
             const message = cause instanceof ApiError ? cause.message : 'Impossible de modifier la devise de référence.';
@@ -194,9 +189,7 @@ export function SettingsPage() {
     };
 
     const apply = async (key: keyof typeof settings, value: unknown) => {
-        const didSave = await update(key, value);
-        setSaved(didSave);
-        if (didSave) window.setTimeout(() => setSaved(false), 1800);
+        await update(key, value);
     };
 
     const toggle = (key: keyof typeof settings) => {
@@ -241,7 +234,6 @@ export function SettingsPage() {
                     <h1>{isOrganizationPage ? 'Paramètres de l’organisation' : 'Paramètres'}</h1>
                     <p>{isOrganizationPage ? 'Gérez les réglages partagés selon votre rôle.' : 'Personnalisez votre expérience H-Immo.'}</p>
                 </div>
-                {saved && <Badge variant="success">Préférences enregistrées</Badge>}
             </header>
 
             <div className="settings-page__sections">
@@ -259,7 +251,6 @@ export function SettingsPage() {
                         <p>La devise de référence est utilisée pour les synthèses financières de toute l’organisation. Les montants comptabilisés gardent leur devise d’origine.</p>
                         {fxLoading && <p role="status">Chargement des paramètres de change…</p>}
                         {fxError && <p className="settings-error" role="alert">{fxError}</p>}
-                        {fxSuccess && <p className="settings-success" role="status">{fxSuccess}</p>}
                         {fxSettings?.scope === 'organization' && <>
                         <div className="setting-row"><div><strong>Devise de référence</strong><p>Les rapports de l’organisation et de ses villes utiliseront cette devise pour leurs totaux.</p></div><FormField label="Devise de l’organisation" htmlFor="organization-currency"><Select id="organization-currency" value={organizationCurrencyDraft} onChange={(event) => setOrganizationCurrencyDraft(event.target.value as 'USD' | 'CDF')} options={[{ value: 'USD', label: 'Dollar américain (USD)' }, { value: 'CDF', label: 'Franc congolais (CDF)' }]} /></FormField><Button disabled={fxBusy || organizationCurrencyDraft === fxSettings.organizationCurrency} onClick={() => void saveOrganizationCurrency()}>Enregistrer</Button></div>
                         <p>Le taux ci-dessous reste exprimé en 1 USD = X CDF et sert aux conversions historiques des rapports, sauf dérogation locale autorisée.</p>
@@ -296,6 +287,7 @@ export function SettingsPage() {
                             <p>Choisissez l'apparence de l'interface.</p>
                         </div>
                         <Select
+                            aria-label="Thème de l’interface"
                             value={settings.theme}
                             onChange={handleSelectChange('theme')}
                             options={[
@@ -338,16 +330,9 @@ export function SettingsPage() {
                         <div>
                             <strong>Langue</strong>
                             <p>Langue de l'interface.</p>
-                            <small className="setting-row__note">Le changement de langue sera disponible prochainement.</small>
+                            <small className="setting-row__note">Français est actuellement la langue disponible. Les autres traductions ne sont pas encore activées.</small>
                         </div>
-                        <Select
-                            disabled
-                            value={settings.locale}
-                            options={[
-                                { value: 'fr', label: 'Français' },
-                                { value: 'en', label: 'English' },
-                            ]}
-                        />
+                        <span className="setting-row__current-value">Français</span>
                     </div>
                     <div className="setting-row">
                         <div>
@@ -355,6 +340,7 @@ export function SettingsPage() {
                             <p>Format d'affichage des dates.</p>
                         </div>
                         <Select
+                            aria-label="Format d’affichage des dates"
                             value={settings.dateFormat}
                             onChange={handleSelectChange('dateFormat')}
                             options={[
@@ -367,12 +353,15 @@ export function SettingsPage() {
                     <div className="setting-row">
                         <div>
                             <strong>Tableaux compacts</strong>
-                            <p>Réduire l'espacement pour afficher plus de lignes.</p>
+                            <p>{settings.compactTables
+                                ? 'Activé : les lignes des tableaux prennent moins de hauteur.'
+                                : 'Désactivé : activez cette option pour afficher plus de lignes à l’écran.'}</p>
                         </div>
                         <button
                             className="setting-switch"
                             type="button"
                             role="switch"
+                            aria-label="Afficher des tableaux compacts"
                             aria-checked={settings.compactTables}
                             onClick={() => toggle('compactTables')}
                         >
@@ -382,17 +371,51 @@ export function SettingsPage() {
                     <div className="setting-row">
                         <div>
                             <strong>Réduire les animations</strong>
-                            <p>Désactive les transitions pour plus de fluidité.</p>
+                            <p>Réduit les animations et transitions dans l’application.</p>
                         </div>
                         <button
                             className="setting-switch"
                             type="button"
                             role="switch"
+                            aria-label="Réduire les animations"
                             aria-checked={settings.reducedMotion}
                             onClick={() => toggle('reducedMotion')}
                         >
                             <span />
                         </button>
+                    </div>
+                    <div className="setting-row">
+                        <div>
+                            <strong>Menu latéral replié au démarrage</strong>
+                            <p>Gagnez de la place sur ordinateur. Le menu reste ouvrable à tout moment.</p>
+                        </div>
+                        <button
+                            className="setting-switch"
+                            type="button"
+                            role="switch"
+                            aria-label="Replier le menu latéral par défaut"
+                            aria-checked={settings.sidebarCollapsed}
+                            onClick={() => toggle('sidebarCollapsed')}
+                        >
+                            <span />
+                        </button>
+                    </div>
+                    <div className="setting-row">
+                        <div>
+                            <strong>Lignes par page</strong>
+                            <p>Nombre d’éléments affichés à la fois dans les tableaux.</p>
+                        </div>
+                        <Select
+                            aria-label="Nombre de lignes par page"
+                            value={settings.defaultPageSize ?? 20}
+                            onChange={handleSelectChange('defaultPageSize')}
+                            options={[
+                                { value: 10, label: '10 lignes' },
+                                { value: 20, label: '20 lignes' },
+                                { value: 50, label: '50 lignes' },
+                                { value: 100, label: '100 lignes' },
+                            ]}
+                        />
                     </div>
                 </Card></section>}
 
@@ -406,6 +429,7 @@ export function SettingsPage() {
                             className="setting-switch"
                             type="button"
                             role="switch"
+                            aria-label="Recevoir les notifications importantes par e-mail"
                             aria-checked={settings.emailNotifications}
                             onClick={() => toggle('emailNotifications')}
                         >
@@ -415,12 +439,13 @@ export function SettingsPage() {
                     <div className="setting-row">
                         <div>
                             <strong>Notifications dans l'application</strong>
-                            <p>Afficher les alertes dans l'interface.</p>
+                            <p>Afficher les confirmations et messages d’état temporaires dans l’interface.</p>
                         </div>
                         <button
                             className="setting-switch"
                             type="button"
                             role="switch"
+                            aria-label="Afficher les confirmations et messages d’état dans l’application"
                             aria-checked={settings.inAppNotifications}
                             onClick={() => toggle('inAppNotifications')}
                         >
@@ -462,22 +487,6 @@ export function SettingsPage() {
                                 />
                                 {retentionError && <small className="setting-row__error">{retentionError}</small>}
                             </FormField>
-                        </div>
-                        <div className="setting-row">
-                            <div>
-                                <strong>Taille de page par défaut</strong>
-                                <p>Nombre d'éléments par page dans les tableaux (10–100).</p>
-                            </div>
-                            <Select
-                                value={settings.defaultPageSize ?? 20}
-                                onChange={handleSelectChange('defaultPageSize')}
-                                options={[
-                                    { value: 10, label: '10' },
-                                    { value: 20, label: '20' },
-                                    { value: 50, label: '50' },
-                                    { value: 100, label: '100' },
-                                ]}
-                            />
                         </div>
                     </Card></section>
                 )}

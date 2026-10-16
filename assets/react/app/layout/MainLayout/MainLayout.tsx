@@ -4,7 +4,7 @@
 // Plus de header — tout passe par le sidebar et son UserMenu.
 // ============================================================
 
-import { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { Navigate, Outlet, useLocation, useNavigate } from 'react-router-dom';
 
 import { useAuth } from '../../providers/AuthProvider';
@@ -28,6 +28,9 @@ import { GlobalSearch } from '../../../features/shared/search/components/GlobalS
 import { rememberLastLocation } from '../../routes/navigationMemory';
 import { ContextualHelp } from '../../../features/shared/help/components/ContextualHelp';
 import { PublicationNotifications } from '../../../features/shared/publications/components/PublicationNotifications';
+import { readUserPreferences, saveSidebarCollapsedPreference, saveUserPreferences } from '../../../services/userPreferences';
+import { settingsService } from '../../../features/shared/account/settings/services/settingsService';
+import { useToast } from './contexts/ToastContext';
 
 /**
  * Marque du sidebar : logo + "IMMO" + nom de l'organisation active sur sa propre ligne.
@@ -105,13 +108,39 @@ export function MainLayout() {
     const { currentOrganization, platformRole, organizationRole, isLoading: isOrgLoading } = useOrganization();
     const [isMobileOpen, setIsMobileOpen] = useState(false);
     const [isWorkspaceSwitcherOpen, setWorkspaceSwitcherOpen] = useState(false);
+    const [sidebarCollapsedPreference, setSidebarCollapsedPreference] = useState<boolean | undefined>(
+        () => readUserPreferences().sidebarCollapsed,
+    );
     const isMobile = useIsMobile();
     const isPortrait = useIsPortrait();
     const isNarrowDesktop = useMediaQuery(MEDIA_QUERIES.narrowDesktop);
     const [isPageTransitionLoading, setPageTransitionLoading] = useState(false);
     const location = useLocation();
     const navigate = useNavigate();
+    const { push } = useToast();
     const previousPath = useRef(location.pathname);
+
+    useEffect(() => {
+        const syncPreferences = () => setSidebarCollapsedPreference(readUserPreferences().sidebarCollapsed);
+        window.addEventListener('h-immo:user-preferences-updated', syncPreferences);
+        return () => window.removeEventListener('h-immo:user-preferences-updated', syncPreferences);
+    }, []);
+
+    useEffect(() => {
+        if (!isAuthenticated) return;
+        let active = true;
+        void settingsService.getMySettings()
+            .then((settings) => { if (active) saveUserPreferences(settings); })
+            .catch(() => { /* Les préférences locales restent disponibles si l’API est momentanément inaccessible. */ });
+        return () => { active = false; };
+    }, [isAuthenticated]);
+
+    const persistSidebarCollapsed = useCallback((collapsed: boolean) => {
+        saveSidebarCollapsedPreference(collapsed);
+        void settingsService.updateMySettings({ sidebarCollapsed: collapsed }).catch(() => {
+            push('warning', 'Le choix du menu est conservé sur cet appareil, mais n’a pas pu être synchronisé à votre compte.');
+        });
+    }, [push]);
 
     // Reprendre la dernière page métier après une fermeture ou une session
     // interrompue. La destination est isolée par utilisateur et ne remplace
@@ -243,7 +272,8 @@ return (
                     groups={groups}
                     variant="dark"
                     collapsible
-                    defaultCollapsed={(isPortrait || isNarrowDesktop) && !isMobile}
+                    defaultCollapsed={!isMobile && (sidebarCollapsedPreference ?? (isPortrait || isNarrowDesktop))}
+                    onCollapsedChange={persistSidebarCollapsed}
                     width="264px"
                     header={(
                         <div className="main-layout__sidebar-header-stack">

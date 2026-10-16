@@ -39,7 +39,7 @@ final readonly class UserSettingsService
 
         // Filtrer les paramètres SUPER_ADMIN si l'utilisateur n'en a pas le droit
         if (!$this->security->isSuperAdmin()) {
-            unset($newSettings['auditLogRetentionDays'], $newSettings['defaultPageSize']);
+            unset($newSettings['auditLogRetentionDays']);
         }
 
         $targetUser->setSettings($newSettings);
