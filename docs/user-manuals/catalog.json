@@ -1,5 +1,5 @@
 {
-  "version": "1.3.1",
+  "version": "1.3.2",
   "updatedAt": "2026-10-16",
   "roles": {
     "super_admin": {
@@ -11,7 +11,6 @@
         {
           "name": "Tableau de bord",
           "menu": "Vue générale → Tableau de bord",
-          "image": "super-dashboard.jpg",
           "goal": "Suivre l’état général de la plateforme et repérer les indicateurs nécessitant une vérification.",
           "steps": [
             "Ouvrez le tableau de bord depuis le menu latéral.",
@@ -26,7 +25,6 @@
         {
           "name": "Organisations",
           "menu": "Administration plateforme → Organisations",
-          "image": "super-organizations.jpg",
           "goal": "Consulter et administrer les organisations enregistrées sur Soft-IMMO.",
           "steps": [
             "Ouvrez Organisations dans le menu.",
@@ -42,7 +40,6 @@
         {
           "name": "Utilisateurs",
           "menu": "Administration plateforme → Utilisateurs",
-          "image": "super-users.jpg",
           "goal": "Gérer les comptes et les accès de plateforme autorisés.",
           "steps": [
             "Ouvrez Utilisateurs.",
@@ -58,7 +55,6 @@
         {
           "name": "Journal d’audit",
           "menu": "Administration plateforme → Audit",
-          "image": "super-audit.jpg",
           "goal": "Reconstituer les actions sensibles réalisées sur la plateforme.",
           "steps": [
             "Ouvrez le journal d’audit.",
@@ -74,7 +70,6 @@
         {
           "name": "Rapports de la plateforme",
           "menu": "Vue générale → Rapports",
-          "image": "super-reports.jpg",
           "goal": "Consulter les synthèses transversales disponibles à l’administration plateforme.",
           "steps": [
             "Ouvrez Rapports.",
@@ -90,7 +85,6 @@
         {
           "name": "Profil et préférences",
           "menu": "Compte → Mon profil / Paramètres",
-          "image": "super-settings.jpg",
           "goal": "Gérer les préférences personnelles et les informations de son compte.",
           "steps": [
             "Ouvrez Paramètres pour le thème, la couleur d’accent et les préférences d’affichage.",
@@ -103,7 +97,7 @@
           "id": "profil-et-preferences"
         }
       ],
-      "pageCount": 10
+      "pageCount": 11
     },
     "patron": {
       "title": "Manuel d’utilisation — Espace Patron",
@@ -114,7 +108,6 @@
         {
           "name": "Tableau de bord",
           "menu": "Vue générale → Tableau de bord",
-          "image": "patron-dashboard.jpg",
           "goal": "Suivre les indicateurs importants de votre organisation.",
           "steps": [
             "Ouvrez le tableau de bord.",
@@ -129,7 +122,6 @@
         {
           "name": "Rapports",
           "menu": "Vue générale → Rapports",
-          "image": "patron-reports.jpg",
           "goal": "Analyser l’activité et les résultats de l’organisation.",
           "steps": [
             "Ouvrez Rapports.",
@@ -145,7 +137,6 @@
         {
           "name": "Patrimoine",
           "menu": "Gestion immobilière → Patrimoine",
-          "image": "patron-property.jpg",
           "goal": "Décrire le patrimoine réel de la parcelle au bâtiment, au niveau et aux espaces locatifs, puis gérer les accès physiques.",
           "steps": [
             "Ouvrez Patrimoine et sélectionnez la ville, la parcelle ou le bâtiment à consulter.",
@@ -161,7 +152,6 @@
         {
           "name": "Locataires",
           "menu": "Gestion immobilière → Locataires",
-          "image": "patron-tenants.jpg",
           "goal": "Suivre les occupants, les baux et les indicateurs locatifs de l’organisation.",
           "steps": [
             "Ouvrez Locataires.",
@@ -178,7 +168,6 @@
         {
           "name": "Loyers",
           "menu": "Finances → Loyers",
-          "image": "patron-rents.jpg",
           "goal": "Suivre les échéances, paiements et retards de l’organisation.",
           "steps": [
             "Ouvrez Loyers.",
@@ -195,7 +184,6 @@
         {
           "name": "Trésorerie",
           "menu": "Finances → Trésorerie",
-          "image": "patron-treasury.jpg",
           "goal": "Suivre les entrées, sorties et soldes consolidés de l’organisation.",
           "steps": [
             "Ouvrez Trésorerie.",
@@ -211,7 +199,6 @@
         {
           "name": "Vitrine",
           "menu": "Gestion immobilière → Vitrine",
-          "image": "patron-showcase.jpg",
           "goal": "Consulter la présentation publique de l’organisation.",
           "steps": [
             "Ouvrez Vitrine.",
@@ -226,7 +213,6 @@
         {
           "name": "Maintenance",
           "menu": "Opérations → Maintenance",
-          "image": "patron-maintenance.jpg",
           "goal": "Suivre les interventions et leur avancement dans l’organisation.",
           "steps": [
             "Choisissez la ville active.",
@@ -241,7 +227,6 @@
         {
           "name": "Administration de l’organisation",
           "menu": "Administration → Administration",
-          "image": "patron-administration.jpg",
           "goal": "Gérer les réglages d’organisation autorisés à votre rôle.",
           "steps": [
             "Ouvrez Administration.",
@@ -257,7 +242,6 @@
         {
           "name": "Profil et paramètres",
           "menu": "Compte → Mon profil / Paramètres",
-          "image": "patron-settings.jpg",
           "goal": "Personnaliser votre compte et consulter le présent manuel.",
           "steps": [
             "Dans Paramètres, choisissez thème et couleur d’accent.",
@@ -270,7 +254,7 @@
           "id": "profil-et-parametres"
         }
       ],
-      "pageCount": 14
+      "pageCount": 17
     },
     "admin_immobilier": {
       "title": "Manuel d’utilisation — Administration immobilière",
@@ -281,7 +265,6 @@
         {
           "name": "Tableau de bord",
           "menu": "Vue générale → Tableau de bord",
-          "image": "immo-dashboard.jpg",
           "goal": "Suivre les indicateurs de l’organisation.",
           "steps": [
             "Ouvrez Tableau de bord.",
@@ -296,7 +279,6 @@
         {
           "name": "Rapports",
           "menu": "Vue générale → Rapports",
-          "image": "immo-reports.jpg",
           "goal": "Analyser l’activité de l’organisation.",
           "steps": [
             "Ouvrez Rapports.",
@@ -312,7 +294,6 @@
         {
           "name": "Patrimoine",
           "menu": "Gestion immobilière → Patrimoine",
-          "image": "immo-property.jpg",
           "goal": "Consulter et comparer la structure du patrimoine entre les villes de l’organisation.",
           "steps": [
             "Ouvrez Patrimoine et sélectionnez la ville, la parcelle ou le bâtiment à examiner.",
@@ -328,7 +309,6 @@
         {
           "name": "Locataires",
           "menu": "Gestion immobilière → Locataires",
-          "image": "immo-tenants.jpg",
           "goal": "Superviser les locataires, les occupations et les contrats dans l’organisation.",
           "steps": [
             "Ouvrez Locataires dans le périmètre actif.",
@@ -346,7 +326,6 @@
         {
           "name": "Loyers",
           "menu": "Finances → Loyers",
-          "image": "immo-rents.jpg",
           "goal": "Superviser les échéances, paiements et retards entre villes.",
           "steps": [
             "Ouvrez Loyers.",
@@ -362,7 +341,6 @@
         {
           "name": "Trésorerie",
           "menu": "Finances → Trésorerie",
-          "image": "immo-treasury.jpg",
           "goal": "Suivre les entrées, sorties et soldes consolidés par devise.",
           "steps": [
             "Ouvrez Trésorerie.",
@@ -378,7 +356,6 @@
         {
           "name": "Vitrine",
           "menu": "Gestion immobilière → Vitrine",
-          "image": "immo-showcase.jpg",
           "goal": "Superviser la présentation publique de l’organisation.",
           "steps": [
             "Ouvrez Vitrine.",
@@ -394,7 +371,6 @@
         {
           "name": "Personnel",
           "menu": "Opérations → Personnel",
-          "image": "immo-staff.jpg",
           "goal": "Gérer le répertoire organisationnel des collaborateurs et consulter leurs affectations.",
           "steps": [
             "Ouvrez Personnel.",
@@ -411,7 +387,6 @@
         {
           "name": "Maintenance",
           "menu": "Opérations → Maintenance",
-          "image": "admin-immobilier-maintenance.jpg",
           "goal": "Superviser les interventions et leur avancement par ville.",
           "steps": [
             "Ouvrez Maintenance et choisissez la ville.",
@@ -426,7 +401,6 @@
         {
           "name": "Administration",
           "menu": "Administration → Administration",
-          "image": "immo-administration.jpg",
           "goal": "Gérer les réglages de l’organisation autorisés.",
           "steps": [
             "Ouvrez Administration.",
@@ -442,7 +416,6 @@
         {
           "name": "Profil et paramètres",
           "menu": "Compte → Mon profil / Paramètres",
-          "image": "immo-settings.jpg",
           "goal": "Personnaliser son compte et consulter le manuel.",
           "steps": [
             "Dans Paramètres, choisissez thème, accent et préférences.",
@@ -455,7 +428,7 @@
           "id": "profil-et-parametres"
         }
       ],
-      "pageCount": 15
+      "pageCount": 19
     },
     "admin_ville": {
       "title": "Manuel d’utilisation — Administration de ville",
@@ -466,7 +439,6 @@
         {
           "name": "Tableau de bord",
           "menu": "Vue générale → Tableau de bord",
-          "image": "ville-dashboard.jpg",
           "goal": "Suivre les indicateurs des villes attribuées.",
           "steps": [
             "Ouvrez Tableau de bord.",
@@ -481,7 +453,6 @@
         {
           "name": "Rapports de ville",
           "menu": "Vue générale → Rapports",
-          "image": "ville-reports.jpg",
           "goal": "Consulter les rapports de votre périmètre.",
           "steps": [
             "Ouvrez Rapports.",
@@ -496,7 +467,6 @@
         {
           "name": "Patrimoine",
           "menu": "Gestion immobilière → Patrimoine",
-          "image": "ville-property.jpg",
           "goal": "Décrire le patrimoine réel de la parcelle au bâtiment, au niveau et aux espaces locatifs, puis gérer les accès physiques.",
           "steps": [
             "Ouvrez Patrimoine, puis sélectionnez la ville et la parcelle concernées.",
@@ -514,7 +484,6 @@
         {
           "name": "Locataires",
           "menu": "Gestion immobilière → Locataires",
-          "image": "ville-tenants.jpg",
           "goal": "Gérer les personnes, leurs occupations et leurs contrats sur les unités autorisées.",
           "steps": [
             "Ouvrez Locataires dans le périmètre actif.",
@@ -536,7 +505,6 @@
         {
           "name": "Loyers",
           "menu": "Finances → Loyers",
-          "image": "ville-rents.jpg",
           "goal": "Suivre les échéances dans les villes attribuées.",
           "steps": [
             "Ouvrez Loyers.",
@@ -552,7 +520,6 @@
         {
           "name": "Trésorerie",
           "menu": "Finances → Trésorerie",
-          "image": "ville-treasury.jpg",
           "goal": "Lire les entrées et sorties visibles dans votre périmètre.",
           "steps": [
             "Ouvrez Trésorerie.",
@@ -568,7 +535,6 @@
         {
           "name": "Opérations et personnel",
           "menu": "Opérations → Opérations",
-          "image": "ville-operations.jpg",
           "goal": "Suivre les membres et leurs affectations aux biens.",
           "steps": [
             "Ouvrez Opérations et sélectionnez la ville active.",
@@ -584,7 +550,6 @@
         {
           "name": "Maintenance",
           "menu": "Opérations → Maintenance",
-          "image": "ville-maintenance.jpg",
           "goal": "Suivre les interventions d’une ville attribuée.",
           "steps": [
             "Choisissez la ville active.",
@@ -600,7 +565,6 @@
         {
           "name": "Profil et paramètres",
           "menu": "Compte → Mon profil / Paramètres",
-          "image": "ville-settings.jpg",
           "goal": "Régler ses préférences et consulter son manuel.",
           "steps": [
             "Ouvrez Paramètres pour le thème, l’accent et les préférences personnelles.",
@@ -613,7 +577,7 @@
           "id": "profil-et-parametres"
         }
       ],
-      "pageCount": 14
+      "pageCount": 17
     }
   }
 }

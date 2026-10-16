@@ -3,7 +3,7 @@
 declare(strict_types=1);
 
 /**
- * Vérifie l’intégrité des guides publiés et des pages servies au lecteur.
+ * Vérifie l’intégrité des guides textuels et des pages PDF servies au lecteur.
  * Les contrôles d’accès HTTP par rôle sont effectués avec comptes de test dédiés.
  */
 $root = dirname(__DIR__);
@@ -52,14 +52,47 @@ foreach ($expectedRoles as $role) {
     foreach (is_array($modules) ? $modules : [] as $module) {
         $articleIds[] = $module['id'] ?? '';
         $check(
-            isset($module['id'], $module['name'], $module['menu'], $module['goal'], $module['steps'], $module['image'])
+            isset($module['id'], $module['name'], $module['menu'], $module['goal'], $module['steps'])
             && is_array($module['steps']) && count($module['steps']) > 0,
             "La procédure du module ".($module['name'] ?? 'inconnu')." est complète",
         );
         $check(strlen(trim((string) ($module['goal'] ?? ''))) >= 20 && strlen(trim((string) ($module['steps'][0] ?? ''))) >= 12, "Le contenu du module ".($module['name'] ?? 'inconnu')." est exploitable dans le lecteur web");
-        $check(is_file($root.'/output/pdf/screenshots/'.basename((string) ($module['image'] ?? ''))), "La capture du module ".($module['name'] ?? 'inconnu')." existe");
+        $check(!isset($module['image']), "Le module ".($module['name'] ?? 'inconnu')." ne dépend pas d’une capture d’écran");
     }
     $check(count($articleIds) === count(array_unique($articleIds)) && !in_array('', $articleIds, true), "Les articles {$role} ont des identifiants stables et uniques pour leur navigation URL");
+
+    $text = '';
+    if (is_string($pdfPath) && is_file($pdfPath)) {
+        $process = proc_open(['pdftotext', '-layout', $pdfPath, '-'], [1 => ['pipe', 'w'], 2 => ['pipe', 'w']], $pipes);
+        if (is_resource($process)) {
+            $text = stream_get_contents($pipes[1]) ?: '';
+            fclose($pipes[1]);
+            fclose($pipes[2]);
+            proc_close($process);
+        }
+    }
+    $check(
+        str_contains($text, 'Actions de cet écran')
+        && str_contains($text, 'Comment reconnaître la réussite')
+        && str_contains($text, 'En cas de blocage ou d’erreur'),
+        "Le PDF {$role} contient les rubriques d’action, de réussite et d’erreur du manuel web",
+    );
+    $normalizedPdfText = preg_replace('/\s+/u', ' ', $text) ?? $text;
+    $check(
+        is_array($modules) && array_reduce($modules, static function (bool $complete, array $module) use ($normalizedPdfText): bool {
+            if (!$complete || !str_contains($normalizedPdfText, (string) ($module['name'] ?? ''))) {
+                return false;
+            }
+            foreach ($module['steps'] ?? [] as $step) {
+                if (!str_contains($normalizedPdfText, rtrim((string) $step, '.!?'))) {
+                    return false;
+                }
+            }
+
+            return true;
+        }, true),
+        "Le PDF {$role} reprend chaque écran et chaque étape du catalogue web",
+    );
 
     for ($page = 1; $page <= $pageCount; ++$page) {
         $pagePath = sprintf('%s/output/pdf/manual-pages/%s/page-%03d.jpg', $root, $role, $page);

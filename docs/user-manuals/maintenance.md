@@ -6,8 +6,10 @@
 `patron`, `admin_immobilier` et `admin_ville`. Chaque entrée `modules` décrit
 le chemin de menu, l’objectif, la procédure, les champs, le résultat attendu et
 les limites d’accès. Le lecteur web et le générateur PDF lisent ce même
-catalogue. Les captures utilisées par le PDF sont stockées sous
-`output/pdf/screenshots/`.
+catalogue. Chaque étape constitue une action navigable dans le lecteur et un
+sous-titre de la table des matières du PDF. Les PDF contiennent du texte
+sélectionnable et des pictogrammes vectoriels ; aucune capture d’écran de
+l’application n’y est intégrée.
 
 Le contenu ne constitue jamais une autorisation. Pour décrire un nouveau bouton
 ou une opération, vérifiez le menu du rôle dans
@@ -41,10 +43,9 @@ du rôle actif en `Content-Disposition: attachment`.
 3. Vérifier qu’aucune adresse, personne, donnée de test ou valeur secrète réelle
    n’est présente dans l’article ni dans l’image.
 4. Mettre à jour la version et `updatedAt` du catalogue.
-5. Exécuter les contrôles ci-dessous. Si le contenu PDF doit suivre la
-   modification, vérifier les captures et lancer `python3
-   tools/generate_user_manuals.py`; cette commande régénère les PDF et les pages
-   JPEG de lecture de compatibilité.
+5. Exécuter les contrôles ci-dessous puis lancer `python3
+   tools/generate_user_manuals.py`; cette commande régénère les quatre PDF et
+   leurs pages JPEG de lecture à partir des PDF, sans capturer l’interface.
 
 ## Vérifications
 
@@ -56,9 +57,10 @@ yarn build
 ```
 
 Le script Node contrôle les quatre rôles, les URL d’article, la recherche, les
-groupes et la correspondance entre chaque article et le menu réellement
-accessible. Le script PHP vérifie le catalogue, les articles, les PDF, les
-captures et les pages de rendu conservées pour compatibilité.
+groupes, les étapes navigables et la correspondance entre chaque article et le
+menu réellement accessible. Le script PHP vérifie le catalogue, le texte des
+PDF, la présence des repères de réussite et d’erreur et les pages de rendu PDF
+conservées pour compatibilité.
 
 Contrôle visuel du lecteur sur 320, 375, 768, 1024 et 1440 px, dans les thèmes
 clair et sombre : navigation, sélection d’article, recherche, précédent/suivant,
