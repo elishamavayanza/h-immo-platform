@@ -85,6 +85,15 @@ const content: Record<string, Omit<PageHelp, 'path' | 'roles'>> = {
             { id: 'publications-images', question: 'Quelles images puis-je joindre ?', answer: 'Vous pouvez joindre jusqu’à huit images dans les formats acceptés par le formulaire. Une légende peut être saisie pour chaque image sélectionnée.' },
         ],
     },
+    '/app/publications': {
+        title: 'Détail d’une publication',
+        description: 'Lisez une annonce diffusée à votre organisation et revenez à votre espace de travail.',
+        questions: [
+            { id: 'publication-read', question: 'Comment lire une publication et revenir à mon espace ?', answer: 'Parcourez le titre, la date, le contenu et les images, puis utilisez « Retour à l’application ». L’ouverture marque automatiquement la publication comme lue et met à jour le compteur de notifications.', keywords: ['annonce', 'notification', 'lue', 'compteur', 'retour'] },
+            { id: 'publication-unavailable', question: 'Pourquoi la publication est-elle indisponible ?', answer: 'Elle a pu expirer, être retirée ou ne pas vous être destinée. Revenez à votre espace ; si elle reste dans vos notifications, actualisez celles-ci ou contactez l’administration de la plateforme.', keywords: ['expirée', 'retirée', 'erreur', 'accès'] },
+            { id: 'publication-images', question: 'Comment consulter les images jointes ?', answer: 'Les images s’affichent dans le contenu de la publication et s’adaptent à la largeur de l’écran. Faites défiler la page pour consulter l’ensemble de l’annonce.', keywords: ['photo', 'image', 'mobile', 'défilement'] },
+        ],
+    },
     '/app/admin/utilisateurs': {
         title: 'Utilisateurs plateforme',
         description: 'Consultez les comptes et gérez leur accès à la plateforme.',
@@ -255,7 +264,13 @@ const content: Record<string, Omit<PageHelp, 'path' | 'roles'>> = {
         description: 'Configurez vos préférences personnelles et les options accessibles à votre compte.',
         questions: [
             { id: 'settings-theme', question: 'Comment choisir le thème et la couleur ?', answer: 'Dans la section Apparence, choisissez le thème (clair, sombre ou système) et l’une des couleurs de palette. Le choix est enregistré dans vos préférences et s’applique aux composants compatibles.' },
-            { id: 'settings-account', question: 'Comment modifier mes préférences ?', answer: 'Modifiez les contrôles disponibles dans la section concernée puis utilisez le bouton d’enregistrement correspondant. Un retour de confirmation indique si la sauvegarde a abouti.' },
+            { id: 'settings-date-format', question: 'Comment changer le format des dates ?', answer: 'Choisissez JJ/MM/AAAA, MM/JJ/AAAA ou AAAA-MM-JJ dans « Format de date ». Le changement est appliqué aux dates formatées par l’application ; il ne modifie pas les dates enregistrées ni les données déjà exportées.', keywords: ['date', 'format', 'jour', 'mois', 'année'] },
+            { id: 'settings-compact-tables', question: 'À quoi sert l’affichage compact des tableaux ?', answer: 'Activez « Tableaux compacts » pour réduire la hauteur des lignes et voir davantage d’éléments à l’écran. Désactivez-le pour retrouver l’espacement normal. Ce réglage change la présentation, pas le nombre total de résultats ni les permissions.', keywords: ['tableau', 'lignes', 'densité', 'compact', 'espacement'] },
+            { id: 'settings-page-size', question: 'Comment afficher plus ou moins de lignes dans les listes ?', answer: 'Choisissez le nombre de lignes par page dans « Lignes par page ». Les listes paginées utilisent ce choix lorsqu’elles prennent en charge la préférence ; utilisez ensuite la pagination pour parcourir les autres résultats.', keywords: ['pagination', '10', '20', '50', '100', 'résultats'] },
+            { id: 'settings-motion', question: 'Que change la réduction des animations ?', answer: 'Activez cette option pour limiter les transitions et animations de l’interface. Les menus, formulaires et actions restent disponibles ; seul leur mouvement visuel est réduit.', keywords: ['animation', 'transition', 'mouvement', 'accessibilité'] },
+            { id: 'settings-notifications', question: 'Comment fonctionnent les notifications par e-mail et dans l’application ?', answer: 'Les deux réglages sont indépendants : l’e-mail concerne les alertes importantes envoyées par courrier, tandis que les notifications dans l’application contrôlent les messages toast temporaires de confirmation et d’état. Désactiver les toasts ne bloque pas l’enregistrement des actions.', keywords: ['email', 'e-mail', 'toast', 'message', 'confirmation', 'alerte'] },
+            { id: 'settings-navigation', question: 'Comment garder plus de place pour le contenu ?', answer: 'Activez « Menu latéral replié au démarrage » pour ouvrir l’application avec le menu réduit sur ordinateur. Vous pouvez toujours le déployer depuis son bouton. Sur petit écran, le menu suit le comportement mobile et cette préférence ne change pas les accès.', keywords: ['menu', 'sidebar', 'navigation', 'écran', 'mobile'] },
+            { id: 'settings-account', question: 'Comment modifier et enregistrer mes préférences ?', answer: 'Les réglages sont enregistrés individuellement dès que vous changez un contrôle. Un toast confirme le réglage appliqué ; en cas d’échec de synchronisation, l’application affiche l’erreur et rétablit la valeur précédente. Corrigez le problème puis réessayez.' },
             { id: 'settings-currency', question: 'Pourquoi certains paramètres d’organisation ne sont-ils pas visibles ?', answer: 'Les paramètres financiers et ceux de l’organisation dépendent de votre rôle et de l’activation de la fonctionnalité. Consultez la section Organisation si elle est proposée.' },
         ],
     },
@@ -266,6 +281,15 @@ const content: Record<string, Omit<PageHelp, 'path' | 'roles'>> = {
             { id: 'org-settings-currency', question: 'Comment choisir la devise de référence ?', answer: 'Sélectionnez USD ou CDF puis enregistrez le réglage. Les montants d’origine restent distincts ; le taux de change sert aux rapports qui appliquent cette conversion.' },
             { id: 'org-settings-rate', question: 'Comment mettre à jour un taux de change ?', answer: 'Saisissez le taux demandé dans la section de l’organisation ou de la ville concernée, puis enregistrez. L’historique indique la date d’effet et une dérogation locale lorsqu’elle existe.' },
             { id: 'org-settings-access', question: 'Pourquoi cette section n’est-elle pas disponible ?', answer: 'L’accès dépend de votre rôle et de la configuration financière de l’organisation. Si le lien n’est pas affiché, demandez au Patron ou à l’Administrateur immobilier de vérifier les paramètres.' },
+        ],
+    },
+    '/settings/manuel': {
+        title: 'Manuel d’utilisation',
+        description: 'Ouvrez le guide correspondant au rôle actif et parcourez ses procédures.',
+        questions: [
+            { id: 'manual-role', question: 'Pourquoi le manuel dépend-il de mon rôle ?', answer: 'Le guide présente les menus, autorisations et procédures accessibles dans votre espace. Si votre rôle actif change, le contenu proposé suit ce rôle.' , keywords: ['rôle', 'permissions', 'menu', 'accès'] },
+            { id: 'manual-read', question: 'Comment lire ou télécharger le manuel ?', answer: 'Sélectionnez « Lire le manuel » pour ouvrir le document dans la page et le faire défiler. Utilisez « Télécharger le PDF » pour le conserver hors ligne. Sur téléphone, faites défiler avec le doigt et utilisez le zoom du lecteur si nécessaire.' , keywords: ['pdf', 'lecture', 'télécharger', 'mobile', 'zoom', 'défilement'] },
+            { id: 'manual-sections', question: 'Comment trouver une procédure dans le guide ?', answer: 'Utilisez l’arbre des sections pour choisir un écran ou une action. Les étapes décrivent le parcours, les champs à vérifier et les résultats attendus ; les encadrés signalent les erreurs courantes et les actions réservées à certains rôles.' , keywords: ['arbre', 'navigation', 'procédure', 'étapes', 'erreur'] },
         ],
     },
     '/profile': {
@@ -301,6 +325,10 @@ export function buildContextualHelpInventory(): PageHelp[] {
         const definition = content[path];
         if (definition) inventory.push({ path, roles: [...ORG_ROLES, PLATFORM_ROLE], ...definition });
     }
+    for (const path of ['/app/publications', '/settings/manuel']) {
+        const definition = content[path];
+        if (definition) inventory.push({ path, roles: path === '/app/publications' ? [...ORG_ROLES] : [...ORG_ROLES, PLATFORM_ROLE], ...definition });
+    }
     const expenseManagement = content['/app/depenses/gestion'];
     if (expenseManagement) inventory.push({ path: '/app/depenses/gestion', roles: [...ORG_ROLES], ...expenseManagement });
     for (const path of ['/login', '/forgot-password', '/reset-password']) {
@@ -327,9 +355,15 @@ export function resolveContextualHelp(pathname: string, platformRole: PlatformRo
 }
 
 export function filterHelpQuestions(questions: readonly HelpQuestion[], search: string): HelpQuestion[] {
-    const query = search.trim().toLocaleLowerCase('fr');
+    const normalize = (value: string) => value
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .toLocaleLowerCase('fr')
+        .replace(/\s+/g, ' ')
+        .trim();
+    const query = normalize(search);
     if (!query) return [...questions];
     return questions.filter(({ question, answer, keywords = [] }) =>
-        [question, answer, ...keywords].some((value) => value.toLocaleLowerCase('fr').includes(query))
+        [question, answer, ...keywords].some((value) => normalize(value).includes(query))
     );
 }

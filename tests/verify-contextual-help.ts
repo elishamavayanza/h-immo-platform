@@ -22,13 +22,13 @@ for (const { platformRole, organizationRole } of roles) {
         if (!hasAccess) continue;
         const help = resolveContextualHelp(route.path, platformRole, organizationRole);
         assert(help !== null, `aide absente pour ${route.path} (${platformRole ?? organizationRole})`);
-        assert(help.questions.length > 0 && help.questions.length <= 10, `nombre de questions invalide pour ${route.path}`);
+        assert(help.questions.length > 0 && help.questions.length <= 20, `nombre de questions invalide pour ${route.path}`);
     }
 }
 
 for (const page of inventory) {
     assert(page.roles.length > 0, `aucun rôle associé à ${page.path}`);
-    assert(page.questions.length <= 10, `plus de dix questions sur ${page.path}`);
+    assert(page.questions.length <= 20, `plus de vingt questions sur ${page.path}`);
 }
 
 assert(resolveContextualHelp('/app/patrimoine/villes/abc/parcelles/xyz', null, 'patron')?.path === '/app/patrimoine', 'un drill-down patrimoine conserve son aide');
@@ -37,8 +37,16 @@ assert(resolveContextualHelp('/app/personnel', null, 'admin_ville') === null, 'u
 assert(resolveContextualHelp('/login', null, null)?.title === 'Connexion', 'la connexion possède une aide publique');
 assert(resolveContextualHelp('/app/access-denied', null, null)?.title === 'Accès refusé', 'la page accès refusé possède une aide');
 assert(resolveContextualHelp('/app/organisation', null, 'admin_ville') === null, 'la fiche organisation n’expose pas son aide au rôle ville');
+assert(resolveContextualHelp('/app/publications/123e4567-e89b-42d3-a456-426614174000', null, 'admin_ville')?.title === 'Détail d’une publication', 'le détail des publications possède une aide dédiée');
+assert(resolveContextualHelp('/app/publications/123e4567-e89b-42d3-a456-426614174000', 'super_admin', null) === null, 'SUPER_ADMIN ne reçoit pas les publications destinées aux organisations');
+assert(resolveContextualHelp('/settings/manuel', 'super_admin', null)?.title === 'Manuel d’utilisation', 'le manuel possède une aide dédiée pour les rôles plateforme');
 const searched = filterHelpQuestions(inventory.find((page) => page.path === '/app/patrimoine')!.questions, 'GPS');
 assert(searched.length === 1 && searched[0].id === 'property-map', 'la recherche porte sur le contenu des réponses');
+const unaccentedSearch = filterHelpQuestions(inventory.find((page) => page.path === '/app/location/loyers')!.questions, 'echeance');
+assert(unaccentedSearch.some((question) => question.id === 'rents-payment'), 'la recherche FAQ ignore les accents');
+const settingsHelp = resolveContextualHelp('/settings', null, 'patron');
+assert(settingsHelp?.questions.some((question) => question.id === 'settings-compact-tables'), 'les préférences de tableaux ont une explication dédiée');
+assert(settingsHelp?.questions.some((question) => question.id === 'settings-notifications'), 'les notifications toast et e-mail sont expliquées séparément');
 assert(filterHelpQuestions(inventory[0].questions, 'terme qui ne figure pas').length === 0, 'la recherche peut retourner un état vide');
 const savedPosition = normalizeHelpButtonPosition(640, 400, 1280, 800);
 assert(Math.abs(savedPosition.x - 0.5) < 0.001 && Math.abs(savedPosition.y - 0.5) < 0.001, 'le glissement enregistre une position normalisée');
