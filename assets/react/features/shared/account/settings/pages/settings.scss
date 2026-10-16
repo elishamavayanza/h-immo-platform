@@ -104,6 +104,7 @@
 
 @media(max-width:600px) {
     .settings-page__sections { grid-template-columns:minmax(0, 1fr); gap:12px; }
+    .settings-manual-page .account-page__header { align-items:stretch; flex-direction:column; gap:12px; }
     .settings-card--platform { grid-column:auto; }
     .setting-row { align-items:flex-start; flex-wrap:wrap; gap:10px; }
     .setting-row p { max-width:34ch; }
@@ -118,6 +119,11 @@
     .settings-manual-reader__toolbar { justify-content:center; }
     .settings-manual-reader__page { order:-1; flex-basis:100%; text-align:center; }
     .settings-manual-reader__stage { height:68vh; min-height:360px; padding:8px; }
+    .settings-manual-page__back { width:100%; box-sizing:border-box; text-align:center; }
+}
+
+@container settings-page (max-width:600px) {
+    .settings-manual-page .account-page__header { align-items:stretch; flex-direction:column; gap:12px; }
     .settings-manual-page__back { width:100%; box-sizing:border-box; text-align:center; }
 }
 
