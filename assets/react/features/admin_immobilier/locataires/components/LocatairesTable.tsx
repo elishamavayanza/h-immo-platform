@@ -26,6 +26,7 @@ interface LocatairesTableProps {
     onNewLease: (row: LocataireRow) => void;
     onActivateLease: (row: LocataireRow) => void;
     onDocuments: (row: LocataireRow) => void;
+    onHistory: (row: LocataireRow) => void;
     /** Lecture seule (espace PATRON) : masque toute action d'écriture. */
     readOnly?: boolean;
 }
@@ -35,7 +36,7 @@ interface LocatairesTableProps {
  * Archiver = suppression logique (`ARCHIVE_TENANT`). Pas de suppression définitive.
  * `readOnly` masque la colonne d'actions (le Patron consulte sans opérer).
  */
-export function LocatairesTable({ rows, role, onEdit, onArchive, onNewLease, onActivateLease, onDocuments, readOnly = false }: LocatairesTableProps) {
+export function LocatairesTable({ rows, role, onEdit, onArchive, onNewLease, onActivateLease, onDocuments, onHistory, readOnly = false }: LocatairesTableProps) {
     const columns: DataTableColumn<LocataireRow>[] = [
         {
             key: 'name',
@@ -52,6 +53,9 @@ export function LocatairesTable({ rows, role, onEdit, onArchive, onNewLease, onA
             title: 'Actions',
             render: (row) => {
                 const items: PopoverMenuItem[] = [
+                    ...(canDo(role, 'view_tenant')
+                        ? [{ id: 'history', label: 'Historique résidentiel', icon: <Icon name="document" />, onClick: () => onHistory(row) }]
+                        : []),
                     ...(row.leaseUuid && canDo(role, 'view_document')
                         ? [{ id: 'documents', label: 'Documents du bail', icon: <Icon name="document" />, onClick: () => onDocuments(row) }]
                         : []),

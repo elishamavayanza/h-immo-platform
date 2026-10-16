@@ -7,6 +7,7 @@ namespace App\Entity\Property;
 use App\Entity\Shared\SoftDeletableEntity;
 use App\Enum\Currency;
 use App\Enum\UnitType;
+use App\Enum\UnitOperationalStatus;
 use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
 
@@ -29,12 +30,20 @@ use Doctrine\ORM\Mapping as ORM;
 #[ORM\UniqueConstraint(name: 'uniq_unit_building_reference', columns: ['building_id', 'reference'])]
 class Unit extends SoftDeletableEntity
 {
+    #[ORM\ManyToOne(targetEntity: BuildingLevel::class)]
+    #[ORM\JoinColumn(name: 'level_id', referencedColumnName: 'id', nullable: true)]
+    private ?BuildingLevel $level = null;
     /**
      * Bâtiment auquel l'unité locative appartient.
      */
     #[ORM\ManyToOne(targetEntity: Building::class)]
     #[ORM\JoinColumn(name: 'building_id', referencedColumnName: 'id', nullable: false)]
     private Building $building;
+
+    /** Unité parente lorsque cet espace est une subdivision physique. */
+    #[ORM\ManyToOne(targetEntity: self::class)]
+    #[ORM\JoinColumn(name: 'parent_unit_id', referencedColumnName: 'id', nullable: true, onDelete: 'SET NULL')]
+    private ?self $parentUnit = null;
 
     /**
      * Référence unique de l'unité dans le bâtiment.
@@ -48,11 +57,22 @@ class Unit extends SoftDeletableEntity
     #[ORM\Column(type: Types::STRING, enumType: UnitType::class)]
     private UnitType $type;
 
+    #[ORM\Column(type: Types::STRING, length: 32, enumType: UnitOperationalStatus::class, options: ['default' => 'available'])]
+    private UnitOperationalStatus $operationalStatus = UnitOperationalStatus::AVAILABLE;
+
+    /** Activité exercée dans un local professionnel, si pertinente. */
+    #[ORM\Column(type: Types::STRING, length: 150, nullable: true)]
+    private ?string $commercialActivity = null;
+
     /**
      * Étage où se situe l'unité.
      */
     #[ORM\Column(type: Types::SMALLINT)]
     private int $floor;
+
+    /** Libellé libre du niveau (ex. rez-de-chaussée, mezzanine, annexe arrière). */
+    #[ORM\Column(type: Types::STRING, length: 100, nullable: true)]
+    private ?string $floorLabel = null;
 
     /**
      * Surface de l'unité en mètres carrés.
@@ -118,6 +138,21 @@ class Unit extends SoftDeletableEntity
         return $this->building;
     }
 
+    public function getParentUnit(): ?self
+    {
+        return $this->parentUnit;
+    }
+
+    public function getLevel(): ?BuildingLevel { return $this->level; }
+    public function setLevel(?BuildingLevel $level): static { $this->level = $level; return $this; }
+
+    public function setParentUnit(?self $parentUnit): static
+    {
+        $this->parentUnit = $parentUnit;
+
+        return $this;
+    }
+
     public function setBuilding(Building $building): static
     {
         $this->building = $building;
@@ -149,6 +184,11 @@ class Unit extends SoftDeletableEntity
         return $this;
     }
 
+    public function getOperationalStatus(): UnitOperationalStatus { return $this->operationalStatus; }
+    public function setOperationalStatus(UnitOperationalStatus $status): static { $this->operationalStatus = $status; return $this; }
+    public function getCommercialActivity(): ?string { return $this->commercialActivity; }
+    public function setCommercialActivity(?string $activity): static { $this->commercialActivity = $activity === null || trim($activity) === '' ? null : trim($activity); return $this; }
+
     public function getFloor(): int
     {
         return $this->floor;
@@ -157,6 +197,18 @@ class Unit extends SoftDeletableEntity
     public function setFloor(int $floor): static
     {
         $this->floor = $floor;
+
+        return $this;
+    }
+
+    public function getFloorLabel(): ?string
+    {
+        return $this->floorLabel;
+    }
+
+    public function setFloorLabel(?string $floorLabel): static
+    {
+        $this->floorLabel = $floorLabel;
 
         return $this;
     }

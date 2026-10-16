@@ -63,7 +63,7 @@ function check(label: string, ok: boolean, detail = ''): void {
 const city = (id: string, name: string): CityItem => ({ id, organizationId: 'org', name, code: id.toUpperCase(), province: null, country: null, status: 'active' });
 const parcel = (id: string, cityId: string, extra: Partial<ParcelItem> = {}): ParcelItem => ({ id, cityId, reference: `REF-${id}`, titleNumber: null, name: `Parcelle ${id}`, address: '12 av. du Port', quarter: null, area: '100.00', latitude: null, longitude: null, description: null, ...extra });
 const building = (id: string, parcelId: string, extra: Partial<BuildingItem> = {}): BuildingItem => ({ id, parcelId, reference: `BAT-${id}`, name: `Bâtiment ${id}`, type: 'apartment', numberOfFloors: null, description: null, photos: [], ...extra });
-const unit = (id: string, buildingId: string, extra: Partial<UnitItem> = {}): UnitItem => ({ id, buildingId, reference: `U-${id}`, type: 'apartment', floor: 0, surface: '50.00', bedrooms: null, rooms: null, bathrooms: null, monthlyRent: '250.00', currency: 'USD', description: null, isPublished: false, ...extra });
+const unit = (id: string, buildingId: string, extra: Partial<UnitItem> = {}): UnitItem => ({ id, buildingId, parentUnitId: null, levelId: null, reference: `U-${id}`, type: 'apartment', operationalStatus: 'available', occupancyStatus: 'vacant', commercialActivity: null, floor: 0, floorLabel: null, surface: '50.00', bedrooms: null, rooms: null, bathrooms: null, monthlyRent: '250.00', currency: 'USD', description: null, isPublished: false, ...extra });
 const occ = (level: OccupancyItem['level'], levelUuid: string | null, totalUnits: number, occupiedUnits: number, availableUnits: number, occupancyRate: number): OccupancyItem => ({ level, levelUuid, label: levelUuid ?? level, totalUnits, occupiedUnits, availableUnits, occupancyRate });
 
 const data: PatrimoineData = {
@@ -133,7 +133,7 @@ check('relatedModuleUrl(bâtiment sans parcelle) -> buildingUuid', relatedModule
 check('relatedModuleUrl(parcelle+bâtiment) -> les deux, dans l’ordre', relatedModuleUrl('/app/depenses', 'p1', 'b1') === '/app/depenses?parcelUuid=p1&buildingUuid=b1');
 
 const lease = (id: string, unitId: string, status: string): LeaseItem => ({
-    id, organizationId: 'org', tenantId: `t-${id}`, unitId, reference: `BAIL-${id}`,
+    id, organizationId: 'org', tenantId: `t-${id}`, unitId, unitIds: [unitId], occupants: [], reference: `BAIL-${id}`,
     startDate: '2026-01-01T00:00:00Z', endDate: null, depositAmount: null, monthlyRent: '300.00',
     exchangeRate: null, referenceCurrency: null, currency: 'USD', status,
     terminationDate: null, terminationReason: null, notes: null, terms: null,

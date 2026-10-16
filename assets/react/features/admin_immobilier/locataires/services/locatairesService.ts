@@ -35,20 +35,38 @@ export async function fetchLocataires(organizationUuid: string, cityUuid?: strin
         return [unit.id, parcel?.cityId ?? null] as const;
     }));
 
-    // Un locataire ne devrait avoir qu'un bail actif (contrôle métier en
-    // PHP) : au cas où, on garde la fin de bail la plus lointaine.
-    const currentLeaseByTenant = new Map<string, LeaseItem>();
+    // Une personne peut avoir plusieurs logements : garder chaque bail
+    // courant au lieu d'écraser silencieusement les précédents dans la ligne.
+    const currentLeasesByTenant = new Map<string, LeaseItem[]>();
     leases.items.forEach((lease) => {
-        if (cityUuid && unitCityById.get(lease.unitId) !== cityUuid) return;
+        const leaseUnitIds = lease.unitIds?.length ? lease.unitIds : [lease.unitId];
+        if (cityUuid && !leaseUnitIds.some((id) => unitCityById.get(id) === cityUuid)) return;
         if (lease.status !== 'active' && lease.status !== 'draft') return;
-        const existing = currentLeaseByTenant.get(lease.tenantId);
-        const preferred = lease.status === 'active' || existing?.status !== 'active';
-        if (preferred && (!existing || lease.createdAt >= existing.createdAt)) currentLeaseByTenant.set(lease.tenantId, lease);
+        const current = currentLeasesByTenant.get(lease.tenantId) ?? [];
+        current.push(lease);
+        currentLeasesByTenant.set(lease.tenantId, current);
+        lease.occupants?.forEach((occupant) => {
+            const related = currentLeasesByTenant.get(occupant.tenantId) ?? [];
+            if (!related.some((item) => item.id === lease.id)) related.push(lease);
+            currentLeasesByTenant.set(occupant.tenantId, related);
+        });
     });
 
     const rows: LocataireRow[] = tenants.items.map((tenant) => {
-        const lease = currentLeaseByTenant.get(tenant.id) ?? null;
+        const tenantLeases = (currentLeasesByTenant.get(tenant.id) ?? []).sort((a, b) => {
+            if (a.status !== b.status) return a.status === 'active' ? -1 : 1;
+            return b.createdAt.localeCompare(a.createdAt);
+        });
+        const lease = tenantLeases[0] ?? null;
         const activeLease = lease?.status === 'active' ? lease : null;
+        const leasedUnitIds = [...new Set(tenantLeases.flatMap((item) => item.unitIds?.length ? item.unitIds : [item.unitId]))];
+        const currentUnitReferences = [...new Set(leasedUnitIds.map((id) => unitById.get(id)?.reference).filter((reference): reference is string => Boolean(reference)))];
+        const currentBuildingIds = [...new Set(leasedUnitIds.map((id) => unitById.get(id)?.buildingId).filter((id): id is string => Boolean(id)))];
+        const currentParcelIds = [...new Set(leasedUnitIds.map((unitId) => {
+            const itemUnit = unitById.get(unitId);
+            const itemBuilding = itemUnit ? buildingById.get(itemUnit.buildingId) : null;
+            return itemBuilding ? parcelById.get(itemBuilding.parcelId)?.id ?? null : null;
+        }).filter((id): id is string => id !== null))];
 
         return {
             id: tenant.id,
@@ -60,12 +78,16 @@ export async function fetchLocataires(organizationUuid: string, cityUuid?: strin
             email: tenant.email,
             notes: tenant.notes,
             address: tenant.address ?? '—',
-            unitReference: lease ? unitById.get(lease.unitId)?.reference ?? null : null,
+            unitReference: currentUnitReferences.join(', ') || null,
+            unitReferences: currentUnitReferences,
+            buildingIds: currentBuildingIds,
+            parcelIds: currentParcelIds,
             buildingId: lease ? unitById.get(lease.unitId)?.buildingId ?? null : null,
             parcelId: lease ? buildingById.get(unitById.get(lease.unitId)?.buildingId ?? '')?.parcelId ?? null : null,
             leaseEnd: activeLease?.endDate ?? null,
             leaseUuid: lease?.id ?? null,
             leaseStatus: lease?.status ?? null,
+            latestMovement: tenant.latestMovement ?? null,
         };
     });
 
@@ -76,9 +98,9 @@ export async function fetchLocataires(organizationUuid: string, cityUuid?: strin
         ? `Liste partielle : ${tenants.total} locataires, ${leases.total} baux et ${units.total} unités au total — les ${REFERENCE_LIMIT} premières entrées de chaque liste sont affichées.`
         : null;
 
-    const activeTenantIds = new Set([...currentLeaseByTenant.values()].filter((lease) => lease.status === 'active').map((lease) => lease.tenantId));
+    const activeLeaseCount = [...new Set([...currentLeasesByTenant.values()].flat().filter((lease) => lease.status === 'active').map((lease) => lease.id))].length;
 
-    return { rows, total: tenants.total, activeLeases: activeTenantIds.size, note, units: units.items, buildings: buildings.items, cities: cities.items.map(({ id, name }) => ({ id, name })) };
+    return { rows, total: tenants.total, activeLeases: activeLeaseCount, leases: leases.items, note, units: units.items.map((unit) => ({ ...unit, cityUuid: unitCityById.get(unit.id) ?? null })), buildings: buildings.items, cities: cities.items.map(({ id, name }) => ({ id, name })) };
 }
 
 /** Payload pour créer un locataire (personne physique ou morale). */
@@ -123,6 +145,8 @@ export async function updateTenant(uuid: string, payload: UpdateTenantPayload): 
 export interface CreateLeasePayload {
     tenantUuid: string;
     unitUuid: string;
+    additionalUnitUuids?: string[];
+    occupants?: Array<{ tenantUuid: string; role: 'co_tenant' | 'occupant'; startDate: string; endDate?: string }>;
     reference: string;
     startDate: string;
     endDate?: string;
@@ -141,6 +165,70 @@ export async function createLease(payload: CreateLeasePayload): Promise<unknown>
 /** `PATCH /api/v1/leases/{uuid}/activate` — transition DRAFT → ACTIVE. */
 export async function activateLease(leaseUuid: string): Promise<unknown> {
     const { data } = await apiClient.patch<Feedback<unknown>>(`/v1/leases/${leaseUuid}/activate`);
+    return data.data;
+}
+
+export async function recordLeaseOccupantDeparture(leaseUuid: string, occupantUuid: string, effectiveDate: string, reason: string): Promise<void> {
+    await apiClient.patch<Feedback<unknown>>(`/v1/leases/${leaseUuid}/occupants/${occupantUuid}/departure`, { effectiveDate, reason });
+}
+
+export async function addLeaseOccupant(leaseUuid: string, tenantUuid: string, role: 'co_tenant' | 'occupant', startDate: string): Promise<void> {
+    await apiClient.post<Feedback<unknown>>(`/v1/leases/${leaseUuid}/occupants`, { tenantUuid, role, startDate });
+}
+
+export type MovementKind = 'move_in' | 'transfer' | 'departure_announced' | 'departure_completed' | 'temporary_leave' | 'return' | 'occupants_changed' | 'correction';
+export type MovementState = 'announced' | 'planned' | 'postponed' | 'cancelled' | 'completed' | 'recorded';
+
+export interface ResidentialMovementItem {
+    uuid: string;
+    type: MovementKind;
+    status: MovementState;
+    leaseUuid: string | null;
+    nextLeaseUuid: string | null;
+    previousUnitUuid: string | null;
+    previousUnitReference: string | null;
+    nextUnitUuid: string | null;
+    nextUnitReference: string | null;
+    plannedDate: string | null;
+    effectiveDate: string | null;
+    effectiveDateEstimated: boolean;
+    reason: string | null;
+    details: string | null;
+    correctionReason: string | null;
+    recordedAt: string;
+    recordedBy: string;
+}
+
+export interface RecordResidentialMovementPayload {
+    type: MovementKind;
+    status: MovementState;
+    leaseUuid?: string;
+    nextLeaseUuid?: string;
+    previousUnitUuid?: string;
+    nextUnitUuid?: string;
+    plannedDate?: string;
+    effectiveDate?: string;
+    effectiveDateEstimated?: boolean;
+    reason?: string;
+    details?: string;
+}
+
+export interface CorrectResidentialMovementPayload extends RecordResidentialMovementPayload {
+    correctionReason: string;
+}
+
+export async function fetchResidentialMovements(tenantUuid: string): Promise<ResidentialMovementItem[]> {
+    const { data } = await apiClient.get<Feedback<ResidentialMovementItem[]>>(`/v1/tenants/${tenantUuid}/movements`);
+    return data.data;
+}
+
+export async function recordResidentialMovement(tenantUuid: string, payload: RecordResidentialMovementPayload): Promise<ResidentialMovementItem> {
+    const { data } = await apiClient.post<Feedback<ResidentialMovementItem>>(`/v1/tenants/${tenantUuid}/movements`, payload);
+    return data.data;
+}
+
+export async function correctResidentialMovement(tenantUuid: string, movementUuid: string, payload: CorrectResidentialMovementPayload): Promise<ResidentialMovementItem> {
+    const { data } = await apiClient.patch<Feedback<ResidentialMovementItem>>(`/v1/tenants/${tenantUuid}/movements/${movementUuid}`, payload);
     return data.data;
 }
 

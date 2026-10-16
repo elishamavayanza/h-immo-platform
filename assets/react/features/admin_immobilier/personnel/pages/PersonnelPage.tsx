@@ -191,6 +191,14 @@ export function PersonnelPage() {
     const openEditAssignment = (target: PersonnelRow) => {
         const assignment = target.latestAssignment;
         if (!assignment) return;
+        // Certaines anciennes affectations contiennent plusieurs niveaux de
+        // bien. Le formulaire n'en accepte qu'un : garder le niveau le plus
+        // précis pour permettre de modifier les autres champs sans erreur.
+        const assignmentTarget = assignment.unitId
+            ? { parcelUuid: '', buildingUuid: '', unitUuid: assignment.unitId }
+            : assignment.buildingId
+                ? { parcelUuid: '', buildingUuid: assignment.buildingId, unitUuid: '' }
+                : { parcelUuid: assignment.parcelId ?? '', buildingUuid: '', unitUuid: '' };
         setAssignTarget(target);
         setAssignmentEditTarget(assignment);
         setAssignmentForm({
@@ -200,9 +208,7 @@ export function PersonnelPage() {
             currency: assignment.currency as 'USD' | 'CDF',
             startDate: assignment.startDate,
             endDate: assignment.endDate ?? '',
-            parcelUuid: assignment.parcelId ?? '',
-            buildingUuid: assignment.buildingId ?? '',
-            unitUuid: assignment.unitId ?? '',
+            ...assignmentTarget,
             notes: assignment.notes ?? '',
         });
         setAssignmentFormErrors({});
@@ -250,9 +256,11 @@ export function PersonnelPage() {
                     currency: assignmentEditTarget.currency as 'USD' | 'CDF',
                     startDate: assignmentEditTarget.startDate,
                     endDate: assignmentEditTarget.endDate ?? undefined,
-                    parcelUuid: assignmentEditTarget.parcelId ?? undefined,
-                    buildingUuid: assignmentEditTarget.buildingId ?? undefined,
-                    unitUuid: assignmentEditTarget.unitId ?? undefined,
+                    ...(assignmentEditTarget.unitId
+                        ? { parcelUuid: undefined, buildingUuid: undefined, unitUuid: assignmentEditTarget.unitId }
+                        : assignmentEditTarget.buildingId
+                            ? { parcelUuid: undefined, buildingUuid: assignmentEditTarget.buildingId, unitUuid: undefined }
+                            : { parcelUuid: assignmentEditTarget.parcelId ?? undefined, buildingUuid: undefined, unitUuid: undefined }),
                     notes: assignmentEditTarget.notes ?? undefined,
                 });
                 if (Object.keys(changes).length > 0) await updateAssignment(assignmentEditTarget.id, changes);

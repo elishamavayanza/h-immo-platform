@@ -16,5 +16,10 @@ enum UnitType: string
     case SHOP = 'shop';
     case OFFICE = 'office';
     case RESTAURANT = 'restaurant';
+    case ROOM = 'room';
+    case WAREHOUSE = 'warehouse';
+    case WORKSHOP = 'workshop';
+    case STORAGE = 'storage';
+    case PARKING = 'parking';
     case OTHER = 'other';
 }

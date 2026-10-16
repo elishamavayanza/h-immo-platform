@@ -26,6 +26,7 @@ import { PhotoViewer } from '../../../shared/media/components/PhotoViewer';
 import { BUILDING_TYPE_LABELS, BUILDING_TYPE_OPTIONS } from './patrimoineView';
 import type { BuildingItem, CityItem, ParcelItem } from '../../shared/types/reference.types';
 import type { BuildingPayload } from '../services/patrimoineService';
+import { AccessPointsManager } from './AccessPointsManager';
 
 interface BuildingForm {
     parcelUuid: string;
@@ -84,6 +85,7 @@ export function BatimentsTab({ buildings, parcels, cities, role, isLoading, erro
     const [photoModalOpen, setPhotoModalOpen] = useState(false);
     const [photoTarget, setPhotoTarget] = useState<BuildingItem | null>(null);
     const [viewTarget, setViewTarget] = useState<BuildingItem | null>(null);
+    const [accessParcelId, setAccessParcelId] = useState<string | null>(null);
 
     const parcelById = new Map(parcels.map((parcel) => [parcel.id, parcel]));
     const cityById = new Map(cities.map((city) => [city.id, city]));
@@ -226,7 +228,7 @@ export function BatimentsTab({ buildings, parcels, cities, role, isLoading, erro
                     {!readOnly && canDo(role, 'create_building') && <Button onClick={openCreate} disabled={parcels.length === 0}>＋ Ajouter un bâtiment</Button>}
                 </div>
             </div>
-            {selectedParcelId && <div className="patrimoine-context"><span>Parcelle sélectionnée : <strong>{parcelById.get(selectedParcelId)?.name ?? 'Parcelle'}</strong> · {cityById.get(parcelById.get(selectedParcelId)?.cityId ?? '')?.name ?? ''}</span><Button variant="outline" onClick={() => onParcelFilter(null)}>Effacer le filtre</Button></div>}
+            {selectedParcelId && <div className="patrimoine-context"><span>Parcelle sélectionnée : <strong>{parcelById.get(selectedParcelId)?.name ?? 'Parcelle'}</strong> · {cityById.get(parcelById.get(selectedParcelId)?.cityId ?? '')?.name ?? ''}</span><div className="patrimoine-context__actions">{!readOnly && canDo(role, 'update_unit') && <Button variant="outline" onClick={() => setAccessParcelId(selectedParcelId)}>Gérer les entrées de la parcelle</Button>}<Button variant="outline" onClick={() => onParcelFilter(null)}>Effacer le filtre</Button></div></div>}
             {body}
 
             <Modal
@@ -286,6 +288,7 @@ export function BatimentsTab({ buildings, parcels, cities, role, isLoading, erro
             <Modal isOpen={viewTarget !== null} onClose={() => setViewTarget(null)} title={viewTarget ? `Photos — ${viewTarget.name}` : 'Photos du bâtiment'} size="large" expandable initiallyExpanded footer={<Button variant="outline" onClick={() => setViewTarget(null)}>Fermer</Button>}>
                 {viewTarget && <PhotoViewer entityUuid={viewTarget.id} entityType="building" entityName={viewTarget.name} />}
             </Modal>
+            {accessParcelId && <AccessPointsManager open buildingId={null} parcelId={accessParcelId} buildingName={parcelById.get(accessParcelId)?.name ?? 'Parcelle'} units={[]} canManage={!readOnly && canDo(role, 'update_unit')} onClose={() => setAccessParcelId(null)} />}
         </Card>
     );
 }

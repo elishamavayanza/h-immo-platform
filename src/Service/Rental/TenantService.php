@@ -18,6 +18,7 @@ use App\Mapper\Rental\TenantMapper;
 use App\Repository\Identity\OrganizationRepository;
 use App\Repository\Property\CityRepository;
 use App\Repository\Rental\TenantRepository;
+use App\Repository\Rental\ResidentialMovementRepository;
 use App\Security\SecurityAction;
 use App\Security\SecurityServiceInterface;
 use App\Service\System\AuditLogService;
@@ -41,6 +42,7 @@ final readonly class TenantService
 {
     public function __construct(
         private TenantRepository $tenantRepository,
+        private ResidentialMovementRepository $movementRepository,
         private OrganizationRepository $organizationRepository,
         private CityRepository $cityRepository,
         private TenantMapper $tenantMapper,
@@ -382,12 +384,23 @@ final readonly class TenantService
             $selectedCity,
         );
 
+        $latestMovements = $this->movementRepository->findLatestForTenants($result['items']);
+        $items = array_map(function (Tenant $tenant) use ($latestMovements): TenantResponse {
+            $movement = $latestMovements[$tenant->getUuid()->toRfc4122()] ?? null;
+            $summary = $movement === null ? null : [
+                'type' => $movement->getType()->value,
+                'status' => $movement->getStatus()->value,
+                'plannedDate' => $movement->getPlannedDate() === null ? null : $this->dateTime->format($movement->getPlannedDate(), 'Y-m-d'),
+                'effectiveDate' => $movement->getEffectiveDate() === null ? null : $this->dateTime->format($movement->getEffectiveDate(), 'Y-m-d'),
+                'recordedAt' => $this->dateTime->format($movement->getCreatedAt(), \DateTimeInterface::ATOM),
+            ];
+
+            return TenantResponse::fromEntity($tenant, $summary);
+        }, $result['items']);
+
         return $feedback
             ->setData([
-                'items' => array_map(
-                    fn (Tenant $tenant): TenantResponse => $this->tenantMapper->toResponse($tenant),
-                    $result['items']
-                ),
+                'items' => $items,
                 'total' => $result['total'],
                 'page' => max(1, $filter->page),
                 'limit' => $filter->limit,

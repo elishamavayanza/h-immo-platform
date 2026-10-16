@@ -7,6 +7,8 @@ namespace App\Controller\Api\Rental;
 use App\Dto\Feedback;
 use App\Dto\Request\Rental\LeaseFilterDto;
 use App\Dto\Request\Rental\LeaseRequest;
+use App\Dto\Request\Rental\LeaseOccupantRequest;
+use App\Dto\Request\Rental\LeaseOccupantDepartureRequest;
 use App\Dto\Request\Rental\LeaseTransitionRequest;
 use App\Entity\Identity\User;
 use App\Service\Rental\LeaseService;
@@ -103,6 +105,24 @@ final class LeaseController extends AbstractController
         #[MapRequestPayload] LeaseRequest $request
     ): JsonResponse {
         $feedback = $this->leaseService->updateLease($uuid, $request, $this->getUser());
+
+        return $this->json($feedback, $feedback->getStatus());
+    }
+
+    #[Route('/{uuid}/occupants', name: 'add_occupant', methods: ['POST'])]
+    #[OA\Post(path: '/api/v1/leases/{uuid}/occupants', summary: 'Ajouter un cotitulaire ou un occupant au suivi historique du bail', requestBody: new OA\RequestBody(content: new OA\JsonContent(ref: new Model(type: LeaseOccupantRequest::class))), responses: [new OA\Response(response: 201, description: 'Occupant ajouté', content: new OA\JsonContent(ref: new Model(type: Feedback::class))), new OA\Response(response: 403, description: 'Accès refusé'), new OA\Response(response: 404, description: 'Bail ou locataire introuvable')])]
+    public function addOccupant(string $uuid, #[MapRequestPayload] LeaseOccupantRequest $request): JsonResponse
+    {
+        $feedback = $this->leaseService->addOccupant($uuid, $request, $this->getUser());
+
+        return $this->json($feedback, $feedback->getStatus());
+    }
+
+    #[Route('/{uuid}/occupants/{occupantUuid}/departure', name: 'occupant_departure', methods: ['PATCH'])]
+    #[OA\Patch(path: '/api/v1/leases/{uuid}/occupants/{occupantUuid}/departure', summary: 'Enregistrer la sortie individuelle d’un cotitulaire ou occupant', requestBody: new OA\RequestBody(content: new OA\JsonContent(ref: new Model(type: LeaseOccupantDepartureRequest::class))), responses: [new OA\Response(response: 200, description: 'Présence clôturée', content: new OA\JsonContent(ref: new Model(type: Feedback::class))), new OA\Response(response: 403, description: 'Accès refusé'), new OA\Response(response: 404, description: 'Bail ou occupant introuvable'), new OA\Response(response: 409, description: 'Présence déjà clôturée')])]
+    public function occupantDeparture(string $uuid, string $occupantUuid, #[MapRequestPayload] LeaseOccupantDepartureRequest $request): JsonResponse
+    {
+        $feedback = $this->leaseService->recordOccupantDeparture($uuid, $occupantUuid, $request, $this->getUser());
 
         return $this->json($feedback, $feedback->getStatus());
     }

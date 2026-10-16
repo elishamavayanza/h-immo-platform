@@ -8,6 +8,7 @@ use App\Dto\Request\Property\UnitRequest;
 use App\Dto\Response\Property\PublicListingResponse;
 use App\Dto\Response\Property\UnitResponse;
 use App\Entity\Property\Unit;
+use App\Enum\UnitOccupancyStatus;
 
 /**
  * UnitMapper
@@ -29,8 +30,17 @@ final class UnitMapper
         if ($request->type !== null) {
             $unit->setType($request->type);
         }
+        if ($request->operationalStatus !== null) {
+            $unit->setOperationalStatus($request->operationalStatus);
+        }
+        if ($request->commercialActivity !== null) {
+            $unit->setCommercialActivity($request->commercialActivity);
+        }
         if ($request->floor !== null) {
             $unit->setFloor($request->floor);
+        }
+        if ($request->floorLabel !== null) {
+            $unit->setFloorLabel($request->floorLabel === '' ? null : trim($request->floorLabel));
         }
         if ($request->surface !== null) {
             $unit->setSurface($request->surface);
@@ -62,9 +72,9 @@ final class UnitMapper
      * de reponse, qui constitue l'unique source de verite du mapping
      * en lecture (aucune duplication de la liste des champs).
      */
-    public function toResponse(Unit $unit): UnitResponse
+    public function toResponse(Unit $unit, UnitOccupancyStatus $occupancyStatus = UnitOccupancyStatus::VACANT): UnitResponse
     {
-        return UnitResponse::fromEntity($unit);
+        return UnitResponse::fromEntity($unit, $occupancyStatus);
     }
 
     /**

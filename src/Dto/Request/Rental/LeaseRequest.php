@@ -46,6 +46,13 @@ final readonly class LeaseRequest
         #[Assert\Uuid(groups: ['create'])]
         public ?string $unitUuid = null,
 
+        #[OA\Property(description: 'UUID des espaces supplémentaires couverts par le bail', type: 'array', items: new OA\Items(type: 'string', format: 'uuid'))]
+        #[Assert\All([new Assert\Uuid()], groups: ['create'])]
+        public array $additionalUnitUuids = [],
+
+        #[OA\Property(description: 'Cotitulaires et occupants non signataires avec leurs périodes', type: 'array', items: new OA\Items(type: 'object'))]
+        public array $occupants = [],
+
         #[OA\Property(
             description: 'Référence unique du contrat de bail',
             example: 'LEASE-2026-0042',

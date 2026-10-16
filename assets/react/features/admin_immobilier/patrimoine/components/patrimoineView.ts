@@ -34,12 +34,36 @@ export const UNIT_TYPE_OPTIONS = [
     { value: 'shop', label: 'Magasin' },
     { value: 'office', label: 'Bureau' },
     { value: 'restaurant', label: 'Restaurant' },
+    { value: 'room', label: 'Chambre' },
+    { value: 'warehouse', label: 'Entrepôt' },
+    { value: 'workshop', label: 'Atelier' },
+    { value: 'storage', label: 'Stockage' },
+    { value: 'parking', label: 'Parking' },
     { value: 'other', label: 'Autre' },
 ];
 
 export const UNIT_TYPE_LABELS: Record<string, string> = Object.fromEntries(
     UNIT_TYPE_OPTIONS.map((option) => [option.value, option.label]),
 );
+
+export const UNIT_OPERATIONAL_STATUS_OPTIONS = [
+    { value: 'available', label: 'Disponible à la location' },
+    { value: 'reserved', label: 'Réservé' },
+    { value: 'pending_handover', label: 'En attente de remise des clés' },
+    { value: 'under_works', label: 'En travaux' },
+    { value: 'temporarily_unavailable', label: 'Indisponible temporairement' },
+    { value: 'releasing', label: 'En cours de libération' },
+    { value: 'not_for_rent', label: 'Non destiné à la location' },
+];
+export const UNIT_OPERATIONAL_STATUS_LABELS: Record<string, string> = Object.fromEntries(
+    UNIT_OPERATIONAL_STATUS_OPTIONS.map((option) => [option.value, option.label]),
+);
+
+export const UNIT_OCCUPANCY_STATUS_LABELS: Record<string, string> = {
+    vacant: 'Vacante',
+    occupied: 'Occupée',
+    partially_occupied: 'Partiellement occupée',
+};
 
 export const CURRENCY_OPTIONS = [
     { value: 'USD', label: 'USD' },

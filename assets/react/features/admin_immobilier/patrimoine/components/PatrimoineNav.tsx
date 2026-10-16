@@ -31,6 +31,19 @@ interface PatrimoineNavProps {
 }
 
 function buildTree({ isCityAdmin, selection, cities, parcels, buildings, units }: PatrimoineNavProps): PatrimoineNavNode[] {
+    const unitNode = (unit: UnitItem, building: BuildingItem, cityId: string, parcelId: string, ancestors = new Set<string>()): PatrimoineNavNode => {
+        const nextAncestors = new Set(ancestors);
+        nextAncestors.add(unit.id);
+        return {
+            id: 'unit:' + unit.id,
+            label: unit.reference || unit.type,
+            level: 'unites',
+            to: buildPatrimoinePath('unites', { cityId, parcelId, buildingId: building.id, unitId: unit.id }),
+            children: units
+                .filter((candidate) => candidate.parentUnitId === unit.id && !nextAncestors.has(candidate.id))
+                .map((child) => unitNode(child, building, cityId, parcelId, nextAncestors)),
+        };
+    };
     const overview: PatrimoineNavNode[] = isCityAdmin ? [] : [{
         id: 'overview', label: 'Vue d’ensemble', level: 'overview',
         to: buildPatrimoinePath('overview', { cityId: null, parcelId: null, buildingId: null }),
@@ -51,17 +64,13 @@ function buildTree({ isCityAdmin, selection, cities, parcels, buildings, units }
                     to: buildPatrimoinePath('batiments', { cityId: city.id, parcelId: parcel.id, buildingId: null }),
                     children: parcelBuildings.map((building) => {
                         const buildingUnits = units.filter((unit) => unit.buildingId === building.id);
+                        const rootUnits = buildingUnits.filter((unit) => unit.parentUnitId === null || !buildingUnits.some((candidate) => candidate.id === unit.parentUnitId));
                         return {
                             id: `building:${building.id}`,
                             label: building.name || building.reference,
                             level: 'batiments' as const,
                             to: buildPatrimoinePath('unites', { cityId: city.id, parcelId: parcel.id, buildingId: building.id }),
-                            children: buildingUnits.map((unit) => ({
-                                id: `unit:${unit.id}`,
-                                label: unit.reference || unit.type,
-                                level: 'unites' as const,
-                                to: buildPatrimoinePath('unites', { cityId: city.id, parcelId: parcel.id, buildingId: building.id, unitId: unit.id }),
-                            })),
+                            children: rootUnits.map((unit) => unitNode(unit, building, city.id, parcel.id)),
                         };
                     }),
                 };
