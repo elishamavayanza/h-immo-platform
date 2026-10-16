@@ -81,17 +81,17 @@ export function useDepenses() {
     useEffect(() => { void reload(); }, [reload]);
 
     const createExpenseAction = useCallback(async (payload: CreateExpensePayload): Promise<void> => {
-        await runAction(push, 'Dépense enregistrée.', () => createExpense(payload));
+        await runAction(push, 'La dépense a été enregistrée.', () => createExpense(payload));
         await reload();
     }, [push, reload]);
 
     const updateExpenseAction = useCallback(async (expenseUuid: string, payload: UpdateExpensePayload): Promise<void> => {
-        await runAction(push, 'Dépense mise à jour.', () => updateExpense(expenseUuid, payload));
+        await runAction(push, 'Les informations de la dépense ont été modifiées.', () => updateExpense(expenseUuid, payload));
         await reload();
     }, [push, reload]);
 
     const cancelExpenseAction = useCallback(async (expenseUuid: string, reason: string): Promise<void> => {
-        await runAction(push, 'Dépense annulée.', () => cancelExpense(expenseUuid, reason));
+        await runAction(push, 'La dépense a été annulée.', () => cancelExpense(expenseUuid, reason));
         await reload();
     }, [push, reload]);
 

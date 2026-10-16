@@ -74,7 +74,9 @@ export function useVitrine() {
     const togglePublished = useCallback(async (row: VitrineRow) => {
         setPendingId(row.id);
         try {
-            await runAction(push, row.isPublished ? 'Annonce retirée.' : 'Annonce publiée.', () => setUnitPublished(row.id, !row.isPublished));
+            await runAction(push, row.isPublished
+                ? `L’annonce « ${row.title} » a été retirée de la vitrine.`
+                : `L’annonce « ${row.title} » est maintenant publiée sur la vitrine.`, () => setUnitPublished(row.id, !row.isPublished));
             await reload();
         } catch (cause) {
             // toast already shown by runAction
@@ -84,19 +86,26 @@ export function useVitrine() {
     }, [push, reload]);
 
     const updateUnitAction = useCallback(async (unitUuid: string, payload: UpdateUnitPayload): Promise<void> => {
-        await runAction(push, 'Annonce mise à jour.', () => updateUnit(unitUuid, payload));
+        const title = data?.rows.find((row) => row.id === unitUuid)?.title;
+        await runAction(push, title ? `L’annonce « ${title} » a été mise à jour.` : 'L’annonce de l’unité a été mise à jour.', () => updateUnit(unitUuid, payload));
         await reload();
-    }, [push, reload]);
+    }, [push, reload, data]);
 
     const addPhotoAction = useCallback(async (unitUuid: string, file: File): Promise<void> => {
-        await runAction(push, 'Photo ajoutée.', () => addUnitPhoto(unitUuid, file));
+        const title = data?.rows.find((row) => row.id === unitUuid)?.title;
+        await runAction(push, title
+            ? `La photo « ${file.name} » a été ajoutée à l’annonce « ${title} ».`
+            : `La photo « ${file.name} » a été ajoutée à l’annonce de l’unité.`, () => addUnitPhoto(unitUuid, file));
         await reload();
-    }, [push, reload]);
+    }, [push, reload, data]);
 
     const removePhotoAction = useCallback(async (unitUuid: string, photoUuid: string): Promise<void> => {
-        await runAction(push, 'Photo retirée.', () => removeUnitPhoto(unitUuid, photoUuid));
+        const title = data?.rows.find((row) => row.id === unitUuid)?.title;
+        await runAction(push, title
+            ? `Une photo a été retirée de l’annonce « ${title} ».`
+            : 'Une photo a été retirée de l’annonce de l’unité.', () => removeUnitPhoto(unitUuid, photoUuid));
         await reload();
-    }, [push, reload]);
+    }, [push, reload, data]);
 
     const rows = useMemo(() => {
         const query = search.trim().toLocaleLowerCase('fr');

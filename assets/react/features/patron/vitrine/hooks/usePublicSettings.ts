@@ -67,7 +67,7 @@ export function usePublicSettings() {
         if (Object.keys(changes).length === 0) return;
         try {
             setSettings(await updateShowcase(organizationUuid, changes));
-            push('success', 'Les réglages publics ont été enregistrés.');
+            push('success', 'Les informations de la vitrine publique ont été enregistrées.');
         } catch (cause) {
             if (!isValidationError(cause)) push('error', actionErrorMessage(cause));
             throw cause;
@@ -79,7 +79,7 @@ export function usePublicSettings() {
         try {
             await uploadOrganizationLogo(organizationUuid, file);
             await reload();
-            push('success', 'Le logo a été mis à jour.');
+            push('success', 'Le logo de la vitrine publique a été mis à jour.');
         } catch (cause) {
             push('error', actionErrorMessage(cause));
             throw cause;
@@ -91,7 +91,7 @@ export function usePublicSettings() {
         try {
             await deleteOrganizationLogo(organizationUuid);
             await reload();
-            push('success', 'Le logo a été retiré.');
+            push('success', 'Le logo de la vitrine publique a été retiré.');
         } catch (cause) {
             push('error', actionErrorMessage(cause));
             throw cause;

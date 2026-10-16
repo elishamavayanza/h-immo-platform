@@ -84,29 +84,29 @@ export function usePersonnel() {
 
     const createWorkerAction = useCallback(async (payload: CreateWorkerPayload) => {
         const worker = await createWorker(payload);
-        push('success', 'Ouvrier créé.');
+        push('success', `Le membre du personnel « ${worker.fullName} » a été ajouté à l’équipe.`);
         await reload();
 
         return worker;
     }, [push, reload]);
 
     const updateWorkerAction = useCallback(async (workerUuid: string, payload: UpdateWorkerPayload): Promise<void> => {
-        await runAction(push, 'Ouvrier mis à jour.', () => updateWorker(workerUuid, payload));
+        await runAction(push, 'La fiche du membre du personnel a été mise à jour.', () => updateWorker(workerUuid, payload));
         await reload();
     }, [push, reload]);
 
     const createAssignmentAction = useCallback(async (payload: CreateAssignmentPayload): Promise<void> => {
-        await runAction(push, 'Affectation créée.', () => createAssignment(payload));
+        await runAction(push, 'Le membre du personnel a été affecté au bien sélectionné.', () => createAssignment(payload));
         await reload();
     }, [push, reload]);
 
     const updateAssignmentAction = useCallback(async (assignmentUuid: string, payload: UpdateAssignmentPayload): Promise<void> => {
-        await runAction(push, 'Affectation mise à jour.', () => updateAssignment(assignmentUuid, payload));
+        await runAction(push, 'L’affectation du membre du personnel a été mise à jour.', () => updateAssignment(assignmentUuid, payload));
         await reload();
     }, [push, reload]);
 
     const endAssignmentAction = useCallback(async (assignmentUuid: string, endDate: string): Promise<void> => {
-        await runAction(push, 'Affectation terminée.', () => endAssignment(assignmentUuid, endDate));
+        await runAction(push, `L’affectation du membre du personnel a pris fin le ${endDate}.`, () => endAssignment(assignmentUuid, endDate));
         await reload();
     }, [push, reload]);
 

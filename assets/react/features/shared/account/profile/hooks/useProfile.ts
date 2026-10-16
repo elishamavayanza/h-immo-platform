@@ -34,7 +34,7 @@ export function useProfile() {
         try {
             const updated = await profileService.updateProfile(profile.uuid, payload, profile);
             setProfile(updated);
-            push('success', 'Profil mis à jour.');
+            push('success', 'Vos informations de profil ont été enregistrées.');
             return updated;
         } catch (cause) {
             push('error', errorMessage(cause));

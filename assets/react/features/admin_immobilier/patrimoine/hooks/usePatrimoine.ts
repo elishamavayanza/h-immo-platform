@@ -117,7 +117,7 @@ export function usePatrimoine() {
 
     const createCity = (payload: CityPayload) => {
         if (!organizationUuid) return Promise.resolve();
-        return runAction('Ville enregistrée.', () => createCityRequest(organizationUuid, payload));
+        return runAction(`La ville « ${payload.name} » a été créée.`, () => createCityRequest(organizationUuid, payload));
     };
 
     const createCityAdmin = (cityUuid: string, payload: { fullName: string; email: string; phone: string }) => {
@@ -128,7 +128,7 @@ export function usePatrimoine() {
     };
 
     const updateCity = (uuid: string, payload: Partial<CityPayload>) =>
-        runAction('Ville mise à jour.', () => updateCityRequest(uuid, payload));
+        runAction('Les informations de la ville ont été mises à jour.', () => updateCityRequest(uuid, payload));
 
     const setCityStatus = (city: CityItem, status: CityPayload['status']) =>
         updateCity(city.id, {
@@ -139,48 +139,48 @@ export function usePatrimoine() {
             status,
         });
 
-    const deleteCity = (uuid: string) => runAction('Ville supprimée.', () => deleteCityRequest(uuid));
+    const deleteCity = (uuid: string) => runAction('La ville a été supprimée du patrimoine.', () => deleteCityRequest(uuid));
 
     const createParcel = (payload: ParcelPayload) =>
-        runAction('Parcelle enregistrée.', () => createParcelRequest(payload));
+        runAction(`La parcelle « ${payload.name} » a été créée.`, () => createParcelRequest(payload));
 
     const updateParcel = (uuid: string, payload: Partial<ParcelPayload>) =>
-        runAction('Parcelle mise à jour.', () => updateParcelRequest(uuid, payload));
+        runAction('Les informations de la parcelle ont été mises à jour.', () => updateParcelRequest(uuid, payload));
 
-    const deleteParcel = (uuid: string) => runAction('Parcelle supprimée.', () => deleteParcelRequest(uuid));
+    const deleteParcel = (uuid: string) => runAction('La parcelle a été supprimée du patrimoine.', () => deleteParcelRequest(uuid));
 
     const addParcelPhotosAction = useCallback(async (parcelUuid: string, files: File[]): Promise<void> => {
-        await runAction('Photo(s) ajoutée(s).', () => addParcelPhotos(parcelUuid, files));
+        await runAction(`${files.length} photo${files.length > 1 ? 's ont été ajoutées' : ' a été ajoutée'} à la parcelle.`, () => addParcelPhotos(parcelUuid, files));
         await reload();
     }, [push, reload]);
 
     const deleteParcelPhotoAction = useCallback(async (parcelUuid: string, filename: string): Promise<void> => {
-        await runAction('Photo retirée.', () => deleteParcelPhoto(parcelUuid, filename));
+        await runAction(`La photo « ${filename} » a été retirée de la parcelle.`, () => deleteParcelPhoto(parcelUuid, filename));
         await reload();
     }, [push, reload]);
 
     const createBuilding = (payload: BuildingPayload) =>
-        runAction('Bâtiment enregistré.', () => createBuildingRequest(payload));
+        runAction(`Le bâtiment « ${payload.name} » a été créé.`, () => createBuildingRequest(payload));
 
     const updateBuilding = (uuid: string, payload: Partial<BuildingPayload>) =>
-        runAction('Bâtiment mis à jour.', () => updateBuildingRequest(uuid, payload));
+        runAction('Les informations du bâtiment ont été mises à jour.', () => updateBuildingRequest(uuid, payload));
 
-    const deleteBuilding = (uuid: string) => runAction('Bâtiment supprimé.', () => deleteBuildingRequest(uuid));
+    const deleteBuilding = (uuid: string) => runAction('Le bâtiment a été supprimé du patrimoine.', () => deleteBuildingRequest(uuid));
 
-    const createUnit = (payload: UnitPayload) => runAction('Unité enregistrée.', () => createUnitRequest(payload));
+    const createUnit = (payload: UnitPayload) => runAction(`L’unité « ${payload.reference} » a été créée.`, () => createUnitRequest(payload));
 
     const updateUnit = (uuid: string, payload: Partial<UnitPayload>) =>
-        runAction('Unité mise à jour.', () => updateUnitRequest(uuid, payload));
+        runAction('Les informations de l’unité ont été mises à jour.', () => updateUnitRequest(uuid, payload));
 
-    const deleteUnit = (uuid: string) => runAction('Unité supprimée.', () => deleteUnitRequest(uuid));
+    const deleteUnit = (uuid: string) => runAction('L’unité a été supprimée du patrimoine.', () => deleteUnitRequest(uuid));
 
     const addUnitPhotoAction = useCallback(async (unitUuid: string, file: File): Promise<void> => {
-        await runAction('Photo ajoutée.', () => addUnitPhoto(unitUuid, file));
+        await runAction(`La photo « ${file.name} » a été ajoutée à l’unité.`, () => addUnitPhoto(unitUuid, file));
         await reload();
     }, [push, reload]);
 
     const removeUnitPhotoAction = useCallback(async (unitUuid: string, photoUuid: string): Promise<void> => {
-        await runAction('Photo retirée.', () => removeUnitPhoto(unitUuid, photoUuid));
+        await runAction('La photo a été retirée de l’unité.', () => removeUnitPhoto(unitUuid, photoUuid));
         await reload();
     }, [push, reload]);
 

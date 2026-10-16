@@ -45,7 +45,8 @@ export function PrivateDocumentsModal({ open, onClose, organizationUuid, related
         try {
             await uploadPrivateDocument(organizationUuid, relatedType, relatedUuid, file);
             setFile(null);
-            push('success', 'Pièce jointe ajoutée.');
+            const relatedLabel = relatedType === 'lease' ? 'au bail' : relatedType === 'payment' ? 'au paiement' : 'à la dépense';
+            push('success', `Le document « ${file.name} » a été joint ${relatedLabel}.`);
             await reload();
         } catch (cause) {
             push('error', cause instanceof ApiError ? cause.message : 'Échec de l’ajout du document.');
@@ -58,7 +59,7 @@ export function PrivateDocumentsModal({ open, onClose, organizationUuid, related
         if (!pendingDelete) return;
         try {
             await deletePrivateDocument(pendingDelete.uuid);
-            push('success', 'Document supprimé.');
+            push('success', `Le document « ${pendingDelete.originalName} » a été supprimé des pièces justificatives.`);
             setPendingDelete(null);
             await reload();
         } catch (cause) {

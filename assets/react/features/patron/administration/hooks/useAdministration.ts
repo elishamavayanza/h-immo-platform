@@ -97,7 +97,7 @@ export function useAdministration() {
                 phone: input.phone,
                 ...(input.role === 'admin_ville' ? { cityUuids: input.cityUuids ?? [] } : {}),
             });
-            push('success', result.flushDescription ?? 'Le membre a été créé. Un email de configuration du mot de passe a été envoyé.');
+            push('success', result.flushDescription ?? `Le compte de ${input.fullName} a été créé. Un email de configuration du mot de passe a été envoyé.`);
             if (result.warnings.email) {
                 push('warning', result.warnings.email);
             }
@@ -129,7 +129,7 @@ export function useAdministration() {
             if (organizationUuid) {
                 setMembers((current) => current.map((member) => member.id === id ? toMember(result.user, organizationUuid, selfUuid) : member));
             }
-            push('success', result.flushDescription ?? 'Le membre a été mis à jour.');
+            push('success', result.flushDescription ?? `Les informations de ${member.name} ont été mises à jour.`);
         } catch (cause) {
             push('error', actionErrorMessage(cause));
             throw cause;
@@ -138,12 +138,13 @@ export function useAdministration() {
 
     /** `POST /v1/identity/users/{uuid}/suspend` — motif facultatif, warning si l'email échoue. */
     const suspendMember = async (id: string, reason?: string): Promise<void> => {
+        const member = members.find((entry) => entry.id === id);
         try {
             const result = await administrationService.suspendMember(id, reason ? { reason } : {});
             if (organizationUuid) {
                 setMembers((current) => current.map((member) => member.id === id ? toMember(result.user, organizationUuid, selfUuid) : member));
             }
-            push('success', result.flushDescription ?? 'Le compte a été suspendu.');
+            push('success', result.flushDescription ?? `Le compte de ${member?.name ?? 'ce membre'} a été suspendu.`);
             if (result.warnings.emails) {
                 push('warning', result.warnings.emails);
             }
@@ -170,7 +171,7 @@ export function useAdministration() {
             if (organizationUuid) {
                 setMembers((list) => list.map((member) => member.id === id ? toMember(result.user, organizationUuid, selfUuid) : member));
             }
-            push('success', result.flushDescription ?? 'Le compte a été réactivé.');
+            push('success', result.flushDescription ?? `Le compte de ${current.name} a été réactivé.`);
         } catch (cause) {
             push('error', actionErrorMessage(cause));
             throw cause;
