@@ -817,6 +817,129 @@ check('PUT ville d\'une autre organization : 403', $status === 403, "obtenu {$st
 [$status, $payload] = $request('DELETE', '/api/v1/property/cities/' . $uuidCityB, null, $token);
 check('DELETE ville d\'une autre organization : 403', $status === 403, "obtenu {$status}");
 
+// Les dates métier rétroactives restent distinctes de la saisie serveur.
+section('Dates opérationnelles : paiement, bail et intervention');
+$paymentDate = (new \DateTimeImmutable('2 days ago', new \DateTimeZone('UTC')))->format('Y-m-d');
+[$status, $payload] = $request('POST', '/api/v1/payments', [
+    'rentUuid' => $uuidRentFutureA,
+    'amount' => '25.00',
+    'currency' => 'USD',
+    'paymentDate' => $paymentDate,
+    'method' => 'cash',
+], $token);
+$payment = $payload['data'] ?? [];
+check(
+    'un paiement rétroactif conserve date métier, auteur et date de saisie',
+    $status === 201
+        && str_starts_with((string) ($payment['paymentDate'] ?? ''), $paymentDate)
+        && ($payment['createdByName'] ?? null) === 'Admin Immobilier A'
+        && isset($payment['createdAt']),
+    "HTTP {$status}, paymentDate=" . ($payment['paymentDate'] ?? 'absente') . ', createdByName=' . ($payment['createdByName'] ?? 'absent') . ', createdAt=' . ($payment['createdAt'] ?? 'absente')
+);
+$todayPaymentDate = (new \DateTimeImmutable('today', new \DateTimeZone('UTC')))->format('Y-m-d');
+[$sameDayPaymentStatus, $sameDayPaymentPayload] = $request('POST', '/api/v1/payments', [
+    'rentUuid' => $uuidRentFutureA,
+    'amount' => '10.00',
+    'currency' => 'USD',
+    'paymentDate' => $todayPaymentDate,
+    'method' => 'cash',
+], $token);
+check(
+    'un paiement effectué et saisi le même jour conserve sa date métier',
+    $sameDayPaymentStatus === 201 && str_starts_with((string) ($sameDayPaymentPayload['data']['paymentDate'] ?? ''), $todayPaymentDate),
+    "HTTP {$sameDayPaymentStatus}"
+);
+[$futurePaymentStatus] = $request('POST', '/api/v1/payments', [
+    'rentUuid' => $uuidRentFutureA,
+    'amount' => '10.00',
+    'currency' => 'USD',
+    'paymentDate' => (new \DateTimeImmutable('tomorrow', new \DateTimeZone('UTC')))->format('Y-m-d'),
+    'method' => 'cash',
+], $token);
+check('un paiement daté dans le futur est refusé', $futurePaymentStatus === 422, "HTTP {$futurePaymentStatus}");
+[$invalidPaymentDateStatus] = $request('POST', '/api/v1/payments', [
+    'rentUuid' => $uuidRentFutureA,
+    'amount' => '10.00',
+    'currency' => 'USD',
+    'paymentDate' => '2026-02-30',
+    'method' => 'cash',
+], $token);
+check('une date civile impossible pour un paiement est refusée', in_array($invalidPaymentDateStatus, [400, 422], true), "HTTP {$invalidPaymentDateStatus}");
+[$crossTenantPaymentStatus] = $request('POST', '/api/v1/payments', [
+    'rentUuid' => $uuidRentB,
+    'amount' => '25.00',
+    'currency' => 'USD',
+    'paymentDate' => $paymentDate,
+    'method' => 'cash',
+], $token);
+check('un paiement rétroactif hors organisation reste interdit', in_array($crossTenantPaymentStatus, [403, 404], true), "obtenu {$crossTenantPaymentStatus}");
+
+$effectiveTermination = (new \DateTimeImmutable('2 days ago', new \DateTimeZone('UTC')))->format('Y-m-d');
+[$terminationStatus, $terminationPayload] = $request('PATCH', '/api/v1/leases/' . $uuidLeaseA . '/terminate', [
+    'reason' => 'Fin effective déclarée après coup',
+    'effectiveDate' => $effectiveTermination,
+], $token);
+check(
+    'la résiliation accepte et conserve une date effective passée',
+    $terminationStatus === 200 && str_starts_with((string) ($terminationPayload['data']['terminationDate'] ?? ''), $effectiveTermination),
+    "HTTP {$terminationStatus}, date=" . ($terminationPayload['data']['terminationDate'] ?? 'absente')
+);
+
+$reportedDate = (new \DateTimeImmutable('2 days ago', new \DateTimeZone('UTC')))->format('Y-m-d');
+[$maintenanceStatus, $maintenancePayload] = $request('POST', '/api/v1/maintenance/work-orders', [
+    'organizationUuid' => $uuidOrgA,
+    'cityUuid' => $uuidCityA,
+    'unitUuid' => $uuidUnitA,
+    'title' => 'Test date rétroactive ' . $suffix,
+    'description' => 'Contrôle transactionnel des dates métier.',
+    'priority' => 'normal',
+    'reportedAt' => $reportedDate,
+], $token);
+$maintenance = $maintenancePayload['data'] ?? [];
+check(
+    'un signalement rétroactif garde date, auteur et horodatage d’enregistrement',
+    $maintenanceStatus === 201
+        && ($maintenance['reportedAt'] ?? null) === $reportedDate
+        && ($maintenance['createdBy'] ?? null) === 'Admin Immobilier A'
+        && isset($maintenance['createdAt']),
+    "HTTP {$maintenanceStatus}, reportedAt=" . ($maintenance['reportedAt'] ?? 'absente')
+);
+[$futureReportedStatus] = $request('POST', '/api/v1/maintenance/work-orders', [
+    'organizationUuid' => $uuidOrgA,
+    'cityUuid' => $uuidCityA,
+    'unitUuid' => $uuidUnitA,
+    'title' => 'Test date future ' . $suffix,
+    'description' => 'Une date de constatation ne peut pas être future.',
+    'priority' => 'normal',
+    'reportedAt' => (new \DateTimeImmutable('tomorrow', new \DateTimeZone('UTC')))->format('Y-m-d'),
+], $token);
+check('un signalement daté dans le futur est refusé', $futureReportedStatus === 422, "obtenu {$futureReportedStatus}");
+[$startMaintenanceStatus] = $request('PATCH', '/api/v1/maintenance/work-orders/' . ($maintenance['uuid'] ?? 'invalid') . '/status', [
+    'organizationUuid' => $uuidOrgA,
+    'cityUuid' => $uuidCityA,
+    'status' => 'in_progress',
+], $token);
+check('une intervention signalée peut passer en cours', $startMaintenanceStatus === 200, "HTTP {$startMaintenanceStatus}");
+[$futureCompletionStatus] = $request('PATCH', '/api/v1/maintenance/work-orders/' . ($maintenance['uuid'] ?? 'invalid') . '/status', [
+    'organizationUuid' => $uuidOrgA,
+    'cityUuid' => $uuidCityA,
+    'status' => 'completed',
+    'completedAt' => (new \DateTimeImmutable('tomorrow', new \DateTimeZone('UTC')))->format('Y-m-d'),
+], $token);
+check('une date future d’achèvement est refusée', $futureCompletionStatus === 422, "HTTP {$futureCompletionStatus}");
+$effectiveCompletion = (new \DateTimeImmutable('yesterday', new \DateTimeZone('UTC')))->format('Y-m-d');
+[$completionStatus, $completionPayload] = $request('PATCH', '/api/v1/maintenance/work-orders/' . ($maintenance['uuid'] ?? 'invalid') . '/status', [
+    'organizationUuid' => $uuidOrgA,
+    'cityUuid' => $uuidCityA,
+    'status' => 'completed',
+    'completedAt' => $effectiveCompletion,
+], $token);
+check(
+    'une intervention terminée tardivement conserve sa date réelle distincte de la saisie',
+    $completionStatus === 200 && ($completionPayload['data']['completedAt'] ?? null) === $effectiveCompletion,
+    "HTTP {$completionStatus}, completedAt=" . ($completionPayload['data']['completedAt'] ?? 'absente')
+);
+
 // ---------------------------------------------------------------------
 section('Annulation de la transaction');
 

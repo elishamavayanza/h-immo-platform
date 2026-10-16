@@ -373,7 +373,7 @@ $recordPayment = static function (string $ref, string $amount) use ($request, $r
         'rentUuid' => $rentAUuid,
         'amount' => $amount,
         'currency' => 'USD',
-        'paymentDate' => '2026-09-01T10:00:00Z',
+        'paymentDate' => '2026-09-01',
         'method' => 'cash',
         'reference' => $ref,
     ], $patronAToken);

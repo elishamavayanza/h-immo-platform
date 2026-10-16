@@ -16,6 +16,7 @@ import { fetchCashBalance, formatPaymentMethod, saveCashOpeningBalance, type Cas
 import { useTreasury } from '../hooks/useTreasury';
 import type { FinancialMovement, FinancialMovementKind } from '../types/finance.types';
 import { useOrganization } from '../../../../app/providers/OrganizationProvider';
+import { localDateInputValue } from '../../../../utils/dateUtils';
 import { PrivateDocumentsModal } from '../components/PrivateDocumentsModal';
 import { useAssignedCities } from '../../hooks/useAssignedCities';
 import '../../../../../styles/pages/shared/finance/_treasury.scss';
@@ -46,7 +47,7 @@ export function TreasuryPage() {
     const [cashCurrency, setCashCurrency] = useState('USD');
     const [cashSnapshot, setCashSnapshot] = useState<CashBalanceSnapshot | null>(null);
     const [openingAmount, setOpeningAmount] = useState('');
-    const [openingDate, setOpeningDate] = useState(() => new Date().toISOString().slice(0, 10));
+    const [openingDate, setOpeningDate] = useState(() => localDateInputValue());
     const [cashLoading, setCashLoading] = useState(false);
     const [cashSaving, setCashSaving] = useState(false);
     const [cashError, setCashError] = useState<string | null>(null);
@@ -63,7 +64,7 @@ export function TreasuryPage() {
         setCashLoading(true);
         setCashError(null);
         void fetchCashBalance(currentOrganization.uuid, cashCityUuid, cashCurrency)
-            .then((snapshot) => { if (active) { setCashSnapshot(snapshot); setOpeningAmount(snapshot.openingBalance ?? ''); setOpeningDate(snapshot.openingDate ?? new Date().toISOString().slice(0, 10)); } })
+            .then((snapshot) => { if (active) { setCashSnapshot(snapshot); setOpeningAmount(snapshot.openingBalance ?? ''); setOpeningDate(snapshot.openingDate ?? localDateInputValue()); } })
             .catch((cause: unknown) => { if (active) setCashError(cause instanceof Error ? cause.message : 'Impossible de charger le solde de caisse.'); })
             .finally(() => { if (active) setCashLoading(false); });
         return () => { active = false; };
@@ -137,7 +138,7 @@ export function TreasuryPage() {
             {cashError && <p role="alert">{cashError}</p>}
             <form className="treasury-cash-note__form" onSubmit={(event) => void saveOpening(event)}>
                 <label>Solde au démarrage<input aria-label="Montant du solde d’ouverture" inputMode="decimal" required pattern="\d{1,10}(\.\d{1,2})?" value={openingAmount} onChange={(event) => setOpeningAmount(event.target.value)} placeholder="0,00" /></label>
-                <label>Date du solde d’ouverture<input aria-label="Date du solde d’ouverture" type="date" required max={new Date().toISOString().slice(0, 10)} value={openingDate} onChange={(event) => setOpeningDate(event.target.value)} /></label>
+                <label>Date du solde d’ouverture<input aria-label="Date du solde d’ouverture" type="date" required max={localDateInputValue()} value={openingDate} onChange={(event) => setOpeningDate(event.target.value)} /></label>
                 <Button type="submit" disabled={cashSaving || cashLoading || !cashCityUuid}>{cashSaving ? 'Enregistrement…' : cashSnapshot?.openingBalance === null ? 'Initialiser la caisse' : 'Mettre à jour le solde'}</Button>
             </form>
             <p>Flux en espèces sur la période sélectionnée : {amountsLabel(totals.cash)}. Les devises restent séparées.</p>

@@ -235,7 +235,7 @@ final readonly class LeaseService
      * Terminaison d'un bail : le statut passe à TERMINATED et la date de
      * rupture est mémorisée, ce qui libère l'unité pour un nouveau bail.
      */
-    public function terminateLease(string $uuid, string $reason, User $currentUser): Feedback
+    public function terminateLease(string $uuid, string $reason, User $currentUser, ?string $effectiveDate = null): Feedback
     {
         $feedback = new Feedback();
 
@@ -254,8 +254,17 @@ final readonly class LeaseService
                 ->autoInitFlush();
         }
 
+        $terminationDate = $effectiveDate === null ? $this->dateTime->today() : $this->dateTime->parseDate($effectiveDate);
+        if ($terminationDate === null || $terminationDate > $this->dateTime->today() || $terminationDate < $lease->getStartDate()) {
+            return $feedback
+                ->addError('effectiveDate', 'La date de résiliation doit être valide, comprise entre le début du bail et aujourd’hui.')
+                ->setFlushDescriptionWithError('La date effective de résiliation est invalide.')
+                ->setStatus(422)
+                ->autoInitFlush();
+        }
+
         $lease->setStatus(LeaseStatus::TERMINATED);
-        $lease->setTerminationDate($this->dateTime->now());
+        $lease->setTerminationDate($terminationDate);
         $lease->setTerminationReason($reason !== '' ? $reason : null);
 
         $this->entityManager->flush();

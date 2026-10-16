@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
 import { Button } from '../../../../components/UI/Button';
 import { Card } from '../../../../components/UI/Card';
+import { Modal } from '../../../../components/UI/Modal';
 import { EmptyState } from '../../../../components/Data/EmptyState';
 import { Select } from '../../../../components/Forms/Select';
 import { Spinner } from '../../../../components/UI/Spinner';
@@ -8,6 +9,7 @@ import { useOrganization } from '../../../../app/providers/OrganizationProvider'
 import { useAdminCity } from '../../../../app/providers/AdminCityProvider';
 import { useToast } from '../../../../app/layout/MainLayout/contexts/ToastContext';
 import { useAssignedCities } from '../../hooks/useAssignedCities';
+import { formatCivilDate, localDateInputValue } from '../../../../utils/dateUtils';
 import { fetchPropertyCatalog, fetchWorkerAssignments, fetchWorkers } from '../../../admin_immobilier/shared/services/referenceService';
 import type { BuildingItem, ParcelItem, PropertyCatalog, UnitItem, WorkerAssignmentItem, WorkerItem } from '../../../admin_immobilier/shared/types/reference.types';
 import { createMaintenanceWorkOrder, editMaintenanceWorkOrder, listMaintenanceWorkOrders, updateMaintenanceStatus, type MaintenanceWorkOrder, type MaintenanceWorkOrderInput } from '../services/maintenanceService';
@@ -41,10 +43,13 @@ export function MaintenancePage() {
     const [description, setDescription] = useState('');
     const [priority, setPriority] = useState<MaintenanceWorkOrderInput['priority']>('normal');
     const [dueDate, setDueDate] = useState('');
+    const [reportedAt, setReportedAt] = useState(() => localDateInputValue());
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
     const [listError, setListError] = useState('');
     const [editingUuid, setEditingUuid] = useState<string | null>(null);
+    const [completionTarget, setCompletionTarget] = useState<MaintenanceWorkOrder | null>(null);
+    const [completionDate, setCompletionDate] = useState('');
     const listRequestId = useRef(0);
 
     useEffect(() => {
@@ -110,11 +115,11 @@ export function MaintenancePage() {
                 parcelUuid: targetKind === 'parcel' ? targetUuid : null,
                 buildingUuid: targetKind === 'building' ? targetUuid : null,
                 unitUuid: targetKind === 'unit' ? targetUuid : null,
-                workerAssignmentUuid: assignmentUuid || null, dueDate: dueDate || null,
+                workerAssignmentUuid: assignmentUuid || null, dueDate: dueDate || null, reportedAt,
             };
             if (editingUuid) await editMaintenanceWorkOrder(editingUuid, input);
             else await createMaintenanceWorkOrder(input);
-            setEditingUuid(null); setTitle(''); setDescription(''); setDueDate(''); setAssignmentUuid('');
+            setEditingUuid(null); setTitle(''); setDescription(''); setDueDate(''); setAssignmentUuid(''); setReportedAt(localDateInputValue());
             push('success', editingUuid ? 'Intervention modifiée.' : 'Intervention ajoutée.');
             await reload();
         } catch (reason) { push('error', reason instanceof Error ? reason.message : 'Impossible d’enregistrer l’intervention.'); }
@@ -129,8 +134,20 @@ export function MaintenancePage() {
         } catch (reason) { push('error', reason instanceof Error ? reason.message : 'La mise à jour a échoué.'); }
     }
 
+    async function completeMaintenance(event: FormEvent<HTMLFormElement>) {
+        event.preventDefault();
+        if (!completionTarget || !completionDate) return;
+        try {
+            await updateMaintenanceStatus(completionTarget, 'completed', completionDate);
+            setCompletionTarget(null);
+            push('success', 'Intervention terminée.');
+            await reload();
+        } catch (reason) { push('error', reason instanceof Error ? reason.message : 'La mise à jour a échoué.'); }
+    }
+
     function beginEdit(item: MaintenanceWorkOrder) {
         setEditingUuid(item.uuid); setTitle(item.title); setDescription(item.description); setPriority(item.priority); setDueDate(item.dueDate ?? '');
+        setReportedAt(item.reportedAt);
         setAssignmentUuid(item.workerAssignmentUuid ?? '');
         if (item.unitUuid) { setTargetKind('unit'); setTargetUuid(item.unitUuid); }
         else if (item.buildingUuid) { setTargetKind('building'); setTargetUuid(item.buildingUuid); }
@@ -144,7 +161,7 @@ export function MaintenancePage() {
     const renderActions = (item: MaintenanceWorkOrder) => <div className="maintenance-actions">
         {![ 'completed', 'cancelled' ].includes(item.status) && <Button size="small" variant="outline" onClick={() => beginEdit(item)}>Modifier</Button>}
         {item.status === 'open' && <Button size="small" onClick={() => void changeStatus(item, 'in_progress')}>Démarrer</Button>}
-        {item.status === 'in_progress' && <Button size="small" onClick={() => void changeStatus(item, 'completed')}>Terminer</Button>}
+        {item.status === 'in_progress' && <Button size="small" onClick={() => { setCompletionTarget(item); setCompletionDate(localDateInputValue()); }}>Terminer</Button>}
         {['open', 'in_progress'].includes(item.status) && <Button size="small" variant="outline" onClick={() => { if (window.confirm('Annuler cette intervention ?')) void changeStatus(item, 'cancelled'); }}>Annuler</Button>}
     </div>;
 
@@ -163,7 +180,8 @@ export function MaintenancePage() {
                 <div className="maintenance-form__field maintenance-form__field--wide"><label htmlFor="maintenance-description">Description</label><textarea id="maintenance-description" value={description} onChange={(event) => setDescription(event.target.value)} maxLength={5000} required rows={4} /></div>
                 <div className="maintenance-form__field"><label htmlFor="maintenance-priority">Priorité</label><Select id="maintenance-priority" aria-label="Priorité" value={priority} onChange={(event) => setPriority(event.target.value as MaintenanceWorkOrderInput['priority'])} options={PRIORITIES} fullWidth /></div>
                 <div className="maintenance-form__field"><label htmlFor="maintenance-assignee">Responsable</label><Select id="maintenance-assignee" aria-label="Responsable" value={assignmentUuid} onChange={(event) => setAssignmentUuid(event.target.value)} options={assignmentOptions} placeholder="Aucun responsable" fullWidth /></div>
-                <div className="maintenance-form__field"><label htmlFor="maintenance-due-date">Date prévue</label><input id="maintenance-due-date" type="date" value={dueDate} min={new Date().toISOString().slice(0, 10)} onChange={(event) => setDueDate(event.target.value)} /></div>
+                <div className="maintenance-form__field"><label htmlFor="maintenance-due-date">Date prévue</label><input id="maintenance-due-date" type="date" value={dueDate} min={localDateInputValue()} onChange={(event) => setDueDate(event.target.value)} /></div>
+                <div className="maintenance-form__field"><label htmlFor="maintenance-reported-date">Date réelle du signalement</label><input id="maintenance-reported-date" type="date" value={reportedAt} max={localDateInputValue()} onChange={(event) => setReportedAt(event.target.value)} required /><small>Vous pouvez choisir le jour où le problème a réellement été constaté. L’enregistrement technique reste daté automatiquement.</small></div>
                 <div className="maintenance-form__actions"><Button type="submit" disabled={saving || !targetUuid}>{saving ? 'Enregistrement…' : editingUuid ? 'Enregistrer les changements' : 'Ajouter l’intervention'}</Button>
                 {editingUuid && <Button type="button" variant="outline" onClick={() => { setEditingUuid(null); setTitle(''); setDescription(''); setDueDate(''); }}>Annuler la modification</Button>}
                 </div>
@@ -172,13 +190,19 @@ export function MaintenancePage() {
         <Card padding="medium" className="organization-table-card maintenance-page__card">
             <div className="organization-table-toolbar"><div><h2>Interventions</h2><p>{rows.length} intervention(s) pour la ville sélectionnée.</p></div><Button variant="outline" onClick={() => void reload()}>Actualiser</Button></div>
             {loading ? <div aria-busy="true"><Spinner size="medium" /> Chargement des interventions…</div> : listError ? <EmptyState title="Liste indisponible" description={listError} action={<Button onClick={() => void reload()}>Réessayer</Button>} /> : rows.length === 0 ? <EmptyState title="Aucune intervention" description="Les interventions créées pour cette ville apparaîtront ici." /> : <div className="maintenance-list">
-                <div className="organization-table-scroll"><table className="organization-table maintenance-table"><thead><tr><th>Intervention</th><th>Bien</th><th>Priorité</th><th>Échéance</th><th>État</th><th>Actions</th></tr></thead><tbody>{rows.map((item) => <tr key={item.uuid}><td><strong>{item.title}</strong><small>{item.description}</small></td><td>{item.targetLabel}</td><td>{PRIORITIES.find((value) => value.value === item.priority)?.label}</td><td>{item.dueDate ?? '—'}</td><td>{STATUS_LABEL[item.status]}</td><td>{renderActions(item)}</td></tr>)}</tbody></table></div>
+                <div className="organization-table-scroll"><table className="organization-table maintenance-table"><thead><tr><th>Intervention</th><th>Bien</th><th>Priorité</th><th>Signalée le</th><th>Échéance</th><th>État</th><th>Actions</th></tr></thead><tbody>{rows.map((item) => <tr key={item.uuid}><td><strong>{item.title}</strong><small>{item.description}<br />Enregistrée le {new Date(item.createdAt).toLocaleString('fr-FR')} par {item.createdBy}</small></td><td>{item.targetLabel}</td><td>{PRIORITIES.find((value) => value.value === item.priority)?.label}</td><td>{formatCivilDate(item.reportedAt)}</td><td>{item.dueDate ? formatCivilDate(item.dueDate) : '—'}</td><td>{STATUS_LABEL[item.status]}</td><td>{renderActions(item)}</td></tr>)}</tbody></table></div>
                 <div className="maintenance-list__cards">{rows.map((item) => <article className="maintenance-item" key={item.uuid}>
                     <div className="maintenance-item__heading"><div><h3>{item.title}</h3><p>{item.description}</p></div><span className={`maintenance-item__status maintenance-item__status--${item.status}`}>{STATUS_LABEL[item.status]}</span></div>
-                    <dl><div><dt>Bien</dt><dd>{item.targetLabel}</dd></div><div><dt>Priorité</dt><dd>{PRIORITIES.find((value) => value.value === item.priority)?.label}</dd></div><div><dt>Échéance</dt><dd>{item.dueDate ?? '—'}</dd></div></dl>
+                    <dl><div><dt>Bien</dt><dd>{item.targetLabel}</dd></div><div><dt>Priorité</dt><dd>{PRIORITIES.find((value) => value.value === item.priority)?.label}</dd></div><div><dt>Signalée le</dt><dd>{formatCivilDate(item.reportedAt)}</dd></div><div><dt>Échéance</dt><dd>{item.dueDate ? formatCivilDate(item.dueDate) : '—'}</dd></div><div><dt>Enregistrée le</dt><dd>{new Date(item.createdAt).toLocaleString('fr-FR')} · {item.createdBy}</dd></div>{item.completedAt && <div><dt>Terminée le</dt><dd>{formatCivilDate(item.completedAt)}</dd></div>}</dl>
                     {renderActions(item)}
                 </article>)}</div>
             </div>}
         </Card>
+        <Modal isOpen={completionTarget !== null} onClose={() => setCompletionTarget(null)} title="Terminer l’intervention" size="small" footer={<><Button variant="outline" onClick={() => setCompletionTarget(null)}>Annuler</Button><Button type="submit" form="maintenance-completion-form">Confirmer</Button></>}>
+            <form id="maintenance-completion-form" className="maintenance-form" onSubmit={(event) => void completeMaintenance(event)}>
+                <p>Indiquez la date à laquelle l’intervention a réellement été terminée. L’enregistrement et votre identité restent horodatés automatiquement.</p>
+                <div className="maintenance-form__field"><label htmlFor="maintenance-completed-date">Date réelle d’achèvement</label><input id="maintenance-completed-date" type="date" min={completionTarget?.reportedAt} max={localDateInputValue()} value={completionDate} onChange={(event) => setCompletionDate(event.target.value)} required /></div>
+            </form>
+        </Modal>
     </main>;
 }

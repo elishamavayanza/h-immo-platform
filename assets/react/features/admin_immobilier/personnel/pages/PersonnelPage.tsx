@@ -14,6 +14,7 @@ import { Textarea } from '../../../../components/Forms/Textarea';
 import { FormField } from '../../../../components/Forms/FormField';
 import { Modal } from '../../../../components/UI/Modal';
 import { useOrganization } from '../../../../app/providers/OrganizationProvider';
+import { localDateInputValue } from '../../../../utils/dateUtils';
 import { useAdminCity } from '../../../../app/providers/AdminCityProvider';
 import { usePersonnel } from '../hooks/usePersonnel';
 import { PersonnelTable } from '../components/PersonnelTable';
@@ -77,7 +78,7 @@ export function PersonnelPage() {
         role: 'gardien',
         monthlySalary: '',
         currency: 'USD' as 'USD' | 'CDF',
-        startDate: new Date().toISOString().split('T')[0],
+        startDate: localDateInputValue(),
         endDate: '',
         parcelUuid: '',
         buildingUuid: '',
@@ -153,7 +154,7 @@ export function PersonnelPage() {
                     role: form.role,
                     monthlySalary: form.monthlySalary.trim(),
                     currency: form.currency,
-                    startDate: new Date().toISOString().slice(0, 10),
+                    startDate: localDateInputValue(),
                     ...(form.targetType === 'parcel' ? { parcelUuid: targetUuid } : {}),
                     ...(form.targetType === 'building' ? { buildingUuid: targetUuid } : {}),
                     ...(form.targetType === 'unit' ? { unitUuid: targetUuid } : {}),
@@ -176,7 +177,7 @@ export function PersonnelPage() {
             role: 'gardien',
             monthlySalary: '',
             currency: 'USD',
-            startDate: new Date().toISOString().split('T')[0],
+            startDate: localDateInputValue(),
             endDate: '',
             parcelUuid: assignmentBuilding ? '' : assignmentParcel?.id ?? '',
             buildingUuid: assignmentBuilding?.id ?? '',
@@ -271,7 +272,7 @@ export function PersonnelPage() {
         if (!assignment || endingAssignment) return;
         setEndingAssignment(true);
         try {
-            await endAssignment(assignment.id, new Date().toISOString().slice(0, 10));
+            await endAssignment(assignment.id, localDateInputValue());
             setEndTarget(null);
         } catch {
             // Le hook affiche déjà le message d’erreur.

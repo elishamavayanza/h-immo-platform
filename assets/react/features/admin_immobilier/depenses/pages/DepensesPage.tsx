@@ -15,6 +15,7 @@ import { FormField } from '../../../../components/Forms/FormField';
 import { Modal } from '../../../../components/UI/Modal';
 import { RightSidebar } from '../../../../components/Navigation/RightSidebar';
 import { useOrganization } from '../../../../app/providers/OrganizationProvider';
+import { localDateInputValue } from '../../../../utils/dateUtils';
 import { useAdminCity } from '../../../../app/providers/AdminCityProvider';
 import { useDepenses } from '../hooks/useDepenses';
 import { DepensesTable } from '../components/DepensesTable';
@@ -96,7 +97,7 @@ export function DepensesPage({ readOnly = false }: { readOnly?: boolean } = {}) 
         category: '',
         amount: '',
         currency: 'USD' as 'USD' | 'CDF',
-        expenseDate: new Date().toISOString().split('T')[0],
+        expenseDate: localDateInputValue(),
         method: '',
         supplier: '',
         reference: '',
@@ -119,7 +120,7 @@ export function DepensesPage({ readOnly = false }: { readOnly?: boolean } = {}) 
             category: '',
             amount: '',
             currency: 'USD',
-            expenseDate: new Date().toISOString().split('T')[0],
+            expenseDate: localDateInputValue(),
             method: '',
             supplier: '',
             reference: '',
@@ -282,6 +283,7 @@ export function DepensesPage({ readOnly = false }: { readOnly?: boolean } = {}) 
                 <FormField label="Date de la dépense" htmlFor="expense-date" required error={formErrors.expenseDate}>
                     <Input id="expense-date" type="date" value={form.expenseDate} onChange={(event) => setForm((current) => ({ ...current, expenseDate: event.target.value }))} required fullWidth />
                 </FormField>
+                <p className="organization-management-form__hint">Indiquez la date réelle de la dépense, même si vous l’enregistrez plus tard. La date d’enregistrement et votre identité sont conservées automatiquement.</p>
                 <FormField label="Mode de paiement" htmlFor="expense-method" error={formErrors.method}>
                     <Select id="expense-method" value={form.method} onChange={(event) => setForm((current) => ({ ...current, method: event.target.value }))} options={EXPENSE_METHOD_OPTIONS} placeholder="Sélectionner" />
                 </FormField>

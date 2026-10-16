@@ -16,6 +16,7 @@ export interface MaintenanceWorkOrder {
     workerAssignmentUuid: string | null;
     workerName: string | null;
     reportedAt: string;
+    createdAt: string;
     dueDate: string | null;
     completedAt: string | null;
     createdBy: string;
@@ -32,6 +33,7 @@ export type MaintenanceWorkOrderInput = {
     unitUuid: string | null;
     workerAssignmentUuid: string | null;
     dueDate: string | null;
+    reportedAt: string;
 };
 
 export async function listMaintenanceWorkOrders(organizationUuid: string, cityUuid: string): Promise<MaintenanceWorkOrder[]> {
@@ -49,9 +51,9 @@ export async function editMaintenanceWorkOrder(uuid: string, input: MaintenanceW
     return data.data;
 }
 
-export async function updateMaintenanceStatus(item: MaintenanceWorkOrder, status: MaintenanceWorkOrder['status']): Promise<MaintenanceWorkOrder> {
+export async function updateMaintenanceStatus(item: MaintenanceWorkOrder, status: MaintenanceWorkOrder['status'], completedAt?: string): Promise<MaintenanceWorkOrder> {
     const { data } = await apiClient.patch<Feedback<MaintenanceWorkOrder>>(`/v1/maintenance/work-orders/${item.uuid}/status`, {
-        organizationUuid: item.organizationUuid, cityUuid: item.cityUuid, status,
+        organizationUuid: item.organizationUuid, cityUuid: item.cityUuid, status, ...(completedAt ? { completedAt } : {}),
     });
     return data.data;
 }

@@ -29,6 +29,8 @@ final readonly class MaintenanceWorkOrderRequest
         public ?string $workerAssignmentUuid = null,
         #[Assert\Date]
         public ?string $dueDate = null,
+        #[Assert\Date]
+        public ?string $reportedAt = null,
     ) {
     }
 }

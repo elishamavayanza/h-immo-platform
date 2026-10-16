@@ -74,12 +74,13 @@ final readonly class PaymentRequest
         public ?Currency $originalCurrency = null,
 
         #[OA\Property(
-            description: 'Date et heure de la transaction',
-            format: 'date-time',
-            example: '2026-09-05T14:30:00Z'
+            description: 'Date civile à laquelle le paiement a réellement été effectué. Peut être antérieure à la saisie.',
+            format: 'date',
+            example: '2026-09-05'
         )]
         #[Assert\NotBlank(groups: ['create'])]
-        public ?\DateTimeImmutable $paymentDate = null,
+        #[Assert\Date(groups: ['create'])]
+        public ?string $paymentDate = null,
 
         #[OA\Property(
             description: 'Mode de paiement utilisé',

@@ -152,7 +152,7 @@ final class LeaseController extends AbstractController
         string $uuid,
         #[MapRequestPayload] ?LeaseTransitionRequest $request = null
     ): JsonResponse {
-        $feedback = $this->leaseService->terminateLease($uuid, $request?->reason ?? '', $this->getUser());
+        $feedback = $this->leaseService->terminateLease($uuid, $request?->reason ?? '', $this->getUser(), $request?->effectiveDate);
 
         return $this->json($feedback, $feedback->getStatus());
     }

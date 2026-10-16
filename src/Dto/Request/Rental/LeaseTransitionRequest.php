@@ -35,6 +35,10 @@ final readonly class LeaseTransitionRequest
         )]
         #[Assert\Length(max: 255)]
         public ?string $reason = null,
+
+        #[OA\Property(description: 'Date réelle de prise d’effet de la résiliation. Par défaut, la date du jour.', format: 'date', example: '2026-10-14', nullable: true)]
+        #[Assert\Date]
+        public ?string $effectiveDate = null,
     ) {
     }
 }
