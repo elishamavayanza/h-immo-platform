@@ -73,6 +73,14 @@ final readonly class UserManualService
             'updatedAt' => $catalog['updatedAt'] ?? '',
             'filename' => basename((string) $manual['filename']),
             'pageCount' => (int) ($manual['pageCount'] ?? 0),
+            // Le contenu web et le PDF proviennent du même catalogue validé
+            // pour le contexte actif ; les articles restent en lecture seule.
+            'modules' => array_values(array_filter(
+                $manual['modules'] ?? [],
+                static fn (mixed $module): bool => is_array($module)
+                    && isset($module['name'], $module['menu'], $module['goal'], $module['steps'])
+                    && is_array($module['steps']),
+            )),
         ], 'path' => $path];
     }
 

@@ -20,7 +20,8 @@
           ],
           "fields": "Aucun formulaire de modification n’est présent sur cette page.",
           "result": "Les indicateurs globaux disponibles sont affichés selon les données de la plateforme.",
-          "limits": "Les droits SUPER_ADMIN ne donnent pas automatiquement les droits métier d’une organisation."
+          "limits": "Les droits SUPER_ADMIN ne donnent pas automatiquement les droits métier d’une organisation.",
+          "id": "tableau-de-bord"
         },
         {
           "name": "Organisations",
@@ -35,7 +36,8 @@
           ],
           "fields": "Les champs dépendent de l’action choisie. Les motifs de suspension sont obligatoires ; la durée peut être définie ou indéterminée.",
           "result": "La fiche et l’état de l’organisation sont mis à jour ; les actions d’administration sont tracées.",
-          "limits": "Les ressources métier internes ne sont pas accessibles par le seul rôle plateforme."
+          "limits": "Les ressources métier internes ne sont pas accessibles par le seul rôle plateforme.",
+          "id": "organisations"
         },
         {
           "name": "Utilisateurs",
@@ -50,7 +52,8 @@
           ],
           "fields": "Les champs dépendent de l’action. Ne partagez jamais de mot de passe ou de jeton.",
           "result": "Le compte est consulté ou modifié selon l’action autorisée.",
-          "limits": "Les rôles d’organisation sont distincts du rôle SUPER_ADMIN."
+          "limits": "Les rôles d’organisation sont distincts du rôle SUPER_ADMIN.",
+          "id": "utilisateurs"
         },
         {
           "name": "Journal d’audit",
@@ -65,7 +68,8 @@
           ],
           "fields": "Filtres disponibles dans l’interface ; aucune donnée secrète ne doit être copiée dans un rapport.",
           "result": "Les événements correspondants sont affichés selon les droits plateforme.",
-          "limits": "Le journal est une trace de consultation ; ne modifiez pas les événements historiques."
+          "limits": "Le journal est une trace de consultation ; ne modifiez pas les événements historiques.",
+          "id": "journal-daudit"
         },
         {
           "name": "Rapports de la plateforme",
@@ -80,7 +84,8 @@
           ],
           "fields": "Les filtres varient selon le rapport.",
           "result": "Une synthèse correspondant aux filtres retenus est affichée ou téléchargée.",
-          "limits": "Les rapports ne remplacent pas les pièces comptables des organisations."
+          "limits": "Les rapports ne remplacent pas les pièces comptables des organisations.",
+          "id": "rapports-de-la-plateforme"
         },
         {
           "name": "Profil et préférences",
@@ -94,7 +99,8 @@
           ],
           "fields": "Les champs personnels visibles à l’écran ; le mot de passe se modifie via la procédure sécurisée de réinitialisation.",
           "result": "Les préférences sont sauvegardées pour le compte.",
-          "limits": "Les paramètres personnels ne modifient pas les autorisations de plateforme."
+          "limits": "Les paramètres personnels ne modifient pas les autorisations de plateforme.",
+          "id": "profil-et-preferences"
         }
       ],
       "pageCount": 10
@@ -117,7 +123,8 @@
           ],
           "fields": "Aucun formulaire de modification sur la page d’accueil.",
           "result": "Vue de synthèse selon les données accessibles à votre organisation.",
-          "limits": "Les résultats sont bornés à l’organisation active."
+          "limits": "Les résultats sont bornés à l’organisation active.",
+          "id": "tableau-de-bord"
         },
         {
           "name": "Rapports",
@@ -132,7 +139,8 @@
           ],
           "fields": "Période et filtres visibles dans le rapport.",
           "result": "Rapport calculé pour l’organisation et la période sélectionnées.",
-          "limits": "Les sommes doivent être lues avec leur devise d’origine et la devise de référence indiquée."
+          "limits": "Les sommes doivent être lues avec leur devise d’origine et la devise de référence indiquée.",
+          "id": "rapports"
         },
         {
           "name": "Patrimoine",
@@ -147,7 +155,8 @@
           ],
           "fields": "Les champs du patrimoine sont consultables en lecture seule. Les niveaux déclarés pour chaque bâtiment peuvent être associés aux unités ; à défaut, un libellé libre permet de décrire un niveau particulier. Les accès sont gérés séparément par les rôles autorisés. Pour un magasin, bureau, restaurant, entrepôt ou atelier, renseignez aussi l’activité exercée ; elle est facultative pour les autres espaces.",
           "result": "La structure visible correspond au périmètre de l’organisation active.",
-          "limits": "Le rôle PATRON consulte le patrimoine en lecture seule. La création et les modifications sont réservées aux rôles de gestion autorisés."
+          "limits": "Le rôle PATRON consulte le patrimoine en lecture seule. La création et les modifications sont réservées aux rôles de gestion autorisés.",
+          "id": "patrimoine"
         },
         {
           "name": "Locataires",
@@ -163,7 +172,8 @@
           ],
           "fields": "Les filtres décrivent le type de personne, le logement, le bail et les mouvements récents.",
           "result": "La vue consolidée reflète les locataires et leurs occupations dans l’organisation.",
-          "limits": "Le PATRON consulte et pilote ; il n’enregistre pas les opérations quotidiennes des villes. Les écritures locales restent réservées à l’ADMIN_VILLE affecté."
+          "limits": "Le PATRON consulte et pilote ; il n’enregistre pas les opérations quotidiennes des villes. Les écritures locales restent réservées à l’ADMIN_VILLE affecté.",
+          "id": "locataires"
         },
         {
           "name": "Loyers",
@@ -179,7 +189,8 @@
           ],
           "fields": "Les tableaux présentent les échéances, paiements, devises et statuts calculés.",
           "result": "Vous disposez d’une vue de suivi des encaissements et des risques locatifs.",
-          "limits": "Le PATRON consulte et pilote ; la saisie et la correction des paiements sont réservées à l’ADMIN_VILLE."
+          "limits": "Le PATRON consulte et pilote ; la saisie et la correction des paiements sont réservées à l’ADMIN_VILLE.",
+          "id": "loyers"
         },
         {
           "name": "Trésorerie",
@@ -194,7 +205,8 @@
           ],
           "fields": "Les mouvements sont associés à un type, une date, un montant, une devise et une source métier.",
           "result": "La liste et les synthèses reflètent les mouvements enregistrés.",
-          "limits": "La consultation consolidée n’autorise pas la saisie ni l’annulation d’écritures locales."
+          "limits": "La consultation consolidée n’autorise pas la saisie ni l’annulation d’écritures locales.",
+          "id": "tresorerie"
         },
         {
           "name": "Vitrine",
@@ -208,7 +220,8 @@
           ],
           "fields": "Les champs de présentation sont ceux du formulaire réel ; ne publiez pas de coordonnées internes.",
           "result": "Vous contrôlez la présentation publique et repérez les informations à corriger.",
-          "limits": "Le PATRON n’effectue pas les modifications opérationnelles de la vitrine."
+          "limits": "Le PATRON n’effectue pas les modifications opérationnelles de la vitrine.",
+          "id": "vitrine"
         },
         {
           "name": "Maintenance",
@@ -222,7 +235,8 @@
           ],
           "fields": "La vue récapitule les ordres de travail enregistrés par les équipes locales.",
           "result": "Le suivi consolidé permet d’identifier les retards et les interventions importantes.",
-          "limits": "La création et les transitions d’intervention relèvent de l’ADMIN_VILLE affecté."
+          "limits": "La création et les transitions d’intervention relèvent de l’ADMIN_VILLE affecté.",
+          "id": "maintenance"
         },
         {
           "name": "Administration de l’organisation",
@@ -237,7 +251,8 @@
           ],
           "fields": "Les champs affichés varient selon les réglages activés.",
           "result": "Le réglage est appliqué au périmètre de l’organisation.",
-          "limits": "Les opérations non disponibles à votre rôle sont absentes ou refusées par le serveur."
+          "limits": "Les opérations non disponibles à votre rôle sont absentes ou refusées par le serveur.",
+          "id": "administration-de-lorganisation"
         },
         {
           "name": "Profil et paramètres",
@@ -251,7 +266,8 @@
           ],
           "fields": "Les préférences se sauvegardent depuis leurs contrôles.",
           "result": "Les changements personnels sont conservés pour votre compte.",
-          "limits": "Les préférences n’étendent pas les droits métier."
+          "limits": "Les préférences n’étendent pas les droits métier.",
+          "id": "profil-et-parametres"
         }
       ],
       "pageCount": 14
@@ -274,7 +290,8 @@
           ],
           "fields": "Aucune saisie sur la synthèse.",
           "result": "Le résultat s’affiche dans la liste ou la fiche après confirmation.",
-          "limits": "Les droits et les données sont limités au rôle et au périmètre actifs."
+          "limits": "Les droits et les données sont limités au rôle et au périmètre actifs.",
+          "id": "tableau-de-bord"
         },
         {
           "name": "Rapports",
@@ -289,7 +306,8 @@
           ],
           "fields": "Filtres visibles selon le rapport.",
           "result": "Le rapport reflète les filtres sélectionnés.",
-          "limits": "Les montants de devises différentes restent distincts."
+          "limits": "Les montants de devises différentes restent distincts.",
+          "id": "rapports"
         },
         {
           "name": "Patrimoine",
@@ -304,7 +322,8 @@
           ],
           "fields": "Les informations visibles décrivent les structures, usages, accès et relations entre espaces.",
           "result": "La vue consolidée aide à suivre le portefeuille et à identifier les données à corriger.",
-          "limits": "L’ADMIN_IMMOBILIER consulte et supervise ; la gestion du patrimoine local est réservée à l’ADMIN_VILLE affecté."
+          "limits": "L’ADMIN_IMMOBILIER consulte et supervise ; la gestion du patrimoine local est réservée à l’ADMIN_VILLE affecté.",
+          "id": "patrimoine"
         },
         {
           "name": "Locataires",
@@ -321,7 +340,8 @@
           ],
           "fields": "Les filtres et détails présentent les dates, personnes, logements, statuts et conditions contractuelles accessibles.",
           "result": "La supervision consolidée permet de comparer les résultats des villes et de suivre les anomalies.",
-          "limits": "L’ADMIN_IMMOBILIER supervise l’organisation. Les opérations locales sont exécutées par l’ADMIN_VILLE ; voir une donnée ne donne pas le droit de la modifier."
+          "limits": "L’ADMIN_IMMOBILIER supervise l’organisation. Les opérations locales sont exécutées par l’ADMIN_VILLE ; voir une donnée ne donne pas le droit de la modifier.",
+          "id": "locataires"
         },
         {
           "name": "Loyers",
@@ -336,7 +356,8 @@
           ],
           "fields": "Les vues présentent montant, devise, date, bail et statut calculé.",
           "result": "Vous comparez les résultats locatifs à l’échelle de l’organisation.",
-          "limits": "La saisie et la correction des paiements sont réservées à l’ADMIN_VILLE ; aucune intervention locale n’est accordée par défaut."
+          "limits": "La saisie et la correction des paiements sont réservées à l’ADMIN_VILLE ; aucune intervention locale n’est accordée par défaut.",
+          "id": "loyers"
         },
         {
           "name": "Trésorerie",
@@ -351,7 +372,8 @@
           ],
           "fields": "Date, source ou catégorie, montant et devise selon le mouvement.",
           "result": "Les synthèses correspondent aux mouvements enregistrés.",
-          "limits": "La consultation ne permet pas de saisir ou d’annuler une écriture locale. N’additionnez pas des devises différentes."
+          "limits": "La consultation ne permet pas de saisir ou d’annuler une écriture locale. N’additionnez pas des devises différentes.",
+          "id": "tresorerie"
         },
         {
           "name": "Vitrine",
@@ -366,7 +388,8 @@
           ],
           "fields": "Champs de présentation visibles dans la page.",
           "result": "La supervision permet de contrôler l’exactitude des informations publiques.",
-          "limits": "La publication et les modifications d’unités sont des opérations locales réservées à l’ADMIN_VILLE."
+          "limits": "La publication et les modifications d’unités sont des opérations locales réservées à l’ADMIN_VILLE.",
+          "id": "vitrine"
         },
         {
           "name": "Personnel",
@@ -382,7 +405,8 @@
           ],
           "fields": "Membre, fonction, ville et bien selon l’opération.",
           "result": "Le répertoire partagé reste à jour et les affectations sont suivies localement.",
-          "limits": "L’ADMIN_IMMOBILIER gère les fiches organisationnelles ; l’ADMIN_VILLE gère les affectations de sa ville."
+          "limits": "L’ADMIN_IMMOBILIER gère les fiches organisationnelles ; l’ADMIN_VILLE gère les affectations de sa ville.",
+          "id": "personnel"
         },
         {
           "name": "Maintenance",
@@ -396,7 +420,8 @@
           ],
           "fields": "La liste présente les interventions enregistrées par les équipes locales.",
           "result": "La vue consolidée facilite la détection des retards et des anomalies.",
-          "limits": "La création et les transitions locales sont réservées à l’ADMIN_VILLE affecté."
+          "limits": "La création et les transitions locales sont réservées à l’ADMIN_VILLE affecté.",
+          "id": "maintenance"
         },
         {
           "name": "Administration",
@@ -411,7 +436,8 @@
           ],
           "fields": "Dépend des sections disponibles.",
           "result": "Le changement s’applique au périmètre indiqué.",
-          "limits": "L’API applique aussi les droits d’action."
+          "limits": "L’API applique aussi les droits d’action.",
+          "id": "administration"
         },
         {
           "name": "Profil et paramètres",
@@ -425,7 +451,8 @@
           ],
           "fields": "Préférences sauvegardées depuis leurs contrôles.",
           "result": "Les préférences sont enregistrées pour ce compte.",
-          "limits": "Elles ne changent pas les autorisations métier."
+          "limits": "Elles ne changent pas les autorisations métier.",
+          "id": "profil-et-parametres"
         }
       ],
       "pageCount": 15
@@ -448,7 +475,8 @@
           ],
           "fields": "Aucune saisie sur la synthèse.",
           "result": "Les indicateurs sont bornés à vos villes.",
-          "limits": "Les droits et les données sont limités au rôle et au périmètre actifs."
+          "limits": "Les droits et les données sont limités au rôle et au périmètre actifs.",
+          "id": "tableau-de-bord"
         },
         {
           "name": "Rapports de ville",
@@ -462,7 +490,8 @@
           ],
           "fields": "Filtres visibles selon le rapport.",
           "result": "Les données des autres villes ne sont pas incluses.",
-          "limits": "Les droits et les données sont limités au rôle et au périmètre actifs."
+          "limits": "Les droits et les données sont limités au rôle et au périmètre actifs.",
+          "id": "rapports-de-ville"
         },
         {
           "name": "Patrimoine",
@@ -479,7 +508,8 @@
           ],
           "fields": "Les champs dépendent du niveau immobilier. Déclarez les niveaux d’un bâtiment avec une référence, un libellé, un ordre et une description, puis associez-y les unités. Un libellé libre reste possible pour les cas particuliers ; les accès, usages commerciaux et occupants ne sont renseignés que lorsque nécessaire. Pour un magasin, bureau, restaurant, entrepôt ou atelier, renseignez aussi l’activité exercée ; elle est facultative pour les autres espaces.",
           "result": "Les espaces, baux et accès sont rattachés à leurs parents et restent bornés au périmètre autorisé.",
-          "limits": "Avant de restructurer des espaces, vérifiez les baux actifs. Les paiements historiques restent associés au bail et ne sont pas modifiés par un changement d’occupation."
+          "limits": "Avant de restructurer des espaces, vérifiez les baux actifs. Les paiements historiques restent associés au bail et ne sont pas modifiés par un changement d’occupation.",
+          "id": "patrimoine"
         },
         {
           "name": "Locataires",
@@ -500,7 +530,8 @@
           ],
           "fields": "Le titulaire principal porte les conditions financières du bail. Les personnes supplémentaires sont reliées comme cotitulaires ou occupants avec leurs périodes propres.",
           "result": "Le contrat conserve ses unités, son titulaire, ses occupants et ses dates ; les échéances et paiements restent rattachés au contrat.",
-          "limits": "Les personnes et unités doivent appartenir à l’organisation et à la ville autorisées. Les occupations incompatibles avec un bail actif sont refusées."
+          "limits": "Les personnes et unités doivent appartenir à l’organisation et à la ville autorisées. Les occupations incompatibles avec un bail actif sont refusées.",
+          "id": "locataires"
         },
         {
           "name": "Loyers",
@@ -515,7 +546,8 @@
           ],
           "fields": "Champs indiqués par le formulaire.",
           "result": "Aucune donnée d’une ville hors périmètre.",
-          "limits": "Les droits et les données sont limités au rôle et au périmètre actifs."
+          "limits": "Les droits et les données sont limités au rôle et au périmètre actifs.",
+          "id": "loyers"
         },
         {
           "name": "Trésorerie",
@@ -530,7 +562,8 @@
           ],
           "fields": "Les champs de saisie ne sont affichés que si autorisés.",
           "result": "La devise d’origine et la devise de référence restent distinctes.",
-          "limits": "Les droits et les données sont limités au rôle et au périmètre actifs."
+          "limits": "Les droits et les données sont limités au rôle et au périmètre actifs.",
+          "id": "tresorerie"
         },
         {
           "name": "Opérations et personnel",
@@ -545,7 +578,8 @@
           ],
           "fields": "Ville, fonction, personne et bien selon l’action.",
           "result": "Une personne peut être affectée à plusieurs biens ; contrôlez les doublons et le périmètre.",
-          "limits": "Les droits et les données sont limités au rôle et au périmètre actifs."
+          "limits": "Les droits et les données sont limités au rôle et au périmètre actifs.",
+          "id": "operations-et-personnel"
         },
         {
           "name": "Maintenance",
@@ -560,7 +594,8 @@
           ],
           "fields": "Bien et titre ; responsable et date selon le besoin.",
           "result": "Chaque intervention appartient à la ville sélectionnée.",
-          "limits": "Les droits et les données sont limités au rôle et au périmètre actifs."
+          "limits": "Les droits et les données sont limités au rôle et au périmètre actifs.",
+          "id": "maintenance"
         },
         {
           "name": "Profil et paramètres",
@@ -574,7 +609,8 @@
           ],
           "fields": "Les réglages organisationnels apparaissent uniquement si votre compte les autorise.",
           "result": "Vos réglages personnels ne changent pas les droits métier.",
-          "limits": "Les droits et les données sont limités au rôle et au périmètre actifs."
+          "limits": "Les droits et les données sont limités au rôle et au périmètre actifs.",
+          "id": "profil-et-parametres"
         }
       ],
       "pageCount": 14
