@@ -126,7 +126,7 @@ $expected = [
     'organization', 'organization_user', 'parcel', 'password_reset_token',
     'payment', 'rent', 'revoked_token', 'tenant', 'unit', 'unit_photo',
     'user', 'user_city', 'worker', 'worker_assignment', 'private_document', 'cash_opening_balance', 'maintenance_work_order',
-    'publication', 'publication_recipient', 'residential_movement', 'lease_unit', 'lease_occupant', 'access_point', 'access_point_unit',
+    'publication', 'publication_recipient', 'residential_movement', 'lease_unit', 'lease_occupant', 'access_point', 'access_point_unit', 'demo_dataset',
 ];
 
 $missing = array_values(array_diff($expected, $tables));
