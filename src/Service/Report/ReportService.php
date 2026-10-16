@@ -32,6 +32,7 @@ use App\Entity\Rental\Tenant;
 use App\Entity\Staff\Worker;
 use App\Entity\Staff\WorkerAssignment;
 use App\Enum\ExpenseCategory;
+use App\Enum\OrganizationStatus;
 use App\Enum\RentStatus;
 use App\Repository\Expense\ExpenseRepository;
 use App\Enum\Currency;
@@ -282,7 +283,7 @@ final readonly class ReportService
                 leaseUuid: $lease->getUuid()->toRfc4122(),
                 leaseReference: $lease->getReference(),
                 tenantName: $tenant->getFullName() ?? $tenant->getCompanyName() ?? 'Locataire',
-                unitLabel: $unit->getReference(),
+                unitLabel: $this->leaseUnitsLabel($lease),
                 cityName: $parcel->getCity()->getName(),
                 endDate: $this->dateTime->format($endDate, 'Y-m-d'),
                 daysRemaining: (int) $today->diff($endDate)->format('%a'),
@@ -342,7 +343,7 @@ final readonly class ReportService
             periodCovered: $this->dateTime->format($periodFrom, 'Y-m-d') . ' to ' . $this->dateTime->format($periodTo, 'Y-m-d'),
             organizations: $orgSummaries,
             totalOrganizations: count($organizations),
-            activeOrganizations: count(array_filter($organizations, fn($o) => $o->getStatus()->value === 'ACTIVE')),
+            activeOrganizations: count(array_filter($organizations, fn ($organization) => $organization->getStatus() === OrganizationStatus::ACTIVE)),
             totalUsers: $totalUsers,
             generatedAt: $this->dateTime->now(),
 );
@@ -797,7 +798,7 @@ final readonly class ReportService
                         leaseUuid: $lease->getUuid()->toRfc4122(),
                         leaseReference: $lease->getReference(),
                         tenantName: $lease->getTenant()->getFullName() ?? $lease->getTenant()->getCompanyName() ?? 'Inconnu',
-                        unitLabel: $lease->getUnit()->getReference() . ' (' . $lease->getUnit()->getBuilding()->getName() . ')',
+                        unitLabel: $this->leaseUnitsLabel($lease),
                         amountDue: $due,
                         amountPaid: $paid,
                         arrears: $arrears,
@@ -1109,6 +1110,16 @@ final readonly class ReportService
     private function countUnitsByCityIds(array $cityIds): int
     {
         return $this->unitRepository->countByCityIds($cityIds);
+    }
+
+    private function leaseUnitsLabel(Lease $lease): string
+    {
+        $units = [$lease->getUnit(), ...$lease->getAdditionalUnits()->toArray()];
+
+        return implode(', ', array_map(
+            static fn ($unit): string => $unit->getReference().' ('.$unit->getBuilding()->getName().')',
+            $units,
+        ));
     }
 
     /** @param list<int> $cityIds @param array<int, array{cityId: int, cityName: string, totalUnits: int, occupiedUnits: int}> $occupancyByCity */

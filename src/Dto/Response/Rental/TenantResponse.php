@@ -55,10 +55,13 @@ final readonly class TenantResponse
 
         #[OA\Property(description: 'Horodatage de dernière mise à jour', format: 'date-time', example: '2026-02-12T15:45:00Z')]
         public \DateTimeImmutable $updatedAt,
+
+        #[OA\Property(description: 'Dernier mouvement résidentiel visible, pour guider les filtres de suivi', type: 'object', nullable: true)]
+        public ?array $latestMovement = null,
     ) {
     }
 
-    public static function fromEntity(Tenant $tenant): self
+    public static function fromEntity(Tenant $tenant, ?array $latestMovement = null): self
     {
         return new self(
             id: (string) $tenant->getUuid(),
@@ -73,6 +76,7 @@ final readonly class TenantResponse
             notes: $tenant->getNotes(),
             createdAt: $tenant->getCreatedAt(),
             updatedAt: $tenant->getUpdatedAt(),
+            latestMovement: $latestMovement,
         );
     }
 }

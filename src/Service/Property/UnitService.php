@@ -8,11 +8,15 @@ use App\Dto\Feedback;
 use App\Dto\Request\Property\UnitFilterDto;
 use App\Dto\Request\Property\UnitRequest;
 use App\Entity\Property\Building;
+use App\Entity\Property\BuildingLevel;
 use App\Entity\Property\City;
 use App\Entity\Property\Unit;
+use App\Enum\UnitOccupancyStatus;
 use App\Mapper\Property\UnitMapper;
 use App\Repository\Property\BuildingRepository;
+use App\Repository\Property\BuildingLevelRepository;
 use App\Repository\Property\UnitRepository;
+use App\Repository\Rental\LeaseRepository;
 use App\Security\SecurityAction;
 use App\Security\SecurityServiceInterface;
 use App\Service\System\AuditLogService;
@@ -36,7 +40,9 @@ final readonly class UnitService
 {
     public function __construct(
         private UnitRepository $unitRepository,
+        private LeaseRepository $leaseRepository,
         private BuildingRepository $buildingRepository,
+        private BuildingLevelRepository $buildingLevelRepository,
         private UnitMapper $unitMapper,
         private SecurityServiceInterface $securityService,
         private AuditLogService $auditLogService,
@@ -78,7 +84,7 @@ final readonly class UnitService
 
         return $feedback
             ->setData([
-                'items' => array_map([$this->unitMapper, 'toResponse'], $result['items']),
+                'items' => array_map(fn (Unit $unit) => $this->toResponse($unit), $result['items']),
                 'total' => $result['total'],
                 'page' => $filter->page,
                 'limit' => $filter->limit,
@@ -161,7 +167,7 @@ final readonly class UnitService
         $this->securityService->checkUnitAccess($unitRepository, SecurityAction::VIEW_UNIT);
 
         return $feedback
-            ->setData($this->unitMapper->toResponse($unitRepository))
+            ->setData($this->toResponse($unitRepository))
             ->setFlushDescription('Détails du unité récupérés.')
             ->setStatus(200)
             ->autoInitFlush();
@@ -197,13 +203,28 @@ final readonly class UnitService
 
         $unitRepository = new Unit();
         $unitRepository->setBuilding($parent);
+        $parentSpace = $this->resolveParentSpace($request->parentUnitUuid, $parent, $feedback);
+        if ($request->parentUnitUuid !== null && $request->parentUnitUuid !== '' && $parentSpace === null) {
+            return $feedback->autoInitFlush();
+        }
+        if ($parentSpace !== null && $this->leaseRepository->findActiveLeaseForUnit($parentSpace) !== null) {
+            return $feedback->addError('parentUnitUuid', 'Un espace déjà loué ne peut pas être restructuré.')
+                ->setErrorFlushDescription('Cette subdivision entrerait en conflit avec un bail actif.')
+                ->setStatus(409)
+                ->autoInitFlush();
+        }
+        $unitRepository->setParentUnit($parentSpace);
         $this->unitMapper->copyToEntity($request, $unitRepository);
+        $level = $this->resolveBuildingLevel($request->levelUuid, $parent, $feedback);
+        if ($request->levelUuid !== null && $request->levelUuid !== '' && $level === null) return $feedback->autoInitFlush();
+        $unitRepository->setLevel($level);
+        if ($level !== null) $unitRepository->setFloor($level->getDisplayOrder())->setFloorLabel($level->getLabel());
 
         $this->entityManager->persist($unitRepository);
         $this->entityManager->flush();
 
         return $feedback
-            ->setData($this->unitMapper->toResponse($unitRepository))
+            ->setData($this->toResponse($unitRepository))
             ->setFlushDescription('Le unité a été créé avec succès.')
             ->setStatus(201)
             ->autoInitFlush();
@@ -219,6 +240,9 @@ final readonly class UnitService
         }
 
         $this->securityService->checkUnitAccess($unitRepository, SecurityAction::UPDATE_UNIT);
+        $previousParentUuid = $unitRepository->getParentUnit() !== null
+            ? (string) $unitRepository->getParentUnit()->getUuid()
+            : null;
 
         $violations = $this->validator->validate($request, groups: ['update']);
         if (count($violations) > 0) {
@@ -244,6 +268,45 @@ final readonly class UnitService
                 ->autoInitFlush();
         }
 
+        $level = $unitRepository->getLevel();
+        if ($request->levelUuid !== null) {
+            $level = $this->resolveBuildingLevel($request->levelUuid, $unitRepository->getBuilding(), $feedback);
+            if ($request->levelUuid !== '' && $level === null) return $feedback->autoInitFlush();
+            if ($level?->getId() !== $unitRepository->getLevel()?->getId()) {
+                if ($this->leaseRepository->findActiveLeaseForRelatedSpaces($this->unitRepository->findRelatedSpaces($unitRepository)) !== null) {
+                    return $feedback->addError('levelUuid', 'Le niveau d’un espace loué ne peut pas être modifié pendant un bail actif.')
+                        ->setFlushDescriptionWithError('Terminez ou transférez les contrats concernés avant ce changement de structure.')
+                        ->autoInitFlush()->setStatus(409);
+                }
+            }
+        }
+
+        if ($request->parentUnitUuid !== null) {
+            $parentSpace = $this->resolveParentSpace($request->parentUnitUuid, $unitRepository->getBuilding(), $feedback);
+            if ($request->parentUnitUuid !== '' && $parentSpace === null) {
+                return $feedback->autoInitFlush();
+            }
+            if ($parentSpace !== null && ($parentSpace->getId() === $unitRepository->getId() || $this->unitRepository->isDescendantOf($parentSpace, $unitRepository))) {
+                return $feedback->addError('parentUnitUuid', 'Un espace ne peut pas devenir son propre parent ou celui de son ancêtre.')
+                    ->setErrorFlushDescription('La hiérarchie des espaces ne peut pas contenir de cycle.')
+                    ->setStatus(422)
+                    ->autoInitFlush();
+            }
+            if ($parentSpace?->getId() !== $unitRepository->getParentUnit()?->getId()) {
+                $affected = array_merge(
+                    $this->unitRepository->findRelatedSpaces($unitRepository),
+                    $parentSpace !== null ? $this->unitRepository->findRelatedSpaces($parentSpace) : [],
+                );
+                if ($this->leaseRepository->findActiveLeaseForRelatedSpaces($affected) !== null) {
+                    return $feedback->addError('parentUnitUuid', 'La hiérarchie ne peut pas être modifiée pendant un bail actif.')
+                        ->setErrorFlushDescription('Clôturez ou transférez les baux concernés avant de restructurer ces espaces.')
+                        ->setStatus(409)
+                        ->autoInitFlush();
+                }
+            }
+            $unitRepository->setParentUnit($parentSpace);
+        }
+
         if ($request->reference !== null && $request->reference !== $unitRepository->getReference()) {
             $existing = $this->unitRepository->findOneByBuildingAndReference(
                 $unitRepository->getBuilding(),
@@ -258,22 +321,64 @@ final readonly class UnitService
             }
         }
 
-        $oldValues = ['reference' => $unitRepository->getReference(), 'type' => $unitRepository->getType()->value, 'floor' => $unitRepository->getFloor(), 'surface' => $unitRepository->getSurface(), 'bedrooms' => $unitRepository->getBedrooms(), 'rooms' => $unitRepository->getRooms(), 'bathrooms' => $unitRepository->getBathrooms(), 'monthlyRent' => $unitRepository->getMonthlyRent(), 'currency' => $unitRepository->getCurrency()->value, 'description' => $unitRepository->getDescription()];
+        $oldValues = ['reference' => $unitRepository->getReference(), 'type' => $unitRepository->getType()->value, 'operationalStatus' => $unitRepository->getOperationalStatus()->value, 'commercialActivity' => $unitRepository->getCommercialActivity(), 'floor' => $unitRepository->getFloor(), 'floorLabel' => $unitRepository->getFloorLabel(), 'parentUnitUuid' => $previousParentUuid, 'surface' => $unitRepository->getSurface(), 'bedrooms' => $unitRepository->getBedrooms(), 'rooms' => $unitRepository->getRooms(), 'bathrooms' => $unitRepository->getBathrooms(), 'monthlyRent' => $unitRepository->getMonthlyRent(), 'currency' => $unitRepository->getCurrency()->value, 'description' => $unitRepository->getDescription()];
         $this->unitMapper->copyToEntity($request, $unitRepository);
+        $unitRepository->setLevel($level);
+        if ($level !== null) $unitRepository->setFloor($level->getDisplayOrder())->setFloorLabel($level->getLabel());
         $this->auditLogService->log(
             action: 'UPDATE_UNIT', entityType: Unit::class, entityId: (int) $unitRepository->getId(),
             organization: $unitRepository->getBuilding()->getParcel()->getCity()->getOrganization(), user: $this->securityService->getCurrentUser(),
             oldValues: $oldValues,
-            newValues: ['reference' => $unitRepository->getReference(), 'type' => $unitRepository->getType()->value, 'floor' => $unitRepository->getFloor(), 'surface' => $unitRepository->getSurface(), 'bedrooms' => $unitRepository->getBedrooms(), 'rooms' => $unitRepository->getRooms(), 'bathrooms' => $unitRepository->getBathrooms(), 'monthlyRent' => $unitRepository->getMonthlyRent(), 'currency' => $unitRepository->getCurrency()->value, 'description' => $unitRepository->getDescription()],
+            newValues: ['reference' => $unitRepository->getReference(), 'type' => $unitRepository->getType()->value, 'operationalStatus' => $unitRepository->getOperationalStatus()->value, 'commercialActivity' => $unitRepository->getCommercialActivity(), 'floor' => $unitRepository->getFloor(), 'floorLabel' => $unitRepository->getFloorLabel(), 'parentUnitUuid' => $unitRepository->getParentUnit() !== null ? (string) $unitRepository->getParentUnit()->getUuid() : null, 'surface' => $unitRepository->getSurface(), 'bedrooms' => $unitRepository->getBedrooms(), 'rooms' => $unitRepository->getRooms(), 'bathrooms' => $unitRepository->getBathrooms(), 'monthlyRent' => $unitRepository->getMonthlyRent(), 'currency' => $unitRepository->getCurrency()->value, 'description' => $unitRepository->getDescription()],
             flush: false,
         );
         $this->entityManager->flush();
 
         return $feedback
-            ->setData($this->unitMapper->toResponse($unitRepository))
+            ->setData($this->toResponse($unitRepository))
             ->setFlushDescription('Le unité a été mis à jour avec succès.')
             ->setStatus(200)
             ->autoInitFlush();
+    }
+
+    private function resolveParentSpace(?string $uuid, Building $building, Feedback $feedback): ?Unit
+    {
+        if ($uuid === null || $uuid === '') {
+            return null;
+        }
+
+        try {
+            $parsed = Uuid::fromString($uuid);
+        } catch (\InvalidArgumentException) {
+            $feedback->addError('parentUnitUuid', 'Identifiant d’espace parent invalide.')
+                ->setStatus(422);
+            return null;
+        }
+
+        $parent = $this->unitRepository->findOneByUuid($parsed);
+        if ($parent === null
+            || (string) $parent->getBuilding()->getUuid() !== (string) $building->getUuid()
+            || !$this->securityService->canAccessBuilding($parent->getBuilding(), SecurityAction::VIEW_UNIT)
+        ) {
+            $feedback->addError('parentUnitUuid', 'L’espace parent est introuvable dans ce bâtiment.')
+                ->setStatus(404);
+            return null;
+        }
+
+        return $parent;
+    }
+
+    private function resolveBuildingLevel(?string $uuid, Building $building, Feedback $feedback): ?BuildingLevel
+    {
+        if ($uuid === null || $uuid === '') return null;
+        try { $level = $this->buildingLevelRepository->findOneByUuid(Uuid::fromString($uuid)); }
+        catch (\InvalidArgumentException) { $level = null; }
+        if ($level === null || $level->getBuilding()->getId() !== $building->getId()) {
+            $feedback->addError('levelUuid', 'Le niveau sélectionné doit appartenir au même bâtiment.')->setStatus(422);
+            return null;
+        }
+        $this->securityService->checkBuildingAccess($building, SecurityAction::VIEW_UNIT);
+        return $level;
     }
 
     public function delete(string $uuid): Feedback
@@ -286,6 +391,14 @@ final readonly class UnitService
         }
 
         $this->securityService->checkUnitAccess($unitRepository, SecurityAction::DELETE_UNIT);
+
+        if ($this->unitRepository->hasActiveSubspaces($unitRepository)) {
+            return $feedback
+                ->addError('unitUuid', 'Détachez ou déplacez d’abord les sous-espaces.')
+                ->setErrorFlushDescription('Un espace parent qui contient des subdivisions ne peut pas être supprimé.')
+                ->setStatus(409)
+                ->autoInitFlush();
+        }
 
         $actor = $this->securityService->getCurrentUser();
         $unitRepository->softDelete();
@@ -382,5 +495,27 @@ final readonly class UnitService
         }
 
         return $unitRepository;
+    }
+
+    private function toResponse(Unit $unit): \App\Dto\Response\Property\UnitResponse
+    {
+        return $this->unitMapper->toResponse($unit, $this->getOccupancyStatus($unit));
+    }
+
+    public function getOccupancyStatus(Unit $unit): UnitOccupancyStatus
+    {
+        $activeLeases = $this->leaseRepository->findActiveLeasesForRelatedSpaces($this->unitRepository->findOverlappingSpaces($unit));
+        if ($activeLeases === []) return UnitOccupancyStatus::VACANT;
+
+        $hasOccupiedSpace = false;
+        foreach ($activeLeases as $lease) {
+            foreach ([$lease->getUnit(), ...$lease->getAdditionalUnits()->toArray()] as $leasedSpace) {
+                if ($leasedSpace === $unit || $this->unitRepository->isDescendantOf($unit, $leasedSpace)) {
+                    $hasOccupiedSpace = true;
+                }
+            }
+        }
+
+        return $hasOccupiedSpace ? UnitOccupancyStatus::OCCUPIED : UnitOccupancyStatus::PARTIALLY_OCCUPIED;
     }
 }

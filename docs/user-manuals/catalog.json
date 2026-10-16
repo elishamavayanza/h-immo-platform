@@ -1,6 +1,6 @@
 {
-  "version": "1.1.0",
-  "updatedAt": "2026-10-15",
+  "version": "1.3.1",
+  "updatedAt": "2026-10-16",
   "roles": {
     "super_admin": {
       "title": "Manuel d’utilisation — Administration de la plateforme",
@@ -138,17 +138,16 @@
           "name": "Patrimoine",
           "menu": "Gestion immobilière → Patrimoine",
           "image": "patron-property.jpg",
-          "goal": "Consulter les villes, parcelles, bâtiments et unités de l’organisation.",
+          "goal": "Décrire le patrimoine réel de la parcelle au bâtiment, au niveau et aux espaces locatifs, puis gérer les accès physiques.",
           "steps": [
-            "Ouvrez Patrimoine.",
-            "Choisissez l’onglet correspondant aux parcelles, bâtiments ou unités.",
-            "Recherchez un élément ou filtrez par ville.",
-            "Ouvrez la fiche pour consulter ses détails et les actions disponibles.",
-            "Pour créer ou modifier, renseignez les champs obligatoires puis enregistrez."
+            "Ouvrez Patrimoine et sélectionnez la ville, la parcelle ou le bâtiment à consulter.",
+            "Parcourez les unités pour distinguer les espaces indépendants des subdivisions.",
+            "Consultez les types d’usage, références, niveaux et relations parents affichés.",
+            "Ouvrez Locataires pour vérifier les contrats et les occupants associés."
           ],
-          "fields": "Les champs varient selon le niveau immobilier ; les relations ville, parcelle, bâtiment et unité doivent être cohérentes.",
-          "result": "La fiche est créée ou mise à jour et apparaît dans la liste filtrée.",
-          "limits": "Une ressource appartient à une organisation et, selon son niveau, à une ville précise."
+          "fields": "Les champs du patrimoine sont consultables en lecture seule. Les niveaux déclarés pour chaque bâtiment peuvent être associés aux unités ; à défaut, un libellé libre permet de décrire un niveau particulier. Les accès sont gérés séparément par les rôles autorisés. Pour un magasin, bureau, restaurant, entrepôt ou atelier, renseignez aussi l’activité exercée ; elle est facultative pour les autres espaces.",
+          "result": "La structure visible correspond au périmètre de l’organisation active.",
+          "limits": "Le rôle PATRON consulte le patrimoine en lecture seule. La création et les modifications sont réservées aux rôles de gestion autorisés."
         },
         {
           "name": "Locataires",
@@ -157,9 +156,11 @@
           "goal": "Consulter les locataires et les informations de location disponibles.",
           "steps": [
             "Ouvrez Locataires.",
+            "Recherchez par nom puis filtrez par type, occupation actuelle, plusieurs logements, bail finissant sous 30 jours, départ annoncé, mouvement des 30 derniers jours ou saisie tardive. Si l’organisation dépasse la limite chargée, l’indication de liste partielle précise que les filtres portent sur les données affichées.",
             "Recherchez par nom ou utilisez les filtres.",
             "Ouvrez une fiche pour consulter ses informations.",
-            "Utilisez les actions de création ou de modification proposées et vérifiez le bail associé."
+            "Utilisez les actions de création ou de modification proposées et vérifiez le bail associé.",
+            "Tant qu’un mouvement n’est pas réalisé, utilisez « Corriger » pour modifier ses informations ou le passer à « Annulé » ; indiquez le motif obligatoire. Un mouvement réalisé est verrouillé pour préserver le bail et les paiements déjà traités."
           ],
           "fields": "Les champs obligatoires sont signalés dans le formulaire ; vérifiez les coordonnées et les liens de location.",
           "result": "La fiche du locataire est enregistrée et visible dans le périmètre actif.",
@@ -296,31 +297,39 @@
           "name": "Patrimoine",
           "menu": "Gestion immobilière → Patrimoine",
           "image": "immo-property.jpg",
-          "goal": "Gérer parcelles, bâtiments et unités.",
+          "goal": "Décrire le patrimoine réel de la parcelle au bâtiment, au niveau et aux espaces locatifs, puis gérer les accès physiques.",
           "steps": [
-            "Ouvrez Patrimoine.",
-            "Choisissez l’onglet et la ville concernés.",
-            "Recherchez ou ajoutez un élément en renseignant les champs requis.",
-            "Ouvrez une fiche pour voir ses détails et actions."
+            "Ouvrez Patrimoine, puis sélectionnez la ville et la parcelle concernées.",
+            "Ajoutez les bâtiments indépendants réellement présents sur la parcelle.",
+            "Dans chaque bâtiment, créez une unité par espace réellement louable ; utilisez le numéro et le libellé du niveau pour ordonner des désignations comme sous-sol, rez-de-chaussée ou mezzanine.",
+            "Pour une maison subdivisée, reliez les espaces enfants à leur parent. Un parent ou ses subdivisions ne peuvent pas être loués simultanément.",
+            "Dans Bâtiments, choisissez « Gérer les entrées de la parcelle » pour les accès extérieurs. Dans Unités, ouvrez un bâtiment et choisissez « Gérer les accès » pour ses portes ; cochez les unités desservies par un accès partagé.",
+            "Dans Locataires, créez le bail sur un ou plusieurs espaces de la même ville et ajoutez les cotitulaires ou occupants avec leurs dates."
           ],
-          "fields": "Les relations ville, parcelle, bâtiment et unité doivent être cohérentes.",
-          "result": "La fiche apparaît dans la liste après enregistrement.",
-          "limits": "Les droits et les données sont limités au rôle et au périmètre actifs."
+          "fields": "Les champs dépendent du niveau immobilier. Déclarez les niveaux d’un bâtiment avec une référence, un libellé, un ordre et une description, puis associez-y les unités. Un libellé libre reste possible pour les cas particuliers ; les accès, usages commerciaux et occupants ne sont renseignés que lorsque nécessaire. Pour un magasin, bureau, restaurant, entrepôt ou atelier, renseignez aussi l’activité exercée ; elle est facultative pour les autres espaces.",
+          "result": "Les espaces, baux et accès sont rattachés à leurs parents et restent bornés au périmètre autorisé.",
+          "limits": "Avant de restructurer des espaces, vérifiez les baux actifs. Les paiements historiques restent associés au bail et ne sont pas modifiés par un changement d’occupation."
         },
         {
           "name": "Locataires",
           "menu": "Gestion immobilière → Locataires",
           "image": "immo-tenants.jpg",
-          "goal": "Consulter et gérer les fiches locataires.",
+          "goal": "Gérer les personnes, leurs occupations et leurs contrats sur les unités autorisées.",
           "steps": [
-            "Ouvrez Locataires.",
-            "Recherchez ou filtrez la liste.",
-            "Ouvrez une fiche et vérifiez coordonnées et bail.",
-            "Utilisez les actions proposées puis confirmez."
+            "Ouvrez Locataires dans le périmètre actif.",
+            "Recherchez par nom puis filtrez par type, occupation actuelle, plusieurs logements, bail finissant sous 30 jours, départ annoncé, mouvement des 30 derniers jours ou saisie tardive. Si l’organisation dépasse la limite chargée, l’indication de liste partielle précise que les filtres portent sur les données affichées.",
+            "Créez une fiche par personne, puis démarrez la création du bail pour le titulaire principal.",
+            "Choisissez l’unité louée ; ajoutez d’autres espaces de la même ville si le contrat les réunit réellement.",
+            "Ajoutez les cotitulaires et occupants, leur rôle et leurs dates d’entrée et de sortie.",
+            "Enregistrez le bail, puis consultez l’historique résidentiel pour suivre les mouvements.",
+            "Pour un transfert effectif, créez un bail brouillon à destination avec ses conditions, puis dans l’historique choisissez le bail source, le bail brouillon et la date réelle. La validation clôt le premier et active le second.",
+            "Pour le départ d’un seul cotitulaire ou occupant, utilisez le formulaire de sortie individuelle : seule sa période se termine, le bail et les autres présences continuent.",
+            "Si un ancien occupant revient dans un bail encore actif, choisissez « Réintégrer un ancien occupant » dans l’historique et saisissez sa nouvelle date d’entrée. Une nouvelle période est créée après contrôle des chevauchements ; l’ancienne période reste conservée.",
+            "Tant qu’un mouvement n’est pas réalisé, utilisez « Corriger » pour modifier ses informations ou le passer à « Annulé » ; indiquez le motif obligatoire. Un mouvement réalisé est verrouillé pour préserver le bail et les paiements déjà traités."
           ],
-          "fields": "Les champs obligatoires sont signalés dans le formulaire.",
-          "result": "La fiche mise à jour s’affiche dans la liste.",
-          "limits": "Les droits et les données sont limités au rôle et au périmètre actifs."
+          "fields": "Le titulaire principal porte les conditions financières du bail. Les personnes supplémentaires sont reliées comme cotitulaires ou occupants avec leurs périodes propres.",
+          "result": "Le contrat conserve ses unités, son titulaire, ses occupants et ses dates ; les échéances et paiements restent rattachés au contrat.",
+          "limits": "Les personnes et unités doivent appartenir à l’organisation et à la ville autorisées. Les occupations incompatibles avec un bail actif sont refusées."
         },
         {
           "name": "Loyers",
@@ -427,7 +436,7 @@
           "limits": "Elles ne changent pas les autorisations métier."
         }
       ],
-      "pageCount": 15
+      "pageCount": 16
     },
     "admin_ville": {
       "title": "Manuel d’utilisation — Administration de ville",
@@ -467,31 +476,39 @@
           "name": "Patrimoine",
           "menu": "Gestion immobilière → Patrimoine",
           "image": "ville-property.jpg",
-          "goal": "Consulter les biens des villes attribuées.",
+          "goal": "Décrire le patrimoine réel de la parcelle au bâtiment, au niveau et aux espaces locatifs, puis gérer les accès physiques.",
           "steps": [
-            "Ouvrez Patrimoine.",
-            "Sélectionnez une ville qui vous est attribuée.",
-            "Recherchez par parcelle, bâtiment ou unité.",
-            "Ouvrez la fiche pour ses détails."
+            "Ouvrez Patrimoine, puis sélectionnez la ville et la parcelle concernées.",
+            "Ajoutez les bâtiments indépendants réellement présents sur la parcelle.",
+            "Dans chaque bâtiment, créez une unité par espace réellement louable ; utilisez le numéro et le libellé du niveau pour ordonner des désignations comme sous-sol, rez-de-chaussée ou mezzanine.",
+            "Pour une maison subdivisée, reliez les espaces enfants à leur parent. Un parent ou ses subdivisions ne peuvent pas être loués simultanément.",
+            "Dans Bâtiments, choisissez « Gérer les entrées de la parcelle » pour les accès extérieurs. Dans Unités, ouvrez un bâtiment et choisissez « Gérer les accès » pour ses portes ; cochez les unités desservies par un accès partagé.",
+            "Dans Locataires, créez le bail sur un ou plusieurs espaces de la même ville et ajoutez les cotitulaires ou occupants avec leurs dates."
           ],
-          "fields": "Filtres adaptés au type de bien.",
-          "result": "Une ville hors périmètre est refusée côté serveur.",
-          "limits": "Les droits et les données sont limités au rôle et au périmètre actifs."
+          "fields": "Les champs dépendent du niveau immobilier. Déclarez les niveaux d’un bâtiment avec une référence, un libellé, un ordre et une description, puis associez-y les unités. Un libellé libre reste possible pour les cas particuliers ; les accès, usages commerciaux et occupants ne sont renseignés que lorsque nécessaire. Pour un magasin, bureau, restaurant, entrepôt ou atelier, renseignez aussi l’activité exercée ; elle est facultative pour les autres espaces.",
+          "result": "Les espaces, baux et accès sont rattachés à leurs parents et restent bornés au périmètre autorisé.",
+          "limits": "Avant de restructurer des espaces, vérifiez les baux actifs. Les paiements historiques restent associés au bail et ne sont pas modifiés par un changement d’occupation."
         },
         {
           "name": "Locataires",
           "menu": "Gestion immobilière → Locataires",
           "image": "ville-tenants.jpg",
-          "goal": "Consulter les locataires et leur contexte locatif.",
+          "goal": "Gérer les personnes, leurs occupations et leurs contrats sur les unités autorisées.",
           "steps": [
-            "Ouvrez Locataires.",
-            "Choisissez une ville attribuée ou utilisez les filtres.",
-            "Consultez la fiche et les liens de location.",
-            "Employez seulement les actions autorisées visibles."
+            "Ouvrez Locataires dans le périmètre actif.",
+            "Recherchez par nom puis filtrez par type, occupation actuelle, ancienneté, plusieurs logements ou bail finissant sous 30 jours. Si l’organisation dépasse la limite chargée, l’indication de liste partielle précise que les filtres portent sur les données affichées.",
+            "Créez une fiche par personne, puis démarrez la création du bail pour le titulaire principal.",
+            "Choisissez l’unité louée ; ajoutez d’autres espaces de la même ville si le contrat les réunit réellement.",
+            "Ajoutez les cotitulaires et occupants, leur rôle et leurs dates d’entrée et de sortie.",
+            "Enregistrez le bail, puis consultez l’historique résidentiel pour suivre les mouvements.",
+            "Pour un transfert effectif, créez un bail brouillon à destination avec ses conditions, puis dans l’historique choisissez le bail source, le bail brouillon et la date réelle. La validation clôt le premier et active le second.",
+            "Pour le départ d’un seul cotitulaire ou occupant, utilisez le formulaire de sortie individuelle : seule sa période se termine, le bail et les autres présences continuent.",
+            "Si un ancien occupant revient dans un bail encore actif, choisissez « Réintégrer un ancien occupant » dans l’historique et saisissez sa nouvelle date d’entrée. Une nouvelle période est créée après contrôle des chevauchements ; l’ancienne période reste conservée.",
+            "Tant qu’un mouvement n’est pas réalisé, utilisez « Corriger » pour modifier ses informations ou le passer à « Annulé » ; indiquez le motif obligatoire. Un mouvement réalisé est verrouillé pour préserver le bail et les paiements déjà traités."
           ],
-          "fields": "Les champs proposés dépendent de vos droits délégués.",
-          "result": "Périmètre limité aux villes attribuées.",
-          "limits": "Les droits et les données sont limités au rôle et au périmètre actifs."
+          "fields": "Le titulaire principal porte les conditions financières du bail. Les personnes supplémentaires sont reliées comme cotitulaires ou occupants avec leurs périodes propres.",
+          "result": "Le contrat conserve ses unités, son titulaire, ses occupants et ses dates ; les échéances et paiements restent rattachés au contrat.",
+          "limits": "Les personnes et unités doivent appartenir à l’organisation et à la ville autorisées. Les occupations incompatibles avec un bail actif sont refusées."
         },
         {
           "name": "Loyers",
@@ -568,7 +585,7 @@
           "limits": "Les droits et les données sont limités au rôle et au périmètre actifs."
         }
       ],
-      "pageCount": 13
+      "pageCount": 14
     }
   }
 }

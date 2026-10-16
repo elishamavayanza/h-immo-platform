@@ -6,7 +6,10 @@ namespace App\Controller\Api\Rental;
 
 use App\Dto\Feedback;
 use App\Dto\Request\Rental\TenantFilterDto;
+use App\Dto\Request\Rental\ResidentialMovementRequest;
+use App\Dto\Request\Rental\ResidentialMovementCorrectionRequest;
 use App\Dto\Request\Rental\TenantRequest;
+use App\Service\Rental\ResidentialMovementService;
 use App\Service\Rental\TenantService;
 use App\Trait\FeedbackTrait;
 use Nelmio\ApiDocBundle\Attribute\Model;
@@ -43,8 +46,32 @@ final class TenantController extends AbstractController
     use FeedbackTrait;
 
     public function __construct(
-        private readonly TenantService $tenantService
+        private readonly TenantService $tenantService,
+        private readonly ResidentialMovementService $movementService,
     ) {
+    }
+
+    #[Route('/{uuid}/movements', name: 'movement_list', methods: ['GET'])]
+    public function movements(string $uuid): JsonResponse
+    {
+        $feedback = $this->movementService->history($uuid);
+
+        return $this->json($feedback, $feedback->getStatus());
+    }
+
+    #[Route('/{uuid}/movements', name: 'movement_create', methods: ['POST'])]
+    public function recordMovement(string $uuid, #[MapRequestPayload] ResidentialMovementRequest $request): JsonResponse
+    {
+        $feedback = $this->movementService->record($uuid, $request);
+
+        return $this->json($feedback, $feedback->getStatus());
+    }
+
+    #[Route('/{uuid}/movements/{movementUuid}', name: 'movement_correct', methods: ['PATCH'])]
+    public function correctMovement(string $uuid, string $movementUuid, #[MapRequestPayload] ResidentialMovementCorrectionRequest $request): JsonResponse
+    {
+        $feedback = $this->movementService->correct($uuid, $movementUuid, $request);
+        return $this->json($feedback, $feedback->getStatus());
     }
 
     #[Route('', name: 'create', methods: ['POST'])]

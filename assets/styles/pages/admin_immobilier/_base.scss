@@ -33,7 +33,7 @@
 .organization-table-toolbar h2, .organization-panel h2 { margin: 0 0 $spacing-1; font-size: $font-size-lg; color: $color-text-primary; }
 .organization-table-toolbar p, .organization-panel p { margin: 0; color: $color-text-muted; font-size: $font-size-xs; }
 .organization-filters { display: grid; grid-template-columns: minmax(210px, 280px) repeat(2, minmax(140px, 170px)); gap: $spacing-2; align-items: center; }
-.organization-filters--tenant { grid-template-columns: minmax(230px, 320px) minmax(145px, 180px); }
+.organization-filters--tenant { grid-template-columns: minmax(230px, 320px) minmax(145px, 180px) minmax(180px, 220px) auto; }
 .organization-property-name { display: flex; flex-direction: column; gap: 2px; }
 .organization-property-name strong { color: $color-text-primary; }
 .organization-property-name small { color: $color-text-muted; }

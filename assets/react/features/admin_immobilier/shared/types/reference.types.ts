@@ -59,9 +59,15 @@ export interface BuildingItem {
 export interface UnitItem {
     id: string;
     buildingId: string;
+    parentUnitId: string | null;
+    levelId: string | null;
     reference: string;
     type: string;
+    operationalStatus: string;
+    occupancyStatus: 'vacant' | 'occupied' | 'partially_occupied';
+    commercialActivity: string | null;
     floor: number;
+    floorLabel: string | null;
     surface: string;
     bedrooms: number | null;
     rooms: number | null;
@@ -84,6 +90,13 @@ export interface TenantItem {
     email: string | null;
     address: string | null;
     notes: string | null;
+    latestMovement?: {
+        type: string;
+        status: string;
+        plannedDate: string | null;
+        effectiveDate: string | null;
+        recordedAt: string;
+    } | null;
 }
 
 /** `RentResponse` — `GET /api/v1/rents` (`status` = statut calculé, `isOverdue` dérivé). */
@@ -109,6 +122,8 @@ export interface LeaseItem {
     organizationId: string;
     tenantId: string;
     unitId: string;
+    unitIds: string[];
+    occupants: Array<{ id: string; tenantId: string; role: 'co_tenant' | 'occupant'; startDate: string; endDate: string | null }>;
     reference: string;
     startDate: string;
     endDate: string | null;

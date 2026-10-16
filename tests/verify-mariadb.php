@@ -122,11 +122,11 @@ $sm = $connection->createSchemaManager();
 $tables = $sm->listTableNames();
 
 $expected = [
-    'audit_log', 'building', 'city', 'exchange_rate', 'expense', 'lease',
+    'audit_log', 'building', 'building_level', 'city', 'exchange_rate', 'expense', 'lease',
     'organization', 'organization_user', 'parcel', 'password_reset_token',
     'payment', 'rent', 'revoked_token', 'tenant', 'unit', 'unit_photo',
     'user', 'user_city', 'worker', 'worker_assignment', 'private_document', 'cash_opening_balance', 'maintenance_work_order',
-    'publication', 'publication_recipient',
+    'publication', 'publication_recipient', 'residential_movement', 'lease_unit', 'lease_occupant', 'access_point', 'access_point_unit',
 ];
 
 $missing = array_values(array_diff($expected, $tables));

@@ -92,7 +92,8 @@ class LeaseRepository extends ServiceEntityRepository
     public function findActiveLeaseForUnit(Unit $unit, ?Uuid $excludeUuid = null): ?Lease
     {
         $qb = $this->createQueryBuilder('l')
-            ->andWhere('l.unit = :unit')
+            ->leftJoin('l.additionalUnits', 'additionalUnit')
+            ->andWhere('(l.unit = :unit OR additionalUnit = :unit)')
             ->andWhere('l.status = :status')
             ->andWhere('l.deletedAt IS NULL')
             ->setParameter('unit', $unit)
@@ -104,6 +105,45 @@ class LeaseRepository extends ServiceEntityRepository
         }
 
         return $qb->getQuery()->getOneOrNullResult();
+    }
+
+    /** Recherche un bail actif sur l'espace ou tout espace parent/enfant lié. */
+    public function findActiveLeaseForRelatedSpaces(array $units, ?Uuid $excludeUuid = null): ?Lease
+    {
+        $qb = $this->createQueryBuilder('l')
+            ->leftJoin('l.additionalUnits', 'additionalUnit')
+            ->andWhere('(l.unit IN (:units) OR additionalUnit IN (:units))')
+            ->andWhere('l.status = :status')
+            ->andWhere('l.deletedAt IS NULL')
+            ->setParameter('units', $units)
+            ->setParameter('status', LeaseStatus::ACTIVE)
+            ->setMaxResults(1);
+
+        if ($excludeUuid !== null) {
+            $qb->andWhere('l.uuid != :excludeUuid')
+                ->setParameter('excludeUuid', $this->bindableUuid($excludeUuid));
+        }
+
+        return $qb->getQuery()->getOneOrNullResult();
+    }
+
+    /** @return list<Lease> Tous les baux actifs qui couvrent au moins un espace indiqué. */
+    public function findActiveLeasesForRelatedSpaces(array $units): array
+    {
+        if ($units === []) {
+            return [];
+        }
+
+        return $this->createQueryBuilder('l')
+            ->distinct()
+            ->leftJoin('l.additionalUnits', 'additionalUnit')
+            ->andWhere('(l.unit IN (:units) OR additionalUnit IN (:units))')
+            ->andWhere('l.status = :status')
+            ->andWhere('l.deletedAt IS NULL')
+            ->setParameter('units', $units)
+            ->setParameter('status', LeaseStatus::ACTIVE)
+            ->getQuery()
+            ->getResult();
     }
 
     /**
@@ -118,7 +158,8 @@ class LeaseRepository extends ServiceEntityRepository
     public function findActiveLeaseForUnitAtDate(Unit $unit, \DateTimeImmutable $date): ?Lease
     {
         return $this->createQueryBuilder('l')
-            ->andWhere('l.unit = :unit')
+            ->leftJoin('l.additionalUnits', 'additionalUnit')
+            ->andWhere('(l.unit = :unit OR additionalUnit = :unit)')
             ->andWhere('l.status = :status')
             ->andWhere('l.deletedAt IS NULL')
             ->andWhere('l.startDate <= :date')
@@ -144,7 +185,7 @@ class LeaseRepository extends ServiceEntityRepository
             return 0;
         }
 
-        return (int) $this->createQueryBuilder('l')
+        $primaryCount = (int) $this->createQueryBuilder('l')
             ->select('COUNT(DISTINCT u.id)')
             ->innerJoin('l.unit', 'u')
             ->innerJoin('u.building', 'b')
@@ -166,6 +207,31 @@ class LeaseRepository extends ServiceEntityRepository
             ->setParameter('atDate', $date)
             ->getQuery()
             ->getSingleScalarResult();
+
+        $additionalCount = (int) $this->createQueryBuilder('l')
+            ->select('COUNT(DISTINCT extra.id)')
+            ->innerJoin('l.additionalUnits', 'extra')
+            ->innerJoin('extra.building', 'extraBuilding')
+            ->innerJoin('extraBuilding.parcel', 'extraParcel')
+            ->andWhere('extraParcel.city IN (:cities)')
+            ->andWhere('l.deletedAt IS NULL')
+            ->andWhere('l.organization = :organization')
+            ->andWhere('extra.deletedAt IS NULL')
+            ->andWhere('extraBuilding.deletedAt IS NULL')
+            ->andWhere('extraParcel.deletedAt IS NULL')
+            ->andWhere('l.status IN (:occupancyStatuses)')
+            ->andWhere('l.startDate <= :atDate')
+            ->andWhere('(l.endDate IS NULL OR l.endDate >= :atDate)')
+            ->andWhere('(l.status != :terminated OR l.terminationDate IS NULL OR l.terminationDate >= :atDate)')
+            ->setParameter('cities', $cityIds)
+            ->setParameter('organization', $organizationId)
+            ->setParameter('occupancyStatuses', [LeaseStatus::ACTIVE, LeaseStatus::EXPIRED, LeaseStatus::TERMINATED])
+            ->setParameter('terminated', LeaseStatus::TERMINATED)
+            ->setParameter('atDate', $date)
+            ->getQuery()
+            ->getSingleScalarResult();
+
+        return $primaryCount + $additionalCount;
     }
 
     /**
@@ -187,7 +253,8 @@ class LeaseRepository extends ServiceEntityRepository
     public function findHistoryByUnit(Unit $unit): array
     {
         return $this->createQueryBuilder('l')
-            ->andWhere('l.unit = :unit')
+            ->leftJoin('l.additionalUnits', 'additionalUnit')
+            ->andWhere('(l.unit = :unit OR additionalUnit = :unit)')
             ->andWhere('l.deletedAt IS NULL')
             ->setParameter('unit', $unit)
             ->orderBy('l.startDate', 'DESC')
@@ -236,7 +303,11 @@ class LeaseRepository extends ServiceEntityRepository
                 ->innerJoin('u.building', 'b')
                 ->innerJoin('b.parcel', 'par')
                 ->innerJoin('par.city', 'c')
-                ->andWhere('c.id IN (:cities)')
+                ->leftJoin('l.additionalUnits', 'cityUnit')
+                ->leftJoin('cityUnit.building', 'cityBuilding')
+                ->leftJoin('cityBuilding.parcel', 'cityParcel')
+                ->leftJoin('cityParcel.city', 'additionalCity')
+                ->andWhere('(c.id IN (:cities) OR additionalCity.id IN (:cities))')
                 ->setParameter('cities', $cityIds);
         }
 
@@ -297,7 +368,11 @@ class LeaseRepository extends ServiceEntityRepository
         }
 
         if ($cityIds !== null && !empty($cityIds)) {
-            $qb->andWhere('c.id IN (:cities)')
+            $qb->leftJoin('l.additionalUnits', 'cityUnit')
+                ->leftJoin('cityUnit.building', 'cityBuilding')
+                ->leftJoin('cityBuilding.parcel', 'cityParcel')
+                ->leftJoin('cityParcel.city', 'additionalCity')
+                ->andWhere('(c.id IN (:cities) OR additionalCity.id IN (:cities))')
                 ->setParameter('cities', $cityIds);
         }
 
@@ -340,8 +415,12 @@ class LeaseRepository extends ServiceEntityRepository
             ->innerJoin('u.building', 'b')
             ->innerJoin('b.parcel', 'p')
             ->innerJoin('p.city', 'c')
+            ->leftJoin('l.additionalUnits', 'additionalUnit')
+            ->leftJoin('additionalUnit.building', 'additionalBuilding')
+            ->leftJoin('additionalBuilding.parcel', 'additionalParcel')
+            ->leftJoin('additionalParcel.city', 'additionalCity')
             ->andWhere('l.organization = :organization')
-            ->andWhere('c.id IN (:cities)')
+            ->andWhere('(c.id IN (:cities) OR additionalCity.id IN (:cities))')
             ->andWhere('l.status = :active')
             ->andWhere('l.endDate IS NOT NULL AND l.endDate >= :from AND l.endDate <= :to')
             ->andWhere('l.deletedAt IS NULL')

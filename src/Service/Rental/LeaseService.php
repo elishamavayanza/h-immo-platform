@@ -7,9 +7,12 @@ namespace App\Service\Rental;
 use App\Dto\Feedback;
 use App\Dto\Request\Rental\LeaseFilterDto;
 use App\Dto\Request\Rental\LeaseRequest;
+use App\Dto\Request\Rental\LeaseOccupantRequest;
+use App\Dto\Request\Rental\LeaseOccupantDepartureRequest;
 use App\Entity\Identity\User;
 use App\Entity\Property\Unit;
 use App\Entity\Rental\Lease;
+use App\Entity\Rental\LeaseOccupant;
 use App\Entity\Rental\Tenant;
 use App\Enum\LeaseStatus;
 use App\Mapper\Rental\LeaseMapper;
@@ -17,6 +20,7 @@ use App\Repository\Identity\OrganizationRepository;
 use App\Repository\Property\CityRepository;
 use App\Repository\Property\UnitRepository;
 use App\Repository\Rental\LeaseRepository;
+use App\Repository\Rental\LeaseOccupantRepository;
 use App\Repository\Rental\TenantRepository;
 use App\Security\SecurityAction;
 use App\Security\SecurityServiceInterface;
@@ -40,6 +44,7 @@ final readonly class LeaseService
 {
     public function __construct(
         private LeaseRepository $leaseRepository,
+        private LeaseOccupantRepository $leaseOccupantRepository,
         private OrganizationRepository $organizationRepository,
         private TenantRepository $tenantRepository,
         private UnitRepository $unitRepository,
@@ -96,9 +101,37 @@ final readonly class LeaseService
         $lease->setOrganization($organization);
         $lease->setTenant($tenant);
         $lease->setUnit($unit);
+        $selectedUnits = [$unit];
+        foreach (array_unique($request->additionalUnitUuids) as $unitUuid) {
+            $extra = $this->resolveUnit($unitUuid, SecurityAction::VIEW_UNIT, $feedback);
+            if ($extra === null) return $feedback->autoInitFlush();
+            if ($extra->getBuilding()->getParcel()->getCity()->getOrganization() !== $organization) {
+                return $feedback->addError('additionalUnitUuids', 'Tous les espaces doivent appartenir à la même organisation.')
+                    ->setFlushDescriptionWithError('Le bail ne peut pas réunir des espaces de plusieurs organisations.')
+                    ->setStatus(422)->autoInitFlush();
+            }
+            if ($extra->getBuilding()->getParcel()->getCity() !== $unit->getBuilding()->getParcel()->getCity()) {
+                return $feedback->addError('additionalUnitUuids', 'Les espaces d’un même bail doivent se trouver dans une seule ville.')
+                    ->setFlushDescriptionWithError('Créez un contrat distinct pour les espaces situés dans une autre ville.')
+                    ->setStatus(422)->autoInitFlush();
+            }
+            if ($extra === $unit) continue;
+            $lease->addAdditionalUnit($extra);
+            $selectedUnits[] = $extra;
+        }
+        foreach ($selectedUnits as $index => $selected) {
+            foreach (array_slice($selectedUnits, $index + 1) as $other) {
+                if ($this->unitRepository->isDescendantOf($selected, $other) || $this->unitRepository->isDescendantOf($other, $selected)) {
+                    return $feedback->addError('additionalUnitUuids', 'Un espace parent et son sous-espace ne peuvent pas être inclus ensemble dans le même bail.')
+                        ->setFlushDescriptionWithError('Choisissez soit l’espace complet, soit ses subdivisions louées séparément.')
+                        ->setStatus(422)->autoInitFlush();
+                }
+            }
+        }
         $this->leaseMapper->copyToEntity($request, $lease);
+        if (!$this->attachOccupants($request->occupants, $tenant, $lease, $feedback)) return $feedback->autoInitFlush();
 
-        if (!$this->persistLeaseExclusively($lease, null, $feedback)) {
+        if (!$this->persistLeaseExclusively($lease, null, $feedback, $selectedUnits)) {
             return $feedback->autoInitFlush();
         }
 
@@ -146,6 +179,11 @@ final readonly class LeaseService
         }
 
         $this->securityService->checkLeaseAccess($lease, SecurityAction::UPDATE_LEASE);
+        if ($request->additionalUnitUuids !== [] || $request->occupants !== []) {
+            return $feedback->addError('unitIds', 'Le périmètre et les occupants d’un bail créé sont conservés dans son historique.')
+                ->setFlushDescriptionWithError('Utilisez l’opération d’ajout d’occupant ou un nouveau bail pour préserver la traçabilité.')
+                ->autoInitFlush();
+        }
 
         // Un changement de locataire ou d'unité est traité comme un
         // changement de périmètre : l'entité cible doit être accessible,
@@ -229,6 +267,113 @@ final readonly class LeaseService
             ->setFlushDescription('Contrat de bail récupéré.')
             ->setStatus(200)
             ->autoInitFlush();
+    }
+
+    public function addOccupant(string $uuid, LeaseOccupantRequest $request, User $currentUser): Feedback
+    {
+        $feedback = new Feedback();
+        $lease = $this->findLease($uuid, $feedback);
+        if ($lease === null) return $feedback->autoInitFlush();
+
+        $this->securityService->checkLeaseAccess($lease, SecurityAction::UPDATE_LEASE);
+        if (!in_array($lease->getStatus(), [LeaseStatus::DRAFT, LeaseStatus::ACTIVE], true)) {
+            return $feedback->addError('status', 'Un bail clôturé ne peut plus recevoir de nouveaux occupants.')
+                ->setFlushDescriptionWithError('Enregistrez un nouveau bail pour tracer une nouvelle occupation.')
+                ->autoInitFlush();
+        }
+        $violations = $this->validator->validate($request);
+        if (count($violations) > 0) {
+            return $feedback->bind($violations)->setFlushDescriptionWithError('Les données de l’occupant sont invalides.')->autoInitFlush();
+        }
+
+        if (!$this->attachOccupants([[
+            'tenantUuid' => $request->tenantUuid,
+            'role' => $request->role,
+            'startDate' => $request->startDate,
+            'endDate' => $request->endDate,
+        ]], $lease->getTenant(), $lease, $feedback)) {
+            return $feedback->setFlushDescriptionWithError('L’occupant n’a pas pu être rattaché à ce bail.')->autoInitFlush();
+        }
+
+        $this->entityManager->flush();
+        $this->auditLogService->log(
+            action: 'ADD_LEASE_OCCUPANT',
+            entityType: Lease::class,
+            entityId: $lease->getId(),
+            organization: $lease->getOrganization(),
+            user: $currentUser,
+            oldValues: null,
+            newValues: ['tenantUuid' => $request->tenantUuid, 'role' => $request->role, 'startDate' => $request->startDate, 'endDate' => $request->endDate],
+        );
+
+        return $feedback->setData($this->leaseMapper->toResponse($lease))
+            ->setFlushDescription('L’occupant a été ajouté à l’historique du bail.')
+            ->autoInitFlush()->setStatus(201);
+    }
+
+    public function recordOccupantDeparture(string $leaseUuid, string $occupantUuid, LeaseOccupantDepartureRequest $request, User $currentUser): Feedback
+    {
+        $feedback = new Feedback();
+        $lease = $this->findLease($leaseUuid, $feedback);
+        if ($lease === null) return $feedback->autoInitFlush();
+
+        $this->securityService->checkLeaseAccess($lease, SecurityAction::UPDATE_LEASE);
+        if ($lease->getStatus() !== LeaseStatus::ACTIVE) {
+            return $feedback->addError('lease', 'Le départ individuel ne peut être enregistré que sur un bail actif.')
+                ->setFlushDescriptionWithError('Le bail sélectionné n’est pas actif.')
+                ->autoInitFlush();
+        }
+        $violations = $this->validator->validate($request);
+        if (count($violations) > 0) {
+            return $feedback->bind($violations)->setFlushDescriptionWithError('Les données de sortie sont invalides.')->autoInitFlush();
+        }
+
+        try {
+            $occupant = $this->leaseOccupantRepository->findForLease(Uuid::fromString($occupantUuid), $lease);
+        } catch (\InvalidArgumentException) {
+            $occupant = null;
+        }
+        if ($occupant === null) {
+            return $feedback->setErrorFlushDescription('La personne ne fait pas partie du bail sélectionné.')->autoInitFlush()->setStatus(404);
+        }
+
+        $departureDate = $this->dateTime->parseDate($request->effectiveDate);
+        if ($departureDate === null || $departureDate < $occupant->getStartDate() || $departureDate > $this->dateTime->today()) {
+            return $feedback->addError('effectiveDate', 'La date doit être comprise entre le début de présence et aujourd’hui.')
+                ->setFlushDescriptionWithError('La date de sortie est invalide.')
+                ->autoInitFlush();
+        }
+        if ($occupant->getEndDate() !== null) {
+            return $feedback->addError('occupant', 'La sortie de cette personne est déjà enregistrée.')
+                ->setFlushDescriptionWithError('Cette présence est déjà clôturée.')
+                ->autoInitFlush()->setStatus(409);
+        }
+
+        $this->entityManager->wrapInTransaction(function () use ($occupant, $departureDate, $request, $lease, $currentUser): void {
+            $occupant->setEndDate($departureDate);
+            $this->entityManager->flush();
+            $this->auditLogService->log(
+                action: 'END_LEASE_OCCUPANT_PRESENCE',
+                entityType: LeaseOccupant::class,
+                entityId: (int) $occupant->getId(),
+                organization: $lease->getOrganization(),
+                user: $currentUser,
+                oldValues: ['endDate' => null],
+                newValues: [
+                    'leaseUuid' => $lease->getUuid()->toRfc4122(),
+                    'tenantUuid' => $occupant->getTenant()->getUuid()->toRfc4122(),
+                    'effectiveDate' => $this->dateTime->format($departureDate, 'Y-m-d'),
+                    'reason' => $request->reason,
+                ],
+            );
+        });
+
+        return $feedback->setData([
+            'occupantUuid' => $occupant->getUuid()->toRfc4122(),
+            'tenantUuid' => $occupant->getTenant()->getUuid()->toRfc4122(),
+            'endDate' => $this->dateTime->format($departureDate, 'Y-m-d'),
+        ])->setFlushDescription('La sortie de l’occupant est enregistrée. Le bail et les autres occupants restent actifs.')
+            ->setStatus(200)->autoInitFlush();
     }
 
     /**
@@ -415,16 +560,12 @@ final readonly class LeaseService
     }
 
     /**
-     * Vérifie qu'aucun autre bail ACTIVE n'occupe déjà l'unité, puis
-     * enregistre le bail.
+     * Vérifie qu'aucun bail actif ne porte sur cette unité, ses parents ou
+     * ses sous-espaces, puis enregistre le bail.
      *
-     * Contrôle, verrou et écriture ont lieu dans UNE SEULE transaction.
-     * C'est indispensable : un simple `SELECT` avant l'INSERT souffre
-     * d'une fenêtre d'interleave — deux requêtes concurrentes peuvent
-     * toutes deux ne voir aucun bail actif et en créer chacune un. Le
-     * verrou pessimiste `SELECT ... FOR UPDATE` sur la ligne unité
-     * sérialise ces transactions concurrentes, le second appelant
-     * attendant que le premier ait commité avant de relire.
+     * Le contrôle, le verrouillage de la racine commune et l'écriture sont
+     * atomiques. Des espaces frères partagent le verrou pour éviter une
+     * course, mais ne sont pas considérés incompatibles par la règle métier.
      *
      * Le verrou doit être maintenu jusqu'au commit, c'est pourquoi il ne
      * peut pas être_factorisé dans une méthode appelée séparément.
@@ -435,19 +576,50 @@ final readonly class LeaseService
      *
      * @return bool `false` si un conflit a été signalé dans $feedback
      */
-    private function persistLeaseExclusively(Lease $lease, ?Lease $exclude, Feedback $feedback): bool
+    private function persistLeaseExclusively(Lease $lease, ?Lease $exclude, Feedback $feedback, array $selectedUnits = [], bool $checkOperationalAvailability = false): bool
     {
+        $selectedUnits = $selectedUnits ?: [$lease->getUnit(), ...$lease->getAdditionalUnits()->toArray()];
+        $hasUnavailableSpace = false;
         $succeeded = $this->entityManager->wrapInTransaction(
-            function () use ($lease, $exclude): bool {
-                $this->unitRepository->lockForUpdate($lease->getUnit());
+            function () use ($lease, $exclude, $selectedUnits, $checkOperationalAvailability, &$hasUnavailableSpace): bool {
+                $overlappingSpaces = [];
+                $roots = [];
+                foreach ($selectedUnits as $unit) {
+                    $root = $this->unitRepository->findSpaceRoot($unit);
+                    $roots[$root->getId()] = $root;
+                    foreach ($this->unitRepository->findOverlappingSpaces($unit) as $overlap) {
+                        $overlappingSpaces[$overlap->getId()] = $overlap;
+                    }
+                }
+                ksort($roots);
+                foreach ($roots as $root) $this->unitRepository->lockForUpdate($root);
+
+                if ($checkOperationalAvailability) {
+                    foreach ($overlappingSpaces as $space) {
+                        if ($space->getOperationalStatus() !== \App\Enum\UnitOperationalStatus::AVAILABLE) {
+                            $hasUnavailableSpace = true;
+                            break;
+                        }
+                    }
+                }
+
+                if ($lease->getStatus() === LeaseStatus::ACTIVE && $hasUnavailableSpace) {
+                    if ($checkOperationalAvailability) {
+                        $lease->setStatus(LeaseStatus::DRAFT);
+                    }
+                    return false;
+                }
 
                 if (
                     $lease->getStatus() === LeaseStatus::ACTIVE
-                    && $this->leaseRepository->findActiveLeaseForUnit(
-                        $lease->getUnit(),
+                    && $this->leaseRepository->findActiveLeaseForRelatedSpaces(
+                        array_values($overlappingSpaces),
                         $exclude?->getUuid()
                     ) !== null
                 ) {
+                    if ($checkOperationalAvailability) {
+                        $lease->setStatus(LeaseStatus::DRAFT);
+                    }
                     return false;
                 }
 
@@ -460,14 +632,56 @@ final readonly class LeaseService
 
         if (!$succeeded) {
             $feedback
-                ->addError('unitUuid', 'Cette unité est déjà occupée par un bail actif.')
-                ->setFlushDescriptionWithError(
-                    'Une unité ne peut avoir qu\'un seul bail actif à la fois.'
-                )
+                ->addError('unitUuid', $hasUnavailableSpace
+                    ? 'Un espace du contrat est réservé ou indisponible.'
+                    : 'Cet espace ou un espace parent/enfant est déjà occupé par un bail actif.')
+                ->setFlushDescriptionWithError($hasUnavailableSpace
+                    ? 'Un bail actif ne peut pas porter sur un espace actuellement indisponible.'
+                    : 'Des espaces imbriqués ne peuvent pas être loués simultanément lorsque leurs usages se chevauchent.')
                 ->setStatus(409);
         }
 
         return $succeeded;
+    }
+
+    /** Valide les occupants avant l'écriture; leur rôle financier reste celui du contrat. */
+    private function attachOccupants(array $occupants, Tenant $primaryTenant, Lease $lease, Feedback $feedback): bool
+    {
+        $seen = [(string) $primaryTenant->getUuid() => true];
+        foreach ($occupants as $index => $item) {
+            if (!is_array($item) || !is_string($item['tenantUuid'] ?? null) || !in_array($item['role'] ?? null, ['co_tenant', 'occupant'], true)) {
+                $feedback->addError('occupants', sprintf('La personne %d doit avoir un UUID et un rôle valide.', $index + 1));
+                continue;
+            }
+            $occupantTenant = $this->resolveTenant($item['tenantUuid'], SecurityAction::VIEW_TENANT, $feedback);
+            if ($occupantTenant === null) continue;
+            $uuid = (string) $occupantTenant->getUuid();
+            if (isset($seen[$uuid]) || $occupantTenant->getOrganization() !== $primaryTenant->getOrganization()) {
+                $feedback->addError('occupants', 'Une personne est répétée ou appartient à une autre organisation.');
+                continue;
+            }
+            $start = $this->dateTime->parseDate((string) ($item['startDate'] ?? $lease->getStartDate()->format('Y-m-d')));
+            $end = isset($item['endDate']) && $item['endDate'] !== '' ? $this->dateTime->parseDate((string) $item['endDate']) : null;
+            $contractEnd = $lease->getTerminationDate() ?? $lease->getEndDate();
+            if ($start === null || (isset($item['endDate']) && $item['endDate'] !== '' && $end === null)
+                || ($end !== null && $end < $start)
+                || ($start !== null && $start < $lease->getStartDate())
+                || ($contractEnd !== null && $start !== null && $start > $contractEnd)
+                || ($contractEnd !== null && $end !== null && $end > $contractEnd)) {
+                $feedback->addError('occupants', sprintf('Les dates de la personne %d sont invalides.', $index + 1));
+                continue;
+            }
+            if ($this->leaseOccupantRepository->hasOverlappingPresence($occupantTenant, $lease, $start, $end)) {
+                $feedback->addError('occupants', sprintf('La période de présence de la personne %d chevauche une présence déjà enregistrée dans ce bail.', $index + 1));
+                continue;
+            }
+            $entry = new \App\Entity\Rental\LeaseOccupant();
+            $entry->setOrganization($lease->getOrganization())->setTenant($occupantTenant)->setRole($item['role'])->setStartDate($start)->setEndDate($end);
+            $lease->addOccupant($entry);
+            $seen[$uuid] = true;
+        }
+
+        return count($feedback->getErrors()) === 0;
     }
 
     /**
@@ -506,8 +720,9 @@ final readonly class LeaseService
 
         $lease->setStatus(LeaseStatus::ACTIVE);
 
-        if (!$this->persistLeaseExclusively($lease, $lease, $feedback)) {
-            return $feedback->autoInitFlush();
+        if (!$this->persistLeaseExclusively($lease, $lease, $feedback, checkOperationalAvailability: true)) {
+            $lease->setStatus(LeaseStatus::DRAFT);
+            return $feedback->autoInitFlush()->setStatus(409);
         }
 
         // Log d'audit : activation du bail

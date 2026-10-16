@@ -10,6 +10,8 @@ use App\Entity\Shared\SoftDeletableEntity;
 use App\Enum\Currency;
 use App\Enum\LeaseStatus;
 use Doctrine\DBAL\Types\Types;
+use Doctrine\Common\Collections\ArrayCollection;
+use Doctrine\Common\Collections\Collection;
 use Doctrine\ORM\Mapping as ORM;
 
 /**
@@ -33,6 +35,44 @@ use Doctrine\ORM\Mapping as ORM;
 #[ORM\UniqueConstraint(name: 'uniq_lease_org_reference', columns: ['organization_id', 'reference'])]
 class Lease extends SoftDeletableEntity
 {
+    /** @var Collection<int, Unit> Espaces secondaires couverts par le même contrat. */
+    #[ORM\ManyToMany(targetEntity: Unit::class)]
+    #[ORM\JoinTable(
+        name: 'lease_unit',
+        joinColumns: [new ORM\JoinColumn(name: 'lease_id', referencedColumnName: 'id', onDelete: 'CASCADE')],
+        inverseJoinColumns: [new ORM\JoinColumn(name: 'unit_id', referencedColumnName: 'id', onDelete: 'RESTRICT')],
+    )]
+    private Collection $additionalUnits;
+
+    /** @var Collection<int, LeaseOccupant> Personnes autorisées occupant le logement. */
+    #[ORM\OneToMany(mappedBy: 'lease', targetEntity: LeaseOccupant::class, cascade: ['persist'], orphanRemoval: true)]
+    private Collection $occupants;
+
+    public function __construct()
+    {
+        parent::__construct();
+        $this->additionalUnits = new ArrayCollection();
+        $this->occupants = new ArrayCollection();
+    }
+
+    /** @return Collection<int, Unit> */
+    public function getAdditionalUnits(): Collection { return $this->additionalUnits; }
+
+    public function addAdditionalUnit(Unit $unit): static
+    {
+        if ($unit !== $this->unit && !$this->additionalUnits->contains($unit)) $this->additionalUnits->add($unit);
+        return $this;
+    }
+
+    /** @return Collection<int, LeaseOccupant> */
+    public function getOccupants(): Collection { return $this->occupants; }
+
+    public function addOccupant(LeaseOccupant $occupant): static
+    {
+        if (!$this->occupants->contains($occupant)) { $this->occupants->add($occupant); $occupant->setLease($this); }
+        return $this;
+    }
+
     /**
      * Organisation propriétaire du contrat de bail.
      */

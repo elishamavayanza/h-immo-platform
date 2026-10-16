@@ -15,6 +15,7 @@ import {
 } from '../services/locatairesService';
 import { createLease, type CreateLeasePayload } from '../services/locatairesService';
 import type { LocataireRow, LocatairesData } from '../types/locataire.types';
+import { filterTenantsByHousing, type TenantHousingFilter } from '../utils/tenantFilters';
 
 function actionErrorMessage(cause: unknown): string {
     return cause instanceof ApiError ? cause.message : 'Une erreur inattendue est survenue. Réessayez.';
@@ -50,6 +51,7 @@ export function useLocataires() {
 
     const [search, setSearch] = useState('');
     const [type, setType] = useState('all');
+    const [housingFilter, setHousingFilter] = useState<TenantHousingFilter>('all');
 
     const [pending, setPending] = useState<LocataireRow | null>(null);
     const [isArchiving, setArchiving] = useState(false);
@@ -111,11 +113,12 @@ export function useLocataires() {
 
     const rows = useMemo(() => {
         const query = search.trim().toLocaleLowerCase('fr');
-        return (data?.rows ?? []).filter((row) =>
+        const matching = (data?.rows ?? []).filter((row) =>
             (!query || [row.name, row.sublabel, row.unitReference ?? ''].some((value) => value.toLocaleLowerCase('fr').includes(query)))
             && (type === 'all' || row.type === type),
         );
-    }, [data, search, type]);
+        return filterTenantsByHousing(matching, data?.leases ?? [], housingFilter, new Date().toISOString().slice(0, 10));
+    }, [data, search, type, housingFilter]);
 
     return {
         data,
@@ -127,6 +130,8 @@ export function useLocataires() {
         setSearch,
         type,
         setType,
+        housingFilter,
+        setHousingFilter,
         pending,
         requestArchive: setPending,
         cancelArchive: () => setPending(null),

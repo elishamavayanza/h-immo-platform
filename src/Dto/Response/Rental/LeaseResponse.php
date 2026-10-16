@@ -33,6 +33,12 @@ final readonly class LeaseResponse
         #[OA\Property(description: 'UUID public de l\'unité locative', format: 'uuid', example: 'a812bc34-912e-43a1-bb29-e81a09cd9112')]
         public string $unitId,
 
+        #[OA\Property(description: 'UUID publics de tous les espaces inclus dans le contrat', type: 'array', items: new OA\Items(type: 'string', format: 'uuid'))]
+        public array $unitIds,
+
+        #[OA\Property(description: 'Cotitulaires et occupants autorisés', type: 'array', items: new OA\Items(type: 'object'))]
+        public array $occupants,
+
         #[OA\Property(description: 'Référence unique du contrat de bail', example: 'BAIL-2026-001')]
         public string $reference,
 
@@ -87,6 +93,14 @@ final readonly class LeaseResponse
             organizationId: (string) $lease->getOrganization()->getUuid(),
             tenantId: (string) $lease->getTenant()->getUuid(),
             unitId: (string) $lease->getUnit()->getUuid(),
+            unitIds: array_values(array_map(static fn($unit): string => (string) $unit->getUuid(), [$lease->getUnit(), ...$lease->getAdditionalUnits()->toArray()])),
+            occupants: array_values(array_map(static fn($occupant): array => [
+                'id' => (string) $occupant->getUuid(),
+                'tenantId' => (string) $occupant->getTenant()->getUuid(),
+                'role' => $occupant->getRole(),
+                'startDate' => $occupant->getStartDate()->format('Y-m-d'),
+                'endDate' => $occupant->getEndDate()?->format('Y-m-d'),
+            ], $lease->getOccupants()->toArray())),
             reference: $lease->getReference(),
             startDate: $lease->getStartDate(),
             endDate: $lease->getEndDate(),

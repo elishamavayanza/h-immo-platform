@@ -23,6 +23,7 @@ use App\Entity\Property\Parcel;
 use App\Entity\Property\Unit;
 use App\Entity\Rental\Lease;
 use App\Entity\Rental\Rent;
+use App\Entity\Rental\ResidentialMovement;
 use App\Entity\Rental\Tenant;
 use App\Enum\BuildingType;
 use App\Enum\CityStatus;
@@ -32,8 +33,12 @@ use App\Enum\OrganizationRole;
 use App\Enum\OrganizationStatus;
 use App\Enum\PlatformRole;
 use App\Enum\RentStatus;
+use App\Enum\ResidentialMovementStatus;
+use App\Enum\ResidentialMovementType;
+use App\Dto\Request\Rental\ResidentialMovementRequest;
 use App\Enum\TenantType;
 use App\Enum\UnitType;
+use App\Enum\UnitOperationalStatus;
 use App\Repository\Identity\OrganizationRepository;
 use App\Repository\Identity\UserCityRepository;
 use App\Repository\Property\BuildingRepository;
@@ -43,6 +48,7 @@ use App\Repository\Property\UnitRepository;
 use App\Repository\Rental\LeaseRepository;
 use App\Repository\Rental\RentRepository;
 use App\Repository\Rental\TenantRepository;
+use App\Repository\Rental\ResidentialMovementRepository;
 use App\Repository\System\AuditLogRepository;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\DependencyInjection\Compiler\CompilerPassInterface;
@@ -331,6 +337,26 @@ $tenantB = $makeTenant('Locataire B', $orgB);
 
 $em->flush();
 
+$movementA = (new ResidentialMovement())
+    ->setOrganization($orgA)
+    ->setTenant($tenantA)
+    ->setRecordedBy($patronA)
+    ->setType(ResidentialMovementType::MOVE_IN)
+    ->setStatus(ResidentialMovementStatus::COMPLETED)
+    ->setNextUnit($unitA1)
+    ->setEffectiveDate(new \DateTimeImmutable('2026-01-01'));
+$movementB = (new ResidentialMovement())
+    ->setOrganization($orgB)
+    ->setTenant($tenantB)
+    ->setRecordedBy($patronB)
+    ->setType(ResidentialMovementType::MOVE_IN)
+    ->setStatus(ResidentialMovementStatus::COMPLETED)
+    ->setNextUnit($unitB1)
+    ->setEffectiveDate(new \DateTimeImmutable('2026-01-01'));
+$em->persist($movementA);
+$em->persist($movementB);
+$em->flush();
+
 // Un bail actif sur l'unité A1, un bail actif sur B1.
 $leaseA = new Lease();
 $leaseA->setOrganization($orgA);
@@ -417,6 +443,8 @@ $leaseRepo = $container->get(LeaseRepository::class);
 $rentRepo = $container->get(RentRepository::class);
 /** @var TenantRepository $tenantRepo */
 $tenantRepo = $container->get(TenantRepository::class);
+/** @var ResidentialMovementRepository $movementRepo */
+$movementRepo = $container->get(ResidentialMovementRepository::class);
 /** @var OrganizationRepository $orgRepo */
 $orgRepo = $container->get(OrganizationRepository::class);
 /** @var AuditLogRepository $auditRepo */
@@ -565,6 +593,19 @@ try {
 }
 
 try {
+    $historyA = $movementRepo->findHistoryForTenant($tenantA);
+    $historyB = $movementRepo->findHistoryForTenant($tenantB);
+    check(
+        'ResidentialMovementRepository isole l’historique par locataire et organisation',
+        count($historyA) === 1 && $historyA[0]->getOrganization() === $orgA
+            && count($historyB) === 1 && $historyB[0]->getOrganization() === $orgB,
+        'A=' . count($historyA) . ' B=' . count($historyB),
+    );
+} catch (\Throwable $e) {
+    check('ResidentialMovementRepository isole l’historique par locataire et organisation', false, $e->getMessage());
+}
+
+try {
     // ADMIN_VILLE de A1 : voit le locataire A (bail sur unité de A1) mais pas B.
     $r = $tenantRepo->findPaginatedAccessible([$orgA, $orgB], [$cityA1], 1, 50, null);
     check(
@@ -684,6 +725,123 @@ try {
 section('Règle métier : un seul bail actif par unité');
 
 try {
+    $spaceParent = $makeUnit('UA-HOUSE', $buildingA1);
+    $spaceRoomA = $makeUnit('UA-ROOM-A', $buildingA1);
+    $spaceRoomB = $makeUnit('UA-ROOM-B', $buildingA1);
+    $spaceRoomA->setParentUnit($spaceParent);
+    $spaceRoomB->setParentUnit($spaceParent);
+    $em->flush();
+
+    $unitRepo = $container->get(UnitRepository::class);
+    $parentTree = $unitRepo->findOverlappingSpaces($spaceParent);
+    $roomTree = $unitRepo->findOverlappingSpaces($spaceRoomA);
+    check(
+        'Une maison entière recouvre ses deux sous-espaces',
+        count($parentTree) === 3
+    );
+    check(
+        'Deux sous-espaces frères restent louables indépendamment',
+        count($roomTree) === 2
+            && !in_array($spaceRoomB->getId(), array_map(static fn (Unit $space): int => $space->getId(), $roomTree), true)
+    );
+    check(
+        'La détection de cycle reconnaît un descendant',
+        $unitRepo->isDescendantOf($spaceRoomA, $spaceParent)
+    );
+
+    $occupantLease = new Lease();
+    $occupantLease->setOrganization($orgA);
+    $occupantLease->setTenant($tenantA);
+    $occupantLease->setUnit($spaceRoomA);
+    $occupantLease->setReference('BAIL-ROOM-A');
+    $occupantLease->setStartDate(new \DateTimeImmutable('2026-01-01'));
+    $occupantLease->setMonthlyRent('150.00');
+    $occupantLease->setCurrency(Currency::USD);
+    $occupantLease->setStatus(LeaseStatus::ACTIVE);
+    $em->persist($occupantLease);
+    $em->flush();
+
+    check(
+        'Un bail sur un sous-espace bloque la location de la maison entière',
+        $leaseRepo->findActiveLeaseForRelatedSpaces($unitRepo->findOverlappingSpaces($spaceParent)) !== null
+    );
+    check(
+        'Un bail sur un sous-espace ne bloque pas son espace frère',
+        $leaseRepo->findActiveLeaseForRelatedSpaces($unitRepo->findOverlappingSpaces($spaceRoomB)) === null
+    );
+    $unitService = $container->get(\App\Service\Property\UnitService::class);
+    $parentOccupancy = $unitService->getOccupancyStatus($spaceParent);
+    $leasedChildOccupancy = $unitService->getOccupancyStatus($spaceRoomA);
+    $vacantSiblingOccupancy = $unitService->getOccupancyStatus($spaceRoomB);
+    check('L’API calcule une maison partiellement occupée depuis les baux des sous-espaces',
+        $parentOccupancy === \App\Enum\UnitOccupancyStatus::PARTIALLY_OCCUPIED);
+    check('L’API calcule un sous-espace loué comme occupé',
+        $leasedChildOccupancy === \App\Enum\UnitOccupancyStatus::OCCUPIED);
+    check('Un sous-espace frère libre reste disponible malgré un autre bail actif',
+        $vacantSiblingOccupancy === \App\Enum\UnitOccupancyStatus::VACANT);
+
+    $spaceRoomC = $makeUnit('UA-ROOM-C', $buildingA1);
+    $spaceRoomC->setParentUnit($spaceParent);
+    $groundLevel = (new \App\Entity\Property\BuildingLevel())->setBuilding($buildingA1)->setReference('RDC')
+        ->setLabel('Rez-de-chaussée')->setDisplayOrder(0)->setDescription('Niveau des espaces communs.');
+    $firstLevel = (new \App\Entity\Property\BuildingLevel())->setBuilding($buildingA1)->setReference('N1')
+        ->setLabel('Premier étage')->setDisplayOrder(1);
+    $spaceRoomB->setLevel($groundLevel)->setFloor(0)->setFloorLabel($groundLevel->getLabel());
+    $spaceRoomB->setType(\App\Enum\UnitType::SHOP)->setCommercialActivity('Pharmacie');
+    $spaceRoomC->setLevel($firstLevel)->setFloor(1)->setFloorLabel($firstLevel->getLabel());
+    $em->persist($groundLevel);
+    $em->persist($firstLevel);
+    $compositeLease = (new Lease())->setOrganization($orgA)->setTenant($tenantA)->setUnit($spaceRoomB)
+        ->setReference('BAIL-COMPOSITE-BC')->setStartDate(new \DateTimeImmutable('2026-02-01'))
+        ->setMonthlyRent('300.00')->setCurrency(Currency::USD)->setStatus(LeaseStatus::ACTIVE);
+    $compositeLease->addAdditionalUnit($spaceRoomC);
+    $em->persist($compositeLease);
+
+    $occupantRecord = (new \App\Entity\Rental\LeaseOccupant())->setOrganization($orgA)->setTenant($tenantA)
+        ->setRole('occupant')->setStartDate(new \DateTimeImmutable('2026-02-01'));
+    $compositeLease->addOccupant($occupantRecord);
+    $em->persist($compositeLease);
+    $em->flush();
+
+    check(
+        'Un bail composé est retrouvé depuis chacun de ses espaces',
+        $leaseRepo->findActiveLeaseForUnit($spaceRoomC)?->getUuid()->equals($compositeLease->getUuid()) === true
+    );
+    check(
+        'Le tableau de réponse conserve les espaces et les occupants du contrat',
+        count(\App\Dto\Response\Rental\LeaseResponse::fromEntity($compositeLease)->unitIds) === 2
+            && count(\App\Dto\Response\Rental\LeaseResponse::fromEntity($compositeLease)->occupants) === 1
+    );
+    check('La réponse d’un local commercial conserve son activité déclarée',
+        \App\Dto\Response\Property\UnitResponse::fromEntity($spaceRoomB)->commercialActivity === 'Pharmacie');
+    check(
+        'Les unités peuvent partager des niveaux nommés et ordonnés',
+        $spaceRoomB->getLevel()?->getLabel() === 'Rez-de-chaussée'
+            && $spaceRoomC->getLevel()?->getDisplayOrder() === 1
+    );
+
+    $accessPoint = (new \App\Entity\Property\AccessPoint())->setParcel($parcelA1)->setBuilding($buildingA1)->setReference('ENTREE-COMMUNE')
+        ->setLabel('Entrée commune')->setType('shared_entry')->setAccessMode('shared')->setUnits([$spaceRoomB, $spaceRoomC]);
+    $parcelAccess = (new \App\Entity\Property\AccessPoint())->setParcel($parcelA1)->setReference('PORTAIL-PARCELLE')
+        ->setLabel('Portail principal')->setType('main_entry')->setAccessMode('shared');
+    $em->persist($accessPoint);
+    $em->persist($parcelAccess);
+    $em->flush();
+    $accessPoints = $container->get(\App\Repository\Property\AccessPointRepository::class)->findByParcel($parcelA1, $buildingA1);
+    $parcelAccesses = $container->get(\App\Repository\Property\AccessPointRepository::class)->findByParcel($parcelA1);
+    check(
+        'Un accès partagé peut desservir plusieurs espaces sans les confondre',
+        count($accessPoints) === 2 && count($accessPoint->getUnits()) === 2
+    );
+    check(
+        'Une entrée de parcelle est distincte des entrées de bâtiment',
+        count($parcelAccesses) === 1 && $parcelAccesses[0]->getBuilding() === null
+    );
+} catch (\Throwable $e) {
+    check('Hiérarchie des espaces et conflits de bail', false, $e->getMessage());
+}
+
+try {
     $conflict = $leaseRepo->findActiveLeaseForUnit($unitA1);
     check(
         'Un second bail actif sur la même unité est détecté comme conflit',
@@ -757,6 +915,20 @@ try {
 }
 
 try {
+    $tenantList = $container->get(\App\Service\Rental\TenantService::class)->listTenants(
+        new \App\Dto\Request\Rental\TenantFilterDto(organizationId: (string) $orgA->getUuid(), limit: 50),
+    );
+    $listedTenant = array_values(array_filter($tenantList->getData()['items'], static fn ($item): bool => $item->id === (string) $tenantA->getUuid()))[0] ?? null;
+    check('La liste API des locataires inclut le dernier mouvement sans exposer les autres organisations',
+        $tenantList->getStatus() === 200
+            && $listedTenant?->latestMovement !== null
+            && $listedTenant?->latestMovement['type'] === ResidentialMovementType::MOVE_IN->value,
+        'status=' . $tenantList->getStatus());
+} catch (\Throwable $e) {
+    check('La liste API des locataires inclut le dernier mouvement sans exposer les autres organisations', false, get_class($e) . ': ' . $e->getMessage());
+}
+
+try {
     $security->checkLeaseAccess($leaseB, \App\Security\SecurityAction::VIEW_LEASE);
     check('Patron A ne peut PAS lire un bail de l\'organization B', false, 'aucune exception levée');
 } catch (\App\Exception\AccessDeniedException $e) {
@@ -770,6 +942,182 @@ try {
     check('Patron A peut lire un bail de son organization', true);
 } catch (\Throwable $e) {
     check('Patron A peut lire un bail de son organization', false, $e->getMessage());
+}
+
+try {
+    /** @var \App\Service\Rental\ResidentialMovementService $movementService */
+    $movementService = $container->get(\App\Service\Rental\ResidentialMovementService::class);
+    /** @var \App\Service\Rental\LeaseService $leaseService */
+    $leaseService = $container->get(\App\Service\Rental\LeaseService::class);
+    $unitA2->setOperationalStatus(UnitOperationalStatus::UNDER_WORKS);
+    $leaseUnavailable = (new Lease())->setOrganization($orgA)->setTenant($tenantA)->setUnit($unitA2)
+        ->setReference('BAIL-INDISPONIBLE')->setStartDate(new \DateTimeImmutable('2026-10-01'))
+        ->setMonthlyRent('400.00')->setCurrency(Currency::USD)->setStatus(LeaseStatus::DRAFT);
+    $em->persist($leaseUnavailable);
+    $em->flush();
+    $blockedActivation = $leaseService->activateLease((string) $leaseUnavailable->getUuid(), $patronA);
+    $em->refresh($leaseUnavailable);
+    check('Un bail ne peut pas être activé sur une unité en travaux',
+        $blockedActivation->getStatus() === 409 && $leaseUnavailable->getStatus() === LeaseStatus::DRAFT,
+        'status=' . $blockedActivation->getStatus(),
+    );
+
+    $missingDestination = $movementService->record(
+        (string) $tenantA->getUuid(),
+        new ResidentialMovementRequest(type: ResidentialMovementType::MOVE_IN, status: ResidentialMovementStatus::RECORDED),
+    );
+    check('Une nouvelle entrée sans logement de destination est refusée', $missingDestination->getStatus() === 422, 'status=' . $missingDestination->getStatus());
+
+    $feedback = $movementService->record(
+        (string) $tenantA->getUuid(),
+        new ResidentialMovementRequest(
+            type: ResidentialMovementType::TRANSFER,
+            status: ResidentialMovementStatus::RECORDED,
+            previousUnitUuid: (string) $unitA1->getUuid(),
+            nextUnitUuid: (string) $unitA2->getUuid(),
+            effectiveDate: new \DateTimeImmutable('2026-10-14'),
+        ),
+    );
+    check('Patron A peut consigner un mouvement dans son organization', $feedback->getStatus() === 201, 'status=' . $feedback->getStatus());
+    $historyFeedback = $movementService->history((string) $tenantA->getUuid());
+    check('L’historique renvoie le mouvement et sa date réelle',
+        $historyFeedback->getStatus() === 200
+            && count($historyFeedback->getData()) === 2
+            && $historyFeedback->getData()[0]['effectiveDate'] === '2026-10-14',
+        'count=' . count((array) $historyFeedback->getData()),
+    );
+    $recordedMovementUuid = $feedback->getData()['uuid'] ?? '';
+    $correctedMovement = $movementService->correct(
+        (string) $tenantA->getUuid(),
+        $recordedMovementUuid,
+        new \App\Dto\Request\Rental\ResidentialMovementCorrectionRequest(
+            type: ResidentialMovementType::TRANSFER,
+            status: ResidentialMovementStatus::CANCELLED,
+            correctionReason: 'Le locataire a finalement renoncé au transfert',
+            previousUnitUuid: (string) $unitA1->getUuid(),
+            nextUnitUuid: (string) $unitA2->getUuid(),
+            effectiveDate: new \DateTimeImmutable('2026-10-14'),
+        ),
+    );
+    check('Un mouvement non réalisé peut être corrigé avec motif visible et audité',
+        $correctedMovement->getStatus() === 200
+            && $correctedMovement->getData()['status'] === 'cancelled'
+            && $correctedMovement->getData()['correctionReason'] === 'Le locataire a finalement renoncé au transfert',
+        'status=' . $correctedMovement->getStatus(),
+    );
+    $crossTenantMovement = $movementService->correct(
+        (string) $tenantA->getUuid(),
+        (string) $movementB->getUuid(),
+        new \App\Dto\Request\Rental\ResidentialMovementCorrectionRequest(
+            type: ResidentialMovementType::MOVE_IN,
+            status: ResidentialMovementStatus::CANCELLED,
+            correctionReason: 'Test d’isolation',
+        ),
+    );
+    check('Un mouvement d’un autre locataire est introuvable lors d’une correction', $crossTenantMovement->getStatus() === 404, 'status=' . $crossTenantMovement->getStatus());
+
+    $unitA2->setOperationalStatus(UnitOperationalStatus::AVAILABLE);
+    $leaseUnavailable->setStartDate(new \DateTimeImmutable('2026-10-15'));
+    $em->flush();
+    $transfer = $movementService->record(
+        (string) $tenantA->getUuid(),
+        new ResidentialMovementRequest(
+            type: ResidentialMovementType::TRANSFER,
+            status: ResidentialMovementStatus::COMPLETED,
+            leaseUuid: (string) $leaseA->getUuid(),
+            nextLeaseUuid: (string) $leaseUnavailable->getUuid(),
+            previousUnitUuid: (string) $unitA1->getUuid(),
+            nextUnitUuid: (string) $unitA2->getUuid(),
+            effectiveDate: new \DateTimeImmutable('2026-10-15'),
+        ),
+    );
+    $em->refresh($leaseA);
+    $em->refresh($leaseUnavailable);
+    check('Un transfert clôt l’ancien bail et active le bail de destination sans déplacer les loyers',
+        $transfer->getStatus() === 201
+            && $leaseA->getStatus() === LeaseStatus::TERMINATED
+            && $leaseUnavailable->getStatus() === LeaseStatus::ACTIVE
+            && $em->contains($rentA),
+        'status=' . $transfer->getStatus(),
+    );
+    $completedTransferCorrection = $movementService->correct(
+        (string) $tenantA->getUuid(),
+        $transfer->getData()['uuid'],
+        new \App\Dto\Request\Rental\ResidentialMovementCorrectionRequest(
+            type: ResidentialMovementType::TRANSFER,
+            status: ResidentialMovementStatus::CANCELLED,
+            correctionReason: 'Test de verrouillage d’un transfert réalisé',
+            leaseUuid: (string) $leaseA->getUuid(),
+            nextLeaseUuid: (string) $leaseUnavailable->getUuid(),
+            previousUnitUuid: (string) $unitA1->getUuid(),
+            nextUnitUuid: (string) $unitA2->getUuid(),
+        ),
+    );
+    check('Un transfert réalisé est verrouillé contre les corrections rétroactives', $completedTransferCorrection->getStatus() === 409, 'status=' . $completedTransferCorrection->getStatus());
+
+    $unitA3 = $makeUnit('UA-3', $buildingA1);
+    $em->flush();
+    $departureLease = (new Lease())->setOrganization($orgA)->setTenant($tenantA)->setUnit($unitA3)
+        ->setReference('BAIL-DEPART')->setStartDate(new \DateTimeImmutable('2026-01-01'))
+        ->setMonthlyRent('250.00')->setCurrency(Currency::USD)->setStatus(LeaseStatus::ACTIVE);
+    $em->persist($departureLease);
+    $em->flush();
+    $departure = $movementService->record(
+        (string) $tenantA->getUuid(),
+        new ResidentialMovementRequest(
+            type: ResidentialMovementType::DEPARTURE_COMPLETED,
+            status: ResidentialMovementStatus::COMPLETED,
+            leaseUuid: (string) $departureLease->getUuid(),
+            previousUnitUuid: (string) $unitA3->getUuid(),
+            effectiveDate: new \DateTimeImmutable('2026-10-15'),
+        ),
+    );
+    $em->refresh($departureLease);
+    check('Un départ effectif clôt le bail actif et conserve le loyer historique',
+        $departure->getStatus() === 201
+            && $departureLease->getStatus() === LeaseStatus::TERMINATED
+            && $departureLease->getTerminationDate()?->format('Y-m-d') === '2026-10-15'
+            && $em->contains($rentA),
+        'movement=' . $departure->getStatus() . ', lease=' . $departureLease->getStatus()->value,
+    );
+    $occupantLease = (new Lease())->setOrganization($orgA)->setTenant($tenantA)->setUnit($unitA3)
+        ->setReference('BAIL-DEPART-OCCUPANT')->setStartDate(new \DateTimeImmutable('2026-01-01'))
+        ->setMonthlyRent('250.00')->setCurrency(Currency::USD)->setStatus(LeaseStatus::ACTIVE);
+    $em->persist($occupantLease);
+    $tenantAOccupant = $makeTenant('Occupant A', $orgA);
+    $tenantASecondOccupant = $makeTenant('Second occupant A', $orgA);
+    $em->flush();
+    $occupantLeaving = (new \App\Entity\Rental\LeaseOccupant())->setOrganization($orgA)->setTenant($tenantAOccupant)
+        ->setRole('occupant')->setStartDate(new \DateTimeImmutable('2026-01-01'));
+    $occupantStaying = (new \App\Entity\Rental\LeaseOccupant())->setOrganization($orgA)->setTenant($tenantASecondOccupant)
+        ->setRole('co_tenant')->setStartDate(new \DateTimeImmutable('2026-01-01'));
+    $occupantLease->addOccupant($occupantLeaving);
+    $occupantLease->addOccupant($occupantStaying);
+    $em->persist($occupantLease);
+    $em->flush();
+    $occupantDepartureRequest = new \App\Dto\Request\Rental\LeaseOccupantDepartureRequest('2026-10-15', 'Départ individuel de test');
+    $occupantDeparture = $leaseService->recordOccupantDeparture((string) $occupantLease->getUuid(), (string) $occupantLeaving->getUuid(), $occupantDepartureRequest, $patronA);
+    $em->refresh($occupantLease);
+    $duplicateOccupantDeparture = $leaseService->recordOccupantDeparture((string) $occupantLease->getUuid(), (string) $occupantLeaving->getUuid(), $occupantDepartureRequest, $patronA);
+    check('Le départ d’un colocataire conserve le bail et les autres présences actives',
+        $occupantDeparture->getStatus() === 200 && $occupantLease->getStatus() === LeaseStatus::ACTIVE
+            && $occupantLeaving->getEndDate()?->format('Y-m-d') === '2026-10-15' && $occupantStaying->getEndDate() === null,
+        'status=' . $occupantDeparture->getStatus(),
+    );
+    check('Un départ individuel déjà enregistré est refusé sans second effet', $duplicateOccupantDeparture->getStatus() === 409, 'status=' . $duplicateOccupantDeparture->getStatus() . ', errors=' . json_encode($duplicateOccupantDeparture->getErrors()));
+    $overlappingReturn = $leaseService->addOccupant((string) $occupantLease->getUuid(), new \App\Dto\Request\Rental\LeaseOccupantRequest(
+        (string) $tenantAOccupant->getUuid(), 'occupant', '2026-10-15',
+    ), $patronA);
+    check('Un retour ne peut pas chevaucher la présence clôturée', $overlappingReturn->getStatus() === 422, 'status=' . $overlappingReturn->getStatus());
+    $validReturn = $leaseService->addOccupant((string) $occupantLease->getUuid(), new \App\Dto\Request\Rental\LeaseOccupantRequest(
+        (string) $tenantAOccupant->getUuid(), 'occupant', '2026-10-16',
+    ), $patronA);
+    check('Un retour après le départ crée une nouvelle période et conserve l’ancienne',
+        $validReturn->getStatus() === 201
+            && count(array_filter($occupantLease->getOccupants()->toArray(), static fn ($entry): bool => $entry->getTenant() === $tenantAOccupant)) === 2,
+        'status=' . $validReturn->getStatus());
+} catch (\Throwable $e) {
+    check('Patron A peut consigner et lire un mouvement résidentiel', false, get_class($e) . ': ' . $e->getMessage());
 }
 
 // ---------------------------------------------------------------------
@@ -816,6 +1164,26 @@ try {
 }
 
 $tokenStorage->setToken($tokenAdminVille);
+
+try {
+    /** @var \App\Service\Rental\ResidentialMovementService $movementService */
+    $movementService = $container->get(\App\Service\Rental\ResidentialMovementService::class);
+    $movementService->record(
+        (string) $tenantA->getUuid(),
+        new ResidentialMovementRequest(
+            type: ResidentialMovementType::TRANSFER,
+            status: ResidentialMovementStatus::PLANNED,
+            previousUnitUuid: (string) $unitA1->getUuid(),
+            nextUnitUuid: (string) $unitA2->getUuid(),
+            plannedDate: new \DateTimeImmutable('2026-10-20'),
+        ),
+    );
+    check('ADMIN_VILLE ne peut pas consigner un mouvement vers une autre ville', false, 'aucune exception levée');
+} catch (\App\Exception\AccessDeniedException) {
+    check('ADMIN_VILLE ne peut pas consigner un mouvement vers une autre ville', true);
+} catch (\Throwable $e) {
+    check('ADMIN_VILLE ne peut pas consigner un mouvement vers une autre ville', false, get_class($e) . ': ' . $e->getMessage());
+}
 
 try {
     $cities = $security->getScopedCities();

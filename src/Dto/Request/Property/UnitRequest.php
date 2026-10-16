@@ -6,6 +6,7 @@ namespace App\Dto\Request\Property;
 
 use App\Enum\Currency;
 use App\Enum\UnitType;
+use App\Enum\UnitOperationalStatus;
 use Symfony\Component\Serializer\Annotation\Groups;
 use OpenApi\Attributes as OA;
 use Symfony\Component\Validator\Constraints as Assert;
@@ -34,6 +35,11 @@ final readonly class UnitRequest
         #[Groups(['create'])]
         public ?string $buildingUuid = null,
 
+        #[OA\Property(description: 'UUID de l’espace parent pour modéliser une subdivision physique', format: 'uuid', nullable: true)]
+        #[Assert\Length(max: 36, groups: ['create', 'update'])]
+        #[Groups(['create', 'update'])]
+        public ?string $parentUnitUuid = null,
+
         #[OA\Property(
             description: 'Référence ou numéro de porte/bureau',
             example: 'APT-102',
@@ -45,7 +51,7 @@ final readonly class UnitRequest
         public ?string $reference = null,
 
         #[OA\Property(
-            description: 'Type d\'unité (apartment, house, shop, office, restaurant, other)',
+            description: 'Type d’unité (résidence, commerce, chambre, entrepôt, atelier, stockage, parking ou autre)',
             type: 'string',
             example: 'apartment',
             enum: UnitType::class,
@@ -53,6 +59,15 @@ final readonly class UnitRequest
         #[Assert\NotBlank(groups: ['create'])]
         #[Groups(['create', 'update'])]
         public ?UnitType $type = null,
+
+        #[OA\Property(description: 'État opérationnel; l’occupation reste calculée à partir des baux actifs', enum: UnitOperationalStatus::class)]
+        #[Groups(['create', 'update'])]
+        public ?UnitOperationalStatus $operationalStatus = null,
+
+        #[OA\Property(description: 'Activité exercée dans un local commercial ou professionnel', maxLength: 150, nullable: true)]
+        #[Assert\Length(max: 150, groups: ['create', 'update'])]
+        #[Groups(['create', 'update'])]
+        public ?string $commercialActivity = null,
 
         #[OA\Property(
             description: 'Numéro de l\'étage (0 pour le rez-de-chaussée)',
@@ -63,6 +78,16 @@ final readonly class UnitRequest
         #[Assert\PositiveOrZero(groups: ['create', 'update'])]
         #[Groups(['create', 'update'])]
         public ?int $floor = null,
+
+        #[OA\Property(description: 'Libellé du niveau, par exemple rez-de-chaussée, mezzanine ou annexe arrière', maxLength: 100, nullable: true)]
+        #[Assert\Length(max: 100, groups: ['create', 'update'])]
+        #[Groups(['create', 'update'])]
+        public ?string $floorLabel = null,
+
+        #[OA\Property(description: 'UUID du niveau déclaré pour le bâtiment', format: 'uuid', nullable: true)]
+        #[Assert\Length(max: 36, groups: ['create', 'update'])]
+        #[Groups(['create', 'update'])]
+        public ?string $levelUuid = null,
 
         #[OA\Property(
             description: 'Surface habitable ou exploitable en m²',

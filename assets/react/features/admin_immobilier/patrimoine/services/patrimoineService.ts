@@ -24,6 +24,60 @@ import { fetchPatronReport } from '../../../patron/reports/services/reportsServi
 import type { OrganizationRole } from '../../../../../services/api/api.types';
 import type { PatrimoineData, PatrimoineRow } from '../types/patrimoine.types';
 
+export interface AccessPointItem {
+    id: string; parcelId: string; buildingId: string | null; reference: string; label: string; type: string;
+    accessMode: 'private' | 'shared' | 'restricted'; locationDescription: string | null;
+    enabled: boolean; unitIds: string[];
+}
+
+export type AccessPointPayload = { buildingUuid?: string; parcelUuid: string; reference: string; label: string; type: string; accessMode: 'private' | 'shared' | 'restricted'; locationDescription: string | null; unitUuids: string[] };
+
+export interface BuildingLevelItem {
+    id: string;
+    buildingId: string;
+    reference: string;
+    label: string;
+    displayOrder: number;
+    description: string | null;
+}
+
+export type BuildingLevelPayload = Pick<BuildingLevelItem, 'reference' | 'label' | 'displayOrder' | 'description'>;
+
+export async function fetchBuildingLevels(buildingUuid: string): Promise<BuildingLevelItem[]> {
+    const { data } = await apiClient.get<Feedback<BuildingLevelItem[]>>(`/v1/property/buildings/${buildingUuid}/levels`);
+    return data.data;
+}
+
+export async function createBuildingLevel(buildingUuid: string, payload: BuildingLevelPayload): Promise<BuildingLevelItem> {
+    const { data } = await apiClient.post<Feedback<BuildingLevelItem>>(`/v1/property/buildings/${buildingUuid}/levels`, payload);
+    return data.data;
+}
+
+export async function updateBuildingLevel(uuid: string, payload: BuildingLevelPayload): Promise<BuildingLevelItem> {
+    const { data } = await apiClient.put<Feedback<BuildingLevelItem>>(`/v1/property/building-levels/${uuid}`, payload);
+    return data.data;
+}
+
+export async function fetchAccessPoints(scope: { buildingUuid?: string; parcelUuid: string }): Promise<AccessPointItem[]> {
+    const { data } = await apiClient.get<Feedback<AccessPointItem[]>>('/v1/access-points', { params: scope });
+    return data.data;
+}
+
+export async function createAccessPoint(payload: AccessPointPayload): Promise<AccessPointItem> {
+    const { data } = await apiClient.post<Feedback<AccessPointItem>>('/v1/access-points', payload);
+    return data.data;
+}
+
+export async function updateAccessPoint(uuid: string, payload: AccessPointPayload): Promise<AccessPointItem> {
+    const { data } = await apiClient.put<Feedback<AccessPointItem>>(`/v1/access-points/${uuid}`, payload);
+    return data.data;
+}
+
+export async function setAccessPointEnabled(uuid: string, enabled: boolean): Promise<AccessPointItem> {
+    const { data } = await apiClient.patch<Feedback<AccessPointItem>>(`/v1/access-points/${uuid}/status`, { enabled });
+    return data.data;
+}
+
 /** Adresse/quarter d'une parcelle, avec repli sur sa référence. */
 function parcelSublabel(parcel: { reference: string; address: string; quarter: string | null }): string {
     return [parcel.quarter, parcel.address].filter(Boolean).join(' · ') || parcel.reference;
@@ -269,9 +323,14 @@ export async function deleteBuilding(uuid: string): Promise<void> {
 /** Payload d'écriture d'une unité locative (`UnitRequest`). */
 export interface UnitPayload {
     buildingUuid: string;
+    parentUnitUuid?: string;
     reference: string;
     type: string;
+    operationalStatus: string;
+    commercialActivity?: string | null;
     floor: number;
+    floorLabel?: string | null;
+    levelUuid?: string | null;
     surface: string;
     bedrooms: number | null;
     rooms: number | null;

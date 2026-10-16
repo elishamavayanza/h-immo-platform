@@ -1,6 +1,6 @@
 # Rapport de contrôle qualité des manuels Soft-IMMO
 
-**Révision :** 1.1.0 — 15 octobre 2026  
+**Révision :** 1.2.0 — 16 octobre 2026
 **Sources :** `catalog.json` et `tools/generate_user_manuals.py`  
 **PDF concernés :** SUPER_ADMIN, PATRON, ADMIN_IMMOBILIER et ADMIN_VILLE.
 
@@ -15,8 +15,32 @@
 
 ## Vérifications exécutées
 
+### Évolution du patrimoine (16 octobre 2026)
+
+- Le catalogue a été actualisé pour décrire les niveaux configurables, les espaces imbriqués, les unités commerciales et résidentielles, les accès de parcelle/bâtiment partagés, les baux couvrant plusieurs espaces, les cotitulaires/occupants datés et l’historique résidentiel.
+- Les réponses d’aide contextuelle ont été ajoutées aux pages Patrimoine et Locataires. Un départ effectif clôt le bail source; un transfert effectif clôt le bail source et active un bail brouillon de destination préparé au préalable. Le départ d’un cotitulaire clôt seulement sa période d’occupation.
+- Les changements de modèle ont été migrés sur MariaDB de développement jusqu’à `Version20261016124000ResidentialMovementCorrectionReason` ; `doctrine:schema:validate` confirme que le schéma correspond aux entités.
+- Vérifications exécutées : type-check et build Vite ; scripts Patrimoine (65), filtres locataires (6), manuels (145), mapping HTTP (8), documentation OpenAPI (8), schéma MariaDB (20), isolation inter-organisations (89, incluant transferts, départ effectif et individuel, correction/annulation d’un mouvement non réalisé, refus de modifier un événement réalisé, champs de logement obligatoires et isolation des mouvements entre locataires).
+- Le générateur a régénéré les quatre PDF et les images des pages du lecteur depuis le catalogue. Les captures d’interface des modules proviennent des captures déjà présentes dans le dépôt ; aucune nouvelle session authentifiée n’a été disponible pour les refaire sur les écrans actuels.
+- Le parcours authentifié Patrimoine → Goma → Parcelle de démonstration a été parcouru dans le navigateur. La parcelle, le bâtiment et les unités chargent depuis l’API. Ce parcours n’a pas modifié les données.
+
+### Limites restantes avant validation complète des deux boucles
+
+- Les mouvements non réalisés peuvent être modifiés ou annulés avec un motif obligatoire ; les valeurs précédentes et nouvelles sont enregistrées dans l’audit. Un mouvement déjà réalisé reste verrouillé contre une réécriture rétroactive. Une opération compensatrice complète pour corriger un transfert ou un départ déjà exécuté n’est pas encore disponible.
+- Le patrimoine expose désormais l’activité commerciale et sépare l’occupation calculée (libre, occupée, partiellement occupée) de l’état opérationnel manuel (disponible, réservé, attente de remise, travaux, indisponible temporairement, libération, non destiné à la location). L’occupation n’est pas encore agrégée dans les lignes des bâtiments et niveaux. Son calcul par unité fait plusieurs requêtes relationnelles ; une agrégation par lot sera nécessaire si les catalogues deviennent volumineux.
+- Les parcours existants permettent niveaux, espaces imbriqués, baux multi-espaces et accès partagés, mais il n’existe pas encore d’assistant guidé complet pour créer un bâtiment, ses niveaux, espaces et accès en une seule séquence. La restructuration contrôlée d’espaces déjà loués et le changement d’usage historique ne sont pas encore pris en charge comme opérations métier dédiées.
+- Les occupants sont représentés individuellement par bail avec rôle et période, sans modèle de groupe/famille ni changement guidé de titulaire. La page Locataires filtre maintenant l’occupation actuelle, l’absence de bail actif, les logements multiples et les échéances à 30 jours ; restent les départs à confirmer et les mouvements récents ou saisis tardivement. Ces filtres restent partiels lorsque l’interface affiche son avertissement de liste tronquée.
+- Les contrôles automatisés couvrent les cas principaux et l’isolation, mais pas encore toute la matrice de scénarios demandée pour chaque boucle, notamment les restructurations complexes, les occupations temporaires avec retour et les conflits concurrents de double soumission sur tous les types de mouvement.
+- La page Locataires n’a pas été parcourue dans une session authentifiée pour les quatre rôles et aux largeurs mobile/tablette/ordinateur. Les captures incluses dans les manuels sont celles déjà présentes dans le dépôt ; elles n’ont pas été refaites à partir des écrans courants.
+
+### Limites de validation documentaire
+
+- Les quatre PDF et leurs images intégrées n’ont pas été régénérés à partir de nouvelles captures dans cette révision. Les captures précédentes ne peuvent donc pas être considérées comme une preuve visuelle des nouveaux formulaires, niveaux ou accès.
+- Les actions de création et de modification n’ont pas été soumises dans le navigateur afin de ne pas ajouter de données permanentes à l’organisation de développement. Les scénarios backend utilisent les fixtures transactionnelles de `verify-tenant-isolation.php`, puis annulent leur transaction.
+- La page Patrimoine a été contrôlée dans l’interface à 375, 768 et 1280 px, sans débordement horizontal. Le formulaire de mouvement locataire et les autres étapes complètes ne sont pas encore validés dans le navigateur à ces largeurs.
+
 - Génération réussie des quatre PDF avec le Python et les bibliothèques PDF du runtime de l’espace de travail.
-- Ouverture des PDF par `pypdf` lors de la génération ; les comptes de pages obtenus sont : 10 (SUPER_ADMIN), 14 (PATRON), 15 (ADMIN_IMMOBILIER) et 13 (ADMIN_VILLE).
+- Ouverture des PDF par `pypdf` lors de la génération ; les comptes de pages obtenus après la dernière génération sont : 10 (SUPER_ADMIN), 14 (PATRON), 16 (ADMIN_IMMOBILIER) et 14 (ADMIN_VILLE).
 - Rendu initial de toutes les pages en images à 110 dpi, puis nouvel export du lecteur à 150 dpi (limité à 1800 px) avec une meilleure qualité JPEG. L’examen visuel des rendus a montré une pagination correcte, sans page entièrement blanche ni débordement manifeste.
 - Extraction du texte et contrôle des polices : le contenu reste du texte PDF sélectionnable et Times New Roman est incorporée. Les accents et les caractères français sont lisibles dans les rendus examinés.
 - Contrôle visuel des couvertures, tables des matières, pages de modules, légendes, pieds de page et pagination. La table des matières est générée à partir des titres et numéros de page du PDF.

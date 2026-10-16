@@ -1,0 +1,83 @@
+.residential-history {
+    display: grid;
+    gap: 1rem;
+    min-width: 0;
+}
+
+.residential-history__notice,
+.residential-history__empty {
+    margin: 0;
+    padding: .85rem 1rem;
+    border: 1px solid var(--color-border, #d5dcdf);
+    border-radius: .75rem;
+    color: var(--color-text-secondary, #65747b);
+}
+
+.residential-history__error {
+    color: var(--color-danger, #b42318);
+}
+
+.residential-history__list {
+    display: grid;
+    gap: .75rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.residential-history__list li {
+    min-width: 0;
+    padding: .9rem 1rem;
+    border: 1px solid var(--color-border, #d5dcdf);
+    border-radius: .75rem;
+    overflow-wrap: anywhere;
+}
+
+.residential-history__list p {
+    margin: .45rem 0 0;
+}
+
+.residential-history__list small {
+    display: block;
+    margin-top: .45rem;
+    color: var(--color-text-secondary, #65747b);
+}
+
+.residential-history__correction {
+    color: var(--color-text-secondary, #65747b);
+    font-size: .9em;
+}
+
+.residential-history__event {
+    display: flex;
+    justify-content: space-between;
+    gap: .75rem;
+}
+
+.residential-history__event span {
+    color: var(--color-text-secondary, #65747b);
+}
+
+.residential-history__estimated {
+    display: flex;
+    align-items: center;
+    gap: .5rem;
+}
+
+.residential-history__mobile-submit {
+    display: none;
+}
+
+@media (max-width: 640px) {
+    .residential-history__event {
+        align-items: flex-start;
+        flex-direction: column;
+        gap: .25rem;
+    }
+
+    .residential-history__mobile-submit {
+        display: inline-flex;
+        width: 100%;
+        justify-content: center;
+    }
+}

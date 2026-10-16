@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from 'react';
+import { useEffect, useState, type FormEvent } from 'react';
 
 import { Card } from '../../../../components/UI/Card';
 import { Button } from '../../../../components/UI/Button';
@@ -24,15 +24,21 @@ import { fieldErrorMap } from '../../../shared/utils/actionErrors';
 import { ModalActions } from '../../../shared/components/ModalActions';
 import { changedFields } from '../../../shared/utils/changedFields';
 import { PhotoGallery } from '../../../shared/media/components/PhotoGallery';
-import { CURRENCY_OPTIONS, UNIT_TYPE_LABELS, UNIT_TYPE_OPTIONS } from './patrimoineView';
+import { CURRENCY_OPTIONS, UNIT_OCCUPANCY_STATUS_LABELS, UNIT_OPERATIONAL_STATUS_LABELS, UNIT_OPERATIONAL_STATUS_OPTIONS, UNIT_TYPE_LABELS, UNIT_TYPE_OPTIONS } from './patrimoineView';
 import type { BuildingItem, UnitItem } from '../../shared/types/reference.types';
-import type { UnitPayload } from '../services/patrimoineService';
+import { createBuildingLevel, fetchBuildingLevels, updateBuildingLevel, type BuildingLevelItem, type BuildingLevelPayload, type UnitPayload } from '../services/patrimoineService';
+import { AccessPointsManager } from './AccessPointsManager';
 
 interface UnitForm {
     buildingUuid: string;
     reference: string;
     type: string;
+    operationalStatus: string;
+    commercialActivity: string;
     floor: string;
+    floorLabel: string;
+    parentUnitUuid: string;
+    levelUuid: string;
     surface: string;
     bedrooms: string;
     rooms: string;
@@ -42,14 +48,19 @@ interface UnitForm {
     description: string;
 }
 
-const EMPTY_UNIT_FORM: UnitForm = { buildingUuid: '', reference: '', type: 'apartment', floor: '0', surface: '', bedrooms: '', rooms: '', bathrooms: '', monthlyRent: '', currency: 'USD', description: '' };
+const EMPTY_UNIT_FORM: UnitForm = { buildingUuid: '', reference: '', type: 'apartment', operationalStatus: 'available', commercialActivity: '', floor: '0', floorLabel: '', parentUnitUuid: '', levelUuid: '', surface: '', bedrooms: '', rooms: '', bathrooms: '', monthlyRent: '', currency: 'USD', description: '' };
 
 function unitToForm(unit: UnitItem): UnitForm {
     return {
         buildingUuid: unit.buildingId,
         reference: unit.reference,
         type: unit.type,
+        operationalStatus: unit.operationalStatus,
+        commercialActivity: unit.commercialActivity ?? '',
         floor: String(unit.floor),
+        floorLabel: unit.floorLabel ?? '',
+        parentUnitUuid: unit.parentUnitId ?? '',
+        levelUuid: unit.levelId ?? '',
         surface: unit.surface,
         bedrooms: unit.bedrooms !== null ? String(unit.bedrooms) : '',
         rooms: unit.rooms !== null ? String(unit.rooms) : '',
@@ -94,6 +105,21 @@ export function UnitesTab({ units, buildings, role, isLoading, error, note, onRe
     const [submitting, setSubmitting] = useState(false);
     const [deleteTarget, setDeleteTarget] = useState<UnitItem | null>(null);
     const [photoTarget, setPhotoTarget] = useState<UnitItem | null>(null);
+    const [accessBuildingId, setAccessBuildingId] = useState<string | null>(null);
+    const [levelBuildingId, setLevelBuildingId] = useState<string | null>(null);
+    const [buildingLevels, setBuildingLevels] = useState<BuildingLevelItem[]>([]);
+    const [levelForm, setLevelForm] = useState<BuildingLevelPayload>({ reference: '', label: '', displayOrder: 0, description: null });
+    const [levelEdit, setLevelEdit] = useState<BuildingLevelItem | null>(null);
+    const [levelErrors, setLevelErrors] = useState<Record<string, string>>({});
+    const [savingLevel, setSavingLevel] = useState(false);
+    const levelsBuildingId = levelBuildingId || form.buildingUuid || selectedBuildingId || '';
+
+    useEffect(() => {
+        let active = true;
+        if (!levelsBuildingId) { setBuildingLevels([]); return () => { active = false; }; }
+        void fetchBuildingLevels(levelsBuildingId).then((items) => { if (active) setBuildingLevels(items); }).catch(() => { if (active) setBuildingLevels([]); });
+        return () => { active = false; };
+    }, [levelsBuildingId]);
 
     const buildingById = new Map(buildings.map((building) => [building.id, building]));
     const buildingOptions = buildings.map((building) => ({ value: building.id, label: `${building.name} · ${building.reference}` }));
@@ -133,7 +159,12 @@ export function UnitesTab({ units, buildings, role, isLoading, error, note, onRe
             buildingUuid: form.buildingUuid,
             reference: form.reference.trim(),
             type: form.type,
+            operationalStatus: form.operationalStatus,
+            commercialActivity: form.commercialActivity.trim(),
             floor: Number(form.floor || '0'),
+            floorLabel: form.floorLabel.trim(),
+            levelUuid: form.levelUuid || null,
+            parentUnitUuid: form.parentUnitUuid,
             surface: form.surface.trim(),
             bedrooms: optionalInteger(form.bedrooms),
             rooms: optionalInteger(form.rooms),
@@ -148,7 +179,12 @@ export function UnitesTab({ units, buildings, role, isLoading, error, note, onRe
                     buildingUuid: editTarget.buildingId,
                     reference: editTarget.reference,
                     type: editTarget.type,
+                    operationalStatus: editTarget.operationalStatus,
+                    commercialActivity: editTarget.commercialActivity ?? '',
                     floor: editTarget.floor,
+                    floorLabel: editTarget.floorLabel,
+                    levelUuid: editTarget.levelId ?? '',
+                    parentUnitUuid: editTarget.parentUnitId ?? '',
                     surface: editTarget.surface,
                     bedrooms: editTarget.bedrooms,
                     rooms: editTarget.rooms,
@@ -177,15 +213,44 @@ export function UnitesTab({ units, buildings, role, isLoading, error, note, onRe
         await onDelete(target.id);
     };
 
+    const editBuildingLevel = (level: BuildingLevelItem) => {
+        setLevelEdit(level);
+        setLevelForm({ reference: level.reference, label: level.label, displayOrder: level.displayOrder, description: level.description });
+        setLevelErrors({});
+    };
+
+    const saveBuildingLevel = async (event: FormEvent<HTMLFormElement>) => {
+        event.preventDefault();
+        if (!levelBuildingId || savingLevel) return;
+        setSavingLevel(true); setLevelErrors({});
+        try {
+            const saved = levelEdit
+                ? await updateBuildingLevel(levelEdit.id, levelForm)
+                : await createBuildingLevel(levelBuildingId, levelForm);
+            setBuildingLevels((current) => [...current.filter((level) => level.id !== saved.id), saved].sort((a, b) => a.displayOrder - b.displayOrder || a.label.localeCompare(b.label, 'fr')));
+            setLevelEdit(null);
+            setLevelForm({ reference: '', label: '', displayOrder: 0, description: null });
+        } catch (cause) { setLevelErrors(fieldErrorMap(cause)); }
+        finally { setSavingLevel(false); }
+    };
+
     const columns: DataTableColumn<UnitItem>[] = [
         {
             key: 'reference',
             title: 'Unité',
             sortable: true,
-            render: (unit) => <div className="organization-property-name"><strong>{unit.reference}</strong><small>{UNIT_TYPE_LABELS[unit.type] ?? unit.type} · niveau {unit.floor}</small></div>,
+            render: (unit) => <div className="organization-property-name"><strong>{unit.reference}</strong><small>{UNIT_TYPE_LABELS[unit.type] ?? unit.type} · {unit.floorLabel || (unit.floor === 0 ? 'Rez-de-chaussée' : 'Niveau ' + unit.floor)}{unit.parentUnitId ? ' · espace subdivisé' : ''}</small></div>,
         },
         { key: 'building', title: 'Bâtiment', sortable: true, render: (unit) => <button type="button" className="patrimoine-link" onClick={() => onBuildingFilter(unit.buildingId)}>{buildingById.get(unit.buildingId)?.name ?? '—'}</button> },
+        { key: 'commercialActivity', title: 'Activité', render: (unit) => unit.commercialActivity ?? '—' },
+        { key: 'occupancyStatus', title: 'Occupation', sortable: true, render: (unit) => <Badge variant={unit.occupancyStatus === 'vacant' ? 'success' : unit.occupancyStatus === 'occupied' ? 'warning' : 'secondary'}>{UNIT_OCCUPANCY_STATUS_LABELS[unit.occupancyStatus] ?? unit.occupancyStatus}</Badge> },
         { key: 'rent', title: 'Loyer mensuel', sortable: true, render: (unit) => formatMoney(unit.monthlyRent, unit.currency) },
+        {
+            key: 'operationalStatus',
+            title: 'État opérationnel',
+            sortable: true,
+            render: (unit) => <Badge variant={unit.operationalStatus === 'available' ? 'success' : 'warning'}>{UNIT_OPERATIONAL_STATUS_LABELS[unit.operationalStatus] ?? unit.operationalStatus}</Badge>,
+        },
         {
             key: 'published',
             title: 'Vitrine',
@@ -242,7 +307,7 @@ export function UnitesTab({ units, buildings, role, isLoading, error, note, onRe
                     {!readOnly && canDo(role, 'create_unit') && <Button onClick={openCreate} disabled={buildings.length === 0}>＋ Ajouter une unité</Button>}
                 </div>
             </div>
-            {selectedBuildingId && <div className="patrimoine-context"><span>Bâtiment sélectionné : <strong>{buildingById.get(selectedBuildingId)?.name ?? 'Bâtiment'}</strong></span><Button variant="outline" onClick={() => onBuildingFilter(null)}>Effacer le filtre</Button></div>}
+            {selectedBuildingId && <div className="patrimoine-context"><span>Bâtiment sélectionné : <strong>{buildingById.get(selectedBuildingId)?.name ?? 'Bâtiment'}</strong></span><div className="patrimoine-context__actions">{!readOnly && canDo(role, 'update_unit') && <><Button variant="outline" onClick={() => setLevelBuildingId(selectedBuildingId)}>Gérer les niveaux</Button><Button variant="outline" onClick={() => setAccessBuildingId(selectedBuildingId)}>Gérer les accès</Button></>}<Button variant="outline" onClick={() => onBuildingFilter(null)}>Effacer le filtre</Button></div></div>}
             {body}
 
             <Modal
@@ -262,8 +327,27 @@ export function UnitesTab({ units, buildings, role, isLoading, error, note, onRe
                     <FormField label="Type" htmlFor="unit-type" required error={formErrors.type}>
                         <Select id="unit-type" value={form.type} onChange={(event) => setForm((current) => ({ ...current, type: event.target.value }))} options={UNIT_TYPE_OPTIONS} />
                     </FormField>
+                    {['shop', 'office', 'restaurant', 'warehouse', 'workshop'].includes(form.type) && <FormField label="Activité exercée" htmlFor="unit-commercial-activity" helpText="Facultatif. Exemple : pharmacie, alimentation, cabinet médical ou atelier de couture." error={formErrors.commercialActivity}>
+                        <Input id="unit-commercial-activity" value={form.commercialActivity} onChange={(event) => setForm((current) => ({ ...current, commercialActivity: event.target.value }))} placeholder="Ex. : Pharmacie" fullWidth maxLength={150} />
+                    </FormField>}
+                    <FormField label="État opérationnel" htmlFor="unit-operational-status" required helpText="L’occupation est calculée à partir des baux. Tout état autre que disponible bloque l’activation d’un nouveau bail." error={formErrors.operationalStatus}>
+                        <Select id="unit-operational-status" value={form.operationalStatus} onChange={(event) => setForm((current) => ({ ...current, operationalStatus: event.target.value }))} options={UNIT_OPERATIONAL_STATUS_OPTIONS} />
+                    </FormField>
                     <FormField label="Niveau / étage" htmlFor="unit-floor" required error={formErrors.floor}>
-                        <Input id="unit-floor" type="number" step="1" inputMode="numeric" value={form.floor} onChange={(event) => setForm((current) => ({ ...current, floor: event.target.value }))} placeholder="Ex. : 1" required fullWidth />
+                        <Input id="unit-floor" type="number" step="1" inputMode="numeric" value={form.floor} onChange={(event) => setForm((current) => ({ ...current, floor: event.target.value }))} placeholder="Ex. : 1" required fullWidth disabled={Boolean(form.levelUuid)} />
+                    </FormField>
+                    <FormField label="Libellé du niveau" htmlFor="unit-floor-label" helpText="Facultatif : sous-sol, rez-de-chaussée, mezzanine, annexe arrière…" error={formErrors.floorLabel}>
+                        <Input id="unit-floor-label" value={form.floorLabel} onChange={(event) => setForm((current) => ({ ...current, floorLabel: event.target.value }))} placeholder="Ex. : Mezzanine" fullWidth maxLength={100} disabled={Boolean(form.levelUuid)} />
+                    </FormField>
+                    <FormField label="Niveau partagé (facultatif)" htmlFor="unit-level" helpText="Créez d’abord les niveaux depuis le bâtiment sélectionné. L’ordre et le libellé seront repris ici." error={formErrors.levelUuid}>
+                        <Select id="unit-level" value={form.levelUuid} onChange={(event) => {
+                            const level = buildingLevels.find((item) => item.id === event.target.value);
+                            setForm((current) => ({ ...current, levelUuid: event.target.value, ...(level ? { floor: String(level.displayOrder), floorLabel: level.label } : {}) }));
+                        }} options={buildingLevels.map((level) => ({ value: level.id, label: `${level.displayOrder} · ${level.label}` }))} placeholder="Aucun niveau déclaré" />
+                    </FormField>
+                    {form.buildingUuid && !readOnly && canDo(role, 'update_unit') && <Button type="button" variant="outline" onClick={() => setLevelBuildingId(form.buildingUuid)}>Gérer les niveaux du bâtiment</Button>}
+                    <FormField label="Espace parent" htmlFor="unit-parent-space" helpText="Facultatif : utilisez-le pour représenter un espace imbriqué dans une maison ou un local." error={formErrors.parentUnitUuid}>
+                        <Select id="unit-parent-space" value={form.parentUnitUuid} onChange={(event) => setForm((current) => ({ ...current, parentUnitUuid: event.target.value }))} options={[{ value: '', label: 'Aucun · espace indépendant' }, ...units.filter((unit) => unit.buildingId === form.buildingUuid && unit.id !== editTarget?.id).map((unit) => ({ value: unit.id, label: unit.reference + ' · ' + (UNIT_TYPE_LABELS[unit.type] ?? unit.type) }))]} />
                     </FormField>
                     <FormField label="Surface (m²)" htmlFor="unit-surface" required error={formErrors.surface}>
                         <Input id="unit-surface" type="number" min="0" step="0.01" inputMode="decimal" value={form.surface} onChange={(event) => setForm((current) => ({ ...current, surface: event.target.value }))} placeholder="Ex. : 85" required fullWidth />
@@ -302,6 +386,18 @@ export function UnitesTab({ units, buildings, role, isLoading, error, note, onRe
             <Modal isOpen={photoTarget !== null} onClose={() => setPhotoTarget(null)} title={photoTarget ? `Photos de « ${photoTarget.reference} »` : 'Photos de l’unité'} size="large" footer={<Button variant="outline" onClick={() => setPhotoTarget(null)}>Fermer</Button>}>
                 {photoTarget && <PhotoGallery entityUuid={photoTarget.id} entityType="unit" mode="multiple" onChange={() => {}} />}
             </Modal>
+            {accessBuildingId && buildingById.get(accessBuildingId)?.parcelId && <AccessPointsManager open buildingId={accessBuildingId} parcelId={buildingById.get(accessBuildingId)!.parcelId} buildingName={buildingById.get(accessBuildingId)?.name ?? 'Bâtiment'} units={units} canManage={!readOnly && canDo(role, 'update_unit')} onClose={() => setAccessBuildingId(null)} />}
+            {levelBuildingId && <Modal isOpen onClose={() => { setLevelBuildingId(null); setLevelEdit(null); }} title={`Niveaux · ${buildingById.get(levelBuildingId)?.name ?? 'Bâtiment'}`} size="medium" footer={<Button variant="outline" onClick={() => { setLevelBuildingId(null); setLevelEdit(null); }}>Fermer</Button>}>
+                <section className="access-manager">
+                    <div className="access-manager__list"><h3>Niveaux déclarés</h3>{buildingLevels.length === 0 ? <p>Aucun niveau déclaré. Vous pouvez conserver un libellé directement sur chaque unité.</p> : buildingLevels.map((level) => <article className="access-manager__item" key={level.id}><div><strong>{level.displayOrder} · {level.label}</strong><small>{level.reference}{level.description ? ` · ${level.description}` : ''}</small></div><Button variant="outline" onClick={() => editBuildingLevel(level)}>Modifier</Button></article>)}</div>
+                    <form className="access-manager__form" onSubmit={(event) => void saveBuildingLevel(event)}>
+                        <h3>{levelEdit ? 'Modifier un niveau' : 'Ajouter un niveau'}</h3>
+                        <div className="access-manager__fields"><FormField label="Référence" htmlFor="building-level-reference" required error={levelErrors.reference}><Input id="building-level-reference" value={levelForm.reference} onChange={(event) => setLevelForm((current) => ({ ...current, reference: event.target.value }))} required maxLength={50} fullWidth /></FormField><FormField label="Libellé" htmlFor="building-level-label" required error={levelErrors.label}><Input id="building-level-label" value={levelForm.label} onChange={(event) => setLevelForm((current) => ({ ...current, label: event.target.value }))} placeholder="Rez-de-chaussée, mezzanine…" required maxLength={120} fullWidth /></FormField><FormField label="Ordre d’affichage" htmlFor="building-level-order" required error={levelErrors.displayOrder}><Input id="building-level-order" type="number" value={levelForm.displayOrder} onChange={(event) => setLevelForm((current) => ({ ...current, displayOrder: Number(event.target.value) }))} required fullWidth /></FormField></div>
+                        <FormField label="Description (facultative)" htmlFor="building-level-description" error={levelErrors.description}><Textarea id="building-level-description" value={levelForm.description ?? ''} onChange={(event) => setLevelForm((current) => ({ ...current, description: event.target.value || null }))} rows={2} maxLength={2000} fullWidth /></FormField>
+                        <Button type="submit" disabled={savingLevel}>{savingLevel ? 'Enregistrement…' : levelEdit ? 'Enregistrer le niveau' : 'Ajouter le niveau'}</Button>
+                    </form>
+                </section>
+            </Modal>}
         </Card>
     );
 }

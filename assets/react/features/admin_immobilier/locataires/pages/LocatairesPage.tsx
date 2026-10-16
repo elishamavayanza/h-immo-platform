@@ -18,6 +18,7 @@ import { useOrganization } from '../../../../app/providers/OrganizationProvider'
 import { useAdminCity } from '../../../../app/providers/AdminCityProvider';
 import { useLocataires } from '../hooks/useLocataires';
 import { LocatairesTable } from '../components/LocatairesTable';
+import { ResidentialHistoryModal } from '../components/ResidentialHistoryModal';
 import { fieldErrorMap } from '../../../shared/utils/actionErrors';
 import { changedFields } from '../../../shared/utils/changedFields';
 import { ModalActions } from '../../../shared/components/ModalActions';
@@ -71,14 +72,14 @@ export function LocatairesPage({ readOnly = false }: { readOnly?: boolean } = {}
     const isCityAdmin = organizationRole === 'admin_ville';
     const {
         data, rows: allRows, isLoading, error, reload,
-        search, setSearch, type, setType,
+        search, setSearch, type, setType, housingFilter, setHousingFilter,
         pending, requestArchive, cancelArchive, confirmArchive, isArchiving,
         createTenant, updateTenant, createLease, activateLease,
     } = useLocataires();
     useEffect(() => {
         setSearch(searchParams.get('search') ?? '');
     }, [searchParams, setSearch]);
-    const rows = allRows.filter((row) => (!parcelUuid || row.parcelId === parcelUuid) && (!buildingUuid || row.buildingId === buildingUuid));
+    const rows = allRows.filter((row) => (!parcelUuid || row.parcelIds.includes(parcelUuid)) && (!buildingUuid || row.buildingIds.includes(buildingUuid)));
 
     const [tenantModalOpen, setTenantModalOpen] = useState(false);
     const [editTarget, setEditTarget] = useState<LocataireRow | null>(null);
@@ -91,6 +92,8 @@ export function LocatairesPage({ readOnly = false }: { readOnly?: boolean } = {}
     const [leaseToActivate, setLeaseToActivate] = useState<LocataireRow | null>(null);
     const [leaseForm, setLeaseForm] = useState({
         unitUuid: '',
+        additionalUnitUuids: [] as string[],
+        occupants: [] as Array<{ tenantUuid: string; role: 'co_tenant' | 'occupant'; startDate: string; endDate?: string }>,
         reference: '',
         startDate: '',
         endDate: '',
@@ -102,6 +105,12 @@ export function LocatairesPage({ readOnly = false }: { readOnly?: boolean } = {}
     const [leaseFormErrors, setLeaseFormErrors] = useState<Record<string, string>>({});
     const [submittingLease, setSubmittingLease] = useState(false);
     const [documentsTarget, setDocumentsTarget] = useState<LocataireRow | null>(null);
+    const [historyTarget, setHistoryTarget] = useState<LocataireRow | null>(null);
+    const primaryLeaseUnit = data?.units.find((unit) => unit.id === leaseForm.unitUuid);
+    const leaseUnitsInScope = (data?.units ?? []).filter((unit) => {
+        const city = primaryLeaseUnit?.cityUuid ?? leaseTarget?.cityUuid;
+        return !city || unit.cityUuid === city;
+    });
 
     const openCreate = () => {
         setForm({ ...EMPTY_TENANT_FORM, cityUuid: activeCityUuid });
@@ -190,7 +199,7 @@ export function LocatairesPage({ readOnly = false }: { readOnly?: boolean } = {}
         setLeaseTarget(target);
         const now = new Date();
         const startDate = new Date(now.getTime() - now.getTimezoneOffset() * 60_000).toISOString().slice(0, 10);
-        setLeaseForm({ unitUuid: '', reference: '', startDate, endDate: '', monthlyRent: '', depositAmount: '', currency: 'USD', notes: '' });
+        setLeaseForm({ unitUuid: '', additionalUnitUuids: [], occupants: [], reference: '', startDate, endDate: '', monthlyRent: '', depositAmount: '', currency: 'USD', notes: '' });
         setLeaseFormErrors({});
         setLeaseModalOpen(true);
     };
@@ -209,6 +218,8 @@ export function LocatairesPage({ readOnly = false }: { readOnly?: boolean } = {}
         const payload = {
             tenantUuid: leaseTarget.id,
             unitUuid: leaseForm.unitUuid,
+            additionalUnitUuids: leaseForm.additionalUnitUuids.filter((uuid) => uuid !== leaseForm.unitUuid),
+            occupants: leaseForm.occupants,
             reference: leaseForm.reference.trim(),
             startDate: leaseForm.startDate,
             endDate: leaseForm.endDate || undefined,
@@ -228,7 +239,7 @@ export function LocatairesPage({ readOnly = false }: { readOnly?: boolean } = {}
         }
     };
 
-    let body = <LocatairesTable rows={rows} role={organizationRole} onEdit={openEdit} onArchive={requestArchive} onNewLease={openNewLease} onActivateLease={setLeaseToActivate} onDocuments={setDocumentsTarget} readOnly={readOnly} />;
+    let body = <LocatairesTable rows={rows} role={organizationRole} onEdit={openEdit} onArchive={requestArchive} onNewLease={openNewLease} onActivateLease={setLeaseToActivate} onDocuments={setDocumentsTarget} onHistory={setHistoryTarget} readOnly={readOnly} />;
     if (isLoading) {
         body = <EmptyState icon={<Spinner size="large" />} title="Chargement des locataires…" description="Récupération des fiches et de leurs baux en cours." />;
     } else if (error) {
@@ -242,7 +253,7 @@ export function LocatairesPage({ readOnly = false }: { readOnly?: boolean } = {}
 
     return <main className="organization-page organization-operational-page"><header className="organization-page__header"><div><span className="organization-page__eyebrow">GESTION LOCATIVE</span><h1>Locataires</h1><p>Retrouvez les occupants, leurs baux et leur situation.</p></div></header>
         <OrganizationSummary items={[{ label: 'Locataires', value: <>{data?.total ?? 0}</> }, { label: 'Baux en cours', value: <>{data?.activeLeases ?? 0}</> }, { label: 'Personnes morales', value: <>{(data?.rows ?? []).filter((row) => row.type === 'company').length}</> }]} />
-        <Card className="organization-table-card" padding="medium"><div className="organization-table-toolbar"><div><h2>Liste des locataires</h2><p>{data?.note ?? 'La fin du bail affichée correspond au bail actif du locataire.'}</p></div><div className="organization-filters organization-filters--tenant"><SearchInput value={search} onSearch={setSearch} placeholder="Rechercher un locataire…" fullWidth /><Select aria-label="Filtrer par type" value={type} onChange={(event) => setType(event.target.value)} options={[{ value: 'all', label: 'Tous les types' }, { value: 'individual', label: 'Personnes physiques' }, { value: 'company', label: 'Personnes morales' }]} />{!readOnly && canDo(organizationRole, 'create_tenant') && <Button onClick={openCreate}>＋ Ajouter un locataire</Button>}</div></div>{body}</Card>
+        <Card className="organization-table-card" padding="medium"><div className="organization-table-toolbar"><div><h2>Liste des locataires</h2><p>{data?.note ?? 'La fin du bail affichée correspond au bail actif du locataire.'}</p></div><div className="organization-filters organization-filters--tenant"><SearchInput value={search} onSearch={setSearch} placeholder="Rechercher un locataire…" fullWidth /><Select aria-label="Filtrer par type" value={type} onChange={(event) => setType(event.target.value)} options={[{ value: 'all', label: 'Tous les types' }, { value: 'individual', label: 'Personnes physiques' }, { value: 'company', label: 'Personnes morales' }]} /><Select aria-label="Filtrer par occupation ou mouvement" value={housingFilter} onChange={(event) => setHousingFilter(event.target.value as typeof housingFilter)} options={[{ value: 'all', label: 'Toutes les situations' }, { value: 'currently_housed', label: 'Occupants actuels' }, { value: 'former', label: 'Sans bail actif' }, { value: 'multiple_homes', label: 'Plusieurs logements' }, { value: 'expiring_soon', label: 'Bail finissant sous 30 jours' }, { value: 'departure_pending', label: 'Départs annoncés à confirmer' }, { value: 'recent_movement', label: 'Mouvements des 30 derniers jours' }, { value: 'late_movement', label: 'Mouvements saisis tardivement' }]} />{!readOnly && canDo(organizationRole, 'create_tenant') && <Button onClick={openCreate}>＋ Ajouter un locataire</Button>}</div></div>{body}</Card>
         <ConfirmDialog
             isOpen={pending !== null}
             onClose={cancelArchive}
@@ -323,8 +334,49 @@ export function LocatairesPage({ readOnly = false }: { readOnly?: boolean } = {}
             <form id="lease-form" className="organization-management-form" onSubmit={submitLease}>
                 <p className="organization-management-form__hint">Création d'un bail à l'état <strong>Brouillon (DRAFT)</strong>. Il devra être activé pour générer les échéances.</p>
                 <FormField label="Unité" htmlFor="lease-unit" required error={leaseFormErrors.unitUuid}>
-                    <Select id="lease-unit" value={leaseForm.unitUuid} onChange={(event) => setLeaseForm((current) => ({ ...current, unitUuid: event.target.value }))} options={(data?.units ?? []).map((unit) => ({ value: unit.id, label: `${data?.buildings.find((building) => building.id === unit.buildingId)?.name ?? 'Bâtiment'} · ${unit.reference} · ${unit.monthlyRent} ${unit.currency}` }))} placeholder="Sélectionner une unité" required />
+                    <Select id="lease-unit" value={leaseForm.unitUuid} onChange={(event) => setLeaseForm((current) => ({ ...current, unitUuid: event.target.value, additionalUnitUuids: [] }))} options={leaseUnitsInScope.map((unit) => ({ value: unit.id, label: `${data?.buildings.find((building) => building.id === unit.buildingId)?.name ?? 'Bâtiment'} · ${unit.reference} · ${unit.monthlyRent} ${unit.currency}` }))} placeholder="Sélectionner une unité" required />
                 </FormField>
+                {(data?.units.length ?? 0) > 1 && <FormField label="Autres espaces inclus (facultatif)" htmlFor="lease-extra-units" error={leaseFormErrors.additionalUnitUuids}>
+                    <div id="lease-extra-units" className="locataires-lease-options">
+                        {leaseUnitsInScope.filter((unit) => unit.id !== leaseForm.unitUuid).map((unit) => <label key={unit.id} className="locataires-lease-options__item">
+                            <input type="checkbox" checked={leaseForm.additionalUnitUuids.includes(unit.id)} onChange={(event) => setLeaseForm((current) => ({ ...current, additionalUnitUuids: event.target.checked ? [...current.additionalUnitUuids, unit.id] : current.additionalUnitUuids.filter((id) => id !== unit.id) }))} />
+                            <span>{data?.buildings.find((building) => building.id === unit.buildingId)?.name ?? 'Bâtiment'} · {unit.reference}</span>
+                        </label>)}
+                    </div>
+                    <small>Ces espaces seront couverts par le même contrat et le même loyer global.</small>
+                </FormField>}
+                {leaseTarget && allRows.filter((row) => row.id !== leaseTarget.id).length > 0 && <FormField label="Autres occupants ou cotitulaires (facultatif)" htmlFor="lease-occupants" error={leaseFormErrors.occupants}>
+                    <div id="lease-occupants" className="locataires-lease-options">
+                        {allRows.filter((row) => row.id !== leaseTarget.id).map((row) => {
+                            const selected = leaseForm.occupants.find((item) => item.tenantUuid === row.id);
+                            return <div key={row.id} className="locataires-lease-options__item">
+                                <label><input type="checkbox" checked={Boolean(selected)} onChange={(event) => setLeaseForm((current) => ({ ...current, occupants: event.target.checked ? [...current.occupants, { tenantUuid: row.id, role: 'occupant', startDate: current.startDate }] : current.occupants.filter((item) => item.tenantUuid !== row.id) }))} /> <span>{row.name}</span></label>
+                                {selected && <div className="locataires-occupant-fields">
+                                    <Select
+                                        aria-label={`Rôle de ${row.name}`}
+                                        value={selected.role}
+                                        onChange={(event) => setLeaseForm((current) => ({
+                                            ...current,
+                                            occupants: current.occupants.map((item) => item.tenantUuid === row.id
+                                                ? { ...item, role: event.target.value as 'co_tenant' | 'occupant' }
+                                                : item),
+                                        }))}
+                                        options={[{ value: 'occupant', label: 'Occupant' }, { value: 'co_tenant', label: 'Cotitulaire' }]}
+                                    />
+                                    <Input aria-label={`Entrée de ${row.name}`} type="date" value={selected.startDate} onChange={(event) => setLeaseForm((current) => ({
+                                        ...current,
+                                        occupants: current.occupants.map((item) => item.tenantUuid === row.id ? { ...item, startDate: event.target.value } : item),
+                                    }))} />
+                                    <Input aria-label={`Sortie de ${row.name}`} type="date" value={selected.endDate ?? ''} onChange={(event) => setLeaseForm((current) => ({
+                                        ...current,
+                                        occupants: current.occupants.map((item) => item.tenantUuid === row.id ? { ...item, endDate: event.target.value || undefined } : item),
+                                    }))} />
+                                </div>}
+                            </div>;
+                        })}
+                    </div>
+                    <small>Les cotitulaires et occupants restent liés au bail; leurs dates d’entrée commencent à la prise d’effet du contrat.</small>
+                </FormField>}
                 <FormField label="Référence du bail" htmlFor="lease-reference" required error={leaseFormErrors.reference}>
                     <Input id="lease-reference" value={leaseForm.reference} onChange={(event) => setLeaseForm((current) => ({ ...current, reference: event.target.value }))} placeholder="Ex. : LEASE-2026-0042" required fullWidth maxLength={50} />
                 </FormField>
@@ -359,5 +411,15 @@ export function LocatairesPage({ readOnly = false }: { readOnly?: boolean } = {}
                 canDelete={canDo(organizationRole, 'delete_document')}
             />
         )}
+        <ResidentialHistoryModal
+            open={historyTarget !== null}
+            tenant={historyTarget ? { id: historyTarget.id, name: historyTarget.name } : null}
+            units={data?.units ?? []}
+            leases={data?.leases ?? []}
+            tenants={allRows.map(({ id, name }) => ({ id, name }))}
+            canRecord={!readOnly && canDo(organizationRole, 'update_tenant')}
+            onReload={reload}
+            onClose={() => setHistoryTarget(null)}
+        />
     </main>;
 }

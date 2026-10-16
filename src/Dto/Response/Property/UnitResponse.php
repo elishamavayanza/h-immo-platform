@@ -7,6 +7,8 @@ namespace App\Dto\Response\Property;
 use App\Entity\Property\Unit;
 use App\Enum\Currency;
 use App\Enum\UnitType;
+use App\Enum\UnitOperationalStatus;
+use App\Enum\UnitOccupancyStatus;
 use OpenApi\Attributes as OA;
 
 /**
@@ -27,14 +29,32 @@ final readonly class UnitResponse
         #[OA\Property(description: 'UUID public du bâtiment parent', format: 'uuid', example: 'd3b07384-d113-4603-9c0e-a8946114421d')]
         public string $buildingId,
 
+        #[OA\Property(description: 'UUID de l’espace parent, le cas échéant', format: 'uuid', nullable: true)]
+        public ?string $parentUnitId,
+
+        #[OA\Property(description: 'UUID du niveau partagé du bâtiment, le cas échéant', format: 'uuid', nullable: true)]
+        public ?string $levelId,
+
         #[OA\Property(description: 'Référence unique de l\'unité', example: 'APT-101')]
         public string $reference,
 
         #[OA\Property(description: 'Type d\'unité locative', type: 'string', example: 'apartment', enum: UnitType::class)]
         public UnitType $type,
 
+        #[OA\Property(description: 'État opérationnel configuré; l’occupation est déterminée par les baux actifs', enum: UnitOperationalStatus::class)]
+        public UnitOperationalStatus $operationalStatus,
+
+        #[OA\Property(description: 'Occupation calculée à partir des baux actifs des espaces qui se chevauchent', enum: UnitOccupancyStatus::class)]
+        public UnitOccupancyStatus $occupancyStatus,
+
+        #[OA\Property(description: 'Activité commerciale/professionnelle déclarée, le cas échéant', nullable: true)]
+        public ?string $commercialActivity,
+
         #[OA\Property(description: 'Numéro d\'étage (0 pour Rez-de-chaussée)', example: 1)]
         public int $floor,
+
+        #[OA\Property(description: 'Libellé physique du niveau', nullable: true)]
+        public ?string $floorLabel,
 
         #[OA\Property(description: 'Surface utile en m2', example: '75.50')]
         public string $surface,
@@ -68,14 +88,20 @@ final readonly class UnitResponse
     ) {
     }
 
-    public static function fromEntity(Unit $unit): self
+    public static function fromEntity(Unit $unit, UnitOccupancyStatus $occupancyStatus = UnitOccupancyStatus::VACANT): self
     {
         return new self(
             id: (string) $unit->getUuid(),
             buildingId: (string) $unit->getBuilding()->getUuid(),
+            parentUnitId: $unit->getParentUnit() !== null ? (string) $unit->getParentUnit()->getUuid() : null,
+            levelId: $unit->getLevel() !== null ? (string) $unit->getLevel()->getUuid() : null,
             reference: $unit->getReference(),
             type: $unit->getType(),
+            operationalStatus: $unit->getOperationalStatus(),
+            occupancyStatus: $occupancyStatus,
+            commercialActivity: $unit->getCommercialActivity(),
             floor: $unit->getFloor(),
+            floorLabel: $unit->getFloorLabel(),
             surface: $unit->getSurface(),
             bedrooms: $unit->getBedrooms(),
             rooms: $unit->getRooms(),

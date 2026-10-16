@@ -11,6 +11,7 @@ use App\Entity\Property\Unit;
 use App\Enum\Currency;
 use App\Enum\LeaseStatus;
 use App\Enum\UnitType;
+use App\Enum\UnitOperationalStatus;
 use App\Repository\PaginatedResultTrait;
 use App\Repository\UuidParameterTrait;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
@@ -136,7 +137,7 @@ class UnitRepository extends ServiceEntityRepository
             ->innerJoin('u.building', 'b')
             ->innerJoin('b.parcel', 'p')
             ->innerJoin('p.city', 'c')
-            ->leftJoin('App\\Entity\\Rental\\Lease', 'l', 'WITH', 'l.unit = u AND l.status = :activeStatus AND l.deletedAt IS NULL')
+            ->leftJoin('App\\Entity\\Rental\\Lease', 'l', 'WITH', '(l.unit = u OR u MEMBER OF l.additionalUnits) AND l.status = :activeStatus AND l.deletedAt IS NULL')
             ->andWhere('c.id IN (:cities)')
             ->andWhere('u.deletedAt IS NULL')
             ->andWhere('b.deletedAt IS NULL')
@@ -169,7 +170,7 @@ class UnitRepository extends ServiceEntityRepository
             ->andWhere(
                 'NOT EXISTS (
                     SELECT 1 FROM App\Entity\Rental\Lease l
-                    WHERE l.unit = u AND l.status = :activeStatus
+                    WHERE (l.unit = u OR u MEMBER OF l.additionalUnits) AND l.status = :activeStatus AND l.deletedAt IS NULL
                 )'
             )
             ->setParameter('building', $building)
@@ -215,6 +216,103 @@ class UnitRepository extends ServiceEntityRepository
             ->setParameter('id', $unit->getId())
             ->setLockMode(\Doctrine\DBAL\LockMode::PESSIMISTIC_WRITE)
             ->getSingleScalarResult();
+    }
+
+    /** Racine commune utilisée pour sérialiser les baux des espaces imbriqués. */
+    public function findSpaceRoot(Unit $unit): Unit
+    {
+        $root = $unit;
+        while ($root->getParentUnit() !== null) {
+            $root = $root->getParentUnit();
+        }
+
+        return $root;
+    }
+
+    /** @return list<Unit> Unité, parents et subdivisions, sans espaces supprimés. */
+    public function findRelatedSpaces(Unit $unit): array
+    {
+        $root = $this->findSpaceRoot($unit);
+        $result = [];
+        $pending = [$root];
+        $seen = [];
+
+        while ($pending !== []) {
+            $current = array_shift($pending);
+            $key = (string) $current->getId();
+            if (isset($seen[$key])) {
+                continue;
+            }
+            $seen[$key] = true;
+            $result[] = $current;
+
+            $children = $this->createQueryBuilder('u')
+                ->andWhere('u.parentUnit = :parent')
+                ->andWhere('u.deletedAt IS NULL')
+                ->setParameter('parent', $current)
+                ->getQuery()
+                ->getResult();
+            array_push($pending, ...$children);
+        }
+
+        return $result;
+    }
+
+    /** @return list<Unit> L'unité, ses ancêtres et ses descendants, sans ses frères indépendants. */
+    public function findOverlappingSpaces(Unit $unit): array
+    {
+        $spaces = [];
+        $parent = $unit;
+        while ($parent !== null) {
+            $spaces[(string) $parent->getId()] = $parent;
+            $parent = $parent->getParentUnit();
+        }
+
+        $pending = [$unit];
+        while ($pending !== []) {
+            $current = array_shift($pending);
+            $children = $this->createQueryBuilder('u')
+                ->andWhere('u.parentUnit = :parent')
+                ->andWhere('u.deletedAt IS NULL')
+                ->setParameter('parent', $current)
+                ->getQuery()
+                ->getResult();
+            foreach ($children as $child) {
+                $key = (string) $child->getId();
+                if (isset($spaces[$key])) {
+                    continue;
+                }
+                $spaces[$key] = $child;
+                $pending[] = $child;
+            }
+        }
+
+        return array_values($spaces);
+    }
+
+    /** Empêche un cycle si l'espace courant devient enfant d'un de ses descendants. */
+    public function isDescendantOf(Unit $candidate, Unit $ancestor): bool
+    {
+        $parent = $candidate->getParentUnit();
+        while ($parent !== null) {
+            if ($parent->getId() === $ancestor->getId()) {
+                return true;
+            }
+            $parent = $parent->getParentUnit();
+        }
+
+        return false;
+    }
+
+    public function hasActiveSubspaces(Unit $unit): bool
+    {
+        return $this->createQueryBuilder('u')
+            ->select('COUNT(u.id)')
+            ->andWhere('u.parentUnit = :parent')
+            ->andWhere('u.deletedAt IS NULL')
+            ->setParameter('parent', $unit)
+            ->getQuery()
+            ->getSingleScalarResult() > 0;
     }
 
     /**
@@ -306,10 +404,12 @@ class UnitRepository extends ServiceEntityRepository
             ->setParameter('organization', $organization)
             ->andWhere('u.isPublished = :published')
             ->setParameter('published', true)
+            ->andWhere('u.operationalStatus = :operationalAvailable')
+            ->setParameter('operationalAvailable', UnitOperationalStatus::AVAILABLE)
             ->andWhere(
                 'NOT EXISTS (
                     SELECT 1 FROM App\Entity\Rental\Lease l
-                    WHERE l.unit = u AND l.status = :activeStatus
+                    WHERE (l.unit = u OR u MEMBER OF l.additionalUnits) AND l.status = :activeStatus AND l.deletedAt IS NULL
                 )'
             )
             ->setParameter('activeStatus', LeaseStatus::ACTIVE);
@@ -371,10 +471,12 @@ class UnitRepository extends ServiceEntityRepository
             ->setParameter('organization', $organization)
             ->andWhere('u.isPublished = :published')
             ->setParameter('published', true)
+            ->andWhere('u.operationalStatus = :operationalAvailable')
+            ->setParameter('operationalAvailable', UnitOperationalStatus::AVAILABLE)
             ->andWhere(
                 'NOT EXISTS (
                     SELECT 1 FROM App\Entity\Rental\Lease l
-                    WHERE l.unit = u AND l.status = :activeStatus
+                    WHERE (l.unit = u OR u MEMBER OF l.additionalUnits) AND l.status = :activeStatus AND l.deletedAt IS NULL
                 )'
             )
             ->setParameter('activeStatus', LeaseStatus::ACTIVE)
