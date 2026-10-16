@@ -48,14 +48,18 @@ foreach ($expectedRoles as $role) {
 
     $modules = $manual['modules'] ?? [];
     $check(is_array($modules) && count($modules) > 0, "Les modules {$role} sont documentés");
+    $articleIds = [];
     foreach (is_array($modules) ? $modules : [] as $module) {
+        $articleIds[] = $module['id'] ?? '';
         $check(
-            isset($module['name'], $module['menu'], $module['goal'], $module['steps'], $module['image'])
+            isset($module['id'], $module['name'], $module['menu'], $module['goal'], $module['steps'], $module['image'])
             && is_array($module['steps']) && count($module['steps']) > 0,
             "La procédure du module ".($module['name'] ?? 'inconnu')." est complète",
         );
+        $check(strlen(trim((string) ($module['goal'] ?? ''))) >= 20 && strlen(trim((string) ($module['steps'][0] ?? ''))) >= 12, "Le contenu du module ".($module['name'] ?? 'inconnu')." est exploitable dans le lecteur web");
         $check(is_file($root.'/output/pdf/screenshots/'.basename((string) ($module['image'] ?? ''))), "La capture du module ".($module['name'] ?? 'inconnu')." existe");
     }
+    $check(count($articleIds) === count(array_unique($articleIds)) && !in_array('', $articleIds, true), "Les articles {$role} ont des identifiants stables et uniques pour leur navigation URL");
 
     for ($page = 1; $page <= $pageCount; ++$page) {
         $pagePath = sprintf('%s/output/pdf/manual-pages/%s/page-%03d.jpg', $root, $role, $page);
