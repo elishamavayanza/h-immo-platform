@@ -11,7 +11,6 @@
  * Aucun filtrage local n'est donc nécessaire.
  */
 import { apiClient } from '../../../../../services/api/client';
-import { tokenStorage } from '../../../../../services/storage/storage.service';
 import { sumInCurrency } from '../../../admin_immobilier/reports/services/reportsService';
 import { formatInteger, formatMoney, formatPercent } from '../../../../../utils/format.utils';
 import type {
@@ -49,30 +48,16 @@ export async function fetchPatronReport(organizationUuid: string, query: PatronR
  * blob. Le backend rejoue les mêmes contrôles (PATRON de l'organisation).
  */
 export async function downloadPatronReportPdf(organizationUuid: string, query: PatronReportQuery = {}): Promise<void> {
-    const accessToken = tokenStorage.getAccessToken();
-    if (!accessToken) {
-        throw new Error('Non authentifié : jeton d’accès manquant');
-    }
-
-    const params = new URLSearchParams({ organizationUuid, format: 'pdf' });
-    if (query.periodFrom) params.set('periodFrom', query.periodFrom);
-    if (query.periodTo) params.set('periodTo', query.periodTo);
-    if (query.cityUuid) params.set('cityUuid', query.cityUuid);
-
-    const response = await fetch(`/api/v1/reports/patron?${params.toString()}`, {
-        method: 'GET',
-        headers: {
-            'Accept': 'application/pdf',
-            'X-Requested-With': 'XMLHttpRequest',
-            'Authorization': `Bearer ${accessToken}`,
+    const { data: blob } = await apiClient.getBlob('/v1/reports/patron', {
+        params: {
+            organizationUuid,
+            format: 'pdf',
+            ...(query.periodFrom ? { periodFrom: query.periodFrom } : {}),
+            ...(query.periodTo ? { periodTo: query.periodTo } : {}),
+            ...(query.cityUuid ? { cityUuid: query.cityUuid } : {}),
         },
+        headers: { Accept: 'application/pdf' },
     });
-
-    if (!response.ok) {
-        throw new Error(`Échec du téléchargement (${response.status})`);
-    }
-
-    const blob = await response.blob();
     const urlBlob = window.URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = urlBlob;

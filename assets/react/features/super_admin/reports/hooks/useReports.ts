@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { fetchSuperAdminReport, downloadSuperAdminReportPdf, mapToReportsData } from '../services/reportsService';
 import type { ReportsData } from '../../../shared/reports/types/report.types';
@@ -10,8 +10,10 @@ export function useReports() {
     const [error, setError] = useState<string | null>(null);
     const [period, setPeriod] = useState<PeriodRange>(() => computePeriodPreset('this_year'));
     const [isExporting, setExporting] = useState(false);
+    const requestVersion = useRef(0);
 
     const reload = useCallback(async () => {
+        const version = ++requestVersion.current;
         setLoading(true);
         setError(null);
         try {
@@ -20,11 +22,11 @@ export function useReports() {
                 periodTo: period.to,
             });
             const mapped = mapToReportsData(response);
-            setData(mapped);
+            if (version === requestVersion.current) setData(mapped);
         } catch (err) {
-            setError(err instanceof Error ? err.message : 'Impossible de charger le rapport');
+            if (version === requestVersion.current) setError(err instanceof Error ? err.message : 'Impossible de charger le rapport');
         } finally {
-            setLoading(false);
+            if (version === requestVersion.current) setLoading(false);
         }
     }, [period.from, period.to]);
 

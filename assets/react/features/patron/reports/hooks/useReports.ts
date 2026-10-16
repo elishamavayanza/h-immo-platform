@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { useOrganization } from '../../../../app/providers/OrganizationProvider';
 import { ApiError } from '../../../../../services/api/api.types';
@@ -30,6 +30,8 @@ export function useReports() {
 
     const [cities, setCities] = useState<PatronCityOption[]>([]);
     const [data, setData] = useState<PatronReportsData | null>(null);
+    const requestVersion = useRef(0);
+    const loadedOrganization = useRef(organizationUuid);
     const [isLoading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
 
@@ -56,32 +58,41 @@ export function useReports() {
 
     const reload = useCallback(async () => {
         if (!organizationUuid) {
+            requestVersion.current++;
+            loadedOrganization.current = null;
             setData(null);
             setLoading(false);
 
             return;
         }
+        if (loadedOrganization.current !== organizationUuid) {
+            loadedOrganization.current = organizationUuid;
+            setData(null);
+        }
+        const version = ++requestVersion.current;
         setLoading(true);
         setError(null);
         try {
-            setData(await fetchPatronReports(organizationUuid, {
+            const result = await fetchPatronReports(organizationUuid, {
                 periodFrom: periodFrom || undefined,
                 periodTo: periodTo || undefined,
                 cityUuid: cityUuid || undefined,
-            }));
+            });
+            if (version === requestVersion.current) setData(result);
         } catch (cause) {
-            setData(null);
-            setError(cause instanceof ApiError ? cause.message : 'Impossible de charger le rapport de l’organisation.');
+            if (version === requestVersion.current) {
+                setError(cause instanceof ApiError ? cause.message : 'Impossible de charger le rapport de l’organisation.');
+            }
         } finally {
-            setLoading(false);
+            if (version === requestVersion.current) setLoading(false);
         }
     }, [organizationUuid, periodFrom, periodTo, cityUuid]);
 
     useEffect(() => { void reload(); }, [reload]);
 
     return {
-        data,
-        isLoading,
+        data: organizationUuid && loadedOrganization.current === organizationUuid ? data : null,
+        isLoading: isLoading || (organizationUuid !== null && loadedOrganization.current !== organizationUuid),
         error,
         reload,
         cities,

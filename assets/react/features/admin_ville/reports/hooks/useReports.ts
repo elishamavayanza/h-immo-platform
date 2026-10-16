@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { useAdminCity } from '../../../../app/providers/AdminCityProvider';
 import { ApiError } from '../../../../../services/api/api.types';
@@ -18,17 +18,26 @@ export function useReports() {
     const [periodFrom, setPeriodFrom] = useState(() => computePeriodPreset('this_year').from);
     const [periodTo, setPeriodTo] = useState(() => computePeriodPreset('this_year').to);
     const [data, setData] = useState<AdminVilleReportsData | null>(null);
+    const requestVersion = useRef(0);
+    const loadedCity = useRef(cityUuid);
     const [isLoading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
     const reload = useCallback(async () => {
         if (!cityUuid) {
+            requestVersion.current++;
+            loadedCity.current = cityUuid;
             setData(null);
             setError(null);
             setLoading(false);
 
             return;
         }
+        if (loadedCity.current !== cityUuid) {
+            loadedCity.current = cityUuid;
+            setData(null);
+        }
+        const version = ++requestVersion.current;
         setLoading(true);
         setError(null);
         try {
@@ -36,20 +45,21 @@ export function useReports() {
                 periodFrom: periodFrom || undefined,
                 periodTo: periodTo || undefined,
             });
-            setData(result);
+            if (version === requestVersion.current) setData(result);
         } catch (cause) {
-            setData(null);
-            setError(cause instanceof ApiError ? cause.message : 'Impossible de charger le rapport de la ville.');
+            if (version === requestVersion.current) {
+                setError(cause instanceof ApiError ? cause.message : 'Impossible de charger le rapport de la ville.');
+            }
         } finally {
-            setLoading(false);
+            if (version === requestVersion.current) setLoading(false);
         }
     }, [cityUuid, periodFrom, periodTo]);
 
     useEffect(() => { void reload(); }, [reload]);
 
     return {
-        data,
-        isLoading: isLoading || citiesLoading,
+        data: cityUuid && loadedCity.current === cityUuid ? data : null,
+        isLoading: isLoading || citiesLoading || (cityUuid !== null && loadedCity.current !== cityUuid),
         error,
         reload,
         cities,
