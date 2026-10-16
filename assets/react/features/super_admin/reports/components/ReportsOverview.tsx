@@ -32,8 +32,8 @@ export function ReportsOverview({
 }) {
     const hasValidPeriod = isValidPeriodRange(period);
 
-    if (isLoading) return <div className="reports-loading"><Spinner size="large" /><span>Préparation du rapport…</span></div>;
-    if (error || !data) {
+    if (isLoading && !data) return <div className="reports-loading"><Spinner size="large" /><span>Préparation du rapport…</span></div>;
+    if (!data) {
         return (
             <main className="reports-page">
                 <h1>Rapport indisponible</h1>
@@ -43,7 +43,7 @@ export function ReportsOverview({
     }
 
     return (
-        <main className="reports-page">
+        <main className={`reports-page${isLoading ? ' reports-page--refreshing' : ''}`} aria-busy={isLoading}>
             <header className="reports-page__header">
                 <div>
                     <span className="reports-page__eyebrow">{data.scope}</span>
@@ -56,12 +56,14 @@ export function ReportsOverview({
                     <ReportPeriodFilter periodFrom={period.from} periodTo={period.to} onChange={setPeriod} disabled={isExporting} />
                 </div>
                 <div className="reports-page__toolbar-actions">
+                    {isLoading && <span className="reports-page__refresh-status" role="status">Actualisation…</span>}
                     <span className="reports-page__period-label">Période : {data.periodLabel.replace(' to ', ' → ')}</span>
                     <Button variant="outline" onClick={downloadPdf} disabled={isExporting || !hasValidPeriod} aria-busy={isExporting} icon={DOWNLOAD_ICON} iconPosition="left">
                         {isExporting ? 'Préparation…' : 'Télécharger PDF'}
                     </Button>
                 </div>
             </section>
+            {error && <p className="reports-empty" role="alert">Actualisation impossible : {error} Les données affichées sont celles de la dernière période chargée.</p>}
             {!hasValidPeriod && <p className="reports-empty" role="alert">Choisissez une période complète pour générer le PDF.</p>}
             <ReportsPageView data={data} isLoading={false} showHeader={false} />
         </main>

@@ -60,11 +60,11 @@ export function ReportsPage() {
         }
     };
 
-    if (isLoading) {
+    if (isLoading && !data) {
         return <div className="reports-loading" aria-busy="true"><Spinner size="large" /><span>Préparation du rapport…</span></div>;
     }
 
-    if (error) {
+    if (error && !data) {
         return <main className="reports-page"><EmptyState title="Rapport indisponible" description={error} action={<Button onClick={() => void reload()}>Réessayer</Button>} /></main>;
     }
 
@@ -73,7 +73,7 @@ export function ReportsPage() {
     }
 
     return (
-        <main className="reports-page">
+        <main className={`reports-page${isLoading ? ' reports-page--refreshing' : ''}`} aria-busy={isLoading}>
             <header className="reports-page__header">
                 <div>
                     <span className="reports-page__eyebrow">{data.organizationName}</span>
@@ -98,12 +98,14 @@ export function ReportsPage() {
                     />
                 </div>
                 <div className="reports-page__toolbar-actions">
+                    {isLoading && <span className="reports-page__refresh-status" role="status">Actualisation…</span>}
                     <span className="reports-page__period-label">Période affichée : {data.periodCovered.replace(' to ', ' → ')}</span>
                     <Button variant="outline" onClick={() => void handleExportPdf()} disabled={isExporting || !hasValidPeriod} aria-busy={isExporting}>
                         {isExporting ? 'Export…' : 'Exporter en PDF'}
                     </Button>
                 </div>
             </section>
+            {error && <p className="reports-empty" role="alert">Actualisation impossible : {error} Les données affichées sont celles de la dernière période chargée.</p>}
             {!hasValidPeriod && <p className="reports-empty" role="alert">Choisissez une période complète pour générer le PDF.</p>}
             {exportError && <p className="reports-empty" role="alert">{exportError}</p>}
             <ReportsOverview data={data} />

@@ -11,7 +11,6 @@
  * Aucun filtrage local n'est donc nécessaire, on affiche ce que l'API renvoie.
  */
 import { apiClient } from '../../../../../services/api/client';
-import { tokenStorage } from '../../../../../services/storage/storage.service';
 import { sumInCurrency } from '../../../admin_immobilier/reports/services/reportsService';
 import { formatInteger, formatMoney, formatPercent } from '../../../../../utils/format.utils';
 import type {
@@ -53,29 +52,14 @@ export async function downloadAdminVilleReportPdf(
     cityUuid: string,
     query: AdminVilleReportQuery = {}
 ): Promise<void> {
-    const accessToken = tokenStorage.getAccessToken();
-    if (!accessToken) {
-        throw new Error('Non authentifié : jeton d’accès manquant');
-    }
-
-    const params = new URLSearchParams({ format: 'pdf' });
-    if (query.periodFrom) params.set('periodFrom', query.periodFrom);
-    if (query.periodTo) params.set('periodTo', query.periodTo);
-
-    const response = await fetch(`/api/v1/reports/admin-ville/${cityUuid}?${params.toString()}`, {
-        method: 'GET',
-        headers: {
-            'Accept': 'application/pdf',
-            'X-Requested-With': 'XMLHttpRequest',
-            'Authorization': `Bearer ${accessToken}`,
+    const { data: blob } = await apiClient.getBlob(`/v1/reports/admin-ville/${cityUuid}`, {
+        params: {
+            format: 'pdf',
+            ...(query.periodFrom ? { periodFrom: query.periodFrom } : {}),
+            ...(query.periodTo ? { periodTo: query.periodTo } : {}),
         },
+        headers: { Accept: 'application/pdf' },
     });
-
-    if (!response.ok) {
-        throw new Error(`Échec du téléchargement (${response.status})`);
-    }
-
-    const blob = await response.blob();
     const urlBlob = window.URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = urlBlob;
