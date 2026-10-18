@@ -46,6 +46,19 @@ export function PersonnelPage() {
         : allRows.filter((row) => (!parcelUuid || row.parcelIds.includes(parcelUuid)) && (!buildingUuid || row.buildingIds.includes(buildingUuid)));
     const assignmentBuilding = data?.buildings.find((building) => building.id === buildingUuid);
     const assignmentParcel = data?.parcels.find((parcel) => parcel.id === parcelUuid || parcel.id === assignmentBuilding?.parcelId);
+    const eligibleWorkerCityIds = new Set((data?.cities ?? [])
+        .filter((city) => organizationRole !== 'admin_ville' || city.id === activeCityUuid)
+        .map((city) => city.id));
+    const eligibleWorkerParcelIds = new Set((data?.parcels ?? [])
+        .filter((parcel) => eligibleWorkerCityIds.has(parcel.cityId))
+        .map((parcel) => parcel.id));
+    const eligibleWorkerBuildingIds = new Set((data?.buildings ?? [])
+        .filter((building) => eligibleWorkerParcelIds.has(building.parcelId))
+        .map((building) => building.id));
+    const hasWorkerAssignmentTarget = eligibleWorkerCityIds.size > 0
+        && (eligibleWorkerParcelIds.size > 0
+            || eligibleWorkerBuildingIds.size > 0
+            || (data?.units ?? []).some((unit) => eligibleWorkerBuildingIds.has(unit.buildingId)));
 
     const [workerModalOpen, setWorkerModalOpen] = useState(false);
     const [editTarget, setEditTarget] = useState<PersonnelRow | null>(null);
@@ -129,8 +142,31 @@ export function PersonnelPage() {
         }
 
         const targetUuid = form.targetType === 'parcel' ? form.parcelUuid : form.targetType === 'building' ? form.buildingUuid : form.unitUuid;
+        if (!editTarget && !eligibleWorkerCityIds.has(form.cityUuid)) {
+            setFormErrors({ cityUuid: 'La ville sélectionnée n’est pas disponible dans le périmètre chargé.' });
+            setSubmitting(false);
+            return;
+        }
+
         if (!editTarget && !targetUuid) {
             setFormErrors({ [form.targetType === 'parcel' ? 'parcelUuid' : form.targetType === 'building' ? 'buildingUuid' : 'unitUuid']: 'Choisissez le bien auquel affecter cette personne.' });
+            setSubmitting(false);
+            return;
+        }
+
+        const targetIsAvailable = form.targetType === 'parcel'
+            ? eligibleWorkerParcelIds.has(targetUuid)
+                && data?.parcels.some((parcel) => parcel.id === targetUuid && parcel.cityId === form.cityUuid)
+            : form.targetType === 'building'
+                ? eligibleWorkerBuildingIds.has(targetUuid)
+                    && data?.buildings.some((building) => building.id === targetUuid
+                        && data.parcels.some((parcel) => parcel.id === building.parcelId && parcel.cityId === form.cityUuid))
+                : (data?.units ?? []).some((unit) => unit.id === targetUuid
+                    && data?.buildings.some((building) => building.id === unit.buildingId
+                        && data.parcels.some((parcel) => parcel.id === building.parcelId && parcel.cityId === form.cityUuid)));
+
+        if (!editTarget && !targetIsAvailable) {
+            setFormErrors({ [form.targetType === 'parcel' ? 'parcelUuid' : form.targetType === 'building' ? 'buildingUuid' : 'unitUuid']: 'Le bien sélectionné n’est pas disponible dans cette ville.' });
             setSubmitting(false);
             return;
         }
@@ -303,7 +339,7 @@ export function PersonnelPage() {
 
     return <main className="organization-page organization-operational-page"><header className="organization-page__header"><div><span className="organization-page__eyebrow">ÉQUIPE OPÉRATIONNELLE</span><h1>{isCityAssignmentContext ? 'Affecter un employé' : 'Personnel'}</h1><p>{isCityAssignmentContext ? `Choisissez un employé autorisé pour l’affecter à ${assignmentBuilding?.name ?? assignmentParcel?.name ?? 'ce bien'}.` : 'Consultez les ouvriers et leurs affectations sur vos biens.'}</p></div></header>
         <OrganizationSummary items={[{ label: 'Membres affichés', value: <>{rows.length}</> }, { label: 'Affectations visibles', value: <>{rows.reduce((total, row) => total + row.assignments, 0)}</> }, { label: 'Villes couvertes', value: <>{new Set(rows.map((row) => row.city).filter((value) => value !== '—')).size}</> }]} />
-        <Card className="organization-table-card" padding="medium"><div className="organization-table-toolbar"><div><h2>Équipe{organizationRole === 'admin_ville' && activeCity ? ` · ${activeCity.name}` : ''}</h2><p>{data?.note ?? 'Les personnes sont affichées selon leurs affectations dans la ville active. Un membre peut intervenir sur plusieurs biens.'}</p></div><div className="organization-filters organization-filters--tenant"><SearchInput value={search} onSearch={setSearch} placeholder="Rechercher un membre…" fullWidth />{organizationRole !== 'admin_ville' && <Select aria-label="Filtrer par ville" value={city} onChange={(event) => setCity(event.target.value)} options={[{ value: 'all', label: 'Toutes les villes' }, ...availableCities.map((value) => ({ value, label: value }))]} />}{(canDo(organizationRole, 'create_worker') || (organizationRole === 'admin_ville' && activeCity?.canManagePersonnel)) && <Button onClick={openCreateWorker}>＋ Ajouter un ouvrier</Button>}</div></div>{body}</Card>
+        <Card className="organization-table-card" padding="medium"><div className="organization-table-toolbar"><div><h2>Équipe{organizationRole === 'admin_ville' && activeCity ? ` · ${activeCity.name}` : ''}</h2><p>{data?.note ?? 'Les personnes sont affichées selon leurs affectations dans la ville active. Un membre peut intervenir sur plusieurs biens.'}</p></div><div className="organization-filters organization-filters--tenant"><SearchInput value={search} onSearch={setSearch} placeholder="Rechercher un membre…" fullWidth />{organizationRole !== 'admin_ville' && <Select aria-label="Filtrer par ville" value={city} onChange={(event) => setCity(event.target.value)} options={[{ value: 'all', label: 'Toutes les villes' }, ...availableCities.map((value) => ({ value, label: value }))]} />}{(canDo(organizationRole, 'create_worker') || (organizationRole === 'admin_ville' && activeCity?.canManagePersonnel)) && <Button onClick={openCreateWorker} disabled={isLoading || Boolean(error) || !currentOrganization?.uuid || !hasWorkerAssignmentTarget} title={isLoading ? 'Chargement des villes et des biens…' : error ? 'Impossible de vérifier les données. Réessayez le chargement.' : !currentOrganization?.uuid ? 'Aucune organisation active.' : !hasWorkerAssignmentTarget ? 'Ajoutez une ville et un bien accessible avant de créer une affectation.' : undefined}>＋ Ajouter un ouvrier</Button>}</div></div>{body}</Card>
         <Modal
             isOpen={workerModalOpen}
             onClose={closeWorkerModal}
