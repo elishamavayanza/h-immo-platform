@@ -255,7 +255,7 @@ export function BatimentsTab({ buildings, parcels, cities, role, isLoading, erro
                         <Input id="building-floors" type="number" min="0" step="1" inputMode="numeric" value={form.numberOfFloors} onChange={(event) => setForm((current) => ({ ...current, numberOfFloors: event.target.value }))} placeholder="Ex. : 3" fullWidth />
                     </FormField>
                     <FormField label="Description" htmlFor="building-description" error={formErrors.description}>
-                        <Textarea id="building-description" value={form.description} onChange={(event) => setForm((current) => ({ ...current, description: event.target.value }))} rows={3} fullWidth maxLength={1000} />
+                        <Textarea id="building-description" value={form.description} onChange={(event) => setForm((current) => ({ ...current, description: event.target.value }))} placeholder="Ex. : Immeuble résidentiel de trois étages avec parking." rows={3} fullWidth maxLength={1000} />
                     </FormField>
                 </form>
             </Modal>

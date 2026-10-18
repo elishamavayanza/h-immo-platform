@@ -160,6 +160,7 @@ export function VitrinePage() {
                                     id="vitrine-description"
                                     value={description}
                                     onChange={(event) => setDescription(event.target.value)}
+                                    placeholder="Ex. : Des logements bien situés, entretenus et adaptés à vos besoins."
                                     rows={4}
                                     maxLength={2000}
                                     fullWidth

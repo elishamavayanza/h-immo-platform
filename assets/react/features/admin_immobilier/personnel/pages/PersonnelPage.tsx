@@ -323,13 +323,13 @@ export function PersonnelPage() {
                     <Input id="worker-email" type="email" value={form.email} onChange={(event) => setForm((current) => ({ ...current, email: event.target.value }))} placeholder="jean.dupont@example.cd" fullWidth maxLength={180} />
                 </FormField>
                 <FormField label="N° national" htmlFor="worker-nationalid" error={formErrors.nationalId}>
-                    <Input id="worker-nationalid" value={form.nationalId} onChange={(event) => setForm((current) => ({ ...current, nationalId: event.target.value }))} placeholder="Optionnel" fullWidth maxLength={50} />
+                    <Input id="worker-nationalid" value={form.nationalId} onChange={(event) => setForm((current) => ({ ...current, nationalId: event.target.value }))} placeholder="Ex. : 1234567890" fullWidth maxLength={50} />
                 </FormField>
                 <FormField label="Adresse" htmlFor="worker-address" error={formErrors.address}>
-                    <Input id="worker-address" value={form.address} onChange={(event) => setForm((current) => ({ ...current, address: event.target.value }))} placeholder="Optionnel" fullWidth maxLength={255} />
+                    <Input id="worker-address" value={form.address} onChange={(event) => setForm((current) => ({ ...current, address: event.target.value }))} placeholder="Ex. : 12, avenue du Lac, Goma" fullWidth maxLength={255} />
                 </FormField>
                 <FormField label="Notes" htmlFor="worker-notes" error={formErrors.notes}>
-                    <Textarea id="worker-notes" value={form.notes} onChange={(event) => setForm((current) => ({ ...current, notes: event.target.value }))} rows={3} fullWidth maxLength={1000} />
+                    <Textarea id="worker-notes" value={form.notes} onChange={(event) => setForm((current) => ({ ...current, notes: event.target.value }))} placeholder="Ex. : Disponible du lundi au samedi." rows={3} fullWidth maxLength={1000} />
                 </FormField>
                 {!editTarget && <>
                     <div className="organization-management-form__section"><h3>Affectation obligatoire</h3><p>Chaque nouveau membre est rattaché à une ville et à un bien.</p></div>
@@ -343,7 +343,7 @@ export function PersonnelPage() {
                     {form.targetType === 'building' && <FormField label="Bâtiment" htmlFor="worker-building" required error={formErrors.buildingUuid}><Select id="worker-building" value={form.buildingUuid} onChange={(event) => setForm((current) => ({ ...current, buildingUuid: event.target.value }))} options={(data?.buildings ?? []).filter((building) => (data?.parcels ?? []).some((parcel) => parcel.id === building.parcelId && parcel.cityId === form.cityUuid)).map((building) => ({ value: building.id, label: building.name }))} placeholder="Sélectionner un bâtiment" required /></FormField>}
                     {form.targetType === 'unit' && <FormField label="Unité" htmlFor="worker-unit" required error={formErrors.unitUuid}><Select id="worker-unit" value={form.unitUuid} onChange={(event) => setForm((current) => ({ ...current, unitUuid: event.target.value }))} options={(data?.units ?? []).filter((unit) => (data?.buildings ?? []).some((building) => building.id === unit.buildingId && (data?.parcels ?? []).some((parcel) => parcel.id === building.parcelId && parcel.cityId === form.cityUuid))).map((unit) => ({ value: unit.id, label: unit.reference }))} placeholder="Sélectionner une unité" required /></FormField>}
                     <FormField label="Fonction" htmlFor="worker-assignment-role" required error={formErrors.role}><Select id="worker-assignment-role" value={form.role} onChange={(event) => setForm((current) => ({ ...current, role: event.target.value }))} options={ASSIGNMENT_ROLE_OPTIONS} /></FormField>
-                    <FormField label="Salaire mensuel" htmlFor="worker-assignment-salary" required error={formErrors.monthlySalary}><Input id="worker-assignment-salary" type="number" min="0" step="0.01" value={form.monthlySalary} onChange={(event) => setForm((current) => ({ ...current, monthlySalary: event.target.value }))} required fullWidth /></FormField>
+                    <FormField label="Salaire mensuel" htmlFor="worker-assignment-salary" required error={formErrors.monthlySalary}><Input id="worker-assignment-salary" type="number" min="0" step="0.01" value={form.monthlySalary} onChange={(event) => setForm((current) => ({ ...current, monthlySalary: event.target.value }))} placeholder="Ex. : 300.00" required fullWidth /></FormField>
                     <FormField label="Devise" htmlFor="worker-assignment-currency" required><Select id="worker-assignment-currency" value={form.currency} onChange={(event) => setForm((current) => ({ ...current, currency: event.target.value as 'USD' | 'CDF' }))} options={CURRENCY_OPTIONS} /></FormField>
                 </>}
             </form>
@@ -394,7 +394,7 @@ export function PersonnelPage() {
                     <Select id="assign-unit" value={assignmentForm.unitUuid} onChange={(event) => setAssignmentForm((current) => ({ ...current, unitUuid: event.target.value, parcelUuid: '', buildingUuid: '' }))} options={(data?.units ?? []).filter((unit) => (data?.buildings ?? []).some((building) => building.id === unit.buildingId && (data?.parcels ?? []).some((parcel) => parcel.id === building.parcelId && parcel.cityId === assignmentForm.cityUuid))).map((unit) => ({ value: unit.id, label: unit.reference }))} placeholder="Sélectionner une unité" />
                 </FormField>
                 <FormField label="Notes" htmlFor="assign-notes" error={assignmentFormErrors.notes}>
-                    <Textarea id="assign-notes" value={assignmentForm.notes} onChange={(event) => setAssignmentForm((current) => ({ ...current, notes: event.target.value }))} rows={3} fullWidth maxLength={1000} />
+                    <Textarea id="assign-notes" value={assignmentForm.notes} onChange={(event) => setAssignmentForm((current) => ({ ...current, notes: event.target.value }))} placeholder="Ex. : Intervention prévue les jours ouvrables." rows={3} fullWidth maxLength={1000} />
                 </FormField>
             </form>
         </Modal>

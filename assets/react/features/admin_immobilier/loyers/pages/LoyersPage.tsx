@@ -252,7 +252,7 @@ export function LoyersPage({ readOnly = false }: { readOnly?: boolean } = {}) {
                     <Input id="payment-reference" value={paymentForm.reference} onChange={(event) => setPaymentForm((current) => ({ ...current, reference: event.target.value }))} placeholder="Ex. : RECU-12345" fullWidth maxLength={100} />
                 </FormField>
                 <FormField label="Notes" htmlFor="payment-notes" error={paymentFormErrors.notes}>
-                    <Textarea id="payment-notes" value={paymentForm.notes} onChange={(event) => setPaymentForm((current) => ({ ...current, notes: event.target.value }))} rows={3} fullWidth maxLength={1000} />
+                    <Textarea id="payment-notes" value={paymentForm.notes} onChange={(event) => setPaymentForm((current) => ({ ...current, notes: event.target.value }))} placeholder="Ex. : Paiement reçu par virement bancaire." rows={3} fullWidth maxLength={1000} />
                 </FormField>
             </form>
         </Modal>
@@ -274,7 +274,7 @@ export function LoyersPage({ readOnly = false }: { readOnly?: boolean } = {}) {
                     <Select id="update-currency" value={updateForm.currency} onChange={(event) => setUpdateForm((current) => ({ ...current, currency: event.target.value as 'USD' | 'CDF' }))} options={CURRENCY_OPTIONS} />
                 </FormField>
                 <FormField label="Notes" htmlFor="update-notes" error={updateFormErrors.notes}>
-                    <Textarea id="update-notes" value={updateForm.notes} onChange={(event) => setUpdateForm((current) => ({ ...current, notes: event.target.value }))} rows={3} fullWidth maxLength={1000} />
+                    <Textarea id="update-notes" value={updateForm.notes} onChange={(event) => setUpdateForm((current) => ({ ...current, notes: event.target.value }))} placeholder="Ex. : Échéance ajustée après accord avec le locataire." rows={3} fullWidth maxLength={1000} />
                 </FormField>
             </form>
         </Modal>

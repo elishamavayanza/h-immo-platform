@@ -282,10 +282,10 @@ export function ResidentialHistoryModal({ open, tenant, units, leases, canRecord
                     <Input id="movement-reason" value={form.reason} onChange={(event) => setForm((current) => ({ ...current, reason: event.target.value }))} placeholder="Ex. : changement de logement" fullWidth maxLength={100} />
                 </FormField>
                 <FormField label="Précisions" htmlFor="movement-details" error={fieldErrors.details}>
-                    <Textarea id="movement-details" value={form.details} onChange={(event) => setForm((current) => ({ ...current, details: event.target.value }))} rows={3} fullWidth maxLength={5000} />
+                    <Textarea id="movement-details" value={form.details} onChange={(event) => setForm((current) => ({ ...current, details: event.target.value }))} placeholder="Ex. : Départ confirmé lors de l’état des lieux." rows={3} fullWidth maxLength={5000} />
                 </FormField>
                 {editingMovement && <FormField label="Motif obligatoire de correction" htmlFor="movement-correction-reason" required error={fieldErrors.correctionReason}>
-                    <Input id="movement-correction-reason" value={correctionReason} onChange={(event) => setCorrectionReason(event.target.value)} required maxLength={255} fullWidth />
+                    <Input id="movement-correction-reason" value={correctionReason} onChange={(event) => setCorrectionReason(event.target.value)} placeholder="Ex. : Correction de la date après vérification du dossier." required maxLength={255} fullWidth />
                 </FormField>}
                 <Button type="submit" disabled={submitting || (Boolean(editingMovement) && !correctionReason.trim())} className="residential-history__mobile-submit">{submitting ? 'Enregistrement…' : editingMovement ? 'Enregistrer la correction' : 'Enregistrer le mouvement'}</Button>
             </form>}
@@ -303,7 +303,7 @@ export function ResidentialHistoryModal({ open, tenant, units, leases, canRecord
                     <Input id="occupant-departure-date" type="date" value={occupantForm.effectiveDate} onChange={(event) => setOccupantForm((current) => ({ ...current, effectiveDate: event.target.value }))} required fullWidth />
                 </FormField>
                 <FormField label="Motif" htmlFor="occupant-departure-reason" required>
-                    <Input id="occupant-departure-reason" value={occupantForm.reason} onChange={(event) => setOccupantForm((current) => ({ ...current, reason: event.target.value }))} required maxLength={255} fullWidth />
+                    <Input id="occupant-departure-reason" value={occupantForm.reason} onChange={(event) => setOccupantForm((current) => ({ ...current, reason: event.target.value }))} placeholder="Ex. : Fin d’occupation à la demande du locataire." required maxLength={255} fullWidth />
                 </FormField>
                 <Button type="submit" disabled={occupantSubmitting || !selectedOccupant || !occupantForm.effectiveDate || !occupantForm.reason.trim()}>{occupantSubmitting ? 'Enregistrement…' : 'Vérifier la sortie'}</Button>
             </form>}

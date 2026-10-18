@@ -136,6 +136,7 @@ export function ProfilePage() {
                                         id="firstName"
                                         value={formData.firstName}
                                         onChange={(e) => setFormData({ ...formData, firstName: e.target.value })}
+                                        placeholder="Ex. : Jean"
                                     />
                                 </FormField>
                                 <FormField label="Nom" htmlFor="lastName" required>
@@ -143,6 +144,7 @@ export function ProfilePage() {
                                         id="lastName"
                                         value={formData.lastName}
                                         onChange={(e) => setFormData({ ...formData, lastName: e.target.value })}
+                                        placeholder="Ex. : Dupont"
                                     />
                                 </FormField>
                             </div>

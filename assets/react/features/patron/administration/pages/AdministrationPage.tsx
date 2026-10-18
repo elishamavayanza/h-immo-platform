@@ -271,10 +271,10 @@ export function AdministrationPage() {
                 <form id="edit-member-form" className="organization-management-form" onSubmit={submitEdit}>
                     <p className="organization-management-form__hint">Seuls le nom et le téléphone sont modifiables ici ; le rôle et l’accès d’organisation ne changent pas.</p>
                     <FormField label="Nom complet" htmlFor="edit-full-name" required>
-                        <Input id="edit-full-name" value={editForm.name} onChange={(event) => setEditForm((current) => ({ ...current, name: event.target.value }))} required fullWidth maxLength={200} />
+                        <Input id="edit-full-name" value={editForm.name} onChange={(event) => setEditForm((current) => ({ ...current, name: event.target.value }))} placeholder="Ex. : Jean Dupont" required fullWidth maxLength={200} />
                     </FormField>
                     <FormField label="Téléphone" htmlFor="edit-phone" required>
-                        <Input id="edit-phone" value={editForm.phone} onChange={(event) => setEditForm((current) => ({ ...current, phone: event.target.value }))} required fullWidth maxLength={30} />
+                        <Input id="edit-phone" value={editForm.phone} onChange={(event) => setEditForm((current) => ({ ...current, phone: event.target.value }))} placeholder="+243 99 00 00 000" required fullWidth maxLength={30} />
                     </FormField>
                 </form>
             </Modal>

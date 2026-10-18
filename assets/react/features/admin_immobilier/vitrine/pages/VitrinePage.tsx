@@ -127,7 +127,7 @@ export function VitrinePage({ readOnly = false }: { readOnly?: boolean } = {}) {
         >
             <form id="edit-vitrine-form" className="organization-management-form" onSubmit={submitEdit}>
                 <FormField label="Description" htmlFor="vitrine-description" error={editFormErrors.description}>
-                    <Textarea id="vitrine-description" value={editForm.description} onChange={(event) => setEditForm((current) => ({ ...current, description: event.target.value }))} rows={4} fullWidth maxLength={2000} />
+                    <Textarea id="vitrine-description" value={editForm.description} onChange={(event) => setEditForm((current) => ({ ...current, description: event.target.value }))} placeholder="Ex. : Appartement lumineux, proche des commerces et des transports." rows={4} fullWidth maxLength={2000} />
                 </FormField>
                 <FormField label="Loyer affiché" htmlFor="vitrine-rent" error={editFormErrors.monthlyRent}>
                     <Input id="vitrine-rent" type="number" step="0.01" min="0" inputMode="decimal" value={editForm.monthlyRent} onChange={(event) => setEditForm((current) => ({ ...current, monthlyRent: event.target.value }))} placeholder="Ex. : 500.00" fullWidth />

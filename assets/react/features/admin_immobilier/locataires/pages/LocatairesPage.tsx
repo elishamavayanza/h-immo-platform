@@ -322,7 +322,7 @@ export function LocatairesPage({ readOnly = false }: { readOnly?: boolean } = {}
                     <Input id="tenant-address" value={form.address} onChange={(event) => setForm((current) => ({ ...current, address: event.target.value }))} placeholder="05, Avenue du Centre, Quartier Les Volcans" fullWidth maxLength={255} />
                 </FormField>
                 <FormField label="Notes" htmlFor="tenant-notes" error={formErrors.notes}>
-                    <Textarea id="tenant-notes" value={form.notes} onChange={(event) => setForm((current) => ({ ...current, notes: event.target.value }))} rows={3} fullWidth maxLength={1000} />
+                    <Textarea id="tenant-notes" value={form.notes} onChange={(event) => setForm((current) => ({ ...current, notes: event.target.value }))} placeholder="Ex. : Préfère être contacté en journée." rows={3} fullWidth maxLength={1000} />
                 </FormField>
             </form>
         </Modal>
@@ -398,7 +398,7 @@ export function LocatairesPage({ readOnly = false }: { readOnly?: boolean } = {}
                     <Select id="lease-currency" value={leaseForm.currency} onChange={(event) => setLeaseForm((current) => ({ ...current, currency: event.target.value as 'USD' | 'CDF' }))} options={[{ value: 'USD', label: 'USD' }, { value: 'CDF', label: 'CDF' }]} />
                 </FormField>
                 <FormField label="Notes" htmlFor="lease-notes" error={leaseFormErrors.notes}>
-                    <Textarea id="lease-notes" value={leaseForm.notes} onChange={(event) => setLeaseForm((current) => ({ ...current, notes: event.target.value }))} rows={3} fullWidth maxLength={1000} />
+                    <Textarea id="lease-notes" value={leaseForm.notes} onChange={(event) => setLeaseForm((current) => ({ ...current, notes: event.target.value }))} placeholder="Ex. : Le dépôt de garantie a été reçu à la signature." rows={3} fullWidth maxLength={1000} />
                 </FormField>
             </form>
         </Modal>

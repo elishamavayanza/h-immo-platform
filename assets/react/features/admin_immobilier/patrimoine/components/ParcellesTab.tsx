@@ -326,7 +326,7 @@ export function ParcellesTab({ parcels, cities, role, isLoading, error, note, on
                         <Input id="parcel-longitude" type="number" min="-180" max="180" step="any" inputMode="decimal" value={form.longitude} onChange={(event) => setForm((current) => ({ ...current, longitude: event.target.value }))} placeholder="Ex. : 29.2228" fullWidth />
                     </FormField>
                     <FormField label="Description" htmlFor="parcel-description" error={formErrors.description}>
-                        <Textarea id="parcel-description" value={form.description} onChange={(event) => setForm((current) => ({ ...current, description: event.target.value }))} rows={3} fullWidth maxLength={1000} />
+                        <Textarea id="parcel-description" value={form.description} onChange={(event) => setForm((current) => ({ ...current, description: event.target.value }))} placeholder="Ex. : Parcelle clôturée située dans le quartier Les Volcans." rows={3} fullWidth maxLength={1000} />
                     </FormField>
                 </form>
             </Modal>

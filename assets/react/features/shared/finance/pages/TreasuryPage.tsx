@@ -138,7 +138,7 @@ export function TreasuryPage() {
             <strong className="treasury-cash-note__balance">{cashLoading ? 'Chargement…' : cashSnapshot?.balance !== null && cashSnapshot?.balance !== undefined ? formatMoney(cashSnapshot.balance, cashCurrency) : 'Solde à initialiser'}</strong>
             {cashError && <p role="alert">{cashError}</p>}
             <form className="treasury-cash-note__form" onSubmit={(event) => void saveOpening(event)}>
-                <label>Solde au démarrage<input aria-label="Montant du solde d’ouverture" inputMode="decimal" required pattern="\d{1,10}(\.\d{1,2})?" value={openingAmount} onChange={(event) => setOpeningAmount(event.target.value)} placeholder="0,00" /></label>
+                <label>Solde au démarrage<input aria-label="Montant du solde d’ouverture" inputMode="decimal" required pattern="\d{1,10}(\.\d{1,2})?" value={openingAmount} onChange={(event) => setOpeningAmount(event.target.value)} placeholder="Ex. : 250.00" /></label>
                 <label>Date du solde d’ouverture<DatePicker aria-label="Date du solde d’ouverture" required max={localDateInputValue()} value={openingDate} onChange={(event) => setOpeningDate(event.target.value)} fullWidth /></label>
                 <Button type="submit" disabled={cashSaving || cashLoading || !cashCityUuid}>{cashSaving ? 'Enregistrement…' : cashSnapshot?.openingBalance === null ? 'Initialiser la caisse' : 'Mettre à jour le solde'}</Button>
             </form>

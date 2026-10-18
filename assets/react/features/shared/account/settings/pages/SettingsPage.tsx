@@ -547,6 +547,7 @@ export function SettingsPage() {
                                     min="30"
                                     max="2555"
                                     value={retentionDraft ?? String(settings.auditLogRetentionDays ?? '')}
+                                    placeholder="Ex. : 365"
                                     onChange={(e) => setRetentionDraft(e.target.value)}
                                     onBlur={saveRetention}
                                     onKeyDown={(event) => { if (event.key === 'Enter') { event.currentTarget.blur(); } }}

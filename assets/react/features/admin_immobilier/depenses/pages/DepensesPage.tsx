@@ -294,7 +294,7 @@ export function DepensesPage({ readOnly = false }: { readOnly?: boolean } = {}) 
                     <Input id="expense-reference" value={form.reference} onChange={(event) => setForm((current) => ({ ...current, reference: event.target.value }))} placeholder="Ex. : FACT-2026-042" fullWidth maxLength={100} />
                 </FormField>
                 <FormField label="Notes" htmlFor="expense-notes" error={formErrors.notes}>
-                    <Textarea id="expense-notes" value={form.notes} onChange={(event) => setForm((current) => ({ ...current, notes: event.target.value }))} rows={3} fullWidth maxLength={1000} />
+                    <Textarea id="expense-notes" value={form.notes} onChange={(event) => setForm((current) => ({ ...current, notes: event.target.value }))} placeholder="Ex. : Intervention réalisée pour réparer la pompe à eau." rows={3} fullWidth maxLength={1000} />
                 </FormField>
             </form>
         </Modal>

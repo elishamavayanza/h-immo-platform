@@ -145,25 +145,25 @@ export function OrganisationPage() {
                 <form className="organization-management-form patron-organization-form" onSubmit={submit}>
                     <div className="patron-organization-form__grid">
                         <FormField label="Nom de l'organisation" htmlFor="org-name" required error={errors.name}>
-                            <Input id="org-name" value={form.name} onChange={(event) => setForm((current) => ({ ...current, name: event.target.value }))} required fullWidth maxLength={150} />
+                            <Input id="org-name" value={form.name} onChange={(event) => setForm((current) => ({ ...current, name: event.target.value }))} placeholder="Ex. : Immo Plus SARL" required fullWidth maxLength={150} />
                         </FormField>
                         <FormField label="Code" htmlFor="org-code" helpText="Identifiant interne, non modifiable.">
                             <Input id="org-code" value={profile?.code ?? ''} readOnly disabled fullWidth />
                         </FormField>
                         <FormField label="Adresse e-mail" htmlFor="org-email" required error={errors.email}>
-                            <Input id="org-email" type="email" value={form.email} onChange={(event) => setForm((current) => ({ ...current, email: event.target.value }))} required fullWidth maxLength={180} />
+                            <Input id="org-email" type="email" value={form.email} onChange={(event) => setForm((current) => ({ ...current, email: event.target.value }))} placeholder="contact@immoplus.cd" required fullWidth maxLength={180} />
                         </FormField>
                         <FormField label="Téléphone" htmlFor="org-phone" required error={errors.phone}>
-                            <Input id="org-phone" value={form.phone} onChange={(event) => setForm((current) => ({ ...current, phone: event.target.value }))} required fullWidth maxLength={30} />
+                            <Input id="org-phone" value={form.phone} onChange={(event) => setForm((current) => ({ ...current, phone: event.target.value }))} placeholder="+243 99 00 00 000" required fullWidth maxLength={30} />
                         </FormField>
                         <FormField label="Adresse du siège" htmlFor="org-address" error={errors.address}>
-                            <Input id="org-address" value={form.address} onChange={(event) => setForm((current) => ({ ...current, address: event.target.value }))} fullWidth maxLength={255} />
+                            <Input id="org-address" value={form.address} onChange={(event) => setForm((current) => ({ ...current, address: event.target.value }))} placeholder="Ex. : 12, avenue du Lac" fullWidth maxLength={255} />
                         </FormField>
                         <FormField label="Ville" htmlFor="org-city" error={errors.city}>
-                            <Input id="org-city" value={form.city} onChange={(event) => setForm((current) => ({ ...current, city: event.target.value }))} fullWidth maxLength={100} />
+                            <Input id="org-city" value={form.city} onChange={(event) => setForm((current) => ({ ...current, city: event.target.value }))} placeholder="Ex. : Goma" fullWidth maxLength={100} />
                         </FormField>
                         <FormField label="Pays" htmlFor="org-country" error={errors.country}>
-                            <Input id="org-country" value={form.country} onChange={(event) => setForm((current) => ({ ...current, country: event.target.value }))} fullWidth maxLength={100} />
+                            <Input id="org-country" value={form.country} onChange={(event) => setForm((current) => ({ ...current, country: event.target.value }))} placeholder="Ex. : République démocratique du Congo" fullWidth maxLength={100} />
                         </FormField>
                     </div>
 
