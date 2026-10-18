@@ -40,6 +40,11 @@ export function useTimePicker({
 
     const handleChange = useCallback(
         (newTime: string) => {
+            if (newTime === '') {
+                if (value === undefined) setInternalValue('');
+                onChange?.('');
+                return;
+            }
             if (!isValidTimeFormat(newTime)) return;
             if (minTime && timeToMinutes(newTime) < timeToMinutes(minTime)) return;
             if (maxTime && timeToMinutes(newTime) > timeToMinutes(maxTime)) return;

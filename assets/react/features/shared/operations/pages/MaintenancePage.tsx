@@ -4,6 +4,7 @@ import { Card } from '../../../../components/UI/Card';
 import { Modal } from '../../../../components/UI/Modal';
 import { EmptyState } from '../../../../components/Data/EmptyState';
 import { Select } from '../../../../components/Forms/Select';
+import { DatePicker } from '../../../../components/Forms/DatePicker';
 import { Spinner } from '../../../../components/UI/Spinner';
 import { useOrganization } from '../../../../app/providers/OrganizationProvider';
 import { useAdminCity } from '../../../../app/providers/AdminCityProvider';
@@ -185,8 +186,8 @@ export function MaintenancePage() {
                 <div className="maintenance-form__field maintenance-form__field--wide"><label htmlFor="maintenance-description">Description</label><textarea id="maintenance-description" value={description} onChange={(event) => setDescription(event.target.value)} maxLength={5000} required rows={4} /></div>
                 <div className="maintenance-form__field"><label htmlFor="maintenance-priority">Priorité</label><Select id="maintenance-priority" aria-label="Priorité" value={priority} onChange={(event) => setPriority(event.target.value as MaintenanceWorkOrderInput['priority'])} options={PRIORITIES} fullWidth /></div>
                 <div className="maintenance-form__field"><label htmlFor="maintenance-assignee">Responsable</label><Select id="maintenance-assignee" aria-label="Responsable" value={assignmentUuid} onChange={(event) => setAssignmentUuid(event.target.value)} options={assignmentOptions} placeholder="Aucun responsable" fullWidth /></div>
-                <div className="maintenance-form__field"><label htmlFor="maintenance-due-date">Date prévue</label><input id="maintenance-due-date" type="date" value={dueDate} min={localDateInputValue()} onChange={(event) => setDueDate(event.target.value)} /></div>
-                <div className="maintenance-form__field"><label htmlFor="maintenance-reported-date">Date réelle du signalement</label><input id="maintenance-reported-date" type="date" value={reportedAt} max={localDateInputValue()} onChange={(event) => setReportedAt(event.target.value)} required /><small>Vous pouvez choisir le jour où le problème a réellement été constaté. L’enregistrement technique reste daté automatiquement.</small></div>
+                <div className="maintenance-form__field"><label htmlFor="maintenance-due-date">Date prévue</label><DatePicker id="maintenance-due-date" value={dueDate} min={localDateInputValue()} onChange={(event) => setDueDate(event.target.value)} fullWidth /></div>
+                <div className="maintenance-form__field"><label htmlFor="maintenance-reported-date">Date réelle du signalement</label><DatePicker id="maintenance-reported-date" value={reportedAt} max={localDateInputValue()} onChange={(event) => setReportedAt(event.target.value)} required fullWidth /><small>Vous pouvez choisir le jour où le problème a réellement été constaté. L’enregistrement technique reste daté automatiquement.</small></div>
                 <div className="maintenance-form__actions"><Button type="submit" disabled={saving || !targetUuid}>{saving ? 'Enregistrement…' : editingUuid ? 'Enregistrer les changements' : 'Ajouter l’intervention'}</Button>
                 {editingUuid && <Button type="button" variant="outline" onClick={() => { setEditingUuid(null); setTitle(''); setDescription(''); setDueDate(''); }}>Annuler la modification</Button>}
                 </div>
@@ -206,7 +207,7 @@ export function MaintenancePage() {
         <Modal isOpen={completionTarget !== null} onClose={() => setCompletionTarget(null)} title="Terminer l’intervention" size="small" footer={<><Button variant="outline" onClick={() => setCompletionTarget(null)}>Annuler</Button><Button type="submit" form="maintenance-completion-form">Confirmer</Button></>}>
             <form id="maintenance-completion-form" className="maintenance-form" onSubmit={(event) => void completeMaintenance(event)}>
                 <p>Indiquez la date à laquelle l’intervention a réellement été terminée. L’enregistrement et votre identité restent horodatés automatiquement.</p>
-                <div className="maintenance-form__field"><label htmlFor="maintenance-completed-date">Date réelle d’achèvement</label><input id="maintenance-completed-date" type="date" min={completionTarget?.reportedAt} max={localDateInputValue()} value={completionDate} onChange={(event) => setCompletionDate(event.target.value)} required /></div>
+                <div className="maintenance-form__field"><label htmlFor="maintenance-completed-date">Date réelle d’achèvement</label><DatePicker id="maintenance-completed-date" min={completionTarget?.reportedAt} max={localDateInputValue()} value={completionDate} onChange={(event) => setCompletionDate(event.target.value)} required fullWidth /></div>
             </form>
         </Modal>
     </main>;

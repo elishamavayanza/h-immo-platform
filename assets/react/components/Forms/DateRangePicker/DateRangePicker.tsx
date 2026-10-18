@@ -1,5 +1,6 @@
 import React from 'react';
 import { useDateRangePicker, UseDateRangePickerProps } from '../../../hook-components/Forms/DateRangePicker';
+import { DatePicker } from '../DatePicker';
 
 export interface DateRangePickerProps extends UseDateRangePickerProps {
     labelStart?: string;
@@ -36,23 +37,27 @@ export function DateRangePicker({
         <div className={classes}>
             <div className="daterange__field">
                 <label className="daterange__label">{effectiveLabelStart}</label>
-                <input
-                    type="date"
-                    className="daterange__input"
+                <DatePicker
                     value={start}
-                    onChange={(e) => updateStartDate(e.target.value)}
+                    onChange={(event) => updateStartDate(event.target.value)}
                     disabled={disabled}
+                    fullWidth
+                    variant={variant}
+                    fieldSize={fieldSize}
+                    aria-label={effectiveLabelStart}
                 />
             </div>
             <span className="daterange__separator">→</span>
             <div className="daterange__field">
                 <label className="daterange__label">{effectiveLabelEnd}</label>
-                <input
-                    type="date"
-                    className="daterange__input"
+                <DatePicker
                     value={end}
-                    onChange={(e) => updateEndDate(e.target.value)}
+                    onChange={(event) => updateEndDate(event.target.value)}
                     disabled={disabled}
+                    fullWidth
+                    variant={variant}
+                    fieldSize={fieldSize}
+                    aria-label={effectiveLabelEnd}
                 />
             </div>
         </div>

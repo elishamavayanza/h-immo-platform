@@ -3,7 +3,7 @@
 // Fichier : components/Form/DateRangePicker/_DateRangePicker.scss
 // ------------------------------------------------------------
 // Rôle :
-//   Styles du composant <DateRangePicker /> (2 inputs type="date").
+//   Styles du composant <DateRangePicker /> (calendriers personnalisés).
 //   Gère : variantes (default / error / success),
 //   tailles (small / medium / large), plein largeur, désactivé,
 //   labels, séparateur, états focus internes.
@@ -78,66 +78,6 @@
 
 
 // ============================================================
-// INPUT
-// ============================================================
-// Reprend le style de base des champs du Design System.
-// ============================================================
-
-.daterange__input {
-    width: 100%;
-    font-family: $font-family-base;
-    font-weight: $font-weight-medium;
-    color: $color-text-primary;
-    background-color: $color-bg-input;
-    border: 1px solid $color-border;
-    border-radius: $radius-md;
-    outline: none;
-    appearance: none;
-    -webkit-appearance: none;
-    color-scheme: dark;
-    transition:
-        background-color $transition-fast,
-        border-color $transition-fast,
-        box-shadow $transition-fast,
-        color $transition-fast;
-
-    &::-webkit-calendar-picker-indicator {
-        cursor: pointer;
-        opacity: 0.55;
-        padding: 0;
-        margin-left: $spacing-2;
-        transition: opacity $transition-fast;
-
-        &:hover {
-            opacity: 1;
-        }
-    }
-
-    &:hover:not(:disabled) {
-        background-color: $color-bg-card-hover;
-        border-color: $color-border-light;
-    }
-
-    &:focus,
-    &:focus-visible {
-        border-color: $color-primary;
-        box-shadow: $shadow-focus;
-    }
-
-    &:disabled {
-        color: $color-text-disabled;
-        background-color: $color-bg-app;
-        cursor: not-allowed;
-        opacity: 0.7;
-
-        &::-webkit-calendar-picker-indicator {
-            cursor: not-allowed;
-            opacity: 0.3;
-        }
-    }
-}
-
-
 // ============================================================
 // SÉPARATEUR
 // ============================================================
@@ -157,34 +97,12 @@
 // ============================================================
 
 .daterange--small {
-    .daterange__input {
-        padding: $spacing-2 $spacing-3;
-        font-size: $font-size-sm;
-        min-height: 32px;
-        border-radius: $radius-sm;
-    }
-
     .daterange__label {
         font-size: 0.7rem;
     }
 }
 
-.daterange--medium {
-    .daterange__input {
-        padding: $spacing-3 $spacing-4;
-        font-size: $font-size-md;
-        min-height: 40px;
-    }
-}
-
 .daterange--large {
-    .daterange__input {
-        padding: $spacing-4 $spacing-5;
-        font-size: $font-size-lg;
-        min-height: 48px;
-        border-radius: $radius-lg;
-    }
-
     .daterange__label {
         font-size: $font-size-sm;
     }
@@ -197,21 +115,6 @@
 
 // ----- Error -----
 .daterange--error {
-    .daterange__input {
-        border-color: $color-danger;
-
-        &:hover:not(:disabled) {
-            border-color: $color-danger;
-            background-color: $color-danger-light;
-        }
-
-        &:focus,
-        &:focus-visible {
-            border-color: $color-danger;
-            box-shadow: 0 0 0 3px var(--color-danger-ring, rgba(228, 154, 165, 0.30));
-        }
-    }
-
     .daterange__label {
         color: $color-danger;
     }
@@ -219,21 +122,6 @@
 
 // ----- Success -----
 .daterange--success {
-    .daterange__input {
-        border-color: $color-success;
-
-        &:hover:not(:disabled) {
-            border-color: $color-success;
-            background-color: $color-success-light;
-        }
-
-        &:focus,
-        &:focus-visible {
-            border-color: $color-success;
-            box-shadow: 0 0 0 3px var(--color-success-ring, rgba(131, 203, 168, 0.30));
-        }
-    }
-
     .daterange__label {
         color: $color-success;
     }
@@ -262,7 +150,6 @@
 // ============================================================
 
 @media (prefers-reduced-motion: reduce) {
-    .daterange__input,
     .daterange__separator {
         transition: none;
     }

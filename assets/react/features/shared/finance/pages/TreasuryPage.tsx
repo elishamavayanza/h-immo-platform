@@ -5,6 +5,7 @@ import { Button } from '../../../../components/UI/Button';
 import { EmptyState } from '../../../../components/Data/EmptyState';
 import { Spinner } from '../../../../components/UI/Spinner';
 import { SearchInput } from '../../../../components/Forms/SearchInput';
+import { DatePicker } from '../../../../components/Forms/DatePicker';
 import { Select } from '../../../../components/Forms/Select';
 import { OrganizationSummary } from '../../components/OrganizationSummary';
 import { DataTable } from '../../../../components/Data/DataTable';
@@ -138,7 +139,7 @@ export function TreasuryPage() {
             {cashError && <p role="alert">{cashError}</p>}
             <form className="treasury-cash-note__form" onSubmit={(event) => void saveOpening(event)}>
                 <label>Solde au démarrage<input aria-label="Montant du solde d’ouverture" inputMode="decimal" required pattern="\d{1,10}(\.\d{1,2})?" value={openingAmount} onChange={(event) => setOpeningAmount(event.target.value)} placeholder="0,00" /></label>
-                <label>Date du solde d’ouverture<input aria-label="Date du solde d’ouverture" type="date" required max={localDateInputValue()} value={openingDate} onChange={(event) => setOpeningDate(event.target.value)} /></label>
+                <label>Date du solde d’ouverture<DatePicker aria-label="Date du solde d’ouverture" required max={localDateInputValue()} value={openingDate} onChange={(event) => setOpeningDate(event.target.value)} fullWidth /></label>
                 <Button type="submit" disabled={cashSaving || cashLoading || !cashCityUuid}>{cashSaving ? 'Enregistrement…' : cashSnapshot?.openingBalance === null ? 'Initialiser la caisse' : 'Mettre à jour le solde'}</Button>
             </form>
             <p>Flux en espèces sur la période sélectionnée : {amountsLabel(totals.cash)}. Les devises restent séparées.</p>
@@ -148,8 +149,8 @@ export function TreasuryPage() {
             <div className="organization-table-toolbar treasury-toolbar">
                 <div><h2>Mouvements financiers</h2><p>{data?.note ?? 'Les contre-écritures sont incluses avec leur signe. Chaque devise est totalisée séparément.'}</p></div>
                 <div className="treasury-filters">
-                    <label>Date de début <input type="date" value={from} max={to} onChange={(event) => setFrom(event.target.value)} /></label>
-                    <label>Date de fin <input type="date" value={to} min={from} onChange={(event) => setTo(event.target.value)} /></label>
+                    <label>Date de début <DatePicker value={from} max={to} onChange={(event) => setFrom(event.target.value)} fullWidth /></label>
+                    <label>Date de fin <DatePicker value={to} min={from} onChange={(event) => setTo(event.target.value)} fullWidth /></label>
                     {organizationRole === 'admin_ville' && cities.length > 1 && <Select aria-label="Ville" value={cityUuid ?? ''} onChange={(event) => selectCity(event.target.value)} options={cities.map((city) => ({ value: city.id, label: city.name }))} />}
                     <SearchInput value={search} onSearch={setSearch} placeholder="Rechercher un mouvement…" fullWidth />
                     <Select aria-label="Type de flux" value={direction} onChange={(event) => setDirection(event.target.value as 'all' | FinancialMovementKind)} options={[{ value: 'all', label: 'Entrées et sorties' }, { value: 'income', label: 'Entrées' }, { value: 'expense', label: 'Sorties' }]} />

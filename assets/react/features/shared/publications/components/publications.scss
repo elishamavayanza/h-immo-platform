@@ -53,7 +53,7 @@
 .publication-admin__roles { display: flex; flex-wrap: wrap; gap: 10px 18px; border: 1px solid $color-border; border-radius: 10px; }
 .publication-admin__roles label { display: inline-flex; align-items: center; gap: 6px; font-weight: 400; }
 .publication-admin__actions, .publication-admin__item-actions { display: flex; flex-wrap: wrap; gap: 8px; }
-.publication-admin button { min-height: 40px; padding: 8px 14px; border: 1px solid $color-primary; border-radius: 9px; background: $color-primary; color: #fff; font: inherit; cursor: pointer; }
+.publication-admin button:not(.select-field__trigger):not(.datepicker-field__trigger):not(.datepicker-field__clear):not(.calendar__nav):not(.calendar__day):not(.calendar__today) { min-height: 40px; padding: 8px 14px; border: 1px solid $color-primary; border-radius: 9px; background: $color-primary; color: #fff; font: inherit; cursor: pointer; }
 .publication-admin button.is-secondary { background: transparent; color: $color-primary; }
 .publication-admin button:disabled { opacity: .6; cursor: wait; }
 .publication-admin__preview { position: sticky; top: 12px; }
