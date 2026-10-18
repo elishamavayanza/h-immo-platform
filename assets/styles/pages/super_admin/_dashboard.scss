@@ -234,8 +234,8 @@
     min-width: 0;
     height: 100%;
 
-    .card__header { padding: 0 0 14px; }
-    .card__body { padding: 14px 0 0; }
+    .card__header { padding: $spacing-4 $spacing-5 14px; }
+    .card__body { padding: 14px $spacing-5 $spacing-4; }
 
     .sa-card__head {
         @include flex-between;
