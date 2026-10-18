@@ -303,7 +303,7 @@ export function UnitesTab({ units, buildings, role, isLoading, error, note, onRe
         <Card className="organization-table-card" padding="medium">
             <div className="organization-table-toolbar">
                 <div><h2>Unités locatives</h2><p>{note ?? 'Chaque unité est rattachée à un bâtiment et peut être publiée sur la vitrine.'}</p></div>
-                <div className="organization-filters">
+                <div className="organization-filters patrimoine-unit-filters">
                     <SearchInput value={search} onSearch={setSearch} placeholder="Rechercher une unité…" fullWidth />
                     <Select aria-label="Filtrer par bâtiment" value={selectedBuildingId ?? 'all'} onChange={(event) => onBuildingFilter(event.target.value === 'all' ? null : event.target.value)} options={[{ value: 'all', label: 'Tous les bâtiments' }, ...buildingOptions]} />
                     {!readOnly && canDo(role, 'create_unit') && <Button onClick={openCreate} disabled={buildings.length === 0}>＋ Ajouter une unité</Button>}
@@ -389,7 +389,7 @@ export function UnitesTab({ units, buildings, role, isLoading, error, note, onRe
                 {photoTarget && <PhotoGallery entityUuid={photoTarget.id} entityType="unit" mode="multiple" onChange={() => {}} />}
             </Modal>
             {accessBuildingId && buildingById.get(accessBuildingId)?.parcelId && <AccessPointsManager open buildingId={accessBuildingId} parcelId={buildingById.get(accessBuildingId)!.parcelId} buildingName={buildingById.get(accessBuildingId)?.name ?? 'Bâtiment'} units={units} canManage={!readOnly && canDo(role, 'update_unit')} onClose={() => setAccessBuildingId(null)} />}
-            {levelBuildingId && <Modal isOpen onClose={() => { setLevelBuildingId(null); setLevelEdit(null); }} title={`Niveaux · ${buildingById.get(levelBuildingId)?.name ?? 'Bâtiment'}`} size="medium" footer={<Button variant="outline" onClick={() => { setLevelBuildingId(null); setLevelEdit(null); }}>Fermer</Button>}>
+            {levelBuildingId && <Modal isOpen onClose={() => { setLevelBuildingId(null); setLevelEdit(null); }} title={`Niveaux · ${buildingById.get(levelBuildingId)?.name ?? 'Bâtiment'}`} size="large" footer={<Button variant="outline" onClick={() => { setLevelBuildingId(null); setLevelEdit(null); }}>Fermer</Button>}>
                 <section className="access-manager">
                     <div className="access-manager__list"><h3>Niveaux déclarés</h3>{buildingLevels.length === 0 ? <p>Aucun niveau déclaré. Vous pouvez conserver un libellé directement sur chaque unité.</p> : buildingLevels.map((level) => <article className="access-manager__item" key={level.id}><div><strong>{level.displayOrder} · {level.label}</strong><small>{level.reference}{level.description ? ` · ${level.description}` : ''}</small></div><Button variant="outline" onClick={() => editBuildingLevel(level)}>Modifier</Button></article>)}</div>
                     <form className="access-manager__form" onSubmit={(event) => void saveBuildingLevel(event)}>

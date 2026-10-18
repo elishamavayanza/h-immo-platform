@@ -19,6 +19,8 @@
 .patrimoine-breadcrumb button { border: 0; padding: .2rem; background: transparent; color: $color-primary; font: inherit; cursor: pointer; }
 .patrimoine-breadcrumb button:hover { text-decoration: underline; }
 .patrimoine-context { display: flex; justify-content: space-between; align-items: center; gap: 1rem; margin: 0 0 1rem; padding: .75rem 1rem; border: 1px solid $color-border; border-radius: .75rem; color: $color-text-primary; background: $color-bg-card-hover; }
+.patrimoine-context__actions { display: flex; flex: 0 1 auto; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: .5rem; min-width: 0; }
+.patrimoine-context__actions > * { min-width: 0; }
 .patrimoine-map-action { display: flex; justify-content: space-between; align-items: center; gap: 1rem; margin: 0 0 1rem; padding: .8rem 1rem; border: 1px solid $color-border; border-radius: .75rem; background: $color-bg-card; }
 .patrimoine-map-action > div { display: grid; gap: .2rem; }
 .patrimoine-map-action span { color: $color-text-muted; font-size: .85rem; }
@@ -67,6 +69,8 @@
 .patrimoine-related a:hover { text-decoration: underline; }
 .patrimoine-related a:focus-visible { outline: 2px solid currentColor; outline-offset: 3px; border-radius: 2px; }
 .organization-table-card { container-type: inline-size; min-width: 0; }
+.organization-table-card .patrimoine-unit-filters { grid-template-columns: minmax(190px, 1fr) minmax(170px, 220px) max-content; }
+.organization-table-card .patrimoine-unit-filters > * { min-width: 0; }
 .organization-table-card .card__body,
 .organization-table-card .datatable,
 .organization-table-card .datatable__wrapper { min-width: 0; max-width: 100%; }
@@ -85,6 +89,10 @@
   .organization-filters { grid-template-columns: minmax(0, 1fr); }
   .organization-filters > :first-child,
   .organization-filters > :last-child { grid-column: auto; }
+}
+@container (max-width: 900px) {
+  .patrimoine-context { align-items: flex-start; flex-direction: column; }
+  .patrimoine-context__actions { justify-content: flex-start; width: 100%; }
 }
 /* Le contenu utile est plus étroit que la fenêtre quand le menu latéral reste ouvert. */
 @media (max-width: 1200px) {
