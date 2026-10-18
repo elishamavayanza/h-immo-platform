@@ -18,10 +18,12 @@
 // l'Organization ACTIVE (jamais un rôle global de compte).
 //
 // Règle d'affichage (acceptance) :
-//   - PATRON           : 8 entrées (Personnel fusionné dans Administration :
+//   - PATRON           : 8 entrées (+ Vitrine si le SUPER_ADMIN l'autorise ;
+//                        Personnel fusionné dans Administration :
 //                        « Équipe » et « Personnel » désignent la même
 //                        réalité — une seule liste, pas d'onglets)
-//   - ADMIN_IMMOBILIER : 8 entrées (sans Administration, AVEC Personnel :
+//   - ADMIN_IMMOBILIER : 8 entrées (+ Vitrine si le SUPER_ADMIN l'autorise ;
+//                        sans Administration, AVEC Personnel :
 //                        le backend lui accorde VIEW/CREATE/UPDATE/DELETE
 //                        sur Worker et WorkerAssignment)
 //   - ADMIN_VILLE      : 7 entrées (sans Administration ; Opérations expose
@@ -288,7 +290,7 @@ export const PLATFORM_SIDEBAR: SidebarMenu = [
  *      organisation : on n'utilise jamais un rôle « global ».
  *   3. `organizationRole` absent (plus d'appartenance valide)  →  menu vide.
  */
-export function resolveSidebar(platformRole: PlatformRole | null, organizationRole: OrganizationRole | null): SidebarMenu {
+export function resolveSidebar(platformRole: PlatformRole | null, organizationRole: OrganizationRole | null, showcaseEnabled = false): SidebarMenu {
     if (platformRole === 'super_admin') {
         return PLATFORM_SIDEBAR;
     }
@@ -297,7 +299,8 @@ export function resolveSidebar(platformRole: PlatformRole | null, organizationRo
         return [];
     }
 
-    return ORGANIZATION_SIDEBAR[organizationRole] ?? [];
+    const menu = ORGANIZATION_SIDEBAR[organizationRole] ?? [];
+    return showcaseEnabled ? menu : menu.filter(item => item.id !== 'vitrine');
 }
 
 /**

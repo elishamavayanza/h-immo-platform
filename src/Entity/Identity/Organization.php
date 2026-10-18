@@ -111,6 +111,10 @@ class Organization extends SoftDeletableEntity
     #[ORM\Column(type: Types::BOOLEAN, options: ['default' => true])]
     private bool $isPubliclyListed = true;
 
+    /** Fonctionnalité vitrine autorisée par le SUPER_ADMIN pour ce tenant. */
+    #[ORM\Column(type: Types::BOOLEAN, options: ['default' => false])]
+    private bool $showcaseEnabled = false;
+
     /**
      * État actuel de l'organisation dans la plateforme.
      */
@@ -260,6 +264,18 @@ class Organization extends SoftDeletableEntity
     public function isPubliclyListed(): bool
     {
         return $this->isPubliclyListed;
+    }
+
+    public function isShowcaseEnabled(): bool
+    {
+        return $this->showcaseEnabled;
+    }
+
+    public function setShowcaseEnabled(bool $showcaseEnabled): static
+    {
+        $this->showcaseEnabled = $showcaseEnabled;
+
+        return $this;
     }
 
     public function setIsPubliclyListed(bool $isPubliclyListed): static

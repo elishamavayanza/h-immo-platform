@@ -725,6 +725,10 @@ final class SecurityService implements SecurityServiceInterface
     public function checkUnitPublishAccess(Unit $unit, SecurityAction $action): void
     {
         $this->checkUnitAccess($unit, $action);
+
+        if (!$unit->getBuilding()->getParcel()->getCity()->getOrganization()->isShowcaseEnabled()) {
+            throw \App\Exception\AccessDeniedException::create('La vitrine n’est pas activée pour cette organisation.');
+        }
     }
 
     public function canAccessUnit(Unit $unit, SecurityAction $action = SecurityAction::VIEW): bool

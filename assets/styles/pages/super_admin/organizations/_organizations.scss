@@ -79,6 +79,32 @@
     }
 }
 
+.sa-management-form__toggle {
+    display: flex;
+    align-items: flex-start;
+    gap: $spacing-3;
+    padding: $spacing-4;
+    border: 1px solid $color-border;
+    border-radius: $radius-md;
+    background: $color-bg-card;
+    cursor: pointer;
+}
+
+.sa-management-form__toggle input {
+    margin-top: 3px;
+    accent-color: $color-primary;
+}
+
+.sa-management-form__toggle span {
+    display: grid;
+    gap: $spacing-1;
+}
+
+.sa-management-form__toggle small {
+    color: $color-text-muted;
+    font-size: $font-size-xs;
+}
+
 // Sélecteur de logo (étape du wizard et du modal d'édition). L'aperçu garde
 // les proportions de l'ImageEditor (recadrage carré) : 96px d'affichage.
 .sa-logo-picker {

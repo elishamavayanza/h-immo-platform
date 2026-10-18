@@ -123,7 +123,7 @@ final readonly class MediaService
      */
     public function replaceOrganizationLogo(Organization $organization, UploadedFile $file): string
     {
-        $this->securityService->checkOrganizationAccess($organization, SecurityAction::MANAGE_ORGANIZATION_LOGO);
+        $this->checkOrganizationLogoAccess($organization);
 
         $oldPath = $organization->getLogo();
 
@@ -141,7 +141,7 @@ final readonly class MediaService
 
     public function removeOrganizationLogo(Organization $organization): bool
     {
-        $this->securityService->checkOrganizationAccess($organization, SecurityAction::MANAGE_ORGANIZATION_LOGO);
+        $this->checkOrganizationLogoAccess($organization);
 
         $oldPath = $organization->getLogo();
 
@@ -153,6 +153,25 @@ final readonly class MediaService
         $this->entityManager->flush();
 
         return $this->fileUploadService->delete($oldPath);
+    }
+
+    /**
+     * Le SUPER_ADMIN gère l'identité des tenants depuis le plateau plateforme,
+     * sans appartenir à leur périmètre métier. Les rôles d'organisation
+     * restent limités à leur propre organisation.
+     */
+    private function checkOrganizationLogoAccess(Organization $organization): void
+    {
+        if ($this->securityService->isSuperAdmin()) {
+            $this->securityService->requirePlatformRole();
+
+            return;
+        }
+
+        $this->securityService->checkOrganizationAccess(
+            $organization,
+            SecurityAction::MANAGE_ORGANIZATION_LOGO
+        );
     }
 
     /*

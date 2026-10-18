@@ -107,8 +107,8 @@ console.log('\n=== Structure du menu par rôle (menu plat) ===\n');
 
 // Menu attendu, ordre compris. « Tableau de bord » est toujours la première
 // entrée (écran de synthèse demandé par le cahier des charges).
-const EXPECTED_PATRON = ['dashboard', 'rapports', 'patrimoine', 'location-locataires', 'location-loyers', 'depenses', 'vitrine', 'maintenance', 'administration'];
-const EXPECTED_ADMIN_IMMOBILIER = ['dashboard', 'rapports', 'patrimoine', 'location-locataires', 'location-loyers', 'depenses', 'vitrine', 'personnel', 'maintenance', 'administration'];
+const EXPECTED_PATRON = ['dashboard', 'rapports', 'patrimoine', 'location-locataires', 'location-loyers', 'depenses', 'maintenance', 'administration'];
+const EXPECTED_ADMIN_IMMOBILIER = ['dashboard', 'rapports', 'patrimoine', 'location-locataires', 'location-loyers', 'depenses', 'personnel', 'maintenance', 'administration'];
 const EXPECTED_ADMIN_VILLE = ['dashboard', 'rapports', 'patrimoine', 'location-locataires', 'location-loyers', 'depenses', 'operations', 'maintenance'];
 
 check(
@@ -132,6 +132,10 @@ check(
     idsOf(PLATFORM).join(', ')
 );
 check('Sans rôle : menu vide', resolveSidebar(null, null).length === 0);
+check('Vitrine absente par défaut pour le PATRON', !hasTopLevelItem(PATRON, 'vitrine'));
+check('Vitrine affichée au PATRON autorisé par la plateforme', hasTopLevelItem(resolveSidebar(null, 'patron' as OrganizationRole, true), 'vitrine'));
+check('Vitrine affichée à ADMIN_IMMOBILIER autorisé par la plateforme', hasTopLevelItem(resolveSidebar(null, 'admin_immobilier' as OrganizationRole, true), 'vitrine'));
+check('ADMIN_VILLE ne reçoit pas la vitrine, même si l’organisation est autorisée', !hasTopLevelItem(resolveSidebar(null, 'admin_ville' as OrganizationRole, true), 'vitrine'));
 
 console.log('\n=== Permissions de création des Admin ville ===\n');
 check('ADMIN_IMMOBILIER peut créer un ADMIN_VILLE', canDo('admin_immobilier', 'create_city_admin'));

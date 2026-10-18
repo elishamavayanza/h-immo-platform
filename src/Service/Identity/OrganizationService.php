@@ -157,6 +157,7 @@ final readonly class OrganizationService
                 code: $organization->getCode(),
                 name: $organization->getName(),
                 role: $role,
+                showcaseEnabled: $organization->isShowcaseEnabled(),
             ))
             ->setFlushDescription('Rôle récupéré pour l\'organisation sélectionnée.')
             ->setStatus(200)
@@ -256,6 +257,7 @@ final readonly class OrganizationService
             newValues: [
                 'name' => $request->name,
                 'code' => $request->code,
+                'showcaseEnabled' => $organization->isShowcaseEnabled(),
                 'patronEmail' => $request->patronEmail,
                 'emailSent' => $emailSent,
             ]
@@ -301,6 +303,12 @@ final readonly class OrganizationService
 
         $this->authorizeOrganizationOperation($organization, SecurityAction::UPDATE);
 
+        if ($request->showcaseEnabled !== null) {
+            // L'activation commerciale d'une fonctionnalité appartient à la
+            // plateforme, même si le PATRON peut modifier les autres champs.
+            $this->security->requirePlatformRole();
+        }
+
         $violations = $this->validator->validate($request, groups: ['update']);
         if (count($violations) > 0) {
             return $feedback
@@ -319,6 +327,7 @@ final readonly class OrganizationService
             'city' => $organization->getCity(),
             'country' => $organization->getCountry(),
             'currency' => $organization->getCurrency()->value,
+            'showcaseEnabled' => $organization->isShowcaseEnabled(),
         ];
         $this->mapper->copyToEntity($request, $organization);
         $this->auditLogService->log(
@@ -337,6 +346,7 @@ final readonly class OrganizationService
                 'city' => $organization->getCity(),
                 'country' => $organization->getCountry(),
                 'currency' => $organization->getCurrency()->value,
+                'showcaseEnabled' => $organization->isShowcaseEnabled(),
             ],
             flush: false,
         );
@@ -538,6 +548,10 @@ final readonly class OrganizationService
         }
 
         $this->security->checkOrganizationAccess($organization, SecurityAction::MANAGE_ORGANIZATION);
+
+        if (!$organization->isShowcaseEnabled()) {
+            throw new \App\Exception\AccessDeniedException('La vitrine n’est pas activée pour cette organisation.');
+        }
 
         $violations = $this->validator->validate($request);
 

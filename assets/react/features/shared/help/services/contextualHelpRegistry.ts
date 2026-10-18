@@ -253,6 +253,7 @@ const content: Record<string, Omit<PageHelp, 'path' | 'roles'>> = {
         title: 'Vitrine',
         description: 'Gérez les annonces immobilières et les réglages publics disponibles pour votre rôle.',
         questions: [
+            { id: 'showcase-entitlement', question: 'Pourquoi le menu Vitrine est-il absent ?', answer: 'Le SUPER_ADMIN doit d’abord autoriser la fonctionnalité Vitrine dans la fiche de votre organisation. Après activation, le menu apparaît pour les rôles PATRON et ADMIN_IMMOBILIER ; l’ADMIN_VILLE ne dispose pas de ce menu.' },
             { id: 'showcase-listings', question: 'Comment retrouver une annonce ?', answer: 'Recherchez par titre ou utilisez le filtre de statut. Les annonces publiées et les brouillons sont identifiés séparément.' },
             { id: 'showcase-edit', question: 'Comment publier ou modifier une annonce ?', answer: 'Ouvrez l’action de modification de l’annonce, complétez les informations demandées puis enregistrez. La publication d’une unité occupée par un bail actif peut être refusée par la règle métier.' },
             { id: 'showcase-photos', question: 'Comment gérer les photos ?', answer: 'Ouvrez la gestion des photos depuis l’annonce concernée, ajoutez ou retirez les images proposées puis enregistrez les changements.' },
@@ -314,7 +315,7 @@ export function buildContextualHelpInventory(): PageHelp[] {
     const inventory: PageHelp[] = [];
     for (const route of buildAppRoutes()) {
         const roles = roleMenus.flatMap(({ platformRole, organizationRole }) =>
-            resolveSidebar(platformRole, organizationRole).some((item) => item.path === route.path || (item.path && route.path.startsWith(`${item.path}/`)))
+            resolveSidebar(platformRole, organizationRole, true).some((item) => item.path === route.path || (item.path && route.path.startsWith(`${item.path}/`)))
                 ? [platformRole ?? organizationRole]
                 : []
         ).filter((role): role is Exclude<HelpRole, null> => role !== null);

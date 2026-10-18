@@ -49,7 +49,7 @@ export interface AppRouteGuardProps {
 }
 
 export function AppRouteGuard({ children }: AppRouteGuardProps) {
-    const { platformRole, organizationRole } = useOrganization();
+    const { platformRole, organizationRole, currentOrganization } = useOrganization();
     const location = useLocation();
     const navigate = useNavigate();
     const landingPath = defaultPathFor(platformRole, organizationRole);
@@ -75,7 +75,7 @@ export function AppRouteGuard({ children }: AppRouteGuardProps) {
     }
 
     // 2. Feuille du rôle courant.
-    if (isPathInMenu(resolveSidebar(platformRole, organizationRole), location.pathname)) {
+    if (isPathInMenu(resolveSidebar(platformRole, organizationRole, currentOrganization?.showcaseEnabled === true), location.pathname)) {
         return <>{routeContent}</>;
     }
 

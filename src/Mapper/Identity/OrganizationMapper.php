@@ -62,6 +62,9 @@ final class OrganizationMapper
         if ($includeStatus && $dto->status !== null) {
             $organization->setStatus($dto->status);
         }
+        if ($dto->showcaseEnabled !== null) {
+            $organization->setShowcaseEnabled($dto->showcaseEnabled);
+        }
 
         return $organization;
     }

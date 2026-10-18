@@ -222,7 +222,7 @@ export function MainLayout() {
         return <Navigate to="/login" replace />;
     }
 
-    const menu = resolveSidebar(platformRole, organizationRole);
+    const menu = resolveSidebar(platformRole, organizationRole, currentOrganization?.showcaseEnabled === true);
     const activeIds = resolveActiveMenu(menu, location.pathname);
     const groups = toSidebarGroups(menu, activeIds);
 

@@ -16,6 +16,7 @@ export interface OrganizationRow {
     status: OrganizationStatus;
     createdAt: string;
     suspensionEndsAt?: string | null;
+    showcaseEnabled: boolean;
 }
 
 export type OrganizationStatusFilter = OrganizationStatus | 'all';
@@ -39,6 +40,7 @@ export interface OrganizationApiResponse {
     createdAt: string;
     updatedAt: string;
     suspensionEndsAt?: string | null;
+    showcaseEnabled: boolean;
 }
 
 /**
@@ -88,6 +90,7 @@ export type OrganizationUpdatePayload = Partial<{
     address: string;
     country: string;
     status: OrganizationStatus;
+    showcaseEnabled: boolean;
     /** Nouveau logo retaillé par l'ImageEditor : envoyé via l'endpoint média du tenant après le PUT. */
     logoFile?: File | null;
     /** Retirer le logo actuel du tenant (DELETE sur l'endpoint média). */

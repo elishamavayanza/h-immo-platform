@@ -107,6 +107,7 @@ final class SessionUserResponseFactory
                 code: $organization->getCode(),
                 name: $organization->getName(),
                 role: $membership->getRole(),
+                showcaseEnabled: $organization->isShowcaseEnabled(),
             );
         }
 

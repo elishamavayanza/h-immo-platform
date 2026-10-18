@@ -122,6 +122,7 @@ function toRow(response: OrganizationApiResponse): OrganizationRow {
         status: response.status,
         createdAt: response.createdAt,
         suspensionEndsAt: response.suspensionEndsAt ?? null,
+        showcaseEnabled: response.showcaseEnabled,
     };
 }
 

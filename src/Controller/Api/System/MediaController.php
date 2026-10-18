@@ -170,7 +170,7 @@ final class MediaController extends AbstractController
     #[OA\Post(
         path: '/api/v1/media/organizations/{uuid}/logo',
         summary: 'Uploader le logo d\'une organisation',
-        description: 'Remplace le logo existant et l\'enregistre sur l\'organisation. Réservé au Patron et à l\'Administrateur immobilier de cette organisation. Types acceptés : JPEG, PNG, WebP, GIF. Max 10 Mo.',
+        description: 'Remplace le logo de référence de l\'organisation. Accessible au SUPER_ADMIN depuis la plateforme, ainsi qu\'au Patron et à l\'Administrateur immobilier de cette organisation. Types acceptés : JPEG, PNG, WebP, GIF. Max 10 Mo.',
         parameters: [
             new OA\Parameter(name: 'uuid', in: 'path', required: true, schema: new OA\Schema(type: 'string', format: 'uuid')),
         ],

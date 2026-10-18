@@ -1,5 +1,5 @@
 {
-  "version": "1.3.3",
+  "version": "1.3.4",
   "updatedAt": "2026-10-18",
   "roles": {
     "super_admin": {
@@ -234,7 +234,7 @@
           ],
           "fields": "Les champs de présentation sont ceux du formulaire réel ; ne publiez pas de coordonnées internes.",
           "result": "Vous contrôlez la présentation publique et repérez les informations à corriger.",
-          "limits": "Le PATRON n’effectue pas les modifications opérationnelles de la vitrine.",
+          "limits": "La Vitrine est affichée uniquement si le SUPER_ADMIN a autorisé cette fonctionnalité pour votre organisation. Si elle est absente du menu, demandez cette activation à la plateforme. Le PATRON n’effectue pas les modifications opérationnelles de la vitrine.",
           "id": "vitrine"
         },
         {
@@ -394,7 +394,7 @@
           ],
           "fields": "Champs de présentation visibles dans la page.",
           "result": "La supervision permet de contrôler l’exactitude des informations publiques.",
-          "limits": "La publication et les modifications d’unités sont des opérations locales réservées à l’ADMIN_VILLE.",
+          "limits": "La Vitrine est affichée uniquement si le SUPER_ADMIN a autorisé cette fonctionnalité pour votre organisation. Si elle est absente du menu, demandez cette activation à la plateforme. La publication et les modifications d’unités sont des opérations locales réservées à l’ADMIN_VILLE.",
           "id": "vitrine"
         },
         {

@@ -241,6 +241,7 @@ export interface SessionOrganizationMembership {
     code: string;
     name: string;
     role: OrganizationRole;
+    showcaseEnabled: boolean;
 }
 
 /** Ville assignée au compte (pertinent pour un rôle `admin_ville`). */

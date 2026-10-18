@@ -68,7 +68,7 @@ export function UserManualSection() {
         return () => { active = false; };
     }, [contextKey, contextLoading]);
 
-    const menu = useMemo(() => resolveSidebar(platformRole, organizationRole), [platformRole, organizationRole]);
+    const menu = useMemo(() => resolveSidebar(platformRole, organizationRole, currentOrganization?.showcaseEnabled === true), [platformRole, organizationRole, currentOrganization?.showcaseEnabled]);
     const articles = manual?.modules ?? [];
     const currentId = searchParams.get('article');
     const selectedArticle = articles.find((article) => manualArticleId(article) === currentId) ?? articles[0] ?? null;

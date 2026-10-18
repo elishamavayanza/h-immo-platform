@@ -88,7 +88,7 @@ export function buildAppRoutes(): AppRoute[] {
 
     for (const [platformRole, organizationRole] of ROLE_COMBINATIONS) {
         const leaves: AppRoute[] = [];
-        collectLeaves(resolveSidebar(platformRole, organizationRole), leaves);
+        collectLeaves(resolveSidebar(platformRole, organizationRole, true), leaves);
 
         for (const leaf of leaves) {
             // Première venue gagne : le libellé est celui du rôle le plus

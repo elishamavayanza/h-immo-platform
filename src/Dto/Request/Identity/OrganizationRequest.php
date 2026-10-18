@@ -105,6 +105,10 @@ final readonly class OrganizationRequest
         #[Assert\IsNull(message: 'Le statut se modifie via les actions dédiées de suspension ou de réactivation.', groups: ['update'])]
         public ?OrganizationStatus $status = null,
 
+        #[OA\Property(description: 'Autorisation de la fonctionnalité vitrine, réservée au SUPER_ADMIN', example: false)]
+        #[Assert\Type('bool', groups: ['create', 'update'])]
+        public ?bool $showcaseEnabled = null,
+
         // --- Champs pour la création du PATRON (utilisateur responsable) ---
         #[OA\Property(
             description: 'Email du PATRON (sera son identifiant de connexion)',

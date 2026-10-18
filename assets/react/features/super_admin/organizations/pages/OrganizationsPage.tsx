@@ -26,8 +26,8 @@ import '../../../../../styles/pages/super_admin/organizations/_organizations.scs
 
 const STATUS_LABEL: Record<OrganizationStatus, string> = { active: 'Active', suspended: 'Suspendue', inactive: 'Inactive' };
 const STATUS_VARIANT: Record<OrganizationStatus, 'success' | 'error' | 'secondary'> = { active: 'success', suspended: 'error', inactive: 'secondary' };
-type OrganizationForm = { name: string; code: string; email: string; phone: string; address: string; city: string };
-const EMPTY_FORM: OrganizationForm = { name: '', code: '', email: '', phone: '', address: '', city: '' };
+type OrganizationForm = { name: string; code: string; email: string; phone: string; address: string; city: string; showcaseEnabled: boolean };
+const EMPTY_FORM: OrganizationForm = { name: '', code: '', email: '', phone: '', address: '', city: '', showcaseEnabled: false };
 const toLocalDateTime = (date: Date) => new Date(date.getTime() - date.getTimezoneOffset() * 60_000).toISOString().slice(0, 16);
 
 /**
@@ -103,6 +103,7 @@ const [isWizardOpen, setWizardOpen] = useState(false);
         { key: 'name', title: 'Organisation', sortable: true, render: (organization) => <div className="sa-management-identity"><OrganizationLogoCell organization={organization} /><span><strong>{organization.name}</strong><small>{organization.code}</small></span></div> },
         { key: 'city', title: 'Ville du siège', sortable: true },
         { key: 'email', title: 'Contact', sortable: true },
+        { key: 'showcaseEnabled', title: 'Vitrine', render: (organization) => <Badge variant={organization.showcaseEnabled ? 'success' : 'secondary'}>{organization.showcaseEnabled ? 'Autorisée' : 'Non autorisée'}</Badge> },
         { key: 'status', title: 'Statut', sortable: true, render: (organization) => <span><Badge variant={STATUS_VARIANT[organization.status]}>{STATUS_LABEL[organization.status]}</Badge>{organization.status === 'suspended' && organization.suspensionEndsAt && <small className="sa-management-status-detail">Jusqu’au {formatUserDate(organization.suspensionEndsAt, true)}</small>}</span> },
         { key: 'createdAt', title: 'Créée le', sortable: true, render: (organization) => formatUserDate(organization.createdAt) },
         { key: 'actions', title: 'Actions', render: (organization) => <RowActions label={organization.name} isActive={organization.status === 'active'} onEdit={() => openEdit(organization)} onToggleActive={() => { if (organization.status === 'active') openSuspend(organization); else void reactivateOrganization(organization); }} /> },
@@ -127,6 +128,7 @@ const [isWizardOpen, setWizardOpen] = useState(false);
                 phone: form.phone.trim(),
                 address: form.address.trim(),
                 city: form.city,
+                showcaseEnabled: form.showcaseEnabled,
                 status: editingOrganization.status,
                 logoFile: editLogoChange?.kind === 'new' ? editLogoChange.file : undefined,
                 removeLogo: editLogoChange?.kind === 'removed' ? true : undefined,
@@ -138,6 +140,7 @@ const [isWizardOpen, setWizardOpen] = useState(false);
                 phone: editingOrganization.phone.trim(),
                 address: editingOrganization.address.trim(),
                 city: editingOrganization.city.trim(),
+                showcaseEnabled: editingOrganization.showcaseEnabled,
                 status: editingOrganization.status,
                 logoFile: undefined,
                 removeLogo: undefined,
@@ -211,6 +214,7 @@ const [isWizardOpen, setWizardOpen] = useState(false);
                     <FormField label="Téléphone" htmlFor="organization-phone" required><Input id="organization-phone" placeholder="+243 000 000 000" value={form.phone} onChange={(event) => change('phone', event.target.value)} maxLength={30} required fullWidth /></FormField>
                     <FormField label="Ville du siège" htmlFor="organization-city"><Input id="organization-city" placeholder="Ex. : Kinshasa" value={form.city} onChange={(event) => change('city', event.target.value)} maxLength={100} fullWidth /></FormField>
                     <FormField label="Adresse" htmlFor="organization-address"><Input id="organization-address" placeholder="Ex. : Avenue de la Paix, n°12" value={form.address} onChange={(event) => change('address', event.target.value)} maxLength={255} fullWidth /></FormField>
+                    <label className="sa-management-form__toggle"><input type="checkbox" checked={form.showcaseEnabled} onChange={(event) => setForm((current) => ({ ...current, showcaseEnabled: event.target.checked }))} /><span><strong>Autoriser la vitrine immobilière</strong><small>Affiche le menu « Vitrine » aux rôles PATRON et ADMIN_IMMOBILIER et autorise la configuration de la vitrine publique pour cette organisation.</small></span></label>
                 </form>
             ) : (
                 <form id="organization-form" className="sa-management-form" onSubmit={handleEditSubmit}>

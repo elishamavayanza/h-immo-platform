@@ -53,7 +53,7 @@ final readonly class PublicShowcaseService
     {
         $organization = $this->organizationRepository->findOneBySlug($slug);
 
-        if ($organization === null || $organization->isPubliclyHidden()) {
+        if ($organization === null || !$organization->isShowcaseEnabled() || $organization->isPubliclyHidden()) {
             return null;
         }
 

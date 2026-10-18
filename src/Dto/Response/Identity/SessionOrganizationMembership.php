@@ -36,6 +36,9 @@ final readonly class SessionOrganizationMembership
 
         #[OA\Property(description: 'Rôle métier dans cette Organization', type: 'string', enum: OrganizationRole::class, example: OrganizationRole::PATRON)]
         public OrganizationRole $role,
+
+        #[OA\Property(description: 'La plateforme autorise-t-elle la vitrine pour cette organisation', example: false)]
+        public bool $showcaseEnabled = false,
     ) {
     }
 }

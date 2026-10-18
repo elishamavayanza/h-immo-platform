@@ -1,8 +1,16 @@
 # Rapport de contrôle qualité des manuels Soft-IMMO
 
-**Révision :** 1.3.3 — 18 octobre 2026
+**Révision :** 1.3.4 — 18 octobre 2026
 **Sources :** `catalog.json` et `tools/generate_user_manuals.py`  
 **PDF concernés :** SUPER_ADMIN, PATRON, ADMIN_IMMOBILIER et ADMIN_VILLE.
+
+## Révision 1.3.4 — Autorisation de la vitrine par organisation
+
+- Ajout d’un réglage d’autorisation de la vitrine à la fiche Organisation du SUPER_ADMIN. L’accès est désactivé par défaut et chaque changement est protégé par le rôle plateforme et enregistré dans l’audit d’organisation.
+- Les comptes PATRON et ADMIN_IMMOBILIER ne voient le menu Vitrine que lorsque l’organisation active a reçu cette autorisation. L’ADMIN_VILLE ne reçoit pas ce menu.
+- Les API de gestion des annonces, de configuration de la présentation et les routes publiques refusent ou masquent les données d’une organisation dont l’option est désactivée.
+- Le manuel des rôles concernés précise que l’activation doit être accordée par le SUPER_ADMIN. Les quatre PDF et les images du lecteur web ont été régénérés depuis le catalogue.
+- Vérifications exécutées : `yarn type-check`, lint PHP des fichiers modifiés, migration comprise, et contrôle des espaces dans les fichiers texte.
 
 ## Révision 1.3.3 — Couverture des menus et réglages à jour
 

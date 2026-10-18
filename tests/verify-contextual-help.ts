@@ -18,7 +18,7 @@ function assert(condition: unknown, message: string): asserts condition {
 
 for (const { platformRole, organizationRole } of roles) {
     for (const route of buildAppRoutes()) {
-        const hasAccess = resolveSidebar(platformRole, organizationRole).some((item) => route.path === item.path || Boolean(item.path && route.path.startsWith(`${item.path}/`)));
+        const hasAccess = resolveSidebar(platformRole, organizationRole, true).some((item) => route.path === item.path || Boolean(item.path && route.path.startsWith(`${item.path}/`)));
         if (!hasAccess) continue;
         const help = resolveContextualHelp(route.path, platformRole, organizationRole);
         assert(help !== null, `aide absente pour ${route.path} (${platformRole ?? organizationRole})`);
