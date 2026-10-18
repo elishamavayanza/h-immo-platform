@@ -14,6 +14,7 @@ use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
 use Symfony\Component\HttpKernel\Attribute\MapRequestPayload;
+use Symfony\Component\HttpKernel\Exception\BadRequestHttpException;
 
 #[Route('/api/v1/publications')]
 #[IsGranted('ROLE_USER')]
@@ -70,6 +71,13 @@ final class PublicationController extends AbstractController
     {
         $files = $request->files->all('files');
         $captions = $request->request->all('captions');
+        if ($files === [] || count($files) > 8 || array_filter($files, static fn (mixed $file): bool => !$file instanceof \Symfony\Component\HttpFoundation\File\UploadedFile) !== []) {
+            throw new BadRequestHttpException('Sélectionnez entre 1 et 8 images valides.');
+        }
+        if (!array_is_list($captions) || array_filter($captions, static fn (mixed $caption): bool => !is_string($caption) || mb_strlen($caption) > 240) !== []) {
+            throw new BadRequestHttpException('Chaque légende doit être un texte de 240 caractères maximum.');
+        }
+
         return $this->respondSuccess($this->publications->addImages($uuid, $files, $captions), 'Images ajoutées.');
     }
 

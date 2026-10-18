@@ -123,7 +123,7 @@ final class OrganizationController extends AbstractController
      */
     #[Route('', name: 'create', methods: ['POST'])]
     public function create(
-        #[MapRequestPayload] OrganizationRequest $request
+        #[MapRequestPayload(validationGroups: ['create'])] OrganizationRequest $request
     ): JsonResponse {
         $feedback = $this->organizationService->create($request);
 
@@ -137,7 +137,7 @@ final class OrganizationController extends AbstractController
     #[Route('/{uuid}', name: 'update', methods: ['PUT', 'PATCH'])]
     public function update(
         string $uuid,
-        #[MapRequestPayload] OrganizationRequest $request
+        #[MapRequestPayload(validationGroups: ['update'])] OrganizationRequest $request
     ): JsonResponse {
         $feedback = $this->organizationService->update($uuid, $request);
 

@@ -57,7 +57,7 @@ final class ExpenseController extends AbstractController
         ]
     )]
     public function create(
-        #[MapRequestPayload] ExpenseRequest $request
+        #[MapRequestPayload(validationGroups: ['create'])] ExpenseRequest $request
     ): JsonResponse {
         $feedback = $this->expenseService->createExpense($request, $this->getUser());
 
@@ -125,7 +125,7 @@ final class ExpenseController extends AbstractController
     )]
     public function update(
         string $uuid,
-        #[MapRequestPayload] ExpenseRequest $request
+        #[MapRequestPayload(validationGroups: ['update'])] ExpenseRequest $request
     ): JsonResponse {
         $feedback = $this->expenseService->updateExpense($uuid, $request, $this->getUser());
 

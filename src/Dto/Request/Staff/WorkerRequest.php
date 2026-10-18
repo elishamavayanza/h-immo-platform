@@ -78,8 +78,10 @@ final readonly class WorkerRequest
         #[OA\Property(
             description: 'Notes complémentaires',
             nullable: true,
+            maxLength: 5000,
             example: 'Disponible pour affectations multiples'
         )]
+        #[Assert\Length(max: 5000, groups: ['create', 'update'])]
         public ?string $notes = null,
 
         #[OA\Property(description: 'Ville de création pour un administrateur ville autorisé', format: 'uuid', nullable: true)]

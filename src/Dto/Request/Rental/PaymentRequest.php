@@ -39,6 +39,7 @@ final readonly class PaymentRequest
         )]
         #[Assert\NotBlank(groups: ['create'])]
         #[Assert\Regex(pattern: '/^\d{1,10}(\.\d{1,2})?$/', groups: ['create'], message: 'Le montant doit être un nombre positif avec au plus 2 décimales.')]
+        #[Assert\Positive(groups: ['create'])]
         public ?string $amount = null,
 
         #[OA\Property(
@@ -55,6 +56,8 @@ final readonly class PaymentRequest
             example: '2900.00000000',
             nullable: true
         )]
+        #[Assert\Regex(pattern: '/^\d{1,10}(\.\d{1,8})?$/', groups: ['create'], message: 'Le taux doit comporter au plus 8 décimales.')]
+        #[Assert\Positive(groups: ['create'])]
         public ?string $exchangeRate = null,
 
         #[OA\Property(
@@ -62,6 +65,8 @@ final readonly class PaymentRequest
             example: '100.00',
             nullable: true
         )]
+        #[Assert\Regex(pattern: '/^\d{1,10}(\.\d{1,2})?$/', groups: ['create'], message: 'Le montant d’origine doit comporter au plus 2 décimales.')]
+        #[Assert\Positive(groups: ['create'])]
         public ?string $originalAmount = null,
 
         #[OA\Property(
@@ -112,8 +117,10 @@ final readonly class PaymentRequest
         #[OA\Property(
             description: 'Notes d\'accompagnement du paiement',
             example: 'Paiement effectué en deux tranches.',
-            nullable: true
+            nullable: true,
+            maxLength: 5000
         )]
+        #[Assert\Length(max: 5000, groups: ['create', 'update'])]
         public ?string $notes = null,
     ) {
     }

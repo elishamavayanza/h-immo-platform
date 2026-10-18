@@ -18,6 +18,7 @@ final readonly class AccessPointRequest
         #[Assert\Choice(choices: ['private', 'shared', 'restricted'])]
         public string $accessMode = 'shared',
         #[Assert\Length(max: 255)] public ?string $locationDescription = null,
+        #[Assert\Count(max: 100, maxMessage: 'Un accès ne peut pas desservir plus de 100 unités.')]
         #[Assert\All([new Assert\Uuid()])] public array $unitUuids = [],
         #[Assert\Uuid] public ?string $buildingUuid = null,
         #[Assert\Uuid] public ?string $parcelUuid = null,

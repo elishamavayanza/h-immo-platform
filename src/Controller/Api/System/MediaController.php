@@ -312,9 +312,9 @@ final class MediaController extends AbstractController
             $files = [$files];
         }
 
-        if (!is_array($files) || $files === []) {
+        if (!is_array($files) || $files === [] || count($files) > 20 || array_filter($files, static fn (mixed $file): bool => !$file instanceof UploadedFile) !== []) {
             return $this->json(
-                (new Feedback())->addError('files', 'Aucun fichier fourni.')->setErrorFlushDescription('Fichiers requis.')->setStatus(422)->autoInitFlush(),
+                (new Feedback())->addError('files', 'Sélectionnez entre 1 et 20 fichiers image valides.')->setErrorFlushDescription('La sélection de fichiers est invalide.')->setStatus(422)->autoInitFlush(),
                 422
             );
         }
@@ -428,9 +428,9 @@ final class MediaController extends AbstractController
             $files = [$files];
         }
 
-        if (!is_array($files) || $files === []) {
+        if (!is_array($files) || $files === [] || count($files) > 20 || array_filter($files, static fn (mixed $file): bool => !$file instanceof UploadedFile) !== []) {
             return $this->json(
-                (new Feedback())->addError('files', 'Aucun fichier fourni.')->setErrorFlushDescription('Fichiers requis.')->setStatus(422)->autoInitFlush(),
+                (new Feedback())->addError('files', 'Sélectionnez entre 1 et 20 fichiers image valides.')->setErrorFlushDescription('La sélection de fichiers est invalide.')->setStatus(422)->autoInitFlush(),
                 422
             );
         }

@@ -97,6 +97,7 @@ final readonly class ParcelRequest
             example: '1200.50',
         )]
         #[Assert\NotBlank(groups: ['create'])]
+        #[Assert\Regex(pattern: '/^\d{1,8}(\.\d{1,2})?$/', groups: ['create', 'update'], message: 'La superficie doit respecter la précision autorisée : 8 chiffres avant et 2 après la virgule.')]
         #[Assert\Positive(groups: ['create', 'update'])]
         #[Groups(['create', 'update'])]
         public ?string $area = null,
@@ -124,6 +125,7 @@ final readonly class ParcelRequest
             example: 'Parcelle clôturée avec accès direct à la voie principale.',
             nullable: true,
         )]
+        #[Assert\Length(max: 5000, groups: ['create', 'update'])]
         #[Groups(['create', 'update'])]
         public ?string $description = null,
     ) {

@@ -48,9 +48,11 @@ final readonly class LeaseRequest
 
         #[OA\Property(description: 'UUID des espaces supplémentaires couverts par le bail', type: 'array', items: new OA\Items(type: 'string', format: 'uuid'))]
         #[Assert\All([new Assert\Uuid()], groups: ['create'])]
+        #[Assert\Count(max: 20, groups: ['create'], maxMessage: 'Un bail ne peut pas couvrir plus de 20 espaces supplémentaires.')]
         public array $additionalUnitUuids = [],
 
         #[OA\Property(description: 'Cotitulaires et occupants non signataires avec leurs périodes', type: 'array', items: new OA\Items(type: 'object'))]
+        #[Assert\Count(max: 50, groups: ['create', 'update'], maxMessage: 'Un bail ne peut pas contenir plus de 50 occupants supplémentaires.')]
         public array $occupants = [],
 
         #[OA\Property(
@@ -83,6 +85,7 @@ final readonly class LeaseRequest
             example: '500.00'
         )]
         #[Assert\NotBlank(groups: ['create', 'update'])]
+        #[Assert\Regex(pattern: '/^\d{1,10}(\.\d{1,2})?$/', groups: ['create', 'update'], message: 'Le loyer doit comporter au plus 2 décimales.')]
         #[Assert\Positive(groups: ['create', 'update'])]
         public ?string $monthlyRent = null,
 
@@ -91,6 +94,7 @@ final readonly class LeaseRequest
             example: '1000.00',
             nullable: true
         )]
+        #[Assert\Regex(pattern: '/^\d{1,10}(\.\d{1,2})?$/', groups: ['create', 'update'], message: 'La garantie doit comporter au plus 2 décimales.')]
         #[Assert\PositiveOrZero(groups: ['create', 'update'])]
         public ?string $depositAmount = null,
 
@@ -106,8 +110,10 @@ final readonly class LeaseRequest
         #[OA\Property(
             description: 'Notes ou clauses particulières',
             example: 'Clause de révision annuelle de 5% incluse.',
-            nullable: true
+            nullable: true,
+            maxLength: 5000
         )]
+        #[Assert\Length(max: 5000, groups: ['create', 'update'])]
         public ?string $notes = null,
     ) {
     }

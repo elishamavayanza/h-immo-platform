@@ -85,7 +85,7 @@ final class TenantController extends AbstractController
         ]
     )]
     public function create(
-        #[MapRequestPayload] TenantRequest $request
+        #[MapRequestPayload(validationGroups: ['create'])] TenantRequest $request
     ): JsonResponse {
         $feedback = $this->tenantService->createTenant($request);
 
@@ -136,7 +136,7 @@ final class TenantController extends AbstractController
     )]
     public function update(
         string $uuid,
-        #[MapRequestPayload] TenantRequest $request
+        #[MapRequestPayload(validationGroups: ['update'])] TenantRequest $request
     ): JsonResponse {
         $feedback = $this->tenantService->updateTenant($uuid, $request);
 

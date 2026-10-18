@@ -60,7 +60,7 @@ final class RentController extends AbstractController
         ]
     )]
     public function create(
-        #[MapRequestPayload] RentRequest $request
+        #[MapRequestPayload(validationGroups: ['create'])] RentRequest $request
     ): JsonResponse {
         $feedback = $this->rentService->createRent($request, $this->getUser());
 
@@ -147,7 +147,7 @@ final class RentController extends AbstractController
     )]
     public function update(
         string $uuid,
-        #[MapRequestPayload] RentRequest $request
+        #[MapRequestPayload(validationGroups: ['update'])] RentRequest $request
     ): JsonResponse {
         $feedback = $this->rentService->updateRent($uuid, $request, $this->getUser());
 

@@ -13,7 +13,7 @@ final readonly class BuildingLevelRequest
     public function __construct(
         #[Assert\NotBlank] #[Assert\Length(max: 50)] public string $reference,
         #[Assert\NotBlank] #[Assert\Length(max: 120)] public string $label,
-        public int $displayOrder,
+        #[Assert\Range(min: 0, max: 1000)] public int $displayOrder,
         #[Assert\Length(max: 2000)] public ?string $description = null,
     ) {}
 }

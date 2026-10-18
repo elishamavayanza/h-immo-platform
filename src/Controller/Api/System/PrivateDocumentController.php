@@ -63,13 +63,23 @@ final class PrivateDocumentController extends AbstractController
             return $this->json((new Feedback())->addError('file', 'Aucun fichier fourni.')->setErrorFlushDescription('Fichier requis.')->setStatus(422)->autoInitFlush(), 422);
         }
 
+        $organizationUuid = $request->request->get('organizationUuid', '');
+        $relatedType = $request->request->get('relatedType', '');
+        $relatedUuid = $request->request->get('relatedUuid', '');
+        $category = $request->request->get('category', '');
+        foreach (['organizationUuid' => $organizationUuid, 'relatedType' => $relatedType, 'relatedUuid' => $relatedUuid, 'category' => $category] as $field => $value) {
+            if (!is_string($value)) {
+                return $this->json((new Feedback())->addError($field, 'Cette valeur doit être un texte simple.')->setErrorFlushDescription('Certaines données du formulaire de document sont invalides.')->setStatus(422)->autoInitFlush(), 422);
+            }
+        }
+
         try {
             $document = $this->documents->upload(
                 $user,
-                (string) $request->request->get('organizationUuid', ''),
-                (string) $request->request->get('relatedType', ''),
-                (string) $request->request->get('relatedUuid', ''),
-                (string) $request->request->get('category', ''),
+                $organizationUuid,
+                $relatedType,
+                $relatedUuid,
+                $category,
                 $description,
                 $file,
             );

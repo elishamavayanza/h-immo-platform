@@ -67,7 +67,7 @@ final class UserCityController extends AbstractController
      */
     #[Route('', name: 'assign', methods: ['POST'])]
     public function assign(
-        #[MapRequestPayload] UserCityRequest $request
+        #[MapRequestPayload(validationGroups: ['create'])] UserCityRequest $request
     ): JsonResponse {
         $feedback = $this->userCityService->assignCity($request);
 

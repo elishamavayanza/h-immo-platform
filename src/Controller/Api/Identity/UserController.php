@@ -76,7 +76,7 @@ final class UserController extends AbstractController
      */
     #[Route('', name: 'create', methods: ['POST'])]
     public function create(
-        #[MapRequestPayload] UserRequest $request
+        #[MapRequestPayload(validationGroups: ['create'])] UserRequest $request
     ): JsonResponse {
         $feedback = $this->userService->create($request);
 
@@ -98,7 +98,7 @@ final class UserController extends AbstractController
     #[Route('/{uuid}', name: 'update', methods: ['PUT', 'PATCH'])]
     public function update(
         string $uuid,
-        #[MapRequestPayload] UserRequest $request
+        #[MapRequestPayload(validationGroups: ['update'])] UserRequest $request
     ): JsonResponse {
         $feedback = $this->userService->update($uuid, $request);
 
@@ -207,7 +207,7 @@ final class UserController extends AbstractController
             new OA\Response(response: 422, description: 'Données invalides', content: new OA\JsonContent(ref: new Model(type: Feedback::class))),
         ]
     )]
-    public function updateMySettings(#[MapRequestPayload] UserSettingsRequest $request): JsonResponse
+    public function updateMySettings(#[MapRequestPayload(validationGroups: ['update'])] UserSettingsRequest $request): JsonResponse
     {
         $user = $this->getUser();
 

@@ -36,7 +36,7 @@ final readonly class UnitRequest
         public ?string $buildingUuid = null,
 
         #[OA\Property(description: 'UUID de l’espace parent pour modéliser une subdivision physique', format: 'uuid', nullable: true)]
-        #[Assert\Length(max: 36, groups: ['create', 'update'])]
+        #[Assert\Uuid(groups: ['create', 'update'])]
         #[Groups(['create', 'update'])]
         public ?string $parentUnitUuid = null,
 
@@ -85,7 +85,7 @@ final readonly class UnitRequest
         public ?string $floorLabel = null,
 
         #[OA\Property(description: 'UUID du niveau déclaré pour le bâtiment', format: 'uuid', nullable: true)]
-        #[Assert\Length(max: 36, groups: ['create', 'update'])]
+        #[Assert\Uuid(groups: ['create', 'update'])]
         #[Groups(['create', 'update'])]
         public ?string $levelUuid = null,
 
@@ -94,6 +94,7 @@ final readonly class UnitRequest
             example: '85.50',
         )]
         #[Assert\NotBlank(groups: ['create'])]
+        #[Assert\Regex(pattern: '/^\d{1,6}(\.\d{1,2})?$/', groups: ['create', 'update'], message: 'La surface doit respecter la précision autorisée : 6 chiffres avant et 2 après la virgule.')]
         #[Assert\Positive(groups: ['create', 'update'])]
         #[Groups(['create', 'update'])]
         public ?string $surface = null,
@@ -133,6 +134,7 @@ final readonly class UnitRequest
             example: '450.00',
         )]
         #[Assert\NotBlank(groups: ['create'])]
+        #[Assert\Regex(pattern: '/^\d{1,10}(\.\d{1,2})?$/', groups: ['create', 'update'], message: 'Le loyer doit être un nombre positif avec au plus 2 décimales.')]
         #[Assert\Positive(groups: ['create', 'update'])]
         #[Groups(['create', 'update'])]
         public ?string $monthlyRent = null,
@@ -151,7 +153,9 @@ final readonly class UnitRequest
             description: 'Description détaillée du local et de ses équipements',
             example: 'Appartement lumineux avec balcons, cuisine équipée et compteur cash-power indépendant.',
             nullable: true,
+            maxLength: 5000,
         )]
+        #[Assert\Length(max: 5000, groups: ['create', 'update'])]
         #[Groups(['create', 'update'])]
         public ?string $description = null,
     ) {

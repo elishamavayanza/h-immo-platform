@@ -79,7 +79,7 @@ final class CityController extends AbstractController
      */
     #[Route('', name: 'create', methods: ['POST'])]
     public function create(
-        #[MapRequestPayload] CityRequest $request
+        #[MapRequestPayload(validationGroups: ['create'])] CityRequest $request
     ): JsonResponse {
         $feedback = $this->cityService->create($request);
 
@@ -93,7 +93,7 @@ final class CityController extends AbstractController
     #[Route('/{uuid}', name: 'update', methods: ['PUT', 'PATCH'])]
     public function update(
         string $uuid,
-        #[MapRequestPayload] CityRequest $request
+        #[MapRequestPayload(validationGroups: ['update'])] CityRequest $request
     ): JsonResponse {
         $feedback = $this->cityService->update($uuid, $request);
 

@@ -67,7 +67,7 @@ final class LeaseController extends AbstractController
         ]
     )]
     public function create(
-        #[MapRequestPayload] LeaseRequest $request
+        #[MapRequestPayload(validationGroups: ['create'])] LeaseRequest $request
     ): JsonResponse {
         $feedback = $this->leaseService->createLease($request, $this->getUser());
 
@@ -102,7 +102,7 @@ final class LeaseController extends AbstractController
     )]
     public function update(
         string $uuid,
-        #[MapRequestPayload] LeaseRequest $request
+        #[MapRequestPayload(validationGroups: ['update'])] LeaseRequest $request
     ): JsonResponse {
         $feedback = $this->leaseService->updateLease($uuid, $request, $this->getUser());
 

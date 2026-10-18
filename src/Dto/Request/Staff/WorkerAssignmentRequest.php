@@ -79,6 +79,7 @@ final readonly class WorkerAssignmentRequest
             enum: WorkerRole::class
         )]
         #[Assert\NotBlank(groups: ['create'])]
+        #[Assert\Choice(choices: ['gerant', 'sentinelle', 'menager', 'gardien', 'agent_entretien', 'agent_administratif', 'autre'], groups: ['create', 'update'])]
         public ?string $role = null,
 
         #[OA\Property(
@@ -87,6 +88,7 @@ final readonly class WorkerAssignmentRequest
         )]
         #[Assert\NotBlank(groups: ['create'])]
         #[Assert\Regex(pattern: '/^\d{1,10}(\.\d{1,2})?$/', groups: ['create', 'update'], message: 'Le salaire doit être un nombre positif avec au plus 2 décimales.')]
+        #[Assert\Positive(groups: ['create', 'update'])]
         public ?string $monthlySalary = null,
 
         #[OA\Property(
@@ -116,8 +118,10 @@ final readonly class WorkerAssignmentRequest
         #[OA\Property(
             description: 'Notes complémentaires',
             nullable: true,
+            maxLength: 5000,
             example: 'Affectation temporaire 3 mois'
         )]
+        #[Assert\Length(max: 5000, groups: ['create', 'update'])]
         public ?string $notes = null,
     ) {
     }

@@ -57,7 +57,7 @@ final class WorkerAssignmentController extends AbstractController
         ]
     )]
     public function create(
-        #[MapRequestPayload] WorkerAssignmentRequest $request
+        #[MapRequestPayload(validationGroups: ['create'])] WorkerAssignmentRequest $request
     ): JsonResponse {
         $feedback = $this->assignmentService->createAssignment($request, $this->getUser());
 
@@ -121,7 +121,7 @@ final class WorkerAssignmentController extends AbstractController
     )]
     public function update(
         string $uuid,
-        #[MapRequestPayload] WorkerAssignmentRequest $request
+        #[MapRequestPayload(validationGroups: ['update'])] WorkerAssignmentRequest $request
     ): JsonResponse {
         $feedback = $this->assignmentService->updateAssignment($uuid, $request, $this->getUser());
 

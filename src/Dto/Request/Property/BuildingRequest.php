@@ -72,6 +72,7 @@ final readonly class BuildingRequest
             example: 'Immeuble moderne de 4 niveaux avec ascenseur et parking souterrain.',
             nullable: true
         )]
+        #[Assert\Length(max: 5000, groups: ['create', 'update'])]
         public ?string $description = null,
     ) {
     }

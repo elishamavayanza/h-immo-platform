@@ -102,8 +102,10 @@ final readonly class TenantRequest
         #[OA\Property(
             description: 'Notes et observations administratives',
             example: 'Locataire fiable. Garant physique identifié.',
-            nullable: true
+            nullable: true,
+            maxLength: 5000
         )]
+        #[Assert\Length(max: 5000, groups: ['create', 'update'])]
         public ?string $notes = null,
     ) {
     }

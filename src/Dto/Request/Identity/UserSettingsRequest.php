@@ -35,18 +35,23 @@ final class UserSettingsRequest
         public ?string $dateFormat = null,
 
         #[OA\Property(description: 'Notifications par e-mail', example: true, nullable: true)]
+        #[Assert\Type('bool', groups: ['update'])]
         public ?bool $emailNotifications = null,
 
         #[OA\Property(description: 'Notifications in-app', example: true, nullable: true)]
+        #[Assert\Type('bool', groups: ['update'])]
         public ?bool $inAppNotifications = null,
 
         #[OA\Property(description: 'Afficher le bouton d’installation de l’application web', example: false, nullable: true)]
+        #[Assert\Type('bool', groups: ['update'])]
         public ?bool $allowInstallPrompt = null,
 
         #[OA\Property(description: 'Tableaux compacts', example: false, nullable: true)]
+        #[Assert\Type('bool', groups: ['update'])]
         public ?bool $compactTables = null,
 
         #[OA\Property(description: 'Animations réduites', example: false, nullable: true)]
+        #[Assert\Type('bool', groups: ['update'])]
         public ?bool $reducedMotion = null,
 
         // SUPER_ADMIN only
@@ -60,6 +65,7 @@ final class UserSettingsRequest
         public ?int $defaultPageSize = null,
 
         #[OA\Property(description: 'Menu latéral replié par défaut', example: false, nullable: true)]
+        #[Assert\Type('bool', groups: ['update'])]
         public ?bool $sidebarCollapsed = null,
     ) {
     }

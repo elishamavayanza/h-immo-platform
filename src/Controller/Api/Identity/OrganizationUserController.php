@@ -63,7 +63,7 @@ final class OrganizationUserController extends AbstractController
      */
     #[Route('', name: 'assign', methods: ['POST'])]
     public function assign(
-        #[MapRequestPayload] OrganizationUserRequest $request
+        #[MapRequestPayload(validationGroups: ['create'])] OrganizationUserRequest $request
     ): JsonResponse {
         $feedback = $this->orgUserService->assignUser($request);
 
@@ -91,7 +91,7 @@ final class OrganizationUserController extends AbstractController
     #[Route('/{uuid}', name: 'update_role', methods: ['PUT', 'PATCH'])]
     public function updateRole(
         string $uuid,
-        #[MapRequestPayload] OrganizationUserRequest $request
+        #[MapRequestPayload(validationGroups: ['update'])] OrganizationUserRequest $request
     ): JsonResponse {
         $feedback = $this->orgUserService->updateRole($uuid, $request, $this->getUser());
 

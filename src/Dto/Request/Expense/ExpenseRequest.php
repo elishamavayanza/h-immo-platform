@@ -81,6 +81,7 @@ final readonly class ExpenseRequest
             enum: ExpenseCategory::class
         )]
         #[Assert\NotBlank(groups: ['create'])]
+        #[Assert\Choice(choices: ['salary', 'tax', 'maintenance', 'utility', 'insurance', 'management_fee', 'supply', 'cleaning', 'security', 'public_service', 'notary_fee', 'other'], groups: ['create', 'update'])]
         public ?string $category = null,
 
         #[OA\Property(
@@ -89,6 +90,7 @@ final readonly class ExpenseRequest
         )]
         #[Assert\NotBlank(groups: ['create'])]
         #[Assert\Regex(pattern: '/^\d{1,10}(\.\d{1,2})?$/', groups: ['create', 'update'], message: 'Le montant doit être un nombre positif avec au plus 2 décimales.')]
+        #[Assert\Positive(groups: ['create', 'update'])]
         public ?string $amount = null,
 
         #[OA\Property(
@@ -105,6 +107,8 @@ final readonly class ExpenseRequest
             example: '2900.00000000',
             nullable: true
         )]
+        #[Assert\Regex(pattern: '/^\d{1,10}(\.\d{1,8})?$/', groups: ['create', 'update'], message: 'Le taux doit comporter au plus 8 décimales.')]
+        #[Assert\Positive(groups: ['create', 'update'])]
         public ?string $exchangeRate = null,
 
         #[OA\Property(
@@ -112,6 +116,8 @@ final readonly class ExpenseRequest
             example: '100.00',
             nullable: true
         )]
+        #[Assert\Regex(pattern: '/^\d{1,10}(\.\d{1,2})?$/', groups: ['create', 'update'], message: 'Le montant d’origine doit comporter au plus 2 décimales.')]
+        #[Assert\Positive(groups: ['create', 'update'])]
         public ?string $originalAmount = null,
 
         #[OA\Property(
@@ -154,6 +160,7 @@ final readonly class ExpenseRequest
             enum: PaymentMethod::class,
             nullable: true
         )]
+        #[Assert\Choice(choices: ['cash', 'bank_transfer', 'mobile_money', 'card', 'other'], groups: ['create', 'update'])]
         public ?string $method = null,
 
         #[OA\Property(
@@ -186,8 +193,10 @@ final readonly class ExpenseRequest
         #[OA\Property(
             description: 'Description ou notes complémentaires',
             nullable: true,
+            maxLength: 5000,
             example: 'Taxe foncière annuelle parcelle PA-1'
         )]
+        #[Assert\Length(max: 5000, groups: ['create', 'update'])]
         public ?string $notes = null,
     ) {
     }

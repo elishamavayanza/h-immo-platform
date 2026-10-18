@@ -58,6 +58,7 @@ final readonly class RentRequest
             example: '500.00'
         )]
         #[Assert\NotBlank(groups: ['create'])]
+        #[Assert\Regex(pattern: '/^\d{1,10}(\.\d{1,2})?$/', groups: ['create', 'update'], message: 'Le montant doit comporter au plus 2 décimales.')]
         #[Assert\Positive(groups: ['create', 'update'])]
         public ?string $amount = null,
 

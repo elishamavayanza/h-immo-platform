@@ -53,6 +53,7 @@ final readonly class OrganizationShowcaseRequest
             example: true,
             nullable: true
         )]
+        #[Assert\Type('bool')]
         public ?bool $isPubliclyListed = null,
     ) {
     }

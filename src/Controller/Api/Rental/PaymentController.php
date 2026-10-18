@@ -68,7 +68,7 @@ final class PaymentController extends AbstractController
         ]
     )]
     public function create(
-        #[MapRequestPayload] PaymentRequest $request
+        #[MapRequestPayload(validationGroups: ['create'])] PaymentRequest $request
     ): JsonResponse {
         $user = $this->getUser();
 

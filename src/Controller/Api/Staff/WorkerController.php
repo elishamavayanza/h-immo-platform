@@ -59,7 +59,7 @@ final class WorkerController extends AbstractController
         ]
     )]
     public function create(
-        #[MapRequestPayload] WorkerRequest $request
+        #[MapRequestPayload(validationGroups: ['create'])] WorkerRequest $request
     ): JsonResponse {
         $feedback = $this->workerService->createWorker($request, $this->getUser());
 
@@ -120,7 +120,7 @@ final class WorkerController extends AbstractController
     )]
     public function update(
         string $uuid,
-        #[MapRequestPayload] WorkerRequest $request
+        #[MapRequestPayload(validationGroups: ['update'])] WorkerRequest $request
     ): JsonResponse {
         $feedback = $this->workerService->updateWorker($uuid, $request, $this->getUser());
 
