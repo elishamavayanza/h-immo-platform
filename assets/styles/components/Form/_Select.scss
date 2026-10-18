@@ -71,6 +71,8 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
+    width: 100%;
+    min-width: 0;
     text-align: left;
     padding-right: $spacing-8;
 
@@ -78,6 +80,14 @@
         border-color: $color-primary;
         box-shadow: $shadow-focus;
     }
+}
+
+.select-field__trigger > span {
+    flex: 1 1 auto;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 .select-field__trigger .select-field__arrow {
