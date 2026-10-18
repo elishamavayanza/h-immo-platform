@@ -11,6 +11,7 @@ flowchart TB
     classDef cycle fill:#eeeeee,stroke:#424242,stroke-width:1px,color:#111;
     classDef technical fill:#e0f7fa,stroke:#00838f,stroke-width:2px,color:#111;
     classDef security fill:#ffebee,stroke:#c62828,stroke-width:2px,color:#111;
+    classDef capacity fill:#fff3e0,stroke:#ef6c00,stroke-width:2px,color:#111;
 
 %% ============================================================
 %% 1. ARCHITECTURE TECHNIQUE
@@ -21,6 +22,7 @@ flowchart TB
         API["Symfony 7.4<br/>REST API"]
         SECURITY["Security<br/><br/>JWT<br/>Authorization<br/>Tenant Isolation"]
         APPLICATION["Application Layer<br/><br/>Use Cases<br/>Validation<br/>Business Rules"]
+        CAPACITY_SERVICE["OrganizationCapacityService<br/><br/>Usage counters<br/>Limits<br/>Concurrency lock"]
         DOMAIN["Domain Layer<br/><br/>Entities<br/>Enums"]
         ORM["Doctrine ORM"]
 
@@ -28,6 +30,8 @@ flowchart TB
         API --> SECURITY
         SECURITY --> APPLICATION
         APPLICATION --> DOMAIN
+        APPLICATION --> CAPACITY_SERVICE
+        CAPACITY_SERVICE --> DOMAIN
         DOMAIN --> ORM
     end
 
@@ -41,9 +45,12 @@ flowchart TB
         S3["ADMIN_VILLE<br/>City autorisées"]
         S4["SUPER_ADMIN<br/>Plateforme séparée"]
         S5["Contrôle<br/>à chaque opération"]
+        S6["Capacités configurées<br/>par SUPER_ADMIN"]
+        S7["Compteurs bornés<br/>à l'organisation"]
+        S8["Plafonds appliqués<br/>côté API"]
     end
 
-    SECURITY --> S1 & S2 & S3 & S4 & S5
+    SECURITY --> S1 & S2 & S3 & S4 & S5 & S6 & S7 & S8
 
 %% ============================================================
 %% 3. DOMAINES METIER (CŒUR DU SYSTEME)
@@ -56,17 +63,38 @@ flowchart TB
             direction TB
             SUPER_ADMIN["SUPER_ADMIN<br/>Plateforme"]
             ORGANIZATION["Organization<br/>Entreprise"]
+            ORG_CAPACITY["Capacités Organization<br/><br/>maxCities<br/>maxParcels<br/>maxBuildings<br/>maxUnits<br/>maxMembers"]
+            SHOWCASE_ACCESS["showcaseEnabled<br/>Autorisation de la Vitrine"]
+            ORG_SETUP["OrganizationSetupPage<br/><br/>Identité<br/>Capacités<br/>Compte PATRON<br/>Logo"]
             PATRON["PATRON<br/>Responsable"]
             USER["User<br/>Utilisateur"]
             ORG_USER["OrganizationUser<br/>Appartenance + rôle"]
             USER_CITY["UserCity<br/>Villes autorisées"]
 
             SUPER_ADMIN -->|"administre"| ORGANIZATION
+            SUPER_ADMIN -->|"configure"| ORG_SETUP
+            ORG_SETUP -->|"crée / modifie"| ORGANIZATION
+            ORGANIZATION -->|"porte"| ORG_CAPACITY
+            ORGANIZATION -->|"porte"| SHOWCASE_ACCESS
             ORGANIZATION -->|"désigne"| PATRON
             PATRON -->|"gère"| ORG_USER
             USER -->|"appartient"| ORG_USER
             ORGANIZATION -->|"possède"| ORG_USER
             USER -->|"accès géographique"| USER_CITY
+        end
+
+    %% --- CONFIGURATION DES OFFRES ET CAPACITES ---
+        subgraph CAPACITY_CONFIGURATION["4. CONFIGURATION DES CAPACITES"]
+            direction TB
+            CAPACITY_SERVICE_NODE["OrganizationCapacityService<br/><br/>Comptage de l'usage<br/>Vérification des plafonds"]
+            CAPACITY_LOCK["Verrou MariaDB par organisation<br/>et type de ressource"]
+            READ_CAPACITY["Lecture des capacités<br/>PATRON / ADMIN_IMMOBILIER<br/>dans leur organisation"]
+            NO_LIMIT["Sans limite<br/>null"]
+
+            ORG_CAPACITY -->|"définit les maximums"| CAPACITY_SERVICE_NODE
+            CAPACITY_SERVICE_NODE -->|"compte en base"| CAPACITY_LOCK
+            ORG_CAPACITY -->|"null = illimité"| NO_LIMIT
+            READ_CAPACITY -->|"lecture seule"| ORG_CAPACITY
         end
 
     %% --- PATRIMOINE IMMOBILIER ---
@@ -101,7 +129,7 @@ flowchart TB
         end
     end
 
-    subgraph STAFF ["4. GESTION DES DEPENSES ET DU PERSONNEL"]
+    subgraph STAFF ["5. GESTION DES DEPENSES ET DU PERSONNEL"]
         direction TB
         WORKER["Worker<br/>Travailleur"]
         ASSIGNMENT["WorkerAssignment<br/>Affectation"]
@@ -128,9 +156,9 @@ flowchart TB
     end
 
 %% ============================================================
-%% 5. SYSTEME & TRAÇABILITE
+%% 6. SYSTEME & TRAÇABILITE
 %% ============================================================
-    subgraph SYSTEM ["5. SYSTEME & TRAÇABILITE"]
+    subgraph SYSTEM ["6. SYSTEME & TRAÇABILITE"]
         direction LR
         AUDIT["AuditLog<br/>Traçabilité"]
         FILE_STORAGE["File Storage<br/>Photos & Logos"]
@@ -142,7 +170,7 @@ flowchart TB
     end
 
 %% ============================================================
-%% 5. INFRASTRUCTURE & DONNEES
+%% 7. INFRASTRUCTURE & DONNEES
 %% ============================================================
     subgraph INFRASTRUCTURE ["INFRASTRUCTURE & DONNEES"]
         direction LR
@@ -154,11 +182,11 @@ flowchart TB
     APPLICATION --> STORAGE
 
 %% ============================================================
-%% 6. CYCLE D'ACTIVITE METIER
+%% 8. CYCLE D'ACTIVITE METIER
 %% ============================================================
     subgraph BUSINESS_CYCLE ["CYCLE D'ACTIVITE METIER"]
         direction LR
-        C1["1<br/>Entreprise"] --> C2["2<br/>Utilisateurs"] --> C3["3<br/>Rôles & accès"] --> C4["4<br/>Villes"] --> C5["5<br/>Parcelles"] --> C6["6<br/>Bâtiments"] --> C7["7<br/>Unités"] --> C8["8<br/>Locataires"] --> C9["9<br/>Contrats"] --> C10["10<br/>Loyers"] --> C11["11<br/>Paiements"] --> C12["12<br/>Audit"]
+        C1["1<br/>Organisation"] --> C2["2<br/>Capacités & options"] --> C3["3<br/>Utilisateurs"] --> C4["4<br/>Rôles & accès"] --> C5["5<br/>Villes"] --> C6["6<br/>Parcelles"] --> C7["7<br/>Bâtiments"] --> C8["8<br/>Unités"] --> C9["9<br/>Locataires"] --> C10["10<br/>Contrats"] --> C11["11<br/>Loyers"] --> C12["12<br/>Paiements"] --> C13["13<br/>Audit"]
     end
 
 %% ============================================================
@@ -168,6 +196,14 @@ flowchart TB
     DATABASE -.->|"persiste"| PROPERTY
     DATABASE -.->|"persiste"| RENTAL
     DATABASE -.->|"persiste"| SYSTEM
+    DATABASE -.->|"persiste"| CAPACITY_CONFIGURATION
+    CAPACITY_SERVICE_NODE -->|"autorise ou refuse la création"| CITY
+    CAPACITY_SERVICE_NODE -->|"autorise ou refuse la création"| PARCEL
+    CAPACITY_SERVICE_NODE -->|"autorise ou refuse la création"| BUILDING
+    CAPACITY_SERVICE_NODE -->|"autorise ou refuse la création"| UNIT
+    CAPACITY_SERVICE_NODE -->|"autorise ou refuse l'ajout"| ORG_USER
+    SHOWCASE_ACCESS -.->|"conditionne le menu selon le rôle"| PATRON
+    SHOWCASE_ACCESS -.->|"conditionne le menu selon le rôle"| ORG_USER
     DOMAIN -.->|"supporte"| BUSINESS_CYCLE
     SECURITY -.->|"protège"| BUSINESS_CYCLE
 
@@ -175,11 +211,12 @@ flowchart TB
 %% ASSIGNATION DES CLASSES
 %% ============================================================
     class SUPER_ADMIN,ORGANIZATION,PATRON platform;
+    class ORG_CAPACITY,SHOWCASE_ACCESS,ORG_SETUP,READ_CAPACITY,NO_LIMIT,CAPACITY_SERVICE_NODE,CAPACITY_LOCK capacity;
     class USER,ORG_USER,USER_CITY access;
     class CITY,PARCEL,BUILDING,UNIT property;
     class TENANT,LEASE,RENT,PAYMENT rental;
     class WORKER,ASSIGNMENT,EXPENSE,WORKER_ROLE,EXPENSE_CATEGORY expense;
     class AUDIT,FILE_STORAGE system;
-    class C1,C2,C3,C4,C5,C6,C7,C8,C9,C10,C11,C12 cycle;
-    class FRONTEND,API,SECURITY,APPLICATION,DOMAIN,ORM,DATABASE,STORAGE technical;
-    class S1,S2,S3,S4,S5 security;
+    class C1,C2,C3,C4,C5,C6,C7,C8,C9,C10,C11,C12,C13 cycle;
+    class FRONTEND,API,SECURITY,APPLICATION,CAPACITY_SERVICE,DOMAIN,ORM,DATABASE,STORAGE technical;
+    class S1,S2,S3,S4,S5,S6,S7,S8 security;
