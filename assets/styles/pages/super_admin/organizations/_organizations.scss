@@ -11,29 +11,51 @@
 }
 
 .sa-wizard__stepper {
-    display: flex;
-    align-items: center;
-    gap: $spacing-3;
+    display: grid;
+    align-items: start;
     margin: 0;
-    padding: 0;
+    padding: 0 0 $spacing-2;
     list-style: none;
+    width: 100%;
+}
+
+.sa-wizard__step-item {
+    display: flex;
+    position: relative;
+    justify-content: center;
+    min-width: 0;
+}
+
+.sa-wizard__step-item:not(:last-child)::after {
+    position: absolute;
+    top: 13px;
+    right: calc(-50% + 19px);
+    left: calc(50% + 19px);
+    height: 2px;
+    border-radius: $radius-md;
+    background: $color-border;
+    content: '';
+}
+
+.sa-wizard__step-item--done:not(:last-child)::after {
+    background: $color-success;
 }
 
 .sa-wizard__connector {
-    flex: 1;
-    height: 2px;
-    background: $color-border;
-    border-radius: $radius-md;
+    display: none;
 }
 
 .sa-wizard__step {
-    display: inline-flex;
+    display: flex;
+    flex-direction: column;
     align-items: center;
     gap: $spacing-2;
     color: $color-text-muted;
     font-size: $font-size-xs;
     font-weight: $font-weight-medium;
-    white-space: nowrap;
+    line-height: 1.3;
+    text-align: center;
+    z-index: 1;
 }
 
 .sa-wizard__step-number {
@@ -65,6 +87,32 @@
     color: $color-success;
 }
 
+.sa-wizard__step-label {
+    max-width: 100%;
+    padding-inline: $spacing-1;
+    overflow-wrap: anywhere;
+}
+
+.sa-wizard__intro {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: $spacing-3;
+    padding-bottom: $spacing-3;
+    border-bottom: 1px solid $color-border;
+}
+
+.sa-wizard__intro strong {
+    color: $color-text-primary;
+    font-size: $font-size-lg;
+}
+
+.sa-wizard__intro span {
+    flex-shrink: 0;
+    color: $color-text-muted;
+    font-size: $font-size-xs;
+}
+
 .sa-wizard__fields {
     display: grid;
     gap: $spacing-4;
@@ -73,9 +121,55 @@
     border: 0;
 }
 
+.sa-organization-setup-page {
+    max-width: 1100px;
+    margin-inline: auto;
+}
+
+.sa-organization-setup-card {
+    width: 100%;
+}
+
+.sa-organization-setup-actions {
+    display: flex;
+    justify-content: space-between;
+    gap: $spacing-3;
+    padding-top: $spacing-4;
+    border-top: 1px solid $color-border;
+}
+
 @media (max-width: 480px) {
-    .sa-wizard__step span:last-child {
-        display: none;
+    .sa-wizard__stepper {
+        margin-inline: -$spacing-1;
+        width: calc(100% + #{$spacing-2});
+    }
+
+    .sa-wizard__step-item:not(:last-child)::after {
+        right: calc(-50% + 16px);
+        left: calc(50% + 16px);
+        top: 11px;
+    }
+
+    .sa-wizard__step-number {
+        width: 24px;
+        height: 24px;
+        font-size: 0.7rem;
+    }
+
+    .sa-wizard__step {
+        font-size: 0.68rem;
+    }
+
+    .sa-wizard__intro strong {
+        font-size: $font-size-md;
+    }
+
+    .sa-organization-setup-actions {
+        flex-direction: column-reverse;
+    }
+
+    .sa-organization-setup-actions > button {
+        width: 100%;
     }
 }
 
@@ -103,6 +197,59 @@
 .sa-management-form__toggle small {
     color: $color-text-muted;
     font-size: $font-size-xs;
+}
+
+.sa-capacity-fields {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 190px), 1fr));
+    gap: $spacing-3;
+    min-width: 0;
+    padding: $spacing-4;
+    border: 1px solid $color-border;
+    border-radius: $radius-md;
+}
+
+.sa-capacity-fields legend {
+    padding: 0 $spacing-2;
+    color: $color-text-primary;
+    font-weight: $font-weight-semibold;
+}
+
+.sa-capacity-fields > .sa-management-form__hint {
+    grid-column: 1 / -1;
+    margin: 0;
+}
+
+.sa-capacity-limit__unlimited {
+    display: flex;
+    align-items: center;
+    gap: $spacing-2;
+    margin-top: $spacing-2;
+    color: $color-text-secondary;
+    font-size: $font-size-sm;
+    cursor: pointer;
+}
+
+.sa-capacity-limit__unlimited input {
+    accent-color: $color-primary;
+}
+
+.sa-capacity-preview {
+    grid-column: 1 / -1;
+    display: grid;
+    gap: $spacing-2;
+    padding: $spacing-3;
+    border: 1px solid $color-border;
+    border-radius: $radius-sm;
+    background: $color-bg-card;
+}
+
+.sa-capacity-preview > div {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 210px), 1fr));
+    gap: $spacing-2 $spacing-4;
+    color: $color-text-secondary;
+    font-size: $font-size-sm;
 }
 
 // Sélecteur de logo (étape du wizard et du modal d'édition). L'aperçu garde

@@ -68,6 +68,16 @@ final readonly class OrganizationResponse
         public bool $isPubliclyListed,
         #[OA\Property(description: 'La fonctionnalité vitrine est-elle autorisée par la plateforme', example: false)]
         public bool $showcaseEnabled,
+        #[OA\Property(description: 'Nombre maximal de villes ; null indique sans limite', nullable: true)]
+        public ?int $maxCities,
+        #[OA\Property(description: 'Nombre maximal de parcelles ; null indique sans limite', nullable: true)]
+        public ?int $maxParcels,
+        #[OA\Property(description: 'Nombre maximal de bâtiments ; null indique sans limite', nullable: true)]
+        public ?int $maxBuildings,
+        #[OA\Property(description: 'Nombre maximal d’unités ; null indique sans limite', nullable: true)]
+        public ?int $maxUnits,
+        #[OA\Property(description: 'Nombre maximal de membres ; null indique sans limite', nullable: true)]
+        public ?int $maxMembers,
         #[OA\Property(description: 'Fin de la suspension temporaire ; null si indéterminée ou organisation active.', format: 'date-time', nullable: true)]
         public ?\DateTimeImmutable $suspensionEndsAt,
     ) {
@@ -92,6 +102,11 @@ final readonly class OrganizationResponse
             publicDescription: $organization->getPublicDescription(),
             isPubliclyListed: $organization->isPubliclyListed(),
             showcaseEnabled: $organization->isShowcaseEnabled(),
+            maxCities: $organization->getMaxCities(),
+            maxParcels: $organization->getMaxParcels(),
+            maxBuildings: $organization->getMaxBuildings(),
+            maxUnits: $organization->getMaxUnits(),
+            maxMembers: $organization->getMaxMembers(),
             suspensionEndsAt: $organization->getSuspensionEndsAt(),
         );
     }

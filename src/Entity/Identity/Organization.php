@@ -115,6 +115,22 @@ class Organization extends SoftDeletableEntity
     #[ORM\Column(type: Types::BOOLEAN, options: ['default' => false])]
     private bool $showcaseEnabled = false;
 
+    /** Capacités nullables : null signifie sans limite configurée. */
+    #[ORM\Column(type: Types::INTEGER, nullable: true, options: ['unsigned' => true])]
+    private ?int $maxCities = null;
+
+    #[ORM\Column(type: Types::INTEGER, nullable: true, options: ['unsigned' => true])]
+    private ?int $maxParcels = null;
+
+    #[ORM\Column(type: Types::INTEGER, nullable: true, options: ['unsigned' => true])]
+    private ?int $maxBuildings = null;
+
+    #[ORM\Column(type: Types::INTEGER, nullable: true, options: ['unsigned' => true])]
+    private ?int $maxUnits = null;
+
+    #[ORM\Column(type: Types::INTEGER, nullable: true, options: ['unsigned' => true])]
+    private ?int $maxMembers = null;
+
     /**
      * État actuel de l'organisation dans la plateforme.
      */
@@ -274,6 +290,66 @@ class Organization extends SoftDeletableEntity
     public function setShowcaseEnabled(bool $showcaseEnabled): static
     {
         $this->showcaseEnabled = $showcaseEnabled;
+
+        return $this;
+    }
+
+    public function getMaxCities(): ?int
+    {
+        return $this->maxCities;
+    }
+
+    public function setMaxCities(?int $limit): static
+    {
+        $this->maxCities = $limit;
+
+        return $this;
+    }
+
+    public function getMaxParcels(): ?int
+    {
+        return $this->maxParcels;
+    }
+
+    public function setMaxParcels(?int $limit): static
+    {
+        $this->maxParcels = $limit;
+
+        return $this;
+    }
+
+    public function getMaxBuildings(): ?int
+    {
+        return $this->maxBuildings;
+    }
+
+    public function setMaxBuildings(?int $limit): static
+    {
+        $this->maxBuildings = $limit;
+
+        return $this;
+    }
+
+    public function getMaxUnits(): ?int
+    {
+        return $this->maxUnits;
+    }
+
+    public function setMaxUnits(?int $limit): static
+    {
+        $this->maxUnits = $limit;
+
+        return $this;
+    }
+
+    public function getMaxMembers(): ?int
+    {
+        return $this->maxMembers;
+    }
+
+    public function setMaxMembers(?int $limit): static
+    {
+        $this->maxMembers = $limit;
 
         return $this;
     }

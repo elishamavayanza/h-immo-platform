@@ -15,6 +15,7 @@ use App\Repository\Property\CityRepository;
 use App\Security\SecurityAction;
 use App\Security\SecurityServiceInterface;
 use App\Service\System\AuditLogService;
+use App\Service\Identity\OrganizationCapacityService;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\Uid\Uuid;
 use Symfony\Component\Validator\Validator\ValidatorInterface;
@@ -40,7 +41,8 @@ final readonly class CityService
         private CityMapper $mapper,
         private SecurityServiceInterface $securityService,
         private AuditLogService $auditLogService,
-        private ValidatorInterface $validator
+        private ValidatorInterface $validator,
+        private OrganizationCapacityService $capacityService,
     ) {
     }
 
@@ -182,8 +184,13 @@ final readonly class CityService
         $city->setOrganization($organization);
         $this->mapper->copyToEntity($request, $city);
 
-        $this->em->persist($city);
-        $this->em->flush();
+        $attempt = $this->capacityService->executeWithinLimit($organization, 'cities', function () use ($city): void {
+            $this->em->persist($city);
+            $this->em->flush();
+        });
+        if ($attempt['message'] !== null) {
+            return $feedback->addError('capacity', $attempt['message'])->setErrorFlushDescription($attempt['message'])->setStatus($attempt['status'])->autoInitFlush();
+        }
 
         return $feedback
             ->setData($this->mapper->toResponse($city))

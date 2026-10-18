@@ -1,8 +1,19 @@
 # Rapport de contrôle qualité des manuels Soft-IMMO
 
-**Révision :** 1.3.4 — 18 octobre 2026
+**Révision :** 1.3.5 — 18 octobre 2026
 **Sources :** `catalog.json` et `tools/generate_user_manuals.py`  
 **PDF concernés :** SUPER_ADMIN, PATRON, ADMIN_IMMOBILIER et ADMIN_VILLE.
+
+## Révision 1.3.5 — Capacités configurables par organisation
+
+- Ajout de plafonds manuels et indépendants pour les villes, parcelles, bâtiments, unités et membres actifs, avec « Sans limite » représenté par une valeur nulle explicite.
+- Les compteurs sont bornés à l’organisation, et les créations sont contrôlées côté service sous verrou MariaDB afin que des demandes simultanées ne dépassent pas le plafond.
+- Les organisations existantes conservent leurs ressources et reçoivent des plafonds sans limite jusqu’à leur configuration par le SUPER_ADMIN. Une réduction ne masque ni ne supprime les données ; elle bloque uniquement les nouvelles créations concernées.
+- Le PATRON et l’ADMIN_IMMOBILIER consultent l’usage global de leur organisation dans Paramètres → Organisation. L’ADMIN_VILLE ne reçoit pas ces compteurs globaux. Aucun paiement en ligne n’est introduit.
+- Le choix de première livraison est la configuration directe par organisation ; un catalogue de modèles réutilisables reste reporté et n’est pas présenté comme disponible.
+- Mise à jour du manuel partagé, des questions FAQ par rôle et des quatre PDF/pages du lecteur. Pagination : 17 pages (SUPER_ADMIN), 20 (PATRON), 21 (ADMIN_IMMOBILIER), 19 (ADMIN_VILLE).
+- Vérifications exécutées : `yarn type-check`, `yarn build`, lint PHP des fichiers modifiés, `lint:container`, `doctrine:schema:validate` (mapping et base synchronisés), statut des migrations, JSON valide et `git diff --check`. La migration `Version20261018130000OrganizationCapacityLimits` a été appliquée sur la base de développement `gestion_himmo`.
+- Génération réussie des quatre PDF avec le runtime Python du workspace ; examen visuel des pages contenant les nouveaux articles, sans débordement ni défaut de pagination manifeste. Les parcours métiers complets et les scripts de tests autonomes n’ont pas été exécutés dans cette révision.
 
 ## Révision 1.3.4 — Autorisation de la vitrine par organisation
 

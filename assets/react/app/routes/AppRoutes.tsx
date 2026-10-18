@@ -35,6 +35,7 @@ const ForgotPasswordPage = lazyPage(() => import('../../features/auth/pages/Forg
 const ResetPasswordPage = lazyPage(() => import('../../features/auth/pages/ResetPasswordPage'), 'ResetPasswordPage');
 const SuperAdminDashboardPage = lazyPage(() => import('../../features/super_admin/dashboard/pages/SuperAdminDashboardPage'), 'SuperAdminDashboardPage');
 const OrganizationsPage = lazyPage(() => import('../../features/super_admin/organizations/pages/OrganizationsPage'), 'OrganizationsPage');
+const OrganizationSetupPage = lazyPage(() => import('../../features/super_admin/organizations/pages/OrganizationSetupPage'), 'OrganizationSetupPage');
 const UsersPage = lazyPage(() => import('../../features/super_admin/users/pages/UsersPage'), 'UsersPage');
 const AuditLogPage = lazyPage(() => import('../../features/super_admin/audit/pages/AuditLogPage'), 'AuditLogPage');
 const SuperAdminReportsPage = lazyPage(() => import('../../features/super_admin/reports/pages/ReportsPage'), 'ReportsPage');
@@ -109,6 +110,8 @@ export function AppRoutes() {
                     <Route index element={<AppLanding />} />
 
                     <Route path="publications/:uuid" element={<Suspense fallback={pageFallback}><PublicationDetailPage /></Suspense>} />
+                    <Route path="admin/organisations/nouvelle" element={<Suspense fallback={pageFallback}><OrganizationSetupPage /></Suspense>} />
+                    <Route path="admin/organisations/:uuid/modifier" element={<Suspense fallback={pageFallback}><OrganizationSetupPage /></Suspense>} />
 
 {APP_ROUTES.map((route) => {
                         return (

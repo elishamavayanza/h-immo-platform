@@ -3,6 +3,7 @@ import type { Feedback } from '../../../../../services/api/api.types';
 import { mediaHref } from '../../../shared/media/services/mediaService';
 import type {
     OrganizationApiResponse,
+    OrganizationCapacityData,
     OrganizationCreatePayload,
     OrganizationCreateResult,
     OrganizationListData,
@@ -23,6 +24,12 @@ import type {
  * `apiClient` a `baseURL = '/api'`, donc `url` commence à `/v1/...`.
  */
 export const organizationsService = {
+    /** `GET /api/v1/identity/organizations/{uuid}` — détail pour la page d’édition. */
+    async show(uuid: string): Promise<OrganizationRow> {
+        const { data } = await apiClient.get<Feedback<OrganizationApiResponse>>(`/v1/identity/organizations/${uuid}`);
+        return toRow(data.data);
+    },
+
     /** `GET /api/v1/identity/organizations` — liste paginée (SUPER_ADMIN : toutes). */
     async list(params?: { page?: number; limit?: number; search?: string }): Promise<OrganizationRow[]> {
         const query: Record<string, string | number> = {
@@ -57,6 +64,12 @@ export const organizationsService = {
         const { logoFile: _logoFile, removeLogo: _removeLogo, ...body } = payload;
         const { data } = await apiClient.put<Feedback<OrganizationApiResponse>>(`/v1/identity/organizations/${uuid}`, body);
         return toRow(data.data);
+    },
+
+    /** `GET /api/v1/identity/organizations/{uuid}/capacity` — usage plateforme, SUPER_ADMIN uniquement. */
+    async capacity(uuid: string): Promise<OrganizationCapacityData> {
+        const { data } = await apiClient.get<Feedback<OrganizationCapacityData>>(`/v1/identity/organizations/${uuid}/capacity`);
+        return data.data;
     },
 
     /** `DELETE /api/v1/identity/organizations/{uuid}` — suppression logique (soft delete). */
@@ -123,6 +136,11 @@ function toRow(response: OrganizationApiResponse): OrganizationRow {
         createdAt: response.createdAt,
         suspensionEndsAt: response.suspensionEndsAt ?? null,
         showcaseEnabled: response.showcaseEnabled,
+        maxCities: response.maxCities,
+        maxParcels: response.maxParcels,
+        maxBuildings: response.maxBuildings,
+        maxUnits: response.maxUnits,
+        maxMembers: response.maxMembers,
     };
 }
 

@@ -7,6 +7,7 @@ namespace App\Service\Identity;
 use App\Dto\Feedback;
 use App\Dto\Request\Identity\OrganizationRequest;
 use App\Dto\Request\Identity\OrganizationSuspendRequest;
+use App\Dto\Response\Identity\OrganizationCapacityResponse;
 use App\Dto\Response\Identity\SessionOrganizationMembership;
 use App\Dto\Request\Identity\OrganizationShowcaseRequest;
 use App\Dto\Request\PaginationQuery;
@@ -52,7 +53,8 @@ final readonly class OrganizationService
         private PasswordResetService $passwordResetService,
         private OrganizationNotificationService $notificationService,
         private AuditLogService $auditLogService,
-        private DateTimeService $dateTimeService
+        private DateTimeService $dateTimeService,
+        private OrganizationCapacityService $capacityService,
     ) {
     }
 
@@ -252,12 +254,17 @@ final readonly class OrganizationService
             entityType: Organization::class,
             entityId: (int) $organization->getId(),
             organization: $organization,
-            user: null,
+            user: $this->security->getCurrentUser(),
             oldValues: null,
             newValues: [
                 'name' => $request->name,
                 'code' => $request->code,
                 'showcaseEnabled' => $organization->isShowcaseEnabled(),
+                'maxCities' => $organization->getMaxCities(),
+                'maxParcels' => $organization->getMaxParcels(),
+                'maxBuildings' => $organization->getMaxBuildings(),
+                'maxUnits' => $organization->getMaxUnits(),
+                'maxMembers' => $organization->getMaxMembers(),
                 'patronEmail' => $request->patronEmail,
                 'emailSent' => $emailSent,
             ]
@@ -309,6 +316,23 @@ final readonly class OrganizationService
             $this->security->requirePlatformRole();
         }
 
+        $capacityWasRequested = $request->capacitySettingsProvided
+            || $request->maxCities !== null
+            || $request->maxParcels !== null
+            || $request->maxBuildings !== null
+            || $request->maxUnits !== null
+            || $request->maxMembers !== null;
+        if ($capacityWasRequested) {
+            $this->security->requirePlatformRole();
+            if (!$request->capacitySettingsProvided) {
+                return $feedback
+                    ->addError('capacitySettingsProvided', 'Confirmez la configuration complète des capacités.')
+                    ->setErrorFlushDescription('Configuration des capacités incomplète.')
+                    ->setStatus(422)
+                    ->autoInitFlush();
+            }
+        }
+
         $violations = $this->validator->validate($request, groups: ['update']);
         if (count($violations) > 0) {
             return $feedback
@@ -328,6 +352,11 @@ final readonly class OrganizationService
             'country' => $organization->getCountry(),
             'currency' => $organization->getCurrency()->value,
             'showcaseEnabled' => $organization->isShowcaseEnabled(),
+            'maxCities' => $organization->getMaxCities(),
+            'maxParcels' => $organization->getMaxParcels(),
+            'maxBuildings' => $organization->getMaxBuildings(),
+            'maxUnits' => $organization->getMaxUnits(),
+            'maxMembers' => $organization->getMaxMembers(),
         ];
         $this->mapper->copyToEntity($request, $organization);
         $this->auditLogService->log(
@@ -347,6 +376,11 @@ final readonly class OrganizationService
                 'country' => $organization->getCountry(),
                 'currency' => $organization->getCurrency()->value,
                 'showcaseEnabled' => $organization->isShowcaseEnabled(),
+                'maxCities' => $organization->getMaxCities(),
+                'maxParcels' => $organization->getMaxParcels(),
+                'maxBuildings' => $organization->getMaxBuildings(),
+                'maxUnits' => $organization->getMaxUnits(),
+                'maxMembers' => $organization->getMaxMembers(),
             ],
             flush: false,
         );
@@ -357,6 +391,39 @@ final readonly class OrganizationService
             ->setFlushDescription('L\'organisation a été mise à jour avec succès.')
             ->setStatus(200)
             ->autoInitFlush();
+    }
+
+    /** Usage + capacités effectives, exposés dans le périmètre de l’organisation. */
+    public function capacity(string $uuid): Feedback
+    {
+        $feedback = new Feedback();
+        $organization = $this->repository->findOneBy(['uuid' => $uuid]);
+        if (!$organization) {
+            return $feedback->setErrorFlushDescription('Organisation introuvable.')->setStatus(404)->autoInitFlush();
+        }
+
+        if ($this->security->isSuperAdmin()) {
+            $this->security->requirePlatformRole();
+        } else {
+            $this->security->checkOrganizationAccess($organization, SecurityAction::VIEW_ORGANIZATION);
+            $role = $this->security->getOrganizationRole($this->security->getCurrentUser(), $organization);
+            if (!in_array($role, [OrganizationRole::PATRON, OrganizationRole::ADMIN_IMMOBILIER], true)) {
+                throw new \App\Exception\AccessDeniedException('Les capacités globales de l’organisation sont réservées au PATRON et à l’ADMIN_IMMOBILIER.');
+            }
+        }
+
+        $usage = $this->capacityService->usage($organization);
+        return $feedback->setData(new OrganizationCapacityResponse(
+            limits: [
+                'cities' => $organization->getMaxCities(),
+                'parcels' => $organization->getMaxParcels(),
+                'buildings' => $organization->getMaxBuildings(),
+                'units' => $organization->getMaxUnits(),
+                'members' => $organization->getMaxMembers(),
+            ],
+            usage: $usage,
+            showcaseEnabled: $organization->isShowcaseEnabled(),
+        ))->setFlushDescription('Capacités et utilisation récupérées.')->setStatus(200)->autoInitFlush();
     }
 
     /**

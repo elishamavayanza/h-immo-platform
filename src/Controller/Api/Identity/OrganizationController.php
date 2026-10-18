@@ -9,6 +9,7 @@ use App\Dto\Request\Identity\OrganizationRequest;
 use App\Dto\Request\Identity\OrganizationShowcaseRequest;
 use App\Dto\Request\Identity\OrganizationSuspendRequest;
 use App\Dto\Request\PaginationQuery;
+use App\Dto\Response\Identity\OrganizationCapacityResponse;
 use App\Dto\Response\Identity\SessionOrganizationMembership;
 use App\Enum\OrganizationRole;
 use App\Service\Identity\OrganizationService;
@@ -66,6 +67,26 @@ final class OrganizationController extends AbstractController
     public function show(string $uuid): JsonResponse
     {
         $feedback = $this->organizationService->getByUuid($uuid);
+
+        return $this->json($feedback, $feedback->getStatus());
+    }
+
+    #[Route('/{uuid}/capacity', name: 'capacity', methods: ['GET'])]
+    #[OA\Get(
+        summary: 'Capacités et usage d’une organisation',
+        description: 'Retourne les plafonds et les compteurs bornés à l’organisation. Réservé au SUPER_ADMIN, au PATRON et à l’ADMIN_IMMOBILIER de cette organisation.',
+        security: [['bearer' => []]],
+    )]
+    #[OA\Response(
+        response: 200,
+        description: 'Capacités et usage récupérés',
+        content: new OA\JsonContent(ref: new Model(type: OrganizationCapacityResponse::class))
+    )]
+    #[OA\Response(response: 403, description: 'Accès non autorisé')]
+    #[OA\Response(response: 404, description: 'Organisation introuvable')]
+    public function capacity(string $uuid): JsonResponse
+    {
+        $feedback = $this->organizationService->capacity($uuid);
 
         return $this->json($feedback, $feedback->getStatus());
     }

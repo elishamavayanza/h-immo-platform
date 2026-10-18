@@ -57,7 +57,8 @@ final readonly class OrganizationUserService
         private ValidatorInterface $validator,
         private SecurityServiceInterface $security,
         private PasswordResetService $passwordResetService,
-        private AuditLogService $auditLogService
+        private AuditLogService $auditLogService,
+        private OrganizationCapacityService $capacityService,
     ) {
     }
 
@@ -185,6 +186,12 @@ final readonly class OrganizationUserService
         $this->security->checkOrganizationAccess($organization, SecurityAction::MANAGE_USERS);
         $this->security->checkUserAccess($user, SecurityAction::MANAGE_USERS);
 
+        if ($this->orgUserRepository->findByOrganizationAndUser($organization, $user) === []) {
+            $isNewMember = true;
+        } else {
+            $isNewMember = false;
+        }
+
         if ($request->role === OrganizationRole::ADMIN_VILLE) {
             return $feedback->addError('role', 'Attribuez ADMIN_VILLE via l’opération avec périmètre de villes.')
                 ->setErrorFlushDescription('Les affectations de ville exigent une sélection explicite des villes.')
@@ -205,8 +212,18 @@ final readonly class OrganizationUserService
         $orgUser->setUser($user);
         $orgUser->setRole($request->role);
 
-        $this->em->persist($orgUser);
-        $this->em->flush();
+        if ($isNewMember) {
+            $attempt = $this->capacityService->executeWithinLimit($organization, 'members', function () use ($orgUser): void {
+                $this->em->persist($orgUser);
+                $this->em->flush();
+            });
+            if ($attempt['message'] !== null) {
+                return $feedback->addError('capacity', $attempt['message'])->setErrorFlushDescription($attempt['message'])->setStatus($attempt['status'])->autoInitFlush();
+            }
+        } else {
+            $this->em->persist($orgUser);
+            $this->em->flush();
+        }
 
         return $feedback
             ->setData($this->mapper->toResponse($orgUser))
@@ -589,34 +606,39 @@ final readonly class OrganizationUserService
         // depuis l'API.
         $orgUser = null;
 
-        $this->em->wrapInTransaction(function () use ($organization, $role, $email, $fullName, $phone, $cities, &$orgUser): void {
-            $user = new User();
-            $user->setEmail($email);
-            $user->setFullName($fullName);
-            $user->setPhone($phone);
-            $user->setIsActive(true);
-            $user->setPassword(''); // Sera défini via reset-password
-            $this->em->persist($user);
+        $attempt = $this->capacityService->executeWithinLimit($organization, 'members', function () use ($organization, $role, $email, $fullName, $phone, $cities, &$orgUser): void {
+            $this->em->wrapInTransaction(function () use ($organization, $role, $email, $fullName, $phone, $cities, &$orgUser): void {
+                $user = new User();
+                $user->setEmail($email);
+                $user->setFullName($fullName);
+                $user->setPhone($phone);
+                $user->setIsActive(true);
+                $user->setPassword(''); // Sera défini via reset-password
+                $this->em->persist($user);
 
-            // Le lien direct suffit : sans flush intermédiaire, l'entité
-            // n'a pas d'id mais Doctrine la référence par son objet.
-            $orgUser = new OrganizationUser();
-            $orgUser->setOrganization($organization);
-            $orgUser->setUser($user);
-            $orgUser->setRole($role);
-            $this->em->persist($orgUser);
+                // Le lien direct suffit : sans flush intermédiaire, l'entité
+                // n'a pas d'id mais Doctrine la référence par son objet.
+                $orgUser = new OrganizationUser();
+                $orgUser->setOrganization($organization);
+                $orgUser->setUser($user);
+                $orgUser->setRole($role);
+                $this->em->persist($orgUser);
 
-            if ($role === OrganizationRole::ADMIN_VILLE) {
-                foreach ($cities as $city) {
-                    $userCity = new UserCity();
-                    $userCity->setUser($user);
-                    $userCity->setCity($city);
-                    $this->em->persist($userCity);
+                if ($role === OrganizationRole::ADMIN_VILLE) {
+                    foreach ($cities as $city) {
+                        $userCity = new UserCity();
+                        $userCity->setUser($user);
+                        $userCity->setCity($city);
+                        $this->em->persist($userCity);
+                    }
                 }
-            }
 
-            $this->em->flush();
+                $this->em->flush();
+            });
         });
+        if ($attempt['message'] !== null) {
+            return $feedback->addError('capacity', $attempt['message'])->setErrorFlushDescription($attempt['message'])->setStatus($attempt['status'])->autoInitFlush();
+        }
 
         // L'envoi se fait APRÈS le commit : le mailer est un service
         // externe, on ne veut pas qu'une panne SMTP annule la création

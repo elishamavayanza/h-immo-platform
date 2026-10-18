@@ -52,6 +52,23 @@ class OrganizationRepository extends ServiceEntityRepository
         }
     }
 
+    /** Compte une capacité directement dans le périmètre d’une organisation. */
+    public function countCapacityUsage(Organization $organization, string $resource): int
+    {
+        $dql = match ($resource) {
+            'cities' => 'SELECT COUNT(c.id) FROM App\\Entity\\Property\\City c WHERE c.organization = :organization AND c.deletedAt IS NULL',
+            'parcels' => 'SELECT COUNT(p.id) FROM App\\Entity\\Property\\Parcel p JOIN p.city c WHERE c.organization = :organization AND c.deletedAt IS NULL AND p.deletedAt IS NULL',
+            'buildings' => 'SELECT COUNT(b.id) FROM App\\Entity\\Property\\Building b JOIN b.parcel p JOIN p.city c WHERE c.organization = :organization AND c.deletedAt IS NULL AND p.deletedAt IS NULL AND b.deletedAt IS NULL',
+            'units' => 'SELECT COUNT(u.id) FROM App\\Entity\\Property\\Unit u JOIN u.building b JOIN b.parcel p JOIN p.city c WHERE c.organization = :organization AND c.deletedAt IS NULL AND p.deletedAt IS NULL AND b.deletedAt IS NULL AND u.deletedAt IS NULL',
+            'members' => 'SELECT COUNT(DISTINCT u.id) FROM App\\Entity\\Identity\\OrganizationUser ou JOIN ou.user u WHERE ou.organization = :organization AND u.isActive = true AND u.deletedAt IS NULL',
+            default => throw new \InvalidArgumentException('Type de capacité inconnu.'),
+        };
+
+        return (int) $this->getEntityManager()->createQuery($dql)
+            ->setParameter('organization', $organization)
+            ->getSingleScalarResult();
+    }
+
     /** @return list<Organization> */
     public function findExpiredSuspensions(\DateTimeImmutable $now): array
     {

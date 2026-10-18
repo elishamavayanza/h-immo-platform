@@ -65,6 +65,13 @@ final class OrganizationMapper
         if ($dto->showcaseEnabled !== null) {
             $organization->setShowcaseEnabled($dto->showcaseEnabled);
         }
+        if ($dto->capacitySettingsProvided) {
+            $organization->setMaxCities($dto->maxCities);
+            $organization->setMaxParcels($dto->maxParcels);
+            $organization->setMaxBuildings($dto->maxBuildings);
+            $organization->setMaxUnits($dto->maxUnits);
+            $organization->setMaxMembers($dto->maxMembers);
+        }
 
         return $organization;
     }

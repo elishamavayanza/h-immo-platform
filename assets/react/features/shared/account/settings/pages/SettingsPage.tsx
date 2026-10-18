@@ -25,6 +25,7 @@ type FxRate = { baseCurrency: string; quoteCurrency: string; rate: string; effec
 type FxCity = { uuid: string; name: string; rate: FxRate | null };
 type FxAdmin = { uuid: string; name: string; allowed: boolean; cities: Array<{ uuid: string; name: string }> };
 type HistoricalRate = { scope: string; source?: string; rate: FxRate | null };
+type OrganizationCapacity = { limits: Record<'cities' | 'parcels' | 'buildings' | 'units' | 'members', number | null>; usage: Record<'cities' | 'parcels' | 'buildings' | 'units' | 'members', number>; showcaseEnabled: boolean };
 
 const localDateKey = (date: Date) => `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
 
@@ -56,6 +57,21 @@ export function SettingsPage() {
     const [logoLoading, setLogoLoading] = useState(false);
     const [logoBusy, setLogoBusy] = useState(false);
     const [logoError, setLogoError] = useState<string | null>(null);
+    const [capacity, setCapacity] = useState<OrganizationCapacity | null>(null);
+    const [capacityError, setCapacityError] = useState<string | null>(null);
+    const [capacityLoading, setCapacityLoading] = useState(false);
+
+    useEffect(() => {
+        if (!isOrganizationPage || !currentOrganization || !['patron', 'admin_immobilier'].includes(organizationRole ?? '')) { setCapacity(null); setCapacityError(null); return; }
+        let active = true;
+        setCapacityLoading(true);
+        setCapacityError(null);
+        void apiClient.get<Feedback<OrganizationCapacity>>(`/v1/identity/organizations/${currentOrganization.uuid}/capacity`)
+            .then(({ data }) => { if (active) setCapacity(data.data); })
+            .catch((cause: unknown) => { if (active) setCapacityError(cause instanceof ApiError ? cause.message : 'Impossible de charger les capacités de l’organisation.'); })
+            .finally(() => { if (active) setCapacityLoading(false); });
+        return () => { active = false; };
+    }, [currentOrganization, isOrganizationPage, organizationRole]);
 
     useEffect(() => {
         if (!isOrganizationPage || organizationRole !== 'admin_immobilier' || !currentOrganization) return;
@@ -256,6 +272,12 @@ export function SettingsPage() {
             </header>
 
             <div className="settings-page__sections">
+                {isOrganizationPage && ['patron', 'admin_immobilier'].includes(organizationRole ?? '') && <section id="settings-organization-capacity" className="settings-section"><Card header="Offre et capacités" className="settings-card">
+                    <p>Cette configuration est attribuée manuellement par l’administration de la plateforme. Pour la modifier, contactez votre SUPER_ADMIN. Aucun paiement en ligne n’est géré ici.</p>
+                    {capacityLoading && <p role="status">Chargement des capacités…</p>}
+                    {capacityError && <p className="settings-error" role="alert">{capacityError}</p>}
+                    {capacity && <><div className="settings-capacity-grid">{([['cities', 'Villes'], ['parcels', 'Parcelles'], ['buildings', 'Bâtiments'], ['units', 'Unités'], ['members', 'Membres actifs']] as const).map(([key, label]) => <div className="settings-capacity-item" key={key}><strong>{label}</strong><span>{capacity.usage[key]} / {capacity.limits[key] ?? 'Sans limite'}</span>{capacity.limits[key] !== null && capacity.usage[key] > capacity.limits[key] && <small>Plafond dépassé : les données restent accessibles, mais les nouvelles créations sont bloquées.</small>}</div>)}</div><div className="settings-capacity-item settings-capacity-item--feature"><strong>Vitrine immobilière</strong><span>{capacity.showcaseEnabled ? 'Autorisée par la plateforme' : 'Non autorisée'}</span></div></>}
+                </Card></section>}
                 {isOrganizationPage && organizationRole === 'admin_immobilier' && (
                     <section id="settings-organization-logo" className="settings-section"><Card header="Logo de l’organisation" className="settings-card settings-card--logo">
                         <p>Choisissez l’image qui représente votre organisation. Avant l’enregistrement, vous pouvez la déplacer, la zoomer et la faire pivoter.</p>
@@ -294,7 +316,7 @@ export function SettingsPage() {
                         {fxError && <p className="settings-error" role="alert">{fxError}</p>}
                     </Card></section>
                 )}
-                {isOrganizationPage && !['admin_immobilier', 'admin_ville'].includes(organizationRole ?? '') && (
+                {isOrganizationPage && !['patron', 'admin_immobilier', 'admin_ville'].includes(organizationRole ?? '') && (
                     <section className="settings-section"><Card header="Accès non autorisé" className="settings-card">
                         <p>Les paramètres d’organisation sont réservés aux rôles autorisés. Vous pouvez gérer vos préférences personnelles depuis « Mon compte ».</p>
                     </Card></section>
@@ -535,12 +557,12 @@ export function SettingsPage() {
                     </Card></section>
                 )}
             </div>
-            <RightSidebar title="Paramètres" size="small" variant="dark" collapsible defaultCollapsed={false} collapsedWidth={48} closeOnSelect className="settings-rightbar" collapsedContent={<div className="settings-rightbar__rail" aria-label="Raccourcis paramètres"><NavigationRailPopover title="Pages des paramètres" label="Ouvrir le menu des paramètres"><nav className="settings-rightbar__nav" aria-label="Pages des paramètres"><Link to="/settings" aria-current={!isOrganizationPage ? 'page' : undefined}>Mon compte</Link>{(organizationRole === 'admin_immobilier' || (organizationRole === 'admin_ville' && fxSettings?.scope === 'city' && fxSettings.enabled)) && <Link to="/settings/organisation" aria-current={isOrganizationPage ? 'page' : undefined}>Organisation</Link>}<Link to="/settings/manuel">Manuel d’utilisation</Link></nav></NavigationRailPopover>{isOrganizationPage && <CalendarRailPopover title="Historique des taux" label="Ouvrir le calendrier des taux"><Calendar selectedDate={new Date(`${historyDate}T12:00:00`)} onDateSelect={(date) => setHistoryDate(localDateKey(date))} className="settings-calendar__picker" weekdayFormat="compact" /></CalendarRailPopover>}</div>}>
+            <RightSidebar title="Paramètres" size="small" variant="dark" collapsible defaultCollapsed={false} collapsedWidth={48} closeOnSelect className="settings-rightbar" collapsedContent={<div className="settings-rightbar__rail" aria-label="Raccourcis paramètres"><NavigationRailPopover title="Pages des paramètres" label="Ouvrir le menu des paramètres"><nav className="settings-rightbar__nav" aria-label="Pages des paramètres"><Link to="/settings" aria-current={!isOrganizationPage ? 'page' : undefined}>Mon compte</Link>{(organizationRole === 'patron' || organizationRole === 'admin_immobilier' || (organizationRole === 'admin_ville' && fxSettings?.scope === 'city' && fxSettings.enabled)) && <Link to="/settings/organisation" aria-current={isOrganizationPage ? 'page' : undefined}>Organisation</Link>}<Link to="/settings/manuel">Manuel d’utilisation</Link></nav></NavigationRailPopover>{isOrganizationPage && <CalendarRailPopover title="Historique des taux" label="Ouvrir le calendrier des taux"><Calendar selectedDate={new Date(`${historyDate}T12:00:00`)} onDateSelect={(date) => setHistoryDate(localDateKey(date))} className="settings-calendar__picker" weekdayFormat="compact" /></CalendarRailPopover>}</div>}>
                 {isOrganizationPage && <section className="settings-calendar" aria-label="Navigation dans l’historique"><h2>Historique des taux</h2><p>Choisissez une date pour consulter le taux applicable à vos rapports.</p><Calendar selectedDate={new Date(`${historyDate}T12:00:00`)} onDateSelect={(date) => setHistoryDate(localDateKey(date))} className="settings-calendar__picker" weekdayFormat="compact" /></section>}
                 <nav className="settings-rightbar__nav" aria-label="Sections des paramètres">
                     <span className="settings-rightbar__label">Pages</span>
                     <Link to="/settings" aria-current={!isOrganizationPage ? 'page' : undefined}>Mon compte</Link>
-                    {(organizationRole === 'admin_immobilier' || (organizationRole === 'admin_ville' && fxSettings?.scope === 'city' && fxSettings.enabled)) && <Link to="/settings/organisation" aria-current={isOrganizationPage ? 'page' : undefined}>Organisation</Link>}
+                    {(organizationRole === 'patron' || organizationRole === 'admin_immobilier' || (organizationRole === 'admin_ville' && fxSettings?.scope === 'city' && fxSettings.enabled)) && <Link to="/settings/organisation" aria-current={isOrganizationPage ? 'page' : undefined}>Organisation</Link>}
                     <Link to="/settings/manuel">Manuel d’utilisation</Link>
                     {!isOrganizationPage && <div className="settings-rightbar__subnav" aria-label="Sections du compte">
                         <span className="settings-rightbar__label">Préférences</span>
@@ -552,6 +574,7 @@ export function SettingsPage() {
                         {isSuperAdmin && <a href="#settings-platform" className={activeSection === 'settings-platform' ? 'is-active' : undefined} aria-current={activeSection === 'settings-platform' ? 'location' : undefined}>Plateforme</a>}
                     </div>}
                     {isOrganizationPage && <div className="settings-rightbar__subnav" aria-label="Sections de l’organisation">
+                        {['patron', 'admin_immobilier'].includes(organizationRole ?? '') && <a href="#settings-organization-capacity">Offre et capacités</a>}
                         <span className="settings-rightbar__label">Réglages partagés</span>
                         {organizationRole === 'admin_immobilier' && <a href="#settings-organization-logo" className={activeSection === 'settings-organization-logo' ? 'is-active' : undefined} aria-current={activeSection === 'settings-organization-logo' ? 'location' : undefined}>Logo de l’organisation</a>}
                         <a href="#settings-exchange-rate" className={activeSection === 'settings-exchange-rate' ? 'is-active' : undefined} aria-current={activeSection === 'settings-exchange-rate' ? 'location' : undefined}>Taux de change</a>

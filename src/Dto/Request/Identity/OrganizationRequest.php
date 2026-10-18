@@ -109,6 +109,31 @@ final readonly class OrganizationRequest
         #[Assert\Type('bool', groups: ['create', 'update'])]
         public ?bool $showcaseEnabled = null,
 
+        #[OA\Property(description: 'Nombre maximal de villes ; null signifie sans limite', minimum: 1, example: 1, nullable: true)]
+        #[Assert\Range(min: 1, max: 1000000, groups: ['create', 'update'])]
+        public ?int $maxCities = null,
+
+        #[OA\Property(description: 'Nombre maximal de parcelles ; null signifie sans limite', minimum: 1, example: 10, nullable: true)]
+        #[Assert\Range(min: 1, max: 10000000, groups: ['create', 'update'])]
+        public ?int $maxParcels = null,
+
+        #[OA\Property(description: 'Nombre maximal de bâtiments ; null signifie sans limite', minimum: 1, example: 20, nullable: true)]
+        #[Assert\Range(min: 1, max: 10000000, groups: ['create', 'update'])]
+        public ?int $maxBuildings = null,
+
+        #[OA\Property(description: 'Nombre maximal d’unités ; null signifie sans limite', minimum: 1, example: 50, nullable: true)]
+        #[Assert\Range(min: 1, max: 10000000, groups: ['create', 'update'])]
+        public ?int $maxUnits = null,
+
+        #[OA\Property(description: 'Nombre maximal de membres actifs ; null signifie sans limite', minimum: 1, example: 5, nullable: true)]
+        #[Assert\Range(min: 1, max: 1000000, groups: ['create', 'update'])]
+        public ?int $maxMembers = null,
+
+        #[OA\Property(description: 'Indique que les cinq capacités sont explicitement configurées, y compris les valeurs nulles sans limite.', example: false)]
+        #[Assert\IsTrue(message: 'Confirmez les cinq capacités, même lorsqu’elles sont sans limite.', groups: ['create'])]
+        #[Assert\Type('bool', groups: ['create', 'update'])]
+        public bool $capacitySettingsProvided = false,
+
         // --- Champs pour la création du PATRON (utilisateur responsable) ---
         #[OA\Property(
             description: 'Email du PATRON (sera son identifiant de connexion)',

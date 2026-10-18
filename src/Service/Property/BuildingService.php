@@ -16,6 +16,7 @@ use App\Repository\Property\BuildingRepository;
 use App\Security\SecurityAction;
 use App\Security\SecurityServiceInterface;
 use App\Service\System\AuditLogService;
+use App\Service\Identity\OrganizationCapacityService;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\Uid\Uuid;
 use Symfony\Component\Validator\Validator\ValidatorInterface;
@@ -40,7 +41,8 @@ final readonly class BuildingService
         private SecurityServiceInterface $securityService,
         private AuditLogService $auditLogService,
         private EntityManagerInterface $entityManager,
-        private ValidatorInterface $validator
+        private ValidatorInterface $validator,
+        private OrganizationCapacityService $capacityService,
     ) {
     }
 
@@ -185,6 +187,7 @@ final readonly class BuildingService
 
         $this->securityService->checkParcelAccess($parent, SecurityAction::CREATE_BUILDING);
 
+        $organization = $parent->getCity()->getOrganization();
         if ($request->reference !== null
             && $this->buildingRepository->findOneByParcelAndReference($parent, $request->reference) !== null
         ) {
@@ -198,8 +201,13 @@ final readonly class BuildingService
         $buildingRepository->setParcel($parent);
         $this->buildingMapper->copyToEntity($request, $buildingRepository);
 
-        $this->entityManager->persist($buildingRepository);
-        $this->entityManager->flush();
+        $attempt = $this->capacityService->executeWithinLimit($organization, 'buildings', function () use ($buildingRepository): void {
+            $this->entityManager->persist($buildingRepository);
+            $this->entityManager->flush();
+        });
+        if ($attempt['message'] !== null) {
+            return $feedback->addError('capacity', $attempt['message'])->setErrorFlushDescription($attempt['message'])->setStatus($attempt['status'])->autoInitFlush();
+        }
 
         return $feedback
             ->setData($this->buildingMapper->toResponse($buildingRepository))

@@ -61,8 +61,33 @@ const content: Record<string, Omit<PageHelp, 'path' | 'roles'>> = {
         questions: [
             { id: 'org-find', question: 'Comment retrouver une organisation ?', answer: 'Utilisez la recherche et les filtres visibles dans la liste. Ouvrez ensuite la ligne correspondante pour consulter ou modifier sa fiche.' },
             { id: 'org-create', question: 'Comment créer ou modifier une organisation ?', answer: 'Utilisez l’action de création ou d’édition affichée sur la page, renseignez les champs obligatoires de chaque étape puis validez. Vérifiez ensuite que l’organisation apparaît avec les informations attendues.' },
+            { id: 'org-capacity-configure', question: 'Comment attribuer des capacités à une organisation ?', answer: 'À la création ou dans l’édition d’une organisation, définissez un plafond positif pour les villes, parcelles, bâtiments, unités et membres actifs, ou cochez « Sans limite ». Ces valeurs sont configurées manuellement par le SUPER_ADMIN et auditées. La réduction d’un plafond ne supprime rien : elle bloque seulement les nouvelles créations lorsque l’usage atteint le plafond.', keywords: ['offre', 'capacité', 'limite', 'plafond', 'ville', 'parcelle', 'bâtiment', 'unité', 'membre', 'sans limite'] },
+            { id: 'org-capacity-existing-data', question: 'Que se passe-t-il si un plafond est inférieur à l’usage actuel ?', answer: 'Les éléments déjà enregistrés restent visibles et modifiables. Les créations supplémentaires de la ressource concernée sont refusées avec un message indiquant la limite et invitant à contacter le SUPER_ADMIN. Aucune donnée n’est supprimée.', keywords: ['dépassement', 'réduction', 'création', 'données', 'usage'] },
             { id: 'org-suspend', question: 'Comment suspendre ou réactiver une organisation ?', answer: 'Ouvrez l’action de suspension de l’organisation, choisissez la durée proposée et indiquez le motif demandé. Pour réactiver avant la fin, utilisez l’action de réactivation de sa fiche. La suspension bloque l’accès selon les règles du compte.' },
             { id: 'org-errors', question: 'Pourquoi une organisation est-elle absente ou inaccessible ?', answer: 'Vérifiez les filtres et l’état du compte. Une organisation n’est visible que dans le périmètre d’administration autorisé ; les restrictions d’accès doivent être traitées par l’administration plateforme.' },
+        ],
+    },
+    '/app/admin/organisations/nouvelle': {
+        title: 'Créer une organisation',
+        description: 'Configurez une nouvelle organisation en suivant les étapes de la page.',
+        questions: [
+            { id: 'org-create-steps', question: 'Que contient chaque étape de création ?', answer: 'La page répartit la saisie en quatre étapes : identité et coordonnées, capacités initiales, compte PATRON, puis logo. Utilisez « Continuer » pour avancer et « Étape précédente » pour revenir sans perdre les champs déjà saisis.', keywords: ['étapes', 'stepper', 'continuer', 'retour'] },
+            { id: 'org-create-examples', question: 'À quoi servent les exemples dans les champs ?', answer: 'Les exemples gris sont des indications de format, par exemple pour le code, l’e-mail ou le téléphone. Ils disparaissent dès que vous commencez à saisir. Remplacez-les par les vraies informations de l’organisation.', keywords: ['exemple', 'placeholder', 'champ', 'saisie'] },
+            { id: 'org-create-limits', question: 'Comment choisir les capacités initiales ?', answer: 'Pour chaque ressource, laissez « Sans limite » ou décochez cette option et saisissez un plafond positif. Ces capacités peuvent être ajustées plus tard par le SUPER_ADMIN ; elles ne suppriment jamais les données existantes.', keywords: ['capacité', 'limite', 'plafond', 'ville', 'parcelle', 'bâtiment', 'unité', 'membre'] },
+            { id: 'org-create-patron', question: 'Comment le PATRON reçoit-il l’accès ?', answer: 'Indiquez le nom, l’adresse e-mail et le téléphone du PATRON. L’organisation et ce compte sont créés ensemble ; un lien de configuration du mot de passe est envoyé à son adresse.', keywords: ['compte', 'patron', 'identifiant', 'mot de passe', 'e-mail'] },
+            { id: 'org-create-logo', question: 'Le logo est-il obligatoire ?', answer: 'Non. Vous pouvez ajouter un logo à la dernière étape, ou créer l’organisation sans logo et le définir plus tard. Le recadrage proposé prépare l’image avant son envoi.', keywords: ['logo', 'image', 'facultatif', 'recadrer'] },
+            { id: 'org-create-save', question: 'Quand l’organisation est-elle créée ?', answer: 'La création est confirmée à la dernière étape. Le backend enregistre l’organisation et son PATRON dans une même transaction. En cas de problème, la page reste ouverte et affiche l’erreur pour vous permettre de corriger les champs concernés.', keywords: ['enregistrer', 'valider', 'erreur', 'transaction'] },
+        ],
+    },
+    '/app/admin/organisations/:uuid/modifier': {
+        title: 'Modifier une organisation',
+        description: 'Mettez à jour l’identité, les capacités, les options et le logo de l’organisation.',
+        questions: [
+            { id: 'org-edit-steps', question: 'Comment se déroule la modification ?', answer: 'La page présente trois étapes : informations générales, capacités et options, puis logo. Les valeurs actuelles sont préremplies ; avancez avec « Continuer » et revenez en arrière sans perdre vos changements.', keywords: ['étapes', 'stepper', 'modifier', 'continuer'] },
+            { id: 'org-edit-limits', question: 'Que signifie l’utilisation affichée à côté des plafonds ?', answer: 'Elle indique le nombre de ressources déjà enregistrées. Si un nouveau plafond est inférieur à cette utilisation, les éléments existants restent intacts, mais de nouvelles créations de cette ressource seront bloquées jusqu’à l’augmentation de la limite.', keywords: ['usage', 'utilisation', 'capacité', 'plafond', 'dépassement'] },
+            { id: 'org-edit-showcase', question: 'Que fait l’option de vitrine immobilière ?', answer: 'Lorsqu’elle est activée, le menu Vitrine devient disponible aux rôles PATRON et ADMIN_IMMOBILIER de cette organisation. La désactivation retire cet accès organisationnel.', keywords: ['vitrine', 'option', 'menu', 'patron', 'admin immobilier'] },
+            { id: 'org-edit-logo', question: 'Comment remplacer ou retirer le logo ?', answer: 'À l’étape Logo, choisissez une nouvelle image pour remplacer le logo ou utilisez l’action de suppression proposée par le sélecteur. Les autres informations sont enregistrées avec la validation finale.', keywords: ['logo', 'remplacer', 'retirer', 'supprimer'] },
+            { id: 'org-edit-errors', question: 'Pourquoi ne puis-je pas modifier les plafonds ?', answer: 'Les contrôles de capacité restent désactivés si l’application ne peut pas charger l’utilisation actuelle. Revenez à la page ou réessayez quand la connexion est rétablie afin de prévenir une réduction sans aperçu.', keywords: ['plafond', 'verrouillé', 'chargement', 'erreur'] },
         ],
     },
     '/app/admin/rapports': {
@@ -207,6 +232,7 @@ const content: Record<string, Omit<PageHelp, 'path' | 'roles'>> = {
             { id: 'property-search', question: 'Comment rechercher une parcelle, un bâtiment ou une unité ?', answer: 'Utilisez le champ de recherche et les filtres disponibles dans l’onglet courant. Si les résultats sont vides, vérifiez le niveau sélectionné et la ville active.' },
             { id: 'property-map', question: 'Comment consulter les repères GPS ?', answer: 'Ouvrez la carte depuis l’action associée aux parcelles géolocalisées. Les marqueurs regroupés peuvent être sélectionnés ; utilisez les commandes de zoom et de déplacement de la carte.' },
             { id: 'property-relations', question: 'Pourquoi un élément n’apparaît-il pas ?', answer: 'Vérifiez qu’il appartient à la ville et au niveau actuellement ouverts. L’Administrateur de ville ne voit que son périmètre attribué ; les autres organisations ne sont jamais incluses.' },
+            { id: 'property-capacity-limit', question: 'Pourquoi la création d’une ressource est-elle refusée ?', answer: 'L’organisation a peut-être atteint un plafond configuré par le SUPER_ADMIN. Les données existantes restent consultables ; seul l’ajout d’éléments supplémentaires de cette catégorie est bloqué. Le PATRON ou l’ADMIN_IMMOBILIER peut consulter l’usage dans Paramètres → Organisation et demander un ajustement au SUPER_ADMIN. L’ADMIN_VILLE ne voit pas les compteurs globaux.', roles: ['patron', 'admin_immobilier', 'admin_ville'], keywords: ['capacité', 'limite', 'plafond', 'création', 'dépassement'] },
         ],
     },
     '/app/personnel': {
@@ -238,6 +264,7 @@ const content: Record<string, Omit<PageHelp, 'path' | 'roles'>> = {
             { id: 'admin-edit', question: 'Comment modifier ou suspendre un membre ?', answer: 'Ouvrez les actions du membre concerné. Modifiez les informations dans le formulaire ou choisissez la suspension, indiquez sa durée et son motif, puis confirmez.' , roles: ['patron'] },
             { id: 'admin-city-access', question: 'Comment attribuer les villes à un Administrateur de ville ?', answer: 'Depuis les actions du membre, ouvrez la gestion de ses villes, sélectionnez uniquement les villes dont il doit avoir la charge, puis enregistrez. Ses listes seront bornées à ces villes.' , roles: ['patron'] },
             { id: 'admin-delegation', question: 'Comment autoriser un Administrateur de ville à ajouter du personnel ?', answer: 'Ouvrez la gestion des accès délégués et activez l’autorisation de création pour l’Administrateur de ville concerné. Il verra ensuite l’action d’ajout dans son espace ; l’API vérifie également cette permission.' , roles: ['admin_immobilier'] },
+            { id: 'admin-member-capacity', question: 'Que faire si le plafond de membres est atteint ?', answer: 'Le nombre affiché correspond aux comptes actifs rattachés à l’organisation, tous rôles métier confondus. Consultez le plafond dans Paramètres → Organisation, puis demandez au SUPER_ADMIN de revoir la capacité. Aucun compte existant n’est supprimé.', roles: ['patron', 'admin_immobilier'], keywords: ['membre', 'compte', 'utilisateur', 'capacité', 'limite'] },
             { id: 'admin-readonly', question: 'Pourquoi certaines commandes ne sont-elles pas disponibles ?', answer: 'Cette page ne montre que les opérations permises par votre rôle et la délégation active. Une commande absente nécessite une autorisation du responsable concerné.' },
         ],
     },
@@ -247,6 +274,7 @@ const content: Record<string, Omit<PageHelp, 'path' | 'roles'>> = {
             { id: 'organization-profile', question: 'Comment modifier les informations de l’organisation ?', answer: 'Dans la section Identité légale, modifiez les champs autorisés puis sélectionnez « Enregistrer ». Les informations non modifiables sont affichées en lecture seule.' },
             { id: 'organization-logo', question: 'Comment mettre à jour le logo ?', answer: 'Choisissez un fichier avec le contrôle de logo, vérifiez son aperçu puis enregistrez le logo. Si l’enregistrement échoue, vérifiez le format et la taille acceptés.' },
             { id: 'organization-access', question: 'Pourquoi ne puis-je pas modifier ces informations ?', answer: 'Les opérations disponibles dépendent de votre rôle et des champs modifiables dans cette page. Seul un rôle autorisé peut enregistrer les changements.' },
+            { id: 'organization-capacity-limit', question: 'Que faire si une création est refusée pour capacité atteinte ?', answer: 'Vérifiez la section « Offre et capacités » dans Paramètres → Organisation. Si le plafond est atteint, demandez au SUPER_ADMIN de revoir la configuration. Une réduction de plafond ne supprime pas les données déjà enregistrées.', roles: ['patron', 'admin_immobilier'], keywords: ['offre', 'capacité', 'limite', 'plafond', 'atteint'] },
         ],
     },
     '/app/vitrine': {
@@ -283,6 +311,8 @@ const content: Record<string, Omit<PageHelp, 'path' | 'roles'>> = {
             { id: 'org-settings-currency', question: 'Comment choisir la devise de référence ?', answer: 'Sélectionnez USD ou CDF puis enregistrez le réglage. Les montants d’origine restent distincts ; le taux de change sert aux rapports qui appliquent cette conversion.' },
             { id: 'org-settings-rate', question: 'Comment mettre à jour un taux de change ?', answer: 'Saisissez le taux demandé dans la section de l’organisation ou de la ville concernée, puis enregistrez. L’historique indique la date d’effet et une dérogation locale lorsqu’elle existe.' },
             { id: 'org-settings-access', question: 'Pourquoi cette section n’est-elle pas disponible ?', answer: 'L’accès dépend de votre rôle et de la configuration financière de l’organisation. Si le lien n’est pas affiché, demandez au Patron ou à l’Administrateur immobilier de vérifier les paramètres.' },
+            { id: 'org-settings-capacity', question: 'Comment consulter les capacités de l’organisation ?', answer: 'Le PATRON et l’ADMIN_IMMOBILIER voient les plafonds et l’usage actuel des villes, parcelles, bâtiments, unités et membres actifs. « Sans limite » signifie qu’aucun plafond n’a été fixé. Ces réglages sont en lecture seule ; contactez le SUPER_ADMIN pour demander une modification. Il n’existe pas de paiement ni de commande en ligne.', roles: ['patron', 'admin_immobilier'], keywords: ['capacité', 'offre', 'limite', 'usage', 'sans limite', 'SUPER_ADMIN'] },
+            { id: 'org-settings-capacity-over', question: 'Que se passe-t-il après une réduction sous l’usage courant ?', answer: 'Le dépassement est affiché sans cacher ni supprimer les éléments existants. Les consultations et modifications ordinaires restent possibles, mais les nouvelles créations de cette ressource sont bloquées jusqu’à ce que le plafond soit relevé ou que l’usage redescende.', roles: ['patron', 'admin_immobilier'], keywords: ['réduction', 'dépassement', 'données', 'blocage'] },
         ],
     },
     '/settings/manuel': {
@@ -341,6 +371,10 @@ export function buildContextualHelpInventory(): PageHelp[] {
     if (denied) inventory.push({ path: '/app/access-denied', roles: [null, ...ORG_ROLES, PLATFORM_ROLE], ...denied });
     const organizationProfile = content['/app/organisation'];
     if (organizationProfile) inventory.push({ path: '/app/organisation', roles: ['patron'], ...organizationProfile });
+    for (const path of ['/app/admin/organisations/nouvelle', '/app/admin/organisations/:uuid/modifier']) {
+        const definition = content[path];
+        if (definition) inventory.push({ path, roles: [PLATFORM_ROLE], ...definition });
+    }
     return inventory;
 }
 
@@ -349,7 +383,9 @@ const inventory = buildContextualHelpInventory();
 export function resolveContextualHelp(pathname: string, platformRole: PlatformRole | null, organizationRole: OrganizationRole | null): PageHelp | null {
     const role: HelpRole = platformRole ?? organizationRole;
     const candidate = inventory
-        .filter((page) => pathname === page.path || pathname.startsWith(`${page.path}/`))
+        .filter((page) => pathname === page.path
+            || pathname.startsWith(`${page.path}/`)
+            || (page.path === '/app/admin/organisations/:uuid/modifier' && /^\/app\/admin\/organisations\/[0-9a-f-]{36}\/modifier$/i.test(pathname)))
         .sort((a, b) => b.path.length - a.path.length)[0];
     if (!candidate || !candidate.roles.includes(role)) return null;
     const questions = candidate.questions.filter((question) => !question.roles || (role !== null && question.roles.includes(role)));

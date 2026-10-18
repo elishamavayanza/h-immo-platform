@@ -15,6 +15,7 @@ use App\Repository\Property\ParcelRepository;
 use App\Security\SecurityAction;
 use App\Security\SecurityServiceInterface;
 use App\Service\System\AuditLogService;
+use App\Service\Identity\OrganizationCapacityService;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\Uid\Uuid;
 use Symfony\Component\Validator\Validator\ValidatorInterface;
@@ -39,7 +40,8 @@ final readonly class ParcelService
         private SecurityServiceInterface $securityService,
         private AuditLogService $auditLogService,
         private EntityManagerInterface $entityManager,
-        private ValidatorInterface $validator
+        private ValidatorInterface $validator,
+        private OrganizationCapacityService $capacityService,
     ) {
     }
 
@@ -192,6 +194,7 @@ final readonly class ParcelService
 
         $this->securityService->checkCityAccess($parent, SecurityAction::CREATE_PARCEL);
 
+        $organization = $parent->getOrganization();
         if ($request->reference !== null
             && $this->parcelRepository->findOneByCityAndReference($parent, $request->reference) !== null
         ) {
@@ -205,8 +208,13 @@ final readonly class ParcelService
         $parcelRepository->setCity($parent);
         $this->parcelMapper->copyToEntity($request, $parcelRepository);
 
-        $this->entityManager->persist($parcelRepository);
-        $this->entityManager->flush();
+        $attempt = $this->capacityService->executeWithinLimit($organization, 'parcels', function () use ($parcelRepository): void {
+            $this->entityManager->persist($parcelRepository);
+            $this->entityManager->flush();
+        });
+        if ($attempt['message'] !== null) {
+            return $feedback->addError('capacity', $attempt['message'])->setErrorFlushDescription($attempt['message'])->setStatus($attempt['status'])->autoInitFlush();
+        }
 
         return $feedback
             ->setData($this->parcelMapper->toResponse($parcelRepository))

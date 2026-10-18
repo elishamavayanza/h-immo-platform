@@ -17,6 +17,11 @@ export interface OrganizationRow {
     createdAt: string;
     suspensionEndsAt?: string | null;
     showcaseEnabled: boolean;
+    maxCities: number | null;
+    maxParcels: number | null;
+    maxBuildings: number | null;
+    maxUnits: number | null;
+    maxMembers: number | null;
 }
 
 export type OrganizationStatusFilter = OrganizationStatus | 'all';
@@ -41,6 +46,11 @@ export interface OrganizationApiResponse {
     updatedAt: string;
     suspensionEndsAt?: string | null;
     showcaseEnabled: boolean;
+    maxCities: number | null;
+    maxParcels: number | null;
+    maxBuildings: number | null;
+    maxUnits: number | null;
+    maxMembers: number | null;
 }
 
 /**
@@ -52,6 +62,12 @@ export interface OrganizationListData {
     total: number;
     page: number;
     limit: number;
+}
+
+export interface OrganizationCapacityData {
+    limits: Record<'cities' | 'parcels' | 'buildings' | 'units' | 'members', number | null>;
+    usage: Record<'cities' | 'parcels' | 'buildings' | 'units' | 'members', number>;
+    showcaseEnabled: boolean;
 }
 
 /**
@@ -72,14 +88,21 @@ export interface OrganizationCreatePayload {
     patronFullName: string;
     patronEmail: string;
     patronPhone: string;
+    maxCities: number | null;
+    maxParcels: number | null;
+    maxBuildings: number | null;
+    maxUnits: number | null;
+    maxMembers: number | null;
+    capacitySettingsProvided: boolean;
     /** Fichier logos retaillé validé par l'ImageEditor : uploadé APRÈS la création atomique (le tenant doit exister pour le recevoir). */
     logoFile?: File | null;
 }
 
 /**
  * `OrganizationRequest` côté mise à jour : les champs PATRON ne sont plus
- * exigés (groupe de validation `update`) et le mapper ne copie que les
- * champs non nuls, donc un payload partiel est accepté.
+ * exigés (groupe de validation `update`). Les plafonds sont envoyés ensemble
+ * avec `capacitySettingsProvided` afin que `null` reste une valeur explicite
+ * (« sans limite ») sans effacer un réglage lors d’une mise à jour partielle.
  */
 export type OrganizationUpdatePayload = Partial<{
     name: string;
@@ -91,6 +114,12 @@ export type OrganizationUpdatePayload = Partial<{
     country: string;
     status: OrganizationStatus;
     showcaseEnabled: boolean;
+    maxCities: number | null;
+    maxParcels: number | null;
+    maxBuildings: number | null;
+    maxUnits: number | null;
+    maxMembers: number | null;
+    capacitySettingsProvided: boolean;
     /** Nouveau logo retaillé par l'ImageEditor : envoyé via l'endpoint média du tenant après le PUT. */
     logoFile?: File | null;
     /** Retirer le logo actuel du tenant (DELETE sur l'endpoint média). */
