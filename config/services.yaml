@@ -57,7 +57,7 @@ services:
             $jwtSecret: '%env(JWT_SECRET)%'
             $jwtTtl: '%env(int:JWT_TTL)%'
 
-    App\Command\PurgePrivateDocumentsCommand:
+    App\Command\System\PurgePrivateDocumentsCommand:
         arguments:
             $retentionDays: '%app.private_document_retention_days%'
 

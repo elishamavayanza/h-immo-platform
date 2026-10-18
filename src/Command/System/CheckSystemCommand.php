@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Command;
+namespace App\Command\System;
 
 use App\Service\System\SystemInitializationService;
 use Doctrine\ORM\EntityManagerInterface;

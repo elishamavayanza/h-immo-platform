@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Command;
+namespace App\Command\Identity;
 
 use App\Repository\Identity\RevokedTokenRepository;
 use App\Service\System\DateTimeService;

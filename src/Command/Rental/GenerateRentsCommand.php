@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Command;
+namespace App\Command\Rental;
 
 use App\Entity\Rental\Lease;
 use App\Entity\Rental\Rent;

@@ -193,7 +193,7 @@ créer une nouvelle seed ou une nouvelle base de test dédiée.
 Après chaque ajout :
 
 ```bash
-php -l src/Command/NomDeCommande.php
+php -l src/Command/<Domaine>/NomDeCommande.php
 php bin/console lint:container --env=dev
 php bin/console doctrine:schema:validate --env=dev
 php tests/verify-mariadb.php

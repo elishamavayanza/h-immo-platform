@@ -17,7 +17,7 @@ declare(strict_types=1);
  *   php tests/verify-super-admin.php
  */
 
-use App\Command\CreateSuperAdminCommand;
+use App\Command\Identity\CreateSuperAdminCommand;
 use App\Entity\Identity\User;
 use App\Entity\System\AuditLog;
 use App\Enum\PlatformRole;

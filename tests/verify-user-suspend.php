@@ -34,7 +34,7 @@ use App\Service\System\AuditLogService;
 use App\Service\System\DateTimeService;
 use App\Repository\Identity\OrganizationRepository;
 use App\Repository\Identity\UserRepository;
-use App\Command\ExpireSuspensionsCommand;
+use App\Command\Identity\ExpireSuspensionsCommand;
 use Symfony\Component\Console\Tester\CommandTester;
 use Symfony\Component\DependencyInjection\Compiler\CompilerPassInterface;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
