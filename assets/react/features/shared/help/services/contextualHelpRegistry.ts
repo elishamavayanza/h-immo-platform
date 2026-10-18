@@ -298,7 +298,7 @@ const content: Record<string, Omit<PageHelp, 'path' | 'roles'>> = {
         description: 'Consultez et mettez à jour les informations de votre compte.',
         questions: [
             { id: 'profile-edit', question: 'Comment modifier mon profil ?', answer: 'Cliquez sur « Modifier », mettez à jour les champs proposés et enregistrez. Vérifiez le message de confirmation avant de quitter la page.' },
-            { id: 'profile-photo', question: 'Comment changer ma photo ?', answer: 'Utilisez le contrôle de photo du profil, sélectionnez un fichier accepté et enregistrez la modification. En cas d’échec, vérifiez le format et la taille indiqués par l’interface.' },
+            { id: 'profile-photo', question: 'Comment changer ma photo ?', answer: 'Sélectionnez « Modifier », choisissez ou recadrez une photo avec le contrôle du profil, puis enregistrez. La nouvelle photo apparaît immédiatement dans le menu latéral, sans actualiser la page. En cas d’échec, vérifiez le format et la taille indiqués par l’interface.' },
             { id: 'profile-security', question: 'Où modifier mon mot de passe ?', answer: 'Utilisez le parcours « Mot de passe oublié » depuis la page de connexion si aucun formulaire de changement n’est proposé dans le profil.' },
         ],
     },

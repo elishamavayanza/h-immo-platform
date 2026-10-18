@@ -26,6 +26,7 @@ for (const [key, platformRole, organizationRole] of roles) {
     const ids = manual.modules.map(manualArticleId);
     assert(new Set(ids).size === ids.length, `${key} a des URL d’article uniques`);
     assert(manual.modules.every((article) => resolveManualFeature(article, menu) !== null), `${key} relie chaque article à une destination accessible`);
+    assert(menu.every((item) => !item.path || manual.modules.some((article) => resolveManualFeature(article, menu)?.path === item.path)), `${key} documente chaque écran du menu réel`);
     assert(manual.modules.every((article) => manualActions(article).length === article.steps.length), `${key} expose chaque étape sous forme d’action navigable`);
     assert(manual.modules.every((article) => new Set(manualActions(article).map((action) => action.id)).size === article.steps.length), `${key} utilise des identifiants d’action uniques dans chaque écran`);
     assert(Object.keys(groupManualArticles(manual.modules)).length !== 0, `${key} regroupe ses articles par rubrique`);
@@ -33,6 +34,10 @@ for (const [key, platformRole, organizationRole] of roles) {
     const article = manual.modules[0];
     assert(filterManualArticles(manual.modules, article.steps[0]).some((item) => item.name === article.name), `${key} recherche aussi dans les étapes`);
 }
+
+assert(catalog.roles.super_admin.modules.some((article) => article.id === 'publications'), 'SUPER_ADMIN dispose d’un guide pour le menu Publications');
+const publicationsGuide = catalog.roles.super_admin.modules.find((article) => article.id === 'publications');
+assert(Boolean(publicationsGuide?.limits?.includes('ne sont jamais destinataires')), 'le guide Publications précise que SUPER_ADMIN ne reçoit pas les annonces');
 
 const patronTitles = catalog.roles.patron.modules.map((article) => article.name).sort().join('|');
 const cityTitles = catalog.roles.admin_ville.modules.map((article) => article.name).sort().join('|');

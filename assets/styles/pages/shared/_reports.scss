@@ -17,6 +17,38 @@
     min-width: 0;
 }
 
+/* La barre d’actions est commune aux rapports de chaque espace. Le rapport
+   SUPER_ADMIN n’a pas de filtre métier supplémentaire : ses deux zones
+   utilisent simplement cette grille sans créer de troisième colonne vide. */
+.reports-page__toolbar {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, auto);
+    align-items: end;
+    gap: $spacing-4;
+    min-width: 0;
+    padding: $spacing-3 $spacing-4;
+    border: 1px solid $color-border;
+    border-radius: $radius-lg;
+    background: $color-bg-card;
+}
+
+.reports-page__date-filter { min-width: 0; }
+.reports-page__toolbar-actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: flex-end;
+    gap: $spacing-3;
+    min-width: 0;
+}
+.reports-page__period-label {
+    min-width: 0;
+    color: $color-text-muted;
+    font-size: $font-size-xs;
+    overflow-wrap: anywhere;
+}
+.reports-page__toolbar-actions .btn { flex: 0 0 auto; }
+
 .reports-page__header { display: flex; align-items: flex-end; justify-content: space-between; gap: $spacing-4; }
 .reports-page__eyebrow { color: $color-text-muted; font-size: $font-size-xs; letter-spacing: .08em; text-transform: uppercase; }
 .reports-page__header h1 { margin: $spacing-1 0; color: $color-text-primary; font-size: clamp(24px, 2.6vw, 32px); }
@@ -118,6 +150,39 @@
     .reports-page__header { align-items: stretch; flex-direction: column; gap: $spacing-3; }
     .reports-page__controls { align-items: stretch; flex-direction: column; gap: $spacing-2; }
     .reports-page__controls .select-field__wrapper { width: 100%; }
+    .reports-page .reports-page__toolbar {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr);
+        align-items: stretch;
+        gap: $spacing-3;
+        padding: $spacing-3;
+    }
+    .reports-page .reports-page__date-filter,
+    .reports-page .reports-page__toolbar-actions { width: 100%; }
+    .reports-page .reports-page__toolbar-actions {
+        align-items: stretch;
+        flex-direction: column;
+    }
+    .reports-page .reports-page__toolbar-actions .btn { width: 100%; }
+    .reports-page .reports-page__period-label { line-height: 1.45; }
+    .reports-page .reports-page__city-filter { width: 100%; min-width: 0; }
+}
+
+/* Les rapports peuvent être rendus dans une colonne avec sidebar ou panneau
+   latéral : leurs points de rupture suivent donc aussi la largeur disponible,
+   et pas seulement la largeur physique de la fenêtre. */
+@container reports-page (max-width: 440px) {
+    .reports-page .reports-page__date-filter .daterange {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    .reports-page .reports-page__date-filter .daterange__separator {
+        transform: rotate(90deg);
+        align-self: center;
+        margin: -$spacing-1 0;
+    }
+    .report-period-filter__presets { gap: $spacing-1; }
+    .report-period-filter__preset { padding-inline: 9px; }
 }
 
 @media (prefers-reduced-motion: reduce) { .reports-chart__bar { transition: none; } }

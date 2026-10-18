@@ -66,16 +66,19 @@ html[data-theme='dark'] {
 
 html[data-theme='light'] {
     color-scheme: light;
-    --color-bg-base: #E9EDEE;
-    --color-bg-primary: #E9EDEE;
-    --color-bg-content: #E9EDEE;
-    --color-bg-app: #EDF1F1;
-    --color-bg-sidebar: #F1F4F3;
-    --color-bg-topbar: #E5EAEB;
-    --color-bg-card: #F0F3F1;
-    --color-bg-card-hover: #E6ECEB;
-    --color-bg-elevated: #F4F6F5;
-    --color-bg-input: #EEF2F1;
+    // Surfaces légèrement grisées et désaturées pour éviter les grands aplats
+    // presque blancs, tout en gardant une hiérarchie claire entre page, cartes
+    // et éléments interactifs.
+    --color-bg-base: #E4E8E5;
+    --color-bg-primary: #E4E8E5;
+    --color-bg-content: #E4E8E5;
+    --color-bg-app: #E7EBE8;
+    --color-bg-sidebar: #E9EDEA;
+    --color-bg-topbar: #E2E7E5;
+    --color-bg-card: #ECEFEC;
+    --color-bg-card-hover: #E3E8E4;
+    --color-bg-elevated: #F0F2EF;
+    --color-bg-input: #E6EBE8;
     --color-text-primary: #29363C;
     --color-text-secondary: #53636A;
     --color-text-muted: #5D6F75;

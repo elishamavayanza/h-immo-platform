@@ -29,6 +29,8 @@ for (const { platformRole, organizationRole } of roles) {
 for (const page of inventory) {
     assert(page.roles.length > 0, `aucun rôle associé à ${page.path}`);
     assert(page.questions.length <= 20, `plus de vingt questions sur ${page.path}`);
+    assert(new Set(page.questions.map(({ id }) => id)).size === page.questions.length, `identifiants FAQ dupliqués sur ${page.path}`);
+    assert(page.questions.every(({ roles: questionRoles }) => !questionRoles || questionRoles.every((role) => page.roles.includes(role))), `une question dépasse les rôles autorisés sur ${page.path}`);
 }
 
 assert(resolveContextualHelp('/app/patrimoine/villes/abc/parcelles/xyz', null, 'patron')?.path === '/app/patrimoine', 'un drill-down patrimoine conserve son aide');
@@ -47,6 +49,8 @@ assert(unaccentedSearch.some((question) => question.id === 'rents-payment'), 'la
 const settingsHelp = resolveContextualHelp('/settings', null, 'patron');
 assert(settingsHelp?.questions.some((question) => question.id === 'settings-compact-tables'), 'les préférences de tableaux ont une explication dédiée');
 assert(settingsHelp?.questions.some((question) => question.id === 'settings-notifications'), 'les notifications toast et e-mail sont expliquées séparément');
+const profilePhotoHelp = resolveContextualHelp('/profile', null, 'patron')?.questions.find((question) => question.id === 'profile-photo');
+assert(profilePhotoHelp?.answer.includes('sans actualiser la page'), 'le FAQ explique la mise à jour immédiate de la photo dans le menu latéral');
 assert(filterHelpQuestions(inventory[0].questions, 'terme qui ne figure pas').length === 0, 'la recherche peut retourner un état vide');
 const savedPosition = normalizeHelpButtonPosition(640, 400, 1280, 800);
 assert(Math.abs(savedPosition.x - 0.5) < 0.001 && Math.abs(savedPosition.y - 0.5) < 0.001, 'le glissement enregistre une position normalisée');

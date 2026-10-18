@@ -1,8 +1,19 @@
 # Rapport de contrôle qualité des manuels Soft-IMMO
 
-**Révision :** 1.3.2 — 16 octobre 2026
+**Révision :** 1.3.3 — 18 octobre 2026
 **Sources :** `catalog.json` et `tools/generate_user_manuals.py`  
 **PDF concernés :** SUPER_ADMIN, PATRON, ADMIN_IMMOBILIER et ADMIN_VILLE.
+
+## Révision 1.3.3 — Couverture des menus et réglages à jour
+
+- L’article « Publications » manquait au manuel SUPER_ADMIN alors que le menu est disponible dans l’administration plateforme. Il a été ajouté au catalogue partagé avec les étapes de rédaction, audience, catégorie, programmation, pièces jointes, publication et retrait.
+- L’article précise que les comptes SUPER_ADMIN ne sont pas destinataires des publications ; les audiences disponibles concernent les rôles métier des organisations.
+- Les articles « Profil et paramètres » des quatre rôles ont été réconciliés avec les réglages réellement disponibles : photo de profil, préférences d’affichage, notifications, raccourci installable et règles propres au rôle.
+- Le contrôle de navigation vérifie désormais que chaque entrée de menu de la barre latérale possède un article de manuel pour son rôle. Vérification : 39 contrôles de navigation réussis.
+- Régénération du manuel web, des quatre PDF et des images de pages du lecteur depuis le catalogue partagé, sans ajout de captures d’écran de l’interface.
+- Vérifications exécutées : 216 contrôles PHP des contenus/PDF/images, 39 contrôles de navigation, JSON valide et `git diff --check`.
+- Le FAQ contextuel a également été comparé aux routes et menus par rôle : 200 contrôles couvrent la présence de réponses, leur visibilité, les identifiants et la recherche. La réponse sur la photo de profil précise désormais que l’avatar du menu latéral est actualisé sans rechargement.
+- Pagination actualisée : 17 pages (SUPER_ADMIN), 18 (PATRON), 20 (ADMIN_IMMOBILIER) et 19 (ADMIN_VILLE).
 
 ## Révision 1.3.2 — Alignement des PDF sur le manuel web
 

@@ -1,7 +1,12 @@
 @use '../../baseVariables/variables' as *;
 
 .sa-management-page {
-    gap: $spacing-4;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    align-content: start;
+    gap: $spacing-5;
+    min-width: 0;
+    container: management-page / inline-size;
 }
 
 .sa-management-page .sa-header__title {
@@ -39,6 +44,14 @@
 .sa-management-table-card .card__body {
     padding: $spacing-4;
     container: management-card / inline-size;
+}
+
+.sa-management-page > .inline-summary {
+    min-width: 0;
+    overflow: hidden;
+    border: 1px solid $color-border;
+    border-radius: $radius-lg;
+    background: $color-bg-card;
 }
 
 .sa-management-toolbar {
@@ -187,6 +200,42 @@
 
     .sa-management-filters > :first-child {
         grid-column: auto;
+    }
+}
+
+/* La largeur disponible varie avec le menu latéral et le dock droit. Ces
+   seuils suivent donc le contenu réel plutôt que la largeur de la fenêtre. */
+@container management-page (max-width: 1050px) {
+    .sa-management-toolbar {
+        align-items: stretch;
+        flex-direction: column;
+        gap: $spacing-3;
+    }
+
+    .sa-management-filters,
+    .sa-management-filters--users {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .sa-management-filters > :first-child {
+        grid-column: 1 / -1;
+    }
+}
+
+@container management-page (max-width: 480px) {
+    .sa-management-page { gap: $spacing-4; }
+
+    .sa-management-filters,
+    .sa-management-filters--users {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .sa-management-filters > :first-child {
+        grid-column: auto;
+    }
+
+    .sa-management-table-card .card__body {
+        padding: $spacing-3;
     }
 }
 .sa-management-status-detail {

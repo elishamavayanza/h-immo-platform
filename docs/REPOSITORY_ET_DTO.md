@@ -92,9 +92,17 @@ final class LeaseActivationService
 - Une seule classe par entité (ex. `UnitRequest`), utilisée à la fois pour
   la création et la mise à jour, distinguées par des **groupes de
   validation Symfony** : `'create'` et `'update'`.
-- Propriétés publiques typées, sans constructeur ni méthode : un DTO de
-  requête est un pur sac de données désérialisé depuis le JSON entrant
-  (via le Serializer Symfony ou `RequestPayload` selon la version).
+- Propriétés publiques typées, généralement readonly et initialisées par
+  constructeur : un DTO de requête ne porte pas de logique métier. Il reçoit
+  les données HTTP via `#[MapRequestPayload]` ou `#[MapQueryString]` et porte
+  leurs contraintes de validation Symfony.
+- Pour une création ou une mise à jour, le contrôleur passe explicitement le
+  groupe correspondant à `MapRequestPayload(validationGroups: ['create'])` ou
+  `MapRequestPayload(validationGroups: ['update'])`. Sans ce paramètre, les
+  contraintes affectées à ces groupes ne sont pas exécutées.
+- Les contraintes du DTO valident la forme et les limites des champs. Les
+  vérifications de périmètre, d'appartenance aux ressources et de cohérence
+  métier restent dans les services et `SecurityService`.
 - Les relations vers d'autres entités sont exprimées par leur **UUID
   public** (`organizationUuid`, `unitUuid`, ...), jamais par leur id
   technique interne — cohérent avec le choix fait dans `BaseEntity`.

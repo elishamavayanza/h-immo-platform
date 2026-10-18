@@ -14,7 +14,7 @@
 .publication-notifications__item > strong { overflow-wrap: anywhere; }
 .publication-notifications__item > time, .publication-notifications__category { color: $color-text-muted; font-size: .82rem; }
 
-.publication-admin { display: grid; width: 100%; max-width: 100%; min-width: 0; min-height: 100%; box-sizing: border-box; gap: 20px; padding: $spacing-5 clamp(8px, 1vw, 14px) $spacing-8; color: $color-text-primary; }
+.publication-admin { display: grid; width: 100%; max-width: 100%; min-width: 0; min-height: 100%; box-sizing: border-box; gap: 20px; padding: $spacing-5 clamp(8px, 1vw, 14px) $spacing-8; color: $color-text-primary; container: publication-admin / inline-size; }
 .publication-admin__stats, .publication-admin__grid, .publication-admin__history { width: 100%; max-width: 100%; min-width: 0; }
 .publication-admin__stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); border: 1px solid $color-border; border-radius: 14px; background: $color-bg-card; }
 .publication-admin__stats article { display: grid; gap: 5px; padding: 16px; border-right: 1px solid $color-border; }
@@ -133,4 +133,32 @@
     .publication-admin__preview-card .publication-content__image img { height: 170px; max-height: 170px; }
     .publication-detail { padding: 14px; }
     .publication-detail .publication-content__image { padding: 7px; }
+}
+
+/* La barre d’historique prend une largeur fixe sur ordinateur. Quand elle est
+   ouverte, elle réduit parfois l’espace utile sans réduire la fenêtre : on
+   adapte donc aussi l’éditeur à sa largeur réelle. */
+@container publication-admin (max-width: 900px) {
+    .publication-admin__grid { grid-template-columns: minmax(0, 1fr); }
+    .publication-admin__preview { position: static; }
+}
+
+@container publication-admin (max-width: 640px) {
+    .publication-admin__stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .publication-admin__stats article:nth-child(2) { border-right: 0; }
+    .publication-admin__stats article:nth-child(-n+2) { border-bottom: 1px solid $color-border; }
+    .publication-admin__stats article { min-width: 0; padding: 12px; }
+    .publication-admin__fields { grid-template-columns: minmax(0, 1fr); }
+    .publication-admin__editor, .publication-admin__preview, .publication-admin__history { padding: 15px; }
+    .publication-admin__history > header, .publication-admin__list article { align-items: stretch; flex-direction: column; }
+    .publication-admin__roles { min-width: 0; padding: 12px; }
+    .publication-admin__actions, .publication-admin__item-actions { width: 100%; flex-direction: column; }
+    .publication-admin__actions button, .publication-admin__item-actions button, .publication-admin__history > header > button { width: 100%; }
+    .publication-admin__preview-card { max-height: 62vh; padding: 12px; }
+    .publication-admin__preview-card .publication-content__image img { height: 130px; max-height: 130px; }
+}
+
+@container publication-admin (max-width: 360px) {
+    .publication-admin__preview-card .publication-content { grid-template-columns: minmax(0, 1fr); }
+    .publication-admin__preview-card .publication-content__image img { height: 170px; max-height: 170px; }
 }

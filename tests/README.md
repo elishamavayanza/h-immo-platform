@@ -1,12 +1,16 @@
 # Tests de vérification
 
-PHPUnit n'est pas encore installé sur le projet. Les contrôles ci-dessous sont des
-scripts PHP autonomes, exécutés dans l'environnement `dev` sur la base de
-développement. Ils compensent ce manque et couvrent les points exigés par la
-section 15 de `CONTRIBUTING.md`, notamment les contrôles d'autorisation et
-l'isolation entre organisations.
+PHPUnit n'est pas installé sur le projet. Les contrôles ci-dessous sont des
+scripts PHP autonomes. Les tests d'intégration utilisent l'environnement `dev`
+et la base de développement ; les scripts de validation statique ou pure
+peuvent s'exécuter sans connexion à la base. Ils couvrent notamment les
+contrôles d'autorisation, l'isolation entre organisations et les entrées API.
 
-Chaque script :
+Les scripts d'intégration qui ouvrent une transaction l'annulent en sortie afin
+de ne laisser aucune donnée de test. Chaque script retourne `0` en cas de
+succès et `1` en cas d'échec ; les scripts de contrôle affichent leurs résultats.
+
+Les scripts d'intégration qui ouvrent une transaction :
 
 - annule la transaction qu'il ouvre, afin de ne laisser aucune donnée de test ;
 - retourne un code de sortie `0` en cas de succès et `1` sinon ;
@@ -26,13 +30,14 @@ php tests/verify-mariadb.php
 php tests/verify-p0-security.php
 php tests/verify-p0-7-list-endpoints.php
 php tests/verify-parcel-coordinates.php
+php tests/verify-form-validation.php
 php tests/check-injected-dependencies.php
 node tests/verify-reset-password-form.ts
 node tests/verify-sidebar-roles.ts
 ```
 
-Les onze premiers scripts s'exécutent avec PHP. Les deux derniers sont des
-scripts Node : ils vérifient la logique pure des modules React
+Les scripts `php` s'exécutent avec PHP ; `verify-form-validation.php` ne requiert
+pas la base de données. Les deux scripts `node` vérifient la logique des modules React
 (`../assets/react/app`), que Node 24 exécute nativement sans transpiler.
 `verify-reset-password-form.ts` exige l'API démarrée sur le port 8000
 uniquement pour confronter ses contraintes de longueur au schéma OpenAPI ;
@@ -55,6 +60,7 @@ sans elle, ce contrôle est ignoré et les autres restent exécutés.
 | `verify-p0-security.php` | Les quatre correctifs P0, rejoués de bout en bout à travers le noyau et sur deux organisations concurrentes : (P0-1) rapports exigeant l'organisation visée et le rôle réellement détenu, y compris le compte à double appartenance ; (P0-2) cumul des dépenses borné aux villes du lecteur, sans fuite du chiffre d'une organisation concurrente ; (P0-3) médias refusés hors de leur organisation et chemins de traversée rejetés ; (P0-4) statut d'un loyer dérivé des paiements et de la date, statut d'un bail non saisissable et transitions Activate/Terminate/Cancel respectées. |
 | `verify-p0-7-list-endpoints.php` | Les trois endpoints de liste de location (`GET /api/v1/payments`, `GET /api/v1/leases`, `GET /api/v1/rents/overdue`) appelés réellement à travers le noyau avec un `PATRON` sur deux organisations concurrentes : réponse 200 et non 500, présence de la donnée attendue, liste vide et refus en 403/404 lorsque `organizationId` ou l'UUID désignent l'organisation concurrente. Couvre les régressions de repositories non injectés, de DTO de filtre non importé, de `MapRequestPayload` sur un GET, de route masquée et de filtre `organizationId` hors périmètre. |
 | `verify-parcel-coordinates.php` | Coordonnées GPS d'une `Parcel`, rejouées via l'API réelle : création sans coordonnées (201, nulles), création avec coordonnées soumises en nombre JSON (`-0.681` / `29.238`) persistées puis lues, mise à jour des coordonnées acceptée, round-trip base (DECIMAL), refus en 422 d'une coordonnée isolée (latitude sans longitude et inversement), hors plage (`95`, `181`) et non numérique, et absence d'écriture fantôme. |
+| `verify-form-validation.php` | Validation Symfony sans base : refuse catégories de dépenses et rôles inconnus, montants négatifs, réglages hors limites, surfaces dépassant la précision de la base, rôles ou dates de publication invalides et listes d'unités trop longues. Vérifie aussi que les contrôleurs activent les groupes `create`/`update` attendus. |
 | `verify-organization-suspend.php` | Suspension/réactivation d'une organisation via `OrganizationService` : motif obligatoire (422 + erreur sur `reason`, tenant restant actif), lien aux droits `SUSPEND_ORGANIZATION`/`ACTIVATE_ORGANIZATION` (`SecurityAction`), écriture de l'audit (motif archivé dans `newValues`), double suspension et réactivation d'un tenant actif refusées (422), UUID inconnu → 404, non-membre refusé. |
 | `check-injected-dependencies.php` | Contrôle statique par réflexion : chaque accès `$this->…` d'un service désigne une propriété injectée par le constructeur ou une méthode héritée. Détecte sans exécuter de requête un repository ou une dépendance oublié dans un constructeur. |
 

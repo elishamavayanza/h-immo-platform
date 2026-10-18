@@ -1,11 +1,11 @@
 {
-  "version": "1.3.2",
-  "updatedAt": "2026-10-16",
+  "version": "1.3.3",
+  "updatedAt": "2026-10-18",
   "roles": {
     "super_admin": {
       "title": "Manuel d’utilisation — Administration de la plateforme",
       "label": "SUPER_ADMIN",
-      "description": "Administrer les organisations, les comptes de plateforme, les journaux et les rapports globaux.",
+      "description": "Administrer les organisations, les comptes, les publications de la plateforme, les journaux et les rapports globaux.",
       "filename": "manuel-super-admin.pdf",
       "modules": [
         {
@@ -25,32 +25,56 @@
         {
           "name": "Organisations",
           "menu": "Administration plateforme → Organisations",
-          "goal": "Consulter et administrer les organisations enregistrées sur Soft-IMMO.",
+          "goal": "Créer et administrer les organisations de la plateforme, suivre leur état et contrôler les suspensions.",
           "steps": [
-            "Ouvrez Organisations dans le menu.",
-            "Recherchez l’organisation par son nom ou son code.",
-            "Ouvrez sa fiche pour consulter son état et les actions disponibles.",
-            "Pour suspendre ou réactiver, vérifiez le motif et la période avant de confirmer."
+            "Ouvrez Organisations, puis recherchez par nom ou code et filtrez par statut si nécessaire.",
+            "Pour créer un espace, sélectionnez « Nouvelle organisation » et complétez le nom, le code unique, les coordonnées et la ville du siège.",
+            "À l’étape PATRON, renseignez le nom complet, l’adresse e-mail de connexion et le téléphone de la personne responsable.",
+            "À l’étape Logo, ajoutez éventuellement un logo recadré, puis confirmez la création de l’organisation et de son compte PATRON.",
+            "Pour modifier une organisation existante, ouvrez ses actions, modifiez ses coordonnées, puis utilisez l’étape du logo si nécessaire.",
+            "Pour suspendre un espace, choisissez la durée, saisissez le motif obligatoire et vérifiez les informations avant de confirmer. Une suspension coupe l’accès des membres de l’organisation.",
+            "Pour rétablir un espace suspendu ou inactif, utilisez l’action de réactivation puis vérifiez le nouvel état dans la liste."
           ],
-          "fields": "Les champs dépendent de l’action choisie. Les motifs de suspension sont obligatoires ; la durée peut être définie ou indéterminée.",
-          "result": "La fiche et l’état de l’organisation sont mis à jour ; les actions d’administration sont tracées.",
-          "limits": "Les ressources métier internes ne sont pas accessibles par le seul rôle plateforme.",
+          "fields": "La création se déroule en trois étapes : organisation (nom, code, e-mail, téléphone et ville obligatoires ; adresse et pays facultatifs), PATRON (nom, e-mail et téléphone obligatoires), puis logo facultatif. Le code doit être unique. Une suspension exige un motif et peut être indéterminée ou limitée dans le temps.",
+          "result": "La liste affiche les nouveaux espaces et leur état. La création ajoute l’organisation et son PATRON dans la même opération ; le compte reçoit un lien de configuration du mot de passe. Les suspensions et réactivations actualisent l’état et sont tracées.",
+          "limits": "Les opérations portent sur les comptes et organisations de la plateforme. Le rôle SUPER_ADMIN ne donne pas les droits de gestion métier dans les organisations.",
           "id": "organisations"
         },
         {
           "name": "Utilisateurs",
           "menu": "Administration plateforme → Utilisateurs",
-          "goal": "Gérer les comptes et les accès de plateforme autorisés.",
+          "goal": "Consulter les comptes de la plateforme et suspendre ou réactiver leur accès lorsque cela est nécessaire.",
           "steps": [
-            "Ouvrez Utilisateurs.",
-            "Recherchez le compte à administrer.",
-            "Vérifiez son identité et son état avant d’utiliser une action disponible.",
-            "Confirmez l’action et contrôlez le retour affiché."
+            "Ouvrez Utilisateurs et recherchez par nom, adresse e-mail ou nom d’organisation.",
+            "Réduisez la liste avec les filtres Organisation, Rôle et État du compte ; vérifiez les appartenances affichées avant de choisir un compte.",
+            "Pour suspendre un compte actif, choisissez une durée et, si nécessaire, renseignez le motif facultatif. Confirmez la suspension.",
+            "Pour réactiver un compte désactivé, sélectionnez Réactiver et confirmez après avoir vérifié l’identité affichée.",
+            "Après chaque action, vérifiez l’état actualisé et lisez le message de confirmation ou d’avertissement relatif à l’envoi d’e-mail."
           ],
-          "fields": "Les champs dépendent de l’action. Ne partagez jamais de mot de passe ou de jeton.",
-          "result": "Le compte est consulté ou modifié selon l’action autorisée.",
-          "limits": "Les rôles d’organisation sont distincts du rôle SUPER_ADMIN.",
+          "fields": "Les filtres portent sur l’organisation, le rôle et l’état. Une suspension peut être indéterminée ou limitée dans le temps ; le motif est facultatif. Aucun mot de passe ni jeton n’est affiché ou modifié depuis cette page.",
+          "result": "Le nouvel état du compte apparaît dans la liste. Une suspension désactive réellement l’accès et déclenche une notification par e-mail ; une panne d’e-mail éventuelle est signalée séparément. Une réactivation rétablit l’accès immédiatement.",
+          "limits": "Cette page permet de consulter les comptes et de suspendre/réactiver leur accès ; elle ne sert pas à créer un compte ni à modifier ses rôles d’organisation.",
           "id": "utilisateurs"
+        },
+        {
+          "name": "Publications",
+          "menu": "Administration plateforme → Publications",
+          "goal": "Préparer, prévisualiser, programmer et diffuser des annonces aux utilisateurs métier concernés, puis suivre leur consultation et leur statut.",
+          "steps": [
+            "Ouvrez Publications. L’historique regroupe les brouillons, annonces programmées, publications diffusées et archives ; le calendrier permet de filtrer l’historique par date.",
+            "Saisissez un titre et le contenu. Une ligne forme un paragraphe ; commencez une ligne par « - » pour une liste à puces ou par « 1. » pour une liste numérotée.",
+            "Choisissez la catégorie : nouvelle fonctionnalité, amélioration, correction, maintenance ou annonce importante.",
+            "Choisissez le public : tous les utilisateurs métier actifs, un ou plusieurs rôles métier, ou une organisation précise. Vérifiez soigneusement ce ciblage avant diffusion.",
+            "Au besoin, définissez la date de début de diffusion et une date de fin facultative. La date de fin doit être postérieure à la date de début ou, à défaut, à la date actuelle.",
+            "Ajoutez au plus huit images. Les fichiers acceptés sont JPEG, PNG, WebP ou GIF, jusqu’à 10 Mo chacun. Recadrez chaque image et ajoutez une légende si utile.",
+            "Enregistrez le brouillon, puis contrôlez son aperçu et ses destinataires dans l’historique. L’enregistrement ne diffuse pas l’annonce.",
+            "Quand le contenu et le public sont validés, utilisez « Publier ». La publication devient disponible à la date programmée ou immédiatement si aucune date future n’est définie.",
+            "Pour une publication diffusée, utilisez « Retirer » pour interrompre sa diffusion ou « Archiver » pour la classer. Seuls les brouillons peuvent être modifiés."
+          ],
+          "fields": "Titre limité à 180 caractères et contenu obligatoire limité à 20 000 caractères. Une audience par rôle exige au moins un rôle métier ; une audience par organisation exige une organisation. Jusqu’à huit images, 10 Mo par fichier, formats JPEG/PNG/WebP/GIF ; recadrage obligatoire à l’ajout et légende facultative. La fin doit suivre le début.",
+          "result": "Le brouillon apparaît dans l’historique et son aperçu reflète son contenu. Après diffusion, l’historique indique le statut, le nombre de destinataires, les consultations et les expirations. Une publication programmée n’est visible qu’à son heure de disponibilité.",
+          "limits": "Réservé au rôle SUPER_ADMIN. Les annonces visent les comptes métier ; les comptes SUPER_ADMIN ne sont jamais destinataires. Une annonce diffusée ne peut plus être modifiée : retirez-la si nécessaire. Le retrait stoppe les notifications encore actives.",
+          "id": "publications"
         },
         {
           "name": "Journal d’audit",
@@ -85,19 +109,22 @@
         {
           "name": "Profil et préférences",
           "menu": "Compte → Mon profil / Paramètres",
-          "goal": "Gérer les préférences personnelles et les informations de son compte.",
+          "goal": "Mettre à jour les informations et la photo du compte, régler l’affichage, les notifications et les préférences personnelles.",
           "steps": [
-            "Ouvrez Paramètres pour le thème, la couleur d’accent et les préférences d’affichage.",
-            "Ouvrez Mon profil pour vérifier les informations du compte.",
-            "Enregistrez les changements et contrôlez le message de confirmation."
+            "Ouvrez Mon profil, sélectionnez Modifier et mettez à jour votre nom, téléphone ou photo. Pour une photo, ajustez le cadrage puis enregistrez.",
+            "Ouvrez Paramètres → Affichage pour choisir le thème, la couleur d’accent et le format d’affichage des dates.",
+            "Réglez les tableaux compacts, la réduction des animations, le repli du menu latéral au démarrage et le nombre de lignes par page selon votre confort.",
+            "Dans Accès rapide, choisissez si l’option d’installation doit être proposée, puis utilisez séparément « Installer ou créer un raccourci » et confirmez dans le navigateur ou suivez ses instructions.",
+            "Dans Notifications, activez ou désactivez les alertes par e-mail et les confirmations dans l’application.",
+            "Dans Sécurité, suivez la procédure sécurisée de réinitialisation pour changer le mot de passe. Vérifiez les messages de confirmation après chaque modification."
           ],
-          "fields": "Les champs personnels visibles à l’écran ; le mot de passe se modifie via la procédure sécurisée de réinitialisation.",
-          "result": "Les préférences sont sauvegardées pour le compte.",
-          "limits": "Les paramètres personnels ne modifient pas les autorisations de plateforme.",
+          "fields": "Profil : nom, téléphone et photo recadrée. Affichage : thème clair/sombre/système, six couleurs d’accent, format de date, tableaux compacts, animations réduites, menu latéral replié et 10/20/50/100 lignes par page. Accès rapide : affichage de l’option d’installation. Notifications : e-mail et messages dans l’application. Paramètre réservé au SUPER_ADMIN : période affichée du journal d’audit, réglable de 30 à 2555 jours dans Préférences plateforme.",
+          "result": "Les préférences sont conservées pour le compte et s’appliquent à l’interface. La photo, le nom et les autres données modifiés s’actualisent dans l’espace sans déconnexion. Un raccourci n’est créé qu’après votre action et la confirmation du navigateur.",
+          "limits": "Les préférences n’accordent aucun droit supplémentaire. L’installation dépend du navigateur, de l’appareil et d’une adresse sécurisée compatible ; sur certains appareils, le navigateur propose seulement de créer un raccourci. Le changement de mot de passe suit une procédure séparée.",
           "id": "profil-et-preferences"
         }
       ],
-      "pageCount": 11
+      "pageCount": 17
     },
     "patron": {
       "title": "Manuel d’utilisation — Espace Patron",
@@ -242,19 +269,21 @@
         {
           "name": "Profil et paramètres",
           "menu": "Compte → Mon profil / Paramètres",
-          "goal": "Personnaliser votre compte et consulter le présent manuel.",
+          "goal": "Personnaliser votre compte et vos préférences de travail sans modifier les accès de l’organisation.",
           "steps": [
-            "Dans Paramètres, choisissez thème et couleur d’accent.",
-            "Réglez vos préférences personnelles et notifications.",
-            "Ouvrez Manuel d’utilisation pour lire ou télécharger ce guide."
+            "Ouvrez Mon profil pour corriger vos informations ou votre photo ; ajustez le cadrage de la photo et enregistrez.",
+            "Dans Paramètres → Affichage, choisissez le thème, l’accent, le format des dates et les options de confort des tableaux et du menu.",
+            "Dans Accès rapide, décidez si l’option d’installation apparaît ; déclenchez ensuite séparément l’installation ou la création du raccourci et confirmez dans le navigateur.",
+            "Dans Notifications, choisissez les alertes par e-mail et les messages de confirmation dans l’application.",
+            "Pour changer de mot de passe, utilisez la procédure sécurisée indiquée dans Sécurité."
           ],
-          "fields": "Les préférences se sauvegardent depuis leurs contrôles.",
-          "result": "Les changements personnels sont conservés pour votre compte.",
-          "limits": "Les préférences n’étendent pas les droits métier.",
+          "fields": "Profil : nom, téléphone et photo recadrée. Préférences : thème, six accents, format de date, tableaux compacts, animations réduites, menu replié, 10/20/50/100 lignes par page, visibilité de l’option d’installation et notifications e-mail/dans l’application.",
+          "result": "Le profil et les réglages sont actualisés pour votre compte sans interrompre la session. Le raccourci ne s’installe qu’après votre confirmation et dépend des capacités du navigateur et d’une adresse sécurisée compatible.",
+          "limits": "Ces choix ne modifient pas les permissions métier. Le SUPER_ADMIN ne reçoit pas les annonces de la plateforme. Le changement de mot de passe suit une procédure séparée.",
           "id": "profil-et-parametres"
         }
       ],
-      "pageCount": 17
+      "pageCount": 18
     },
     "admin_immobilier": {
       "title": "Manuel d’utilisation — Administration immobilière",
@@ -416,19 +445,21 @@
         {
           "name": "Profil et paramètres",
           "menu": "Compte → Mon profil / Paramètres",
-          "goal": "Personnaliser son compte et consulter le manuel.",
+          "goal": "Personnaliser votre compte et vos préférences de travail sans modifier les droits de l’organisation.",
           "steps": [
-            "Dans Paramètres, choisissez thème, accent et préférences.",
-            "Ouvrez Manuel d’utilisation pour consulter ou télécharger ce guide.",
-            "Ouvrez Mon profil pour vérifier vos informations."
+            "Ouvrez Mon profil pour corriger vos informations ou votre photo ; ajustez le cadrage de la photo et enregistrez.",
+            "Dans Paramètres → Affichage, choisissez le thème, l’accent, le format des dates et les options de confort des tableaux et du menu.",
+            "Dans Accès rapide, décidez si l’option d’installation apparaît ; déclenchez ensuite séparément l’installation ou la création du raccourci et confirmez dans le navigateur.",
+            "Dans Notifications, choisissez les alertes par e-mail et les messages de confirmation dans l’application.",
+            "Pour changer de mot de passe, utilisez la procédure sécurisée indiquée dans Sécurité."
           ],
-          "fields": "Préférences sauvegardées depuis leurs contrôles.",
-          "result": "Les préférences sont enregistrées pour ce compte.",
-          "limits": "Elles ne changent pas les autorisations métier.",
+          "fields": "Profil : nom, téléphone et photo recadrée. Préférences : thème, six accents, format de date, tableaux compacts, animations réduites, menu replié, 10/20/50/100 lignes par page, visibilité de l’option d’installation et notifications e-mail/dans l’application.",
+          "result": "Le profil et les réglages sont actualisés pour votre compte sans interrompre la session. Le raccourci ne s’installe qu’après votre confirmation et dépend des capacités du navigateur et d’une adresse sécurisée compatible.",
+          "limits": "Ces réglages personnels ne changent ni le rôle actif ni les permissions de gestion. Les réglages partagés de l’organisation sont présentés dans la section Organisation lorsqu’ils sont autorisés.",
           "id": "profil-et-parametres"
         }
       ],
-      "pageCount": 19
+      "pageCount": 20
     },
     "admin_ville": {
       "title": "Manuel d’utilisation — Administration de ville",
@@ -565,19 +596,21 @@
         {
           "name": "Profil et paramètres",
           "menu": "Compte → Mon profil / Paramètres",
-          "goal": "Régler ses préférences et consulter son manuel.",
+          "goal": "Personnaliser votre compte et vos préférences de travail dans les villes attribuées.",
           "steps": [
-            "Ouvrez Paramètres pour le thème, l’accent et les préférences personnelles.",
-            "Ouvrez Manuel d’utilisation pour lire ou télécharger le guide.",
-            "Consultez Mon profil."
+            "Ouvrez Mon profil pour corriger vos informations ou votre photo ; ajustez le cadrage de la photo et enregistrez.",
+            "Dans Paramètres → Affichage, choisissez le thème, l’accent, le format des dates et les options de confort des tableaux et du menu.",
+            "Dans Accès rapide, décidez si l’option d’installation apparaît ; déclenchez ensuite séparément l’installation ou la création du raccourci et confirmez dans le navigateur.",
+            "Dans Notifications, choisissez les alertes par e-mail et les messages de confirmation dans l’application.",
+            "Pour changer de mot de passe, utilisez la procédure sécurisée indiquée dans Sécurité."
           ],
-          "fields": "Les réglages organisationnels apparaissent uniquement si votre compte les autorise.",
-          "result": "Vos réglages personnels ne changent pas les droits métier.",
-          "limits": "Les droits et les données sont limités au rôle et au périmètre actifs.",
+          "fields": "Profil : nom, téléphone et photo recadrée. Préférences : thème, six accents, format de date, tableaux compacts, animations réduites, menu replié, 10/20/50/100 lignes par page, visibilité de l’option d’installation et notifications e-mail/dans l’application.",
+          "result": "Le profil et les réglages sont actualisés pour votre compte sans interrompre la session. Le raccourci ne s’installe qu’après votre confirmation et dépend des capacités du navigateur et d’une adresse sécurisée compatible.",
+          "limits": "Ces choix ne changent pas les villes attribuées ni les permissions. Les réglages partagés de l’organisation n’apparaissent que si votre compte les autorise.",
           "id": "profil-et-parametres"
         }
       ],
-      "pageCount": 17
+      "pageCount": 19
     }
   }
 }

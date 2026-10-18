@@ -1283,6 +1283,38 @@ Tester les réponses :
 
 selon le contexte et la stratégie de sécurité choisie.
 
+### Validation des formulaires API
+
+Les données d'un formulaire sont contrôlées côté Symfony avant d'atteindre le
+service métier. Chaque endpoint utilise un DTO de requête dans
+`src/Dto/Request/` et des contraintes `Assert\...` pour vérifier notamment les
+champs obligatoires, formats, UUID, choix autorisés, bornes numériques,
+précision décimale, longueurs de texte et tailles de listes.
+
+Pour les DTO qui distinguent création et modification, le contrôleur doit
+activer explicitement le groupe correspondant :
+
+```php
+#[MapRequestPayload(validationGroups: ['create'])] UserRequest $request
+#[MapRequestPayload(validationGroups: ['update'])] UserRequest $request
+```
+
+Sans `validationGroups`, les contraintes nommées `create` et `update` ne sont
+pas exécutées. Les requêtes de lecture avec filtres utilisent
+`#[MapQueryString]`. Les règles qui dépendent de ressources existantes —
+appartenance à une organisation, périmètre de ville, cohérence entre un bail et
+ses unités, par exemple — restent vérifiées par les services et
+`SecurityService` ; une contrainte de formulaire ne remplace jamais ces contrôles.
+
+Pour exécuter les contrôles ciblés de validation sans base de données :
+
+```bash
+php tests/verify-form-validation.php
+```
+
+Le script vérifie des valeurs invalides représentatives et confirme que les
+endpoints concernés activent bien leurs groupes de validation.
+
 ---
 
 # 35. Boucle de contrôle obligatoire
