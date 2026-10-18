@@ -41,7 +41,10 @@ const PATRON_ACTIONS: ReadonlyArray<SecurityAction> = [
 const ADMIN_IMMOBILIER_ACTIONS: ReadonlyArray<SecurityAction> = [
     'view', 'view_organization',
     'manage_organization_logo', 'manage_exchange_rate', 'create_city_admin', 'assign_user_city', 'revoke_user_city',
-    'view_city', 'view_parcel', 'view_building', 'view_unit',
+    'view_city', 'create_city', 'update_city', 'delete_city', 'activate_city', 'deactivate_city',
+    'view_parcel', 'create_parcel', 'update_parcel', 'delete_parcel',
+    'view_building', 'create_building', 'update_building', 'delete_building',
+    'view_unit', 'create_unit', 'update_unit', 'delete_unit', 'publish_listing',
     'view_tenant', 'view_lease', 'view_rent', 'view_payment',
     'view_worker', 'create_worker', 'update_worker', 'delete_worker', 'view_worker_assignment', 'view_expense', 'view_document',
     'view_report', 'export_report',

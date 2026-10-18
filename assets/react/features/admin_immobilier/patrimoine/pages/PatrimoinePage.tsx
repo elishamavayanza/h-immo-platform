@@ -628,7 +628,7 @@ export function PatrimoinePage({ readOnly = false }: { readOnly?: boolean } = {}
         if (level === 'batiments') {
             return <BatimentsTab buildings={buildings} parcels={parcels} cities={cities} role={organizationRole} isLoading={isLoading} error={error} note={note} onReload={() => void reload()} onCreate={createBuilding} onUpdate={updateBuilding} onDelete={deleteBuilding} selectedParcelId={selectedParcelId} onParcelFilter={openParcel} onOpen={(id) => openBuilding(id)} readOnly={readOnly} />;
         }
-        return <UnitesTab units={units} buildings={buildings} role={organizationRole} isLoading={isLoading} error={error} note={note} onReload={() => void reload()} onCreate={createUnit} onUpdate={updateUnit} onDelete={deleteUnit} onPublish={publishUnit} selectedBuildingId={selectedBuildingId} onBuildingFilter={openBuilding} readOnly={readOnly} />;
+        return <UnitesTab units={units} buildings={buildings} role={organizationRole} isLoading={isLoading} error={error} note={note} onReload={() => void reload()} onCreate={createUnit} onUpdate={updateUnit} onDelete={deleteUnit} onPublish={publishUnit} selectedBuildingId={selectedBuildingId} onBuildingFilter={openBuilding} readOnly={readOnly} showcaseEnabled={currentOrganization?.showcaseEnabled === true} />;
     };
 
     const overviewCities = isLoading ? (
@@ -639,6 +639,9 @@ export function PatrimoinePage({ readOnly = false }: { readOnly?: boolean } = {}
         <PatrimoineChildList
             title="Villes du portefeuille"
             description="Choisissez une ville pour parcourir son patrimoine."
+            action={!readOnly && canDo(organizationRole, 'create_city')
+                ? <Button variant="secondary" onClick={() => goToLevel('villes', null, null, null)}>Gérer les villes</Button>
+                : undefined}
             items={cities.map((entry) => {
                 const occupancy = cityOccupancy(data, entry.id);
                 return {

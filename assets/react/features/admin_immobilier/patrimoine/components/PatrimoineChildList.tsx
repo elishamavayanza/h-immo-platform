@@ -15,6 +15,7 @@ export interface PatrimoineChildItem {
 interface PatrimoineChildListProps {
     title: string;
     description?: ReactNode;
+    action?: ReactNode;
     items: PatrimoineChildItem[];
     emptyTitle: string;
     emptyDescription: string;
@@ -22,12 +23,15 @@ interface PatrimoineChildListProps {
 }
 
 /** Liste compacte des éléments enfants, conçue pour compléter une synthèse sans multiplier les cartes. */
-export function PatrimoineChildList({ title, description, items, emptyTitle, emptyDescription, ariaLabel }: PatrimoineChildListProps) {
+export function PatrimoineChildList({ title, description, action, items, emptyTitle, emptyDescription, ariaLabel }: PatrimoineChildListProps) {
     return (
         <section className="patrimoine-children" aria-label={ariaLabel ?? title}>
-            <div className="patrimoine-children__heading">
-                <h2>{title}</h2>
-                {description && <p>{description}</p>}
+            <div className={`patrimoine-children__top${action ? ' patrimoine-children__top--action' : ''}`}>
+                <div className="patrimoine-children__heading">
+                    <h2>{title}</h2>
+                    {description && <p>{description}</p>}
+                </div>
+                {action && <div className="patrimoine-children__action">{action}</div>}
             </div>
 
             {items.length === 0 ? (

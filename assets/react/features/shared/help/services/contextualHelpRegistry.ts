@@ -213,10 +213,14 @@ const content: Record<string, Omit<PageHelp, 'path' | 'roles'>> = {
     },
     '/app/patrimoine': {
         title: 'Patrimoine',
-        description: 'Parcourez la structure immobilière : villes, parcelles, bâtiments et unités.',
+        description: 'Les questions affichées suivent le niveau du patrimoine actuellement ouvert et votre rôle actif.',
         questions: [
             { id: 'property-navigate', question: 'Comment parcourir le patrimoine ?', answer: 'Commencez par la ville, puis ouvrez une parcelle, un bâtiment et une unité pour descendre dans la hiérarchie. Utilisez le fil d’Ariane de la page pour revenir au niveau précédent.' },
-            { id: 'property-create', question: 'Comment ajouter un élément immobilier ?', answer: 'Choisissez d’abord le niveau concerné et la ville ou le parent demandé. Utilisez le bouton d’ajout présent à ce niveau, complétez les champs obligatoires affichés et enregistrez.' },
+            { id: 'property-adminimmo-actions', question: 'Quelles actions Patrimoine l’ADMIN_IMMOBILIER peut-il effectuer ?', answer: 'Dans son organisation active, il peut créer, modifier et supprimer logiquement les villes, parcelles, bâtiments et unités, changer le statut d’une ville, gérer les niveaux et accès liés aux unités, et publier une unité si la Vitrine est autorisée. Les plafonds de capacité s’appliquent. Vérifiez les baux et l’historique avant une suppression ; les rattachements à une autre organisation sont refusés.', roles: ['admin_immobilier'], keywords: ['ville', 'créer', 'ajouter', 'modifier', 'supprimer', 'parcelle', 'bâtiment', 'unité', 'vitrine', 'admin immobilier'] },
+            { id: 'property-create', question: 'Comment ajouter un élément immobilier ?', answer: 'Choisissez le niveau concerné et le parent demandé. Si votre rôle permet la création à ce niveau, le bouton d’ajout est visible. Complétez les champs obligatoires puis enregistrez.' },
+            { id: 'property-city-admin-assignment', question: 'Comment ajouter un ADMIN_VILLE à une ville ?', answer: 'Dans la liste des villes, ouvrez les actions de la ligne concernée puis « Ajouter un ADMIN_VILLE ». Le compte créé est automatiquement rattaché à cette ville ; vérifiez les coordonnées avant l’envoi de l’invitation.', roles: ['admin_immobilier'], keywords: ['ville', 'admin-ville', 'ajouter', 'affecter', 'inviter'] },
+            { id: 'property-patron-scope', question: 'Que puis-je faire dans Patrimoine avec le rôle PATRON ?', answer: 'Le PATRON consulte la structure immobilière et ses indicateurs. Les boutons de création, modification et suppression ne sont pas disponibles pour ce rôle ; les opérations d’entretien du patrimoine sont déléguées aux administrateurs concernés.', roles: ['patron'], keywords: ['droits', 'lecture', 'patron', 'accès'] },
+            { id: 'property-adminville-scope', question: 'Que puis-je gérer comme ADMIN_VILLE ?', answer: 'Vous gérez les parcelles, bâtiments et unités des villes qui vous sont attribuées. Vous ne créez ni ne modifiez les villes et vous ne voyez pas les autres villes de l’organisation. Les actions locatives restent accessibles dans votre périmètre de ville.', roles: ['admin_ville'], keywords: ['droits', 'ville', 'admin ville', 'périmètre'] },
             { id: 'property-nested-spaces', question: 'Comment décrire une maison avec plusieurs niveaux ou espaces imbriqués ?', answer: 'Dans l’onglet Unités, sélectionnez le bâtiment puis utilisez « Gérer les niveaux » pour créer des niveaux avec référence, libellé, ordre et description. Associez ensuite chaque unité à son niveau. Le champ « Espace parent » représente les subdivisions physiques. Un bail actif sur un espace bloque un bail incompatible sur son parent ou ses sous-espaces.' },
             { id: 'property-structure-change', question: 'Puis-je restructurer un espace déjà loué ?', answer: 'Non. Le rattachement parent ne peut pas être modifié lorsque l’espace, son parent ou l’un de ses sous-espaces porte un bail actif. Clôturez ou transférez d’abord les baux concernés afin de préserver les contrats et l’historique financier.' },
             { id: 'property-house-entire', question: 'Comment louer une maison entière ?', answer: 'Créez une unité qui représente la maison entière et louez-la comme une seule unité. Vous n’avez pas besoin de créer une unité locative pour chaque pièce. Si vous avez déjà créé des subdivisions, le bail sur l’espace parent bloque leurs locations séparées.' },
@@ -370,7 +374,7 @@ export function buildContextualHelpInventory(): PageHelp[] {
     const denied = content['/app/access-denied'];
     if (denied) inventory.push({ path: '/app/access-denied', roles: [null, ...ORG_ROLES, PLATFORM_ROLE], ...denied });
     const organizationProfile = content['/app/organisation'];
-    if (organizationProfile) inventory.push({ path: '/app/organisation', roles: ['patron'], ...organizationProfile });
+    if (organizationProfile) inventory.push({ path: '/app/organisation', roles: ['patron', 'admin_immobilier'], ...organizationProfile });
     for (const path of ['/app/admin/organisations/nouvelle', '/app/admin/organisations/:uuid/modifier']) {
         const definition = content[path];
         if (definition) inventory.push({ path, roles: [PLATFORM_ROLE], ...definition });
@@ -380,6 +384,41 @@ export function buildContextualHelpInventory(): PageHelp[] {
 
 const inventory = buildContextualHelpInventory();
 
+type PatrimoineHelpSection = 'overview' | 'villes' | 'parcelles' | 'batiments' | 'unites';
+
+const patrimoineQuestionsByRoleAndSection: Record<OrganizationRole, Record<PatrimoineHelpSection, readonly string[]>> = {
+    patron: {
+        overview: ['property-navigate', 'property-patron-scope', 'property-relations', 'property-capacity-limit'],
+        villes: ['property-patron-scope', 'property-search', 'property-relations'],
+        parcelles: ['property-patron-scope', 'property-search', 'property-map', 'property-relations'],
+        batiments: ['property-patron-scope', 'property-nested-spaces', 'property-mixed-use', 'property-access', 'property-building-access'],
+        unites: ['property-patron-scope', 'property-nested-spaces', 'property-house-entire', 'property-floor-split', 'property-mixed-use', 'property-partial-occupancy', 'property-usage-change', 'property-composite-lease', 'property-household'],
+    },
+    admin_immobilier: {
+        overview: ['property-navigate', 'property-adminimmo-actions', 'property-city-admin-assignment', 'property-relations', 'property-capacity-limit'],
+        villes: ['property-adminimmo-actions', 'property-city-admin-assignment', 'property-search', 'property-capacity-limit'],
+        parcelles: ['property-adminimmo-actions', 'property-create', 'property-search', 'property-map', 'property-relations', 'property-capacity-limit'],
+        batiments: ['property-adminimmo-actions', 'property-create', 'property-nested-spaces', 'property-mixed-use', 'property-access', 'property-building-access', 'property-relations'],
+        unites: ['property-adminimmo-actions', 'property-create', 'property-nested-spaces', 'property-house-entire', 'property-floor-split', 'property-mixed-use', 'property-access', 'property-usage-change', 'property-partial-occupancy'],
+    },
+    admin_ville: {
+        overview: ['property-adminville-scope', 'property-navigate', 'property-relations', 'property-search', 'property-capacity-limit'],
+        villes: ['property-adminville-scope', 'property-relations'],
+        parcelles: ['property-adminville-scope', 'property-create', 'property-search', 'property-map', 'property-relations', 'property-capacity-limit'],
+        batiments: ['property-adminville-scope', 'property-create', 'property-nested-spaces', 'property-mixed-use', 'property-access', 'property-building-access', 'property-structure-change', 'property-capacity-limit'],
+        unites: ['property-adminville-scope', 'property-create', 'property-nested-spaces', 'property-house-entire', 'property-floor-split', 'property-mixed-use', 'property-access', 'property-composite-lease', 'property-partial-occupancy', 'property-usage-change', 'property-restructure-history'],
+    },
+};
+
+function resolvePatrimoineHelpSection(pathname: string, organizationRole: OrganizationRole): PatrimoineHelpSection {
+    const segments = pathname.split('/').filter(Boolean);
+    if (segments.includes('unites')) return 'unites';
+    if (segments.includes('batiments')) return 'batiments';
+    if (segments.includes('parcelles')) return 'parcelles';
+    if (segments.includes('villes')) return 'villes';
+    return organizationRole === 'admin_ville' ? 'parcelles' : 'overview';
+}
+
 export function resolveContextualHelp(pathname: string, platformRole: PlatformRole | null, organizationRole: OrganizationRole | null): PageHelp | null {
     const role: HelpRole = platformRole ?? organizationRole;
     const candidate = inventory
@@ -388,7 +427,18 @@ export function resolveContextualHelp(pathname: string, platformRole: PlatformRo
             || (page.path === '/app/admin/organisations/:uuid/modifier' && /^\/app\/admin\/organisations\/[0-9a-f-]{36}\/modifier$/i.test(pathname)))
         .sort((a, b) => b.path.length - a.path.length)[0];
     if (!candidate || !candidate.roles.includes(role)) return null;
-    const questions = candidate.questions.filter((question) => !question.roles || (role !== null && question.roles.includes(role)));
+    let questions = candidate.questions.filter((question) => !question.roles || (role !== null && question.roles.includes(role)));
+    if (candidate.path === '/app/patrimoine' && organizationRole !== null) {
+        const section = resolvePatrimoineHelpSection(pathname, organizationRole);
+        const relevantIds = new Set(patrimoineQuestionsByRoleAndSection[organizationRole][section]);
+        questions = questions.filter((question) => relevantIds.has(question.id));
+        return {
+            ...candidate,
+            title: `Patrimoine · ${{ overview: 'Vue d’ensemble', villes: 'Villes', parcelles: 'Parcelles', batiments: 'Bâtiments', unites: 'Unités' }[section]}`,
+            description: 'Aide adaptée à cet écran et à votre rôle actif.',
+            questions,
+        };
+    }
     return { ...candidate, questions };
 }
 

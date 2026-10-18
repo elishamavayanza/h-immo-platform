@@ -1172,10 +1172,11 @@ final class SecurityService implements SecurityServiceInterface
     }
 
     /**
-     * L'ADMIN_IMMOBILIER supervise l'organisation et son portefeuille. Les
-     * actions localisées (patrimoine, location, personnel, dépenses et
-     * maintenance) sont exécutées par l'ADMIN_VILLE de la ville concernée.
-     * Il peut gérer les affectations de ville et inviter des ADMIN_VILLE ;
+     * L'ADMIN_IMMOBILIER gère le patrimoine de son organisation (villes,
+     * parcelles, bâtiments et unités). Les opérations métier localisées
+     * (location, dépenses, maintenance) restent exécutées par l'ADMIN_VILLE
+     * de la ville concernée.
+     * Il peut aussi gérer les affectations de ville et inviter des ADMIN_VILLE ;
      * cela ne donne pas accès à la gestion générale des membres.
      */
     private function checkAdminImmobilierAction(SecurityAction $action): void
@@ -1189,9 +1190,14 @@ final class SecurityService implements SecurityServiceInterface
             SecurityAction::MANAGE_EXCHANGE_RATE,
 
             SecurityAction::VIEW_CITY,
-            SecurityAction::VIEW_PARCEL,
-            SecurityAction::VIEW_BUILDING,
-            SecurityAction::VIEW_UNIT,
+            SecurityAction::CREATE_CITY,
+            SecurityAction::UPDATE_CITY,
+            SecurityAction::DELETE_CITY,
+            SecurityAction::ACTIVATE_CITY, SecurityAction::DEACTIVATE_CITY,
+            SecurityAction::VIEW_PARCEL, SecurityAction::CREATE_PARCEL, SecurityAction::UPDATE_PARCEL, SecurityAction::DELETE_PARCEL,
+            SecurityAction::VIEW_BUILDING, SecurityAction::CREATE_BUILDING, SecurityAction::UPDATE_BUILDING, SecurityAction::DELETE_BUILDING,
+            SecurityAction::VIEW_UNIT, SecurityAction::CREATE_UNIT, SecurityAction::UPDATE_UNIT, SecurityAction::DELETE_UNIT,
+            SecurityAction::PUBLISH_LISTING,
             SecurityAction::VIEW_TENANT,
             SecurityAction::VIEW_LEASE,
             SecurityAction::VIEW_RENT,

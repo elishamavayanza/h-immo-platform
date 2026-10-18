@@ -197,9 +197,10 @@ export function VillesTab({ cities, role, isLoading, error, note, onReload, onCr
                         : []),
                 ];
 
-                if (items.length === 0) return '—';
+                const canCreateCityAdmin = canDo(role, 'create_city_admin');
+                if (items.length === 0 && !canCreateCityAdmin) return '—';
 
-                return <div className="ville-row-actions">{canDo(role, 'create_city_admin') && <Button size="small" variant="secondary" onClick={addCityAdmin} aria-label={`Ajouter un admin ville pour ${city.name}`}><Icon name="plus" size={14} /> Admin ville</Button>}{items.length > 0 && <PopoverMenu placement="bottom" offset={6} items={items} trigger={<span className="organization-row-actions" aria-label={`Actions pour ${city.name}`}><Icon name="more" /></span>} />}</div>;
+                return <div className="ville-row-actions">{canCreateCityAdmin && <Button size="small" variant="secondary" onClick={addCityAdmin} aria-label={`Ajouter un ADMIN_VILLE pour ${city.name}`}><Icon name="plus" size={14} /> Ajouter un ADMIN_VILLE</Button>}{items.length > 0 && <PopoverMenu placement="bottom" offset={6} items={items} trigger={<span className="organization-row-actions" aria-label={`Actions pour ${city.name}`}><Icon name="more" /></span>} />}</div>;
             },
         },
     ];

@@ -21,7 +21,9 @@ function assert(condition: unknown, message: string): asserts condition {
 
 for (const [key, platformRole, organizationRole] of roles) {
     const manual = catalog.roles[key];
-    const menu = resolveSidebar(platformRole, organizationRole);
+    // Les manuels décrivent aussi les modules conditionnés par une option
+    // d’organisation, notamment la Vitrine ; on valide avec cette option active.
+    const menu = resolveSidebar(platformRole, organizationRole, true);
     assert(Boolean(manual?.modules.length), `${key} possède un manuel avec des articles`);
     const ids = manual.modules.map(manualArticleId);
     assert(new Set(ids).size === ids.length, `${key} a des URL d’article uniques`);

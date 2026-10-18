@@ -33,10 +33,12 @@ export function groupManualArticles(articles: UserManualArticle[]): Record<strin
 /** Relie un article à une destination et une icône déjà déclarées dans le menu réel. */
 export function resolveManualFeature(article: UserManualArticle, menu: SidebarMenu): { path: string; icon: string } | null {
     const label = article.menu.split('→').at(-1)?.trim().toLocaleLowerCase('fr') ?? article.name.toLocaleLowerCase('fr');
+    const menuPath = article.menu.toLocaleLowerCase('fr');
     const target = label.includes('rapport') ? 'rapports' : label.includes('profil') || label.includes('param') ? '' : label;
     const item = menu.find((candidate) => candidate.label.toLocaleLowerCase('fr') === target)
         ?? menu.find((candidate) => target !== '' && (candidate.label.toLocaleLowerCase('fr').includes(target) || target.includes(candidate.label.toLocaleLowerCase('fr'))));
     if (item?.path) return { path: item.path, icon: item.icon ?? 'report' };
+    if (label.includes('organisation') && menuPath.includes('param')) return { path: '/settings/organisation', icon: 'building' };
     if (label.includes('profil') || label.includes('param')) return { path: '/settings', icon: 'id-badge' };
     return null;
 }

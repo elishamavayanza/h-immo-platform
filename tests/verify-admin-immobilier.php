@@ -425,6 +425,27 @@ if (is_string($uuidCityLink)) {
 }
 
 $adminImmobilierToken = $token;
+
+section('Patrimoine : l’ADMIN_IMMOBILIER peut modifier les fiches de son organisation');
+
+foreach ([
+    ['Parcelle', '/api/v1/parcels/' . $uuidParcelA, ['reference' => 'EDIT-' . strtoupper(substr($suffix, 0, 8)) . '-P']],
+    ['Bâtiment', '/api/v1/property/buildings/' . $uuidBuildingA, ['reference' => 'EDIT-' . strtoupper(substr($suffix, 0, 8)) . '-B']],
+    ['Unité', '/api/v1/units/' . $uuidUnitA, ['reference' => 'EDIT-' . strtoupper(substr($suffix, 0, 8)) . '-U']],
+] as [$resource, $path, $payload]) {
+    [$status] = $request('PUT', $path, $payload, $adminImmobilierToken);
+    check("ADMIN_IMMOBILIER modifie une fiche {$resource} de son organisation", $status === 200, 'obtenu ' . $status);
+}
+
+foreach ([
+    ['Parcelle', '/api/v1/parcels/' . $uuidParcelB, ['reference' => 'DENY-' . strtoupper(substr($suffix, 0, 8)) . '-P']],
+    ['Bâtiment', '/api/v1/property/buildings/' . $uuidBuildingB, ['reference' => 'DENY-' . strtoupper(substr($suffix, 0, 8)) . '-B']],
+    ['Unité', '/api/v1/units/' . $uuidUnitB, ['reference' => 'DENY-' . strtoupper(substr($suffix, 0, 8)) . '-U']],
+] as [$resource, $path, $payload]) {
+    [$status] = $request('PUT', $path, $payload, $adminImmobilierToken);
+    check("ADMIN_IMMOBILIER ne modifie pas une fiche {$resource} d’une autre organisation", $status === 403, 'obtenu ' . $status);
+}
+
 [$localLoginStatus, $localLoginPayload] = $request('POST', '/api/auth/login', [
     'email' => 'ville.a.' . $suffix . '@test.local',
     'password' => 'MotDePasse!123',
@@ -768,24 +789,120 @@ check(
 );
 
 // ---------------------------------------------------------------------
-section('Villes : l’ADMIN_IMMOBILIER consulte, l’ADMIN_VILLE ne modifie pas le catalogue des villes');
+section('Patrimoine : cycle de vie des villes et droits CRUD organisationnels');
 
 [$status, $payload] = $request('POST', '/api/v1/property/cities', [
     'organizationUuid' => $uuidOrgA,
-    'name' => 'Ville non autorisée',
-    'code' => 'NO' . strtoupper(substr($suffix, 0, 6)),
+    'name' => 'Ville créée par Admin Immobilier',
+    'code' => 'NEW' . strtoupper(substr($suffix, 0, 6)),
     'country' => 'CD',
 ], $adminImmobilierToken);
-check('ADMIN_IMMOBILIER ne crée pas directement une ville', $status === 403, 'obtenu ' . $status);
+check('ADMIN_IMMOBILIER crée une ville dans son organisation', $status === 201, 'obtenu ' . $status . ' : ' . substr(json_encode($payload), 0, 300));
+$createdCityUuid = is_array($payload) && is_string($payload['data']['uuid'] ?? null) ? $payload['data']['uuid'] : null;
 
-[$status] = $request('PUT', '/api/v1/property/cities/' . $uuidCityA, [
-    'name' => 'Ville modifiée hors responsabilité locale',
+[$status] = $request('POST', '/api/v1/property/cities', [
+    'organizationUuid' => $uuidOrgB,
+    'name' => 'Ville hors organisation',
+    'code' => 'OUT' . strtoupper(substr($suffix, 0, 6)),
+    'country' => 'CD',
+], $adminImmobilierToken);
+check('ADMIN_IMMOBILIER ne crée pas de ville dans une autre organisation', $status === 403, 'obtenu ' . $status);
+
+[$status, $payload] = $request('PUT', '/api/v1/property/cities/' . $uuidCityA, [
+    'name' => 'Ville modifiée par Admin Immobilier',
     'code' => 'EDIT' . strtoupper(substr($suffix, 0, 4)),
 ], $adminImmobilierToken);
-check('ADMIN_IMMOBILIER ne modifie pas une ville opérationnelle', $status === 403, 'obtenu ' . $status);
+check('ADMIN_IMMOBILIER modifie une ville de son organisation', $status === 200, 'obtenu ' . $status . ' : ' . substr(json_encode($payload), 0, 300));
 
-[$status] = $request('DELETE', '/api/v1/property/cities/' . $uuidCityA, null, $adminImmobilierToken);
-check('ADMIN_IMMOBILIER ne supprime pas une ville opérationnelle', $status === 403, 'obtenu ' . $status);
+[$status] = $request('PUT', '/api/v1/property/cities/' . $uuidCityB, [
+    'name' => 'Tentative de modification inter-organisation',
+    'code' => 'OUT' . strtoupper(substr($suffix, 0, 4)),
+], $adminImmobilierToken);
+check('ADMIN_IMMOBILIER ne modifie pas une ville d’une autre organisation', $status === 403, 'obtenu ' . $status);
+
+[$status, $payload] = $request('PUT', '/api/v1/property/cities/' . $uuidCityA, [
+    'status' => 'inactive',
+], $adminImmobilierToken);
+check('ADMIN_IMMOBILIER désactive une ville de son organisation', $status === 200 && ($payload['data']['status'] ?? null) === 'inactive', 'obtenu ' . $status);
+[$status, $payload] = $request('PUT', '/api/v1/property/cities/' . $uuidCityA, [
+    'status' => 'active',
+], $adminImmobilierToken);
+check('ADMIN_IMMOBILIER réactive une ville de son organisation', $status === 200 && ($payload['data']['status'] ?? null) === 'active', 'obtenu ' . $status);
+
+if ($createdCityUuid !== null) {
+    [$status, $payload] = $request('POST', '/api/v1/parcels', [
+        'cityUuid' => $createdCityUuid,
+        'reference' => 'CRUD-' . strtoupper(substr($suffix, 0, 8)) . '-P',
+        'name' => 'Parcelle test ADMIN_IMMOBILIER',
+        'address' => 'Avenue de test',
+        'area' => '500.00',
+    ], $adminImmobilierToken);
+    check('ADMIN_IMMOBILIER crée une parcelle dans une ville de son organisation', $status === 201, 'obtenu ' . $status);
+    $createdParcelUuid = is_array($payload) && is_string($payload['data']['uuid'] ?? null) ? $payload['data']['uuid'] : null;
+
+    $createdBuildingUuid = null;
+    if ($createdParcelUuid !== null) {
+        [$status, $payload] = $request('POST', '/api/v1/property/buildings', [
+            'parcelUuid' => $createdParcelUuid,
+            'reference' => 'CRUD-' . strtoupper(substr($suffix, 0, 8)) . '-B',
+            'name' => 'Bâtiment test ADMIN_IMMOBILIER',
+            'type' => 'apartment',
+            'numberOfFloors' => 2,
+        ], $adminImmobilierToken);
+        check('ADMIN_IMMOBILIER crée un bâtiment sur une parcelle de son organisation', $status === 201, 'obtenu ' . $status);
+        $createdBuildingUuid = is_array($payload) && is_string($payload['data']['uuid'] ?? null) ? $payload['data']['uuid'] : null;
+    } else {
+        check('ADMIN_IMMOBILIER crée un bâtiment sur une parcelle de son organisation', false, 'UUID de parcelle absent');
+    }
+
+    $createdUnitUuid = null;
+    if ($createdBuildingUuid !== null) {
+        [$status, $payload] = $request('POST', '/api/v1/units', [
+            'buildingUuid' => $createdBuildingUuid,
+            'reference' => 'CRUD-' . strtoupper(substr($suffix, 0, 8)) . '-U',
+            'type' => 'apartment',
+            'operationalStatus' => 'available',
+            'floor' => 0,
+            'surface' => '50.00',
+            'monthlyRent' => '100.00',
+            'currency' => 'USD',
+        ], $adminImmobilierToken);
+        check('ADMIN_IMMOBILIER crée une unité dans un bâtiment de son organisation', $status === 201, 'obtenu ' . $status);
+        $createdUnitUuid = is_array($payload) && is_string($payload['data']['uuid'] ?? null) ? $payload['data']['uuid'] : null;
+    } else {
+        check('ADMIN_IMMOBILIER crée une unité dans un bâtiment de son organisation', false, 'UUID de bâtiment absent');
+    }
+
+    if ($createdUnitUuid !== null) {
+        [$status] = $request('DELETE', '/api/v1/units/' . $createdUnitUuid, null, $adminImmobilierToken);
+        check('ADMIN_IMMOBILIER supprime logiquement une unité de son organisation', $status === 200, 'obtenu ' . $status);
+    } else {
+        check('ADMIN_IMMOBILIER supprime logiquement une unité de son organisation', false, 'UUID d’unité absent');
+    }
+    if ($createdBuildingUuid !== null) {
+        [$status] = $request('DELETE', '/api/v1/property/buildings/' . $createdBuildingUuid, null, $adminImmobilierToken);
+        check('ADMIN_IMMOBILIER supprime logiquement un bâtiment de son organisation', $status === 200, 'obtenu ' . $status);
+    } else {
+        check('ADMIN_IMMOBILIER supprime logiquement un bâtiment de son organisation', false, 'UUID de bâtiment absent');
+    }
+    if ($createdParcelUuid !== null) {
+        [$status] = $request('DELETE', '/api/v1/parcels/' . $createdParcelUuid, null, $adminImmobilierToken);
+        check('ADMIN_IMMOBILIER supprime logiquement une parcelle de son organisation', $status === 200, 'obtenu ' . $status);
+    } else {
+        check('ADMIN_IMMOBILIER supprime logiquement une parcelle de son organisation', false, 'UUID de parcelle absent');
+    }
+
+    [$status] = $request('DELETE', '/api/v1/property/cities/' . $createdCityUuid, null, $adminImmobilierToken);
+    check('ADMIN_IMMOBILIER supprime logiquement une ville de son organisation', $status === 200, 'obtenu ' . $status);
+} else {
+    check('ADMIN_IMMOBILIER crée une parcelle dans une ville de son organisation', false, 'UUID de ville absent');
+    check('ADMIN_IMMOBILIER crée un bâtiment sur une parcelle de son organisation', false, 'UUID de ville absent');
+    check('ADMIN_IMMOBILIER crée une unité dans un bâtiment de son organisation', false, 'UUID de ville absent');
+    check('ADMIN_IMMOBILIER supprime logiquement une unité de son organisation', false, 'UUID de ville absent');
+    check('ADMIN_IMMOBILIER supprime logiquement un bâtiment de son organisation', false, 'UUID de ville absent');
+    check('ADMIN_IMMOBILIER supprime logiquement une parcelle de son organisation', false, 'UUID de ville absent');
+    check('ADMIN_IMMOBILIER supprime logiquement une ville de son organisation', false, 'UUID absent de la réponse de création');
+}
 
 // Les dates métier rétroactives restent distinctes de la saisie serveur.
 section('Dates opérationnelles : paiement, bail et intervention');

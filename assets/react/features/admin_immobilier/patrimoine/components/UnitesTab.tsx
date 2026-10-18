@@ -86,6 +86,7 @@ interface UnitesTabProps {
     onPublish: (unit: UnitItem) => Promise<void>;
     selectedBuildingId: string | null;
     onBuildingFilter: (uuid: string | null) => void;
+    showcaseEnabled?: boolean;
     /** Lecture seule (espace PATRON) : masque toute action d'écriture. */
     readOnly?: boolean;
 }
@@ -96,7 +97,7 @@ interface UnitesTabProps {
  * courant (`isPublished`) ; une unité occupée est refusée par le backend (422).
  * `readOnly` masque les écritures (Patron).
  */
-export function UnitesTab({ units, buildings, role, isLoading, error, note, onReload, onCreate, onUpdate, onDelete, onPublish, selectedBuildingId, onBuildingFilter, readOnly = false }: UnitesTabProps) {
+export function UnitesTab({ units, buildings, role, isLoading, error, note, onReload, onCreate, onUpdate, onDelete, onPublish, selectedBuildingId, onBuildingFilter, showcaseEnabled = false, readOnly = false }: UnitesTabProps) {
     const [search, setSearch] = useState('');
     const [modalOpen, setModalOpen] = useState(false);
     const [editTarget, setEditTarget] = useState<UnitItem | null>(null);
@@ -262,15 +263,16 @@ export function UnitesTab({ units, buildings, role, isLoading, error, note, onRe
             title: 'Actions',
             render: (unit) => {
                 if (readOnly) return '—';
+                const canManageShowcase = showcaseEnabled && canDo(role, 'publish_listing');
 
                 const items: PopoverMenuItem[] = [
                     ...(canDo(role, 'update_unit')
                         ? [{ id: 'edit', label: 'Modifier', icon: <Icon name="edit" />, onClick: () => openEdit(unit) }]
                         : []),
-                    ...(!readOnly && canDo(role, 'publish_listing')
+                    ...(canManageShowcase
                         ? [{ id: 'photos', label: 'Gérer les photos', icon: <Icon name="camera" />, onClick: () => setPhotoTarget(unit) }]
                         : []),
-                    ...(canDo(role, 'publish_listing')
+                    ...(canManageShowcase
                         ? [{ id: 'publish', label: unit.isPublished ? 'Retirer de la vitrine' : 'Publier', icon: <Icon name="cloud" />, onClick: () => void onPublish(unit) }]
                         : []),
                     ...(canDo(role, 'delete_unit')
