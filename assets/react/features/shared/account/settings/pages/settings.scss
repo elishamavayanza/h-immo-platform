@@ -71,6 +71,21 @@
 .setting-row__current-value { color:var(--color-text-secondary); font-size:.9rem; }
 .setting-row .select-field__wrapper { width:min(220px, 42%); flex:none; }
 .setting-row input[type='number'] { width:100%; min-height:42px; padding:9px 12px; border:1px solid var(--color-border, #29313b); border-radius:var(--radius-md, 8px); color:var(--color-text-primary, #fff); background:var(--color-bg-input, #101214); }
+.settings-install-help,.settings-install-status { margin:12px 0 0; padding:12px 14px; border:1px solid var(--color-border); border-radius:10px; color:var(--color-text-secondary); background:var(--color-bg-card-hover); font-size:.88rem; line-height:1.55; }
+.settings-install-help p { margin:8px 0 0; }
+.settings-install-help p + p { margin-top:6px; }
+.settings-card--shortcut .setting-row > div:first-child { flex:1; }
+.settings-card--shortcut .setting-switch { flex:none; }
+.settings-card--shortcut .settings-install-help button { max-width:100%; }
+.settings-pwa-help-modal .modal__body { display:grid; gap:14px; }
+.settings-pwa-help-modal__notice { padding:12px 14px; border:1px solid color-mix(in srgb, var(--color-danger, #a94e5d) 45%, var(--color-border)); border-radius:10px; color:var(--color-text-primary); background:color-mix(in srgb, var(--color-danger, #a94e5d) 9%, var(--color-bg-card)); }
+.settings-pwa-help-modal__notice strong { display:block; color:var(--color-danger, #a94e5d); }
+.settings-pwa-help-modal__notice p,.settings-pwa-help-modal__intro,.settings-pwa-help-modal__note { margin:7px 0 0; color:var(--color-text-secondary); font-size:.88rem; line-height:1.55; }
+.settings-pwa-help-modal__steps { display:grid; gap:10px; margin:0; padding:0; list-style:none; }
+.settings-pwa-help-modal__steps li { display:grid; gap:4px; padding:11px 12px; border:1px solid var(--color-border); border-radius:9px; background:var(--color-bg-card-hover); }
+.settings-pwa-help-modal__steps strong { color:var(--color-text-primary); font-size:.88rem; }
+.settings-pwa-help-modal__steps span { color:var(--color-text-secondary); font-size:.84rem; line-height:1.5; }
+.settings-pwa-help-modal__note { margin:0; }
 .setting-switch { width:42px; height:24px; flex:none; padding:3px; border:0; border-radius:99px; background:#475569; cursor:pointer; transition:background .18s ease; }
 .setting-switch span { display:block; width:18px; height:18px; border-radius:50%; background:#fff; transition:transform .18s ease; }
 .setting-switch[aria-checked="true"] { background:var(--color-primary, #0891b2); }

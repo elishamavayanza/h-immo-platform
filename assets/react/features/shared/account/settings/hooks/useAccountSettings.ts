@@ -14,6 +14,7 @@ const SETTING_LABELS: Record<keyof UserSettings, string> = {
     accentPalette: 'la couleur d’accent',
     dateFormat: 'le format des dates',
     inAppNotifications: 'les messages toast',
+    allowInstallPrompt: 'la proposition d’installation de Soft-IMMO',
     reducedMotion: 'la réduction des animations',
     sidebarCollapsed: 'l’état initial du menu latéral',
     auditLogRetentionDays: 'la période d’affichage du journal d’audit',
@@ -24,6 +25,7 @@ function preferenceSuccessMessage(key: keyof UserSettings, value: unknown): stri
     if (key === 'compactTables') return `Affichage compact des tableaux ${value ? 'activé' : 'désactivé'}.`;
     if (key === 'emailNotifications') return `Notifications par e-mail ${value ? 'activées' : 'désactivées'}.`;
     if (key === 'inAppNotifications') return `Messages toast ${value ? 'activés' : 'désactivés'}.`;
+    if (key === 'allowInstallPrompt') return `Option d’installation de Soft-IMMO ${value ? 'affichée' : 'masquée'} dans les paramètres.`;
     if (key === 'reducedMotion') return `Animations réduites ${value ? 'activées' : 'désactivées'}.`;
     if (key === 'sidebarCollapsed') return `Menu latéral ${value ? 'replié' : 'déployé'} par défaut.`;
     if (key === 'defaultPageSize') return `Les tableaux afficheront ${value} lignes par page.`;
@@ -45,6 +47,7 @@ export function useAccountSettings() {
         accentPalette: 'ocean',
         dateFormat: 'DD/MM/YYYY',
         inAppNotifications: true,
+        allowInstallPrompt: false,
         reducedMotion: false,
         sidebarCollapsed: false,
     });

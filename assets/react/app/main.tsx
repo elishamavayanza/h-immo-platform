@@ -10,6 +10,7 @@ import { AppRoutes } from './routes/AppRoutes.tsx';
 import { initializeUserPreferences } from '../services/userPreferences';
 import { ErrorBoundary } from '../components/UI/ErrorBoundary';
 import { initializeClientErrorReporting } from '../services/clientErrorReporting';
+import { initializePwaInstallation } from '../services/pwaInstallation';
 
 // Le point d'entrée charge le thème global et toutes les primitives UI.
 // Le reset reste séparé afin de conserver un ordre prévisible.
@@ -18,6 +19,7 @@ import '../../styles/main.scss';
 
 initializeUserPreferences();
 initializeClientErrorReporting();
+initializePwaInstallation();
 
 function App() {
     return (

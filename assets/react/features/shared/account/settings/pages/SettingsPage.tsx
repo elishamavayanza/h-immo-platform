@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { Button } from '../../../../../components/UI/Button';
 import { Card } from '../../../../../components/UI/Card';
+import { Modal } from '../../../../../components/UI/Modal/Modal';
 import { FormField } from '../../../../../components/Forms/FormField';
 import { Input } from '../../../../../components/Forms/Input';
 import { Select } from '../../../../../components/Forms/Select';
@@ -15,6 +16,7 @@ import { useToast } from '../../../../../app/layout/MainLayout/contexts/ToastCon
 import { apiClient } from '../../../../../../services/api/client';
 import { ApiError, type Feedback } from '../../../../../../services/api/api.types';
 import { useAccountSettings } from '../hooks/useAccountSettings';
+import { usePwaInstallation } from '../hooks/usePwaInstallation';
 import { OrganizationLogoPicker, type OrganizationLogoChange } from '../../../../super_admin/organizations/components/OrganizationLogoPicker';
 import { organizationsService } from '../../../../super_admin/organizations/services/organizationsService';
 import './settings.scss';
@@ -33,6 +35,9 @@ export function SettingsPage() {
     const { currentOrganization, organizationRole } = useOrganization();
     const { push } = useToast();
     const { settings, update, isLoading, error, reload } = useAccountSettings();
+    const pwaInstallation = usePwaInstallation();
+    const [installingPwa, setInstallingPwa] = useState(false);
+    const [installHelpOpen, setInstallHelpOpen] = useState(false);
     const [retentionDraft, setRetentionDraft] = useState<string | null>(null);
     const [retentionError, setRetentionError] = useState<string | null>(null);
     const isSuperAdmin = user?.platformRole === 'super_admin';
@@ -195,6 +200,20 @@ export function SettingsPage() {
     const toggle = (key: keyof typeof settings) => {
         const value = !settings[key];
         void apply(key, value);
+    };
+
+    const installSoftImmo = async () => {
+        setInstallingPwa(true);
+        try {
+            const outcome = await pwaInstallation.install();
+            if (outcome === 'accepted') push('success', 'Soft-IMMO a été ajoutée à cet appareil.');
+            else if (outcome === 'dismissed') push('info', 'Installation annulée. Vous pourrez la relancer depuis les paramètres.');
+            else setInstallHelpOpen(true);
+        } catch {
+            setInstallHelpOpen(true);
+        } finally {
+            setInstallingPwa(false);
+        }
     };
 
     const handleSelectChange = (key: keyof typeof settings) => (event: React.ChangeEvent<HTMLSelectElement>) => {
@@ -419,6 +438,31 @@ export function SettingsPage() {
                     </div>
                 </Card></section>}
 
+                {!isOrganizationPage && <section id="settings-shortcut" className="settings-section"><Card header="Accès rapide" className="settings-card settings-card--shortcut">
+                    <div className="setting-row">
+                        <div>
+                            <strong>Afficher l’option d’installation</strong>
+                            <p>Choisissez si Soft-IMMO doit vous proposer son raccourci sur cet appareil. L’installation ne démarre qu’après votre action et la confirmation du navigateur.</p>
+                        </div>
+                        <button
+                            className="setting-switch"
+                            type="button"
+                            role="switch"
+                            aria-label="Afficher l’option d’installation de Soft-IMMO"
+                            aria-checked={settings.allowInstallPrompt}
+                            onClick={() => toggle('allowInstallPrompt')}
+                        ><span /></button>
+                    </div>
+                    {pwaInstallation.installed ? <p className="settings-install-status" role="status">Soft-IMMO est déjà installée sur cet appareil. Pour la retirer, utilisez les réglages de votre appareil ou de votre navigateur.</p>
+                        : settings.allowInstallPrompt ? <div className="settings-install-help">
+                            <Button onClick={() => void installSoftImmo()} isLoading={installingPwa} disabled={installingPwa}>Installer ou créer un raccourci</Button>
+                            <p>{pwaInstallation.canPrompt
+                                ? 'Le navigateur vous demandera de confirmer. Vous pouvez refuser sans modifier votre compte.'
+                                : 'Si votre navigateur ne prend pas en charge l’installation directe, ce bouton vous indiquera comment créer un raccourci depuis son menu.'}</p>
+                            <p>Votre choix est enregistré sur votre compte ; chaque installation ou raccourci concerne uniquement cet appareil et ce navigateur.</p>
+                        </div> : <p className="settings-install-status">L’option d’installation est masquée. Vous pouvez la réactiver à tout moment depuis cette page.</p>}
+                </Card></section>}
+
                 {!isOrganizationPage && <section id="settings-notifications" className="settings-section"><Card header="Notifications" className="settings-card">
                     <div className="setting-row">
                         <div>
@@ -501,6 +545,7 @@ export function SettingsPage() {
                     {!isOrganizationPage && <div className="settings-rightbar__subnav" aria-label="Sections du compte">
                         <span className="settings-rightbar__label">Préférences</span>
                         <a href="#settings-display" className={activeSection === 'settings-display' ? 'is-active' : undefined} aria-current={activeSection === 'settings-display' ? 'location' : undefined}>Affichage</a>
+                        <a href="#settings-shortcut" className={activeSection === 'settings-shortcut' ? 'is-active' : undefined} aria-current={activeSection === 'settings-shortcut' ? 'location' : undefined}>Accès rapide</a>
                         <a href="#settings-notifications" className={activeSection === 'settings-notifications' ? 'is-active' : undefined} aria-current={activeSection === 'settings-notifications' ? 'location' : undefined}>Notifications</a>
                         <a href="#settings-security" className={activeSection === 'settings-security' ? 'is-active' : undefined} aria-current={activeSection === 'settings-security' ? 'location' : undefined}>Sécurité</a>
                         <Link to="/settings/manuel">Manuel d’utilisation</Link>
@@ -513,6 +558,19 @@ export function SettingsPage() {
                     </div>}
                 </nav>
             </RightSidebar>
+            <Modal isOpen={installHelpOpen} onClose={() => setInstallHelpOpen(false)} title="Ajouter Soft-IMMO à cet appareil" size="small" className="settings-pwa-help-modal" footer={<Button onClick={() => setInstallHelpOpen(false)}>J’ai compris</Button>}>
+                {!window.isSecureContext && <div className="settings-pwa-help-modal__notice" role="alert">
+                    <strong>Installation de l’application indisponible sur cette adresse</strong>
+                    <p>Cette page est ouverte en HTTP depuis une adresse réseau. Chrome exige une connexion sécurisée (HTTPS) pour installer une application. L’installation sera disponible lorsque Soft-IMMO sera publiée en HTTPS.</p>
+                </div>}
+                <p className="settings-pwa-help-modal__intro">Vous pouvez tout de même créer un raccourci avec le menu de votre navigateur. Les intitulés varient selon sa version.</p>
+                <ul className="settings-pwa-help-modal__steps">
+                    <li><strong>Android / Chrome</strong><span>Ouvrez le menu ⋮, puis choisissez « Installer l’application » ou « Ajouter à l’écran d’accueil ». Si seule l’option « Créer un raccourci » apparaît, elle ouvrira le site dans Chrome.</span></li>
+                    <li><strong>iPhone ou iPad / Safari</strong><span>Appuyez sur Partager, puis « Sur l’écran d’accueil ».</span></li>
+                    <li><strong>Ordinateur / Chrome ou Edge</strong><span>Utilisez l’icône d’installation près de la barre d’adresse ou le menu du navigateur. Sur Safari pour Mac : Fichier, puis « Ajouter au Dock ».</span></li>
+                </ul>
+                <p className="settings-pwa-help-modal__note">Le raccourci reste lié à l’appareil et au navigateur. Vous pourrez le retirer depuis leurs réglages.</p>
+            </Modal>
         </main>
     );
 }

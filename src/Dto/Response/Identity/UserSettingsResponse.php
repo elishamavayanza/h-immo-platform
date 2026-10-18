@@ -35,6 +35,9 @@ final class UserSettingsResponse
         #[OA\Property(description: 'Notifications in-app', example: true, nullable: true)]
         public ?bool $inAppNotifications = null,
 
+        #[OA\Property(description: 'Afficher le bouton d’installation de l’application web', example: false, nullable: true)]
+        public ?bool $allowInstallPrompt = null,
+
         #[OA\Property(description: 'Tableaux compacts', example: false, nullable: true)]
         public ?bool $compactTables = null,
 
@@ -66,6 +69,7 @@ final class UserSettingsResponse
             dateFormat: $settings['dateFormat'] ?? 'DD/MM/YYYY',
             emailNotifications: $settings['emailNotifications'] ?? true,
             inAppNotifications: $settings['inAppNotifications'] ?? true,
+            allowInstallPrompt: $settings['allowInstallPrompt'] ?? false,
             compactTables: $settings['compactTables'] ?? false,
             reducedMotion: $settings['reducedMotion'] ?? false,
             auditLogRetentionDays: $settings['auditLogRetentionDays'] ?? null,

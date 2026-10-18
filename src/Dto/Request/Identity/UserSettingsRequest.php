@@ -40,6 +40,9 @@ final class UserSettingsRequest
         #[OA\Property(description: 'Notifications in-app', example: true, nullable: true)]
         public ?bool $inAppNotifications = null,
 
+        #[OA\Property(description: 'Afficher le bouton d’installation de l’application web', example: false, nullable: true)]
+        public ?bool $allowInstallPrompt = null,
+
         #[OA\Property(description: 'Tableaux compacts', example: false, nullable: true)]
         public ?bool $compactTables = null,
 
