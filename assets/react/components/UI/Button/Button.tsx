@@ -4,6 +4,7 @@ import { useButton, UseButtonProps } from '../../../hook-components/UI/Button';
 export interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement>, UseButtonProps {
     as?: 'button' | 'a';
     href?: string;
+    download?: string;
     spinner?: React.ReactNode;
 }
 
@@ -26,6 +27,7 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
             spinner = defaultSpinner,
             as = 'button',
             href,
+            download,
             type = 'button',
             ...rest
         },
@@ -60,6 +62,7 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
                 <a
                     className={classes}
                     href={href}
+                    download={download}
                     aria-disabled={isDisabled}
                     tabIndex={isDisabled ? -1 : undefined}
                     {...(rest as React.AnchorHTMLAttributes<HTMLAnchorElement>)}

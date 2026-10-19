@@ -133,7 +133,10 @@ export function UserManualSection() {
                         <p>{manual.description}</p>
                         <div className="manual-workspace__meta"><span>Version {manual.version}</span><span>Mis à jour le {manual.updatedAt}</span>{currentOrganization && <span>{currentOrganization.name}</span>}</div>
                     </div>
-                    <Button variant="secondary" disabled={busy} onClick={() => void download()}>{busy ? 'Préparation…' : 'Télécharger le PDF'}</Button>
+                    <div className="manual-workspace__downloads">
+                        <Button variant="outline" as="a" href="/documents/presentation-generale-soft-immo.pdf" download="presentation-generale-soft-immo.pdf" aria-label="Télécharger la présentation générale de Soft-IMMO">Télécharger la présentation générale</Button>
+                        <Button variant="secondary" disabled={busy} onClick={() => void download()}>{busy ? 'Préparation…' : 'Télécharger le PDF'}</Button>
+                    </div>
                 </header>
                 <div className="manual-workspace__toolbar">
                     <label className="manual-workspace__search"><span aria-hidden="true">⌕</span><span className="sr-only">Rechercher dans le manuel</span><input type="search" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Rechercher un écran, une action, un champ…" /></label>
