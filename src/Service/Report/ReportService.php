@@ -33,7 +33,6 @@ use App\Entity\Staff\Worker;
 use App\Entity\Staff\WorkerAssignment;
 use App\Enum\ExpenseCategory;
 use App\Enum\OrganizationStatus;
-use App\Enum\RentStatus;
 use App\Repository\Expense\ExpenseRepository;
 use App\Enum\Currency;
 use App\Repository\Financial\ExchangeRateRepository;
@@ -55,6 +54,7 @@ use App\Security\SecurityServiceInterface;
 use App\Service\System\DateTimeService;
 use Symfony\Component\HttpKernel\Exception\BadRequestHttpException;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
+use Symfony\Component\HttpKernel\Exception\UnprocessableEntityHttpException;
 use Symfony\Component\Uid\Uuid;
 
 /**
@@ -312,7 +312,7 @@ final readonly class ReportService
             array_push($allCityIds, ...$cityIds);
         }
         $occupancyByCity = [];
-        foreach ($this->unitRepository->getCurrentOccupancyByCityIds($allCityIds) as $row) {
+        foreach ($this->unitRepository->getCurrentOccupancyByCityIds($allCityIds, $this->dateTime->today()) as $row) {
             $occupancyByCity[$row['cityId']] = $row;
         }
 
@@ -560,7 +560,7 @@ final readonly class ReportService
                     (string) $row['total'],
                     Currency::from($currencyCode),
                     $referenceCurrency,
-                    $this->periodStart($period, $periodFrom),
+                    $this->financialRowRateDate($row, $period, $periodFrom),
                     isset($row['cityId']) ? (int) $row['cityId'] : null,
                 );
                 $byPeriod[$period][$field] = bcadd($byPeriod[$period][$field], $amount, 2);
@@ -769,43 +769,47 @@ final readonly class ReportService
     /** @return list<ArrearsItem> */
     private function buildArrears(?int $organizationId, array $cityIds, \DateTimeImmutable $asOfDate): array
     {
-        $leases = $this->leaseRepository->findActiveByOrganizationsAndCities(
+        $leases = $this->leaseRepository->findByOrganizationsAndCities(
             $organizationId ? [$organizationId] : null,
-            $cityIds ?: null
+            $cityIds
         );
 
         $items = [];
         foreach ($leases as $lease) {
             $rents = $this->rentRepository->findByLease($lease);
-            $totalDue = '0.00';
-            $totalPaid = '0.00';
 
             foreach ($rents as $rent) {
-                $due = $rent->getAmount();
-                $totalDue = bcadd($totalDue, $due, 2);
-
-                $paid = $this->paymentRepository->sumAmountByRent($rent);
-                $totalPaid = bcadd($totalPaid, $paid, 2);
-
-                if ($rent->getStatus() === RentStatus::OVERDUE || $rent->getStatus() === RentStatus::PARTIALLY_PAID) {
-                    $arrears = bcsub($due, $paid, 2);
-                    $daysOverdue = 0;
-                    if ($rent->getDueDate() < $asOfDate) {
-                        $daysOverdue = (int) $asOfDate->diff($rent->getDueDate())->days;
-                    }
-
-                    $items[] = new ArrearsItem(
-                        leaseUuid: $lease->getUuid()->toRfc4122(),
-                        leaseReference: $lease->getReference(),
-                        tenantName: $lease->getTenant()->getFullName() ?? $lease->getTenant()->getCompanyName() ?? 'Inconnu',
-                        unitLabel: $this->leaseUnitsLabel($lease),
-                        amountDue: $due,
-                        amountPaid: $paid,
-                        arrears: $arrears,
-                        daysOverdue: $daysOverdue,
-                        currency: $rent->getCurrency()->value,
-                    );
+                $leaseEnd = $this->effectiveLeaseEndDate($lease);
+                if ($leaseEnd !== null && $rent->getDueDate() > $leaseEnd) {
+                    continue;
                 }
+
+                // Une échéance n'est échue que si sa date d'exigibilité est
+                // strictement antérieure à la date de référence du rapport.
+                // Cela exclut les échéances futures/du jour et rend le calcul
+                // indépendant de la date courante de l'application.
+                if ($rent->getDueDate() >= $asOfDate) {
+                    continue;
+                }
+
+                $due = $rent->getAmount();
+                $paid = $this->paymentRepository->sumAmountByRentAsOf($rent, $asOfDate);
+                $arrears = bcsub($due, $paid, 2);
+                if (bccomp($arrears, '0.00', 2) <= 0) {
+                    continue;
+                }
+
+                $items[] = new ArrearsItem(
+                    leaseUuid: $lease->getUuid()->toRfc4122(),
+                    leaseReference: $lease->getReference(),
+                    tenantName: $lease->getTenant()->getFullName() ?? $lease->getTenant()->getCompanyName() ?? 'Inconnu',
+                    unitLabel: $this->leaseUnitsLabel($lease),
+                    amountDue: $due,
+                    amountPaid: $paid,
+                    arrears: $arrears,
+                    daysOverdue: (int) $asOfDate->diff($rent->getDueDate())->days,
+                    currency: $rent->getCurrency()->value,
+                );
             }
         }
 
@@ -840,7 +844,7 @@ final readonly class ReportService
                 ? (string) $row['category']->value
                 : (string) $row['category'];
             $currencyCode = $row['currency'] instanceof \BackedEnum ? $row['currency']->value : (string) $row['currency'];
-            $amount = $this->convertToReferenceCurrency((string) $row['total'], Currency::from($currencyCode), $referenceCurrency, $this->periodStart($row['period'] ?? null, $periodFrom), isset($row['cityId']) ? (int) $row['cityId'] : null);
+            $amount = $this->convertToReferenceCurrency((string) $row['total'], Currency::from($currencyCode), $referenceCurrency, $this->financialRowRateDate($row, $row['period'] ?? null, $periodFrom), isset($row['cityId']) ? (int) $row['cityId'] : null);
             $totalsByCategory[$category] = bcadd($totalsByCategory[$category] ?? '0.00', $amount, 2);
             $countsByCategory[$category] = ($countsByCategory[$category] ?? 0) + (int) $row['count'];
         }
@@ -880,7 +884,7 @@ final readonly class ReportService
         $totalsByCity = [];
         foreach ($results as $row) {
             $currencyCode = $row['currency'] instanceof \BackedEnum ? $row['currency']->value : (string) $row['currency'];
-            $amount = $this->convertToReferenceCurrency((string) $row['total'], Currency::from($currencyCode), $referenceCurrency, $this->periodStart($row['period'] ?? null, $periodFrom), isset($row['cityId']) ? (int) $row['cityId'] : null);
+            $amount = $this->convertToReferenceCurrency((string) $row['total'], Currency::from($currencyCode), $referenceCurrency, $this->financialRowRateDate($row, $row['period'] ?? null, $periodFrom), isset($row['cityId']) ? (int) $row['cityId'] : null);
             $uuid = (string) $row['cityUuid'];
             $totalsByCity[$uuid] ??= ['cityUuid' => $uuid, 'cityName' => (string) $row['cityName'], 'amount' => '0.00', 'count' => 0];
             $totalsByCity[$uuid]['amount'] = bcadd($totalsByCity[$uuid]['amount'], $amount, 2);
@@ -929,7 +933,7 @@ final readonly class ReportService
                 (string) $row['total'],
                 Currency::from($currencyCode),
                 $referenceCurrency,
-                $this->periodStart($row['period'] ?? null, $periodFrom),
+                $this->financialRowRateDate($row, $row['period'] ?? null, $periodFrom),
                 (int) $row['cityId'],
             );
 
@@ -992,7 +996,7 @@ final readonly class ReportService
 
     private function unitHasActiveLease(\App\Entity\Property\Unit $unit): bool
     {
-        $activeLease = $this->leaseRepository->findActiveLeaseForUnit($unit);
+        $activeLease = $this->leaseRepository->findActiveLeaseForUnitAtDate($unit, $this->dateTime->today());
         return $activeLease !== null;
     }
 
@@ -1017,8 +1021,12 @@ final readonly class ReportService
             if ($inverseRate !== null) {
                 return bcdiv($amount, $inverseRate->getRate(), 2);
             }
-            // Pas de taux disponible : retourner le montant original (ne pas casser le rapport)
-            return $amount;
+            throw new UnprocessableEntityHttpException(sprintf(
+                'Le rapport ne peut pas convertir %s vers %s au %s : aucun taux historique applicable n’est enregistré.',
+                $fromCurrency->value,
+                $toCurrency->value,
+                $this->dateTime->format($date, 'Y-m-d'),
+            ));
         }
 
         return $rate->convertBaseToQuote($amount);
@@ -1043,6 +1051,20 @@ final readonly class ReportService
         return $this->dateTime->parseDate($period . '-01') ?? $fallback;
     }
 
+    /** @param array<string, mixed> $row */
+    private function financialRowRateDate(array $row, ?string $period, \DateTimeImmutable $fallback): \DateTimeImmutable
+    {
+        $effectiveDate = $row['effectiveDate'] ?? null;
+        if (is_string($effectiveDate)) {
+            $parsed = $this->dateTime->parseDate($effectiveDate);
+            if ($parsed !== null) {
+                return $parsed;
+            }
+        }
+
+        return $this->periodStart($period, $fallback);
+    }
+
     private function sumRevenues(?int $organizationId, array $cityIds, \DateTimeImmutable $from, \DateTimeImmutable $to): string
     {
         $results = $this->paymentRepository->getFinancialSummary(
@@ -1056,7 +1078,7 @@ final readonly class ReportService
         $total = '0.00';
         foreach ($results as $row) {
             $currency = $row['currency'] instanceof \BackedEnum ? $row['currency']->value : (string) $row['currency'];
-            $converted = $this->convertToReferenceCurrency($row['total'], \App\Enum\Currency::from($currency), $referenceCurrency, $this->periodStart($row['period'] ?? null, $from), isset($row['cityId']) ? (int) $row['cityId'] : null);
+            $converted = $this->convertToReferenceCurrency($row['total'], \App\Enum\Currency::from($currency), $referenceCurrency, $this->financialRowRateDate($row, $row['period'] ?? null, $from), isset($row['cityId']) ? (int) $row['cityId'] : null);
             $total = bcadd($total, $converted, 2);
         }
         return $total;
@@ -1075,7 +1097,7 @@ final readonly class ReportService
         $total = '0.00';
         foreach ($results as $row) {
             $currency = $row['currency'] instanceof \BackedEnum ? $row['currency']->value : (string) $row['currency'];
-            $converted = $this->convertToReferenceCurrency($row['total'], \App\Enum\Currency::from($currency), $referenceCurrency, $this->periodStart($row['period'] ?? null, $from), isset($row['cityId']) ? (int) $row['cityId'] : null);
+            $converted = $this->convertToReferenceCurrency($row['total'], \App\Enum\Currency::from($currency), $referenceCurrency, $this->financialRowRateDate($row, $row['period'] ?? null, $from), isset($row['cityId']) ? (int) $row['cityId'] : null);
             $total = bcadd($total, $converted, 2);
         }
         return $total;
@@ -1083,9 +1105,9 @@ final readonly class ReportService
 
     private function sumArrears(?int $organizationId, array $cityIds, \DateTimeImmutable $asOfDate): string
     {
-        $leases = $this->leaseRepository->findActiveByOrganizationsAndCities(
+        $leases = $this->leaseRepository->findByOrganizationsAndCities(
             $organizationId ? [$organizationId] : null,
-            $cityIds ?: null
+            $cityIds
         );
 
         $referenceCurrency = $this->getReferenceCurrency($organizationId, $cityIds);
@@ -1093,15 +1115,25 @@ final readonly class ReportService
         foreach ($leases as $lease) {
             $rents = $this->rentRepository->findByLease($lease);
             foreach ($rents as $rent) {
-                if ($rent->getStatus() === RentStatus::OVERDUE || $rent->getStatus() === RentStatus::PARTIALLY_PAID) {
-                    $due = $rent->getAmount();
-                    $paid = $this->paymentRepository->sumAmountByRent($rent);
-                    $arrears = bcsub($due, $paid, 2);
-                    $unit = $lease->getUnit();
-                    $cityId = $unit->getBuilding()->getParcel()->getCity()->getId();
-                    $converted = $this->convertToReferenceCurrency($arrears, $rent->getCurrency(), $referenceCurrency, $this->dateTime->parseDate($rent->getPeriod()->format('Y-m-d')) ?? $asOfDate, $cityId);
-                    $total = bcadd($total, $converted, 2);
+                $leaseEnd = $this->effectiveLeaseEndDate($lease);
+                if ($leaseEnd !== null && $rent->getDueDate() > $leaseEnd) {
+                    continue;
                 }
+
+                if ($rent->getDueDate() >= $asOfDate) {
+                    continue;
+                }
+
+                $arrears = bcsub($rent->getAmount(), $this->paymentRepository->sumAmountByRentAsOf($rent, $asOfDate), 2);
+                if (bccomp($arrears, '0.00', 2) <= 0) {
+                    continue;
+                }
+
+                $cityId = $this->cityIdWithinReportScope($lease, $cityIds);
+                // Le solde impayé est présenté avec le taux applicable à la
+                // période du loyer, faute d'une valeur de change figée sur Rent.
+                $converted = $this->convertToReferenceCurrency($arrears, $rent->getCurrency(), $referenceCurrency, $this->dateTime->parseDate($rent->getPeriod()->format('Y-m-d')) ?? $asOfDate, $cityId);
+                $total = bcadd($total, $converted, 2);
             }
         }
         return $total;
@@ -1110,6 +1142,36 @@ final readonly class ReportService
     private function countUnitsByCityIds(array $cityIds): int
     {
         return $this->unitRepository->countByCityIds($cityIds);
+    }
+
+    private function effectiveLeaseEndDate(Lease $lease): ?\DateTimeImmutable
+    {
+        $endDate = $lease->getEndDate();
+        $terminationDate = $lease->getTerminationDate();
+
+        if ($terminationDate !== null && ($endDate === null || $terminationDate < $endDate)) {
+            return $terminationDate;
+        }
+
+        return $endDate;
+    }
+
+    /** @param list<int> $cityIds */
+    private function cityIdWithinReportScope(Lease $lease, array $cityIds): ?int
+    {
+        $primaryCityId = $lease->getUnit()->getBuilding()->getParcel()->getCity()->getId();
+        if (in_array($primaryCityId, $cityIds, true)) {
+            return $primaryCityId;
+        }
+
+        foreach ($lease->getAdditionalUnits() as $unit) {
+            $additionalCityId = $unit->getBuilding()->getParcel()->getCity()->getId();
+            if (in_array($additionalCityId, $cityIds, true)) {
+                return $additionalCityId;
+            }
+        }
+
+        return null;
     }
 
     private function leaseUnitsLabel(Lease $lease): string
@@ -1214,7 +1276,7 @@ final readonly class ReportService
         $total = '0.00';
         foreach ($results as $row) {
             $currency = $row['currency'] instanceof \BackedEnum ? $row['currency']->value : (string) $row['currency'];
-            $converted = $this->convertToReferenceCurrency($row['total'], \App\Enum\Currency::from($currency), $referenceCurrency, $this->periodStart($row['period'] ?? null, $from), isset($row['cityId']) ? (int) $row['cityId'] : null);
+            $converted = $this->convertToReferenceCurrency($row['total'], \App\Enum\Currency::from($currency), $referenceCurrency, $this->financialRowRateDate($row, $row['period'] ?? null, $from), isset($row['cityId']) ? (int) $row['cityId'] : null);
             $total = bcadd($total, $converted, 2);
         }
         return $total;

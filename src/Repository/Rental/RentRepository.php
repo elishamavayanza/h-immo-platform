@@ -6,12 +6,13 @@ namespace App\Repository\Rental;
 
 use App\Entity\Identity\Organization;
 use App\Entity\Rental\Lease;
+use App\Entity\Rental\Payment;
 use App\Entity\Rental\Rent;
 use App\Repository\PaginatedResultTrait;
 use App\Repository\UuidParameterTrait;
 use App\Service\System\DateTimeService;
-use App\Enum\LeaseStatus;
 use App\Enum\RentStatus;
+use App\Enum\LeaseStatus;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\Persistence\ManagerRegistry;
 use Symfony\Component\Uid\Uuid;
@@ -116,13 +117,13 @@ class RentRepository extends ServiceEntityRepository
         $sortOrder = strtoupper($sortOrder) === 'ASC' ? 'ASC' : 'DESC';
 
         $today = $this->dateTime->today();
+        $paidAmount = $this->paidAmountExpression();
 
         $qb = $this->createQueryBuilder('r')
             ->innerJoin('r.lease', 'l')
             ->andWhere('r.dueDate < :today')
-            ->andWhere('r.status IN (:openStatuses)')
+            ->andWhere('r.amount > ' . $paidAmount)
             ->setParameter('today', $today)
-            ->setParameter('openStatuses', [\App\Enum\RentStatus::PENDING, \App\Enum\RentStatus::PARTIALLY_PAID, \App\Enum\RentStatus::OVERDUE])
             ->orderBy("r.$sortBy", $sortOrder);
 
         if ($organizationIds !== null && !empty($organizationIds)) {
@@ -174,6 +175,7 @@ class RentRepository extends ServiceEntityRepository
         $sortOrder = strtoupper($sortOrder) === 'ASC' ? 'ASC' : 'DESC';
 
         $today = $this->dateTime->today();
+        $paidAmount = $this->paidAmountExpression();
 
         $qb = $this->createQueryBuilder('r')
             ->innerJoin('r.lease', 'l')
@@ -212,19 +214,18 @@ class RentRepository extends ServiceEntityRepository
         if ($status !== null && $status !== '') {
             if ($status === 'overdue') {
                 $qb->andWhere('r.dueDate < :today')
-                    ->andWhere('r.status IN (:openStatuses)')
-                    ->setParameter('today', $today)
-                    ->setParameter('openStatuses', [RentStatus::PENDING, RentStatus::PARTIALLY_PAID]);
+                    ->andWhere('r.amount > ' . $paidAmount)
+                    ->setParameter('today', $today);
+            } elseif ($status === RentStatus::PAID->value) {
+                $qb->andWhere('r.amount <= ' . $paidAmount);
+            } elseif ($status === RentStatus::PARTIALLY_PAID->value) {
+                $qb->andWhere($paidAmount . ' > 0 AND ' . $paidAmount . ' < r.amount')
+                    ->andWhere('r.dueDate >= :today')
+                    ->setParameter('today', $today);
             } else {
-                $qb->andWhere('r.status = :status')
-                    ->setParameter('status', RentStatus::from($status));
-
-                if ($status !== 'paid') {
-                    // pending / partially_paid : exclure les échéances passées
-                    // qui sont OVERDUE à la lecture.
-                    $qb->andWhere('r.dueDate >= :today')
-                        ->setParameter('today', $today);
-                }
+                $qb->andWhere($paidAmount . ' <= 0')
+                    ->andWhere('r.dueDate >= :today')
+                    ->setParameter('today', $today);
             }
         }
 
@@ -239,14 +240,15 @@ class RentRepository extends ServiceEntityRepository
      */
     public function findOverdueByOrganization(Organization $organization): array
     {
+        $paidAmount = $this->paidAmountExpression();
+
         return $this->createQueryBuilder('r')
             ->innerJoin('r.lease', 'l')
             ->andWhere('l.organization = :organization')
             ->andWhere('r.dueDate < :today')
-            ->andWhere('r.status IN (:openStatuses)')
+            ->andWhere('r.amount > ' . $paidAmount)
             ->setParameter('organization', $organization)
             ->setParameter('today', $this->dateTime->today())
-            ->setParameter('openStatuses', [RentStatus::PENDING, RentStatus::PARTIALLY_PAID, RentStatus::OVERDUE])
             ->orderBy('r.dueDate', 'ASC')
             ->getQuery()
             ->getResult();
@@ -294,10 +296,11 @@ class RentRepository extends ServiceEntityRepository
     }
 
     /**
-     * Somme des montants des loyers ATTENDUS (somme des Rent.amount)
-     * pour les baux actifs, groupés par période (mois) et devise.
+     * Somme des échéances de loyer générées, groupées par période et devise.
      *
-     * Utilisé pour le résumé financier : comparer attendu vs encaissé.
+     * Une échéance générée reste une donnée historique même si le bail est
+     * ensuite terminé ou expiré : le statut actuel du bail ne doit pas
+     * réécrire rétroactivement les loyers attendus d'une période passée.
      *
      * @param list<int>|null $organizationIds
      * @param list<int>|null $cityIds
@@ -317,9 +320,11 @@ class RentRepository extends ServiceEntityRepository
             ->innerJoin('u.building', 'b')
             ->innerJoin('b.parcel', 'par')
             ->innerJoin('par.city', 'c')
-            ->andWhere('l.status = :activeStatus')
             ->andWhere('l.deletedAt IS NULL')
-            ->setParameter('activeStatus', \App\Enum\LeaseStatus::ACTIVE)
+            ->andWhere('l.status IN (:financialStatuses)')
+            ->andWhere('(l.endDate IS NULL OR r.dueDate <= l.endDate)')
+            ->andWhere('(l.terminationDate IS NULL OR r.dueDate <= l.terminationDate)')
+            ->setParameter('financialStatuses', [LeaseStatus::ACTIVE, LeaseStatus::EXPIRED, LeaseStatus::TERMINATED])
             ->groupBy('period, r.currency, c.id')
             ->orderBy('period', 'ASC');
 
@@ -344,5 +349,14 @@ class RentRepository extends ServiceEntityRepository
         }
 
         return $qb->getQuery()->getResult();
+    }
+
+    /** Expression DQL pour sommer les montants dans la devise de l'échéance. */
+    private function paidAmountExpression(): string
+    {
+        return sprintf(
+            'COALESCE((SELECT SUM(CASE WHEN payment.originalAmount IS NOT NULL THEN payment.originalAmount ELSE payment.amount END) FROM %s payment WHERE payment.rent = r), 0)',
+            Payment::class,
+        );
     }
 }

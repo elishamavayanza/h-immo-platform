@@ -166,6 +166,71 @@ class LeaseRepository extends ServiceEntityRepository
         return $qb->getQuery()->getOneOrNullResult();
     }
 
+    /**
+     * Recherche un bail contractuellement actif dont la période chevauche
+     * celle demandée sur l'un des espaces incompatibles.
+     * Les deux bornes sont inclusives, comme dans les requêtes d'occupation
+     * historiques et de présence des occupants.
+     *
+     * @param list<Unit> $units
+     */
+    public function findActiveLeaseOverlappingPeriodForRelatedSpaces(
+        array $units,
+        \DateTimeImmutable $startDate,
+        ?\DateTimeImmutable $endDate,
+        ?Uuid $excludeUuid = null,
+    ): ?Lease {
+        if ($units === []) {
+            return null;
+        }
+
+        $qb = $this->createQueryBuilder('l')
+            ->leftJoin('l.additionalUnits', 'additionalUnit')
+            ->andWhere('(l.unit IN (:units) OR additionalUnit IN (:units))')
+            ->andWhere('l.status = :status')
+            ->andWhere('l.deletedAt IS NULL')
+            ->andWhere('(l.endDate IS NULL OR l.endDate >= :startDate)')
+            ->setParameter('units', $units)
+            ->setParameter('status', LeaseStatus::ACTIVE)
+            ->setParameter('startDate', $startDate)
+            ->setMaxResults(1);
+
+        if ($endDate !== null) {
+            $qb->andWhere('l.startDate <= :endDate')->setParameter('endDate', $endDate);
+        }
+
+        if ($excludeUuid !== null) {
+            $qb->andWhere('l.uuid != :excludeUuid')
+                ->setParameter('excludeUuid', $this->bindableUuid($excludeUuid));
+        }
+
+        return $qb->getQuery()->getOneOrNullResult();
+    }
+
+    /** @param list<Unit> $units
+     *  @return list<Lease>
+     */
+    public function findActiveLeasesForRelatedSpacesAtDate(array $units, \DateTimeImmutable $date): array
+    {
+        if ($units === []) {
+            return [];
+        }
+
+        return $this->createQueryBuilder('l')
+            ->distinct()
+            ->leftJoin('l.additionalUnits', 'additionalUnit')
+            ->andWhere('(l.unit IN (:units) OR additionalUnit IN (:units))')
+            ->andWhere('l.status = :status')
+            ->andWhere('l.deletedAt IS NULL')
+            ->andWhere('l.startDate <= :date')
+            ->andWhere('(l.endDate IS NULL OR l.endDate >= :date)')
+            ->setParameter('units', $units)
+            ->setParameter('status', LeaseStatus::ACTIVE)
+            ->setParameter('date', $date)
+            ->getQuery()
+            ->getResult();
+    }
+
     /** @return list<Lease> Tous les baux actifs qui couvrent au moins un espace indiqué. */
     public function findActiveLeasesForRelatedSpaces(array $units): array
     {
@@ -393,6 +458,7 @@ class LeaseRepository extends ServiceEntityRepository
         ?array $cityIds = null
     ): array {
         $qb = $this->createQueryBuilder('l')
+            ->distinct()
             ->innerJoin('l.unit', 'u')
             ->innerJoin('u.building', 'b')
             ->innerJoin('b.parcel', 'par')
@@ -412,6 +478,50 @@ class LeaseRepository extends ServiceEntityRepository
                 ->leftJoin('cityBuilding.parcel', 'cityParcel')
                 ->leftJoin('cityParcel.city', 'additionalCity')
                 ->andWhere('(c.id IN (:cities) OR additionalCity.id IN (:cities))')
+                ->setParameter('cities', $cityIds);
+        }
+
+        return $qb->getQuery()->getResult();
+    }
+
+    /**
+     * Baux financiers actifs, expirés ou résiliés dans un périmètre autorisé.
+     * Les échéances déjà dues restent consultables après la clôture du bail.
+     * Une liste vide de villes ou d'organisations signifie zéro résultat.
+     *
+     * @return Lease[]
+     */
+    public function findByOrganizationsAndCities(?array $organizationIds = null, ?array $cityIds = null): array
+    {
+        if ($organizationIds === [] || $cityIds === []) {
+            return [];
+        }
+
+        $qb = $this->createQueryBuilder('l')
+            ->distinct()
+            ->innerJoin('l.unit', 'u')
+            ->innerJoin('u.building', 'b')
+            ->innerJoin('b.parcel', 'par')
+            ->innerJoin('par.city', 'c')
+            ->andWhere('l.deletedAt IS NULL')
+            ->andWhere('l.status IN (:financialStatuses)')
+            ->andWhere('u.deletedAt IS NULL')
+            ->andWhere('b.deletedAt IS NULL')
+            ->andWhere('par.deletedAt IS NULL')
+            ->andWhere('c.deletedAt IS NULL')
+            ->setParameter('financialStatuses', [LeaseStatus::ACTIVE, LeaseStatus::EXPIRED, LeaseStatus::TERMINATED]);
+
+        if ($organizationIds !== null) {
+            $qb->andWhere('l.organization IN (:orgs)')
+                ->setParameter('orgs', $organizationIds);
+        }
+
+        if ($cityIds !== null) {
+            $qb->leftJoin('l.additionalUnits', 'cityUnit')
+                ->leftJoin('cityUnit.building', 'cityBuilding')
+                ->leftJoin('cityBuilding.parcel', 'cityParcel')
+                ->leftJoin('cityParcel.city', 'additionalCity')
+                ->andWhere('(c.id IN (:cities) OR (additionalCity.id IN (:cities) AND cityUnit.deletedAt IS NULL AND cityBuilding.deletedAt IS NULL AND cityParcel.deletedAt IS NULL AND additionalCity.deletedAt IS NULL))')
                 ->setParameter('cities', $cityIds);
         }
 

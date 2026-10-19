@@ -161,7 +161,7 @@ class UnitRepository extends ServiceEntityRepository
      * @param list<int> $cityIds
      * @return list<array{cityId: int, cityName: string, totalUnits: int, occupiedUnits: int}>
      */
-    public function getCurrentOccupancyByCityIds(array $cityIds): array
+    public function getCurrentOccupancyByCityIds(array $cityIds, \DateTimeImmutable $asOfDate): array
     {
         if ($cityIds === []) {
             return [];
@@ -172,7 +172,7 @@ class UnitRepository extends ServiceEntityRepository
             ->innerJoin('u.building', 'b')
             ->innerJoin('b.parcel', 'p')
             ->innerJoin('p.city', 'c')
-            ->leftJoin('App\\Entity\\Rental\\Lease', 'l', 'WITH', '(l.unit = u OR u MEMBER OF l.additionalUnits) AND l.status = :activeStatus AND l.deletedAt IS NULL')
+            ->leftJoin('App\\Entity\\Rental\\Lease', 'l', 'WITH', '(l.unit = u OR u MEMBER OF l.additionalUnits) AND l.status = :activeStatus AND l.deletedAt IS NULL AND l.startDate <= :asOfDate AND (l.endDate IS NULL OR l.endDate >= :asOfDate)')
             ->andWhere('c.id IN (:cities)')
             ->andWhere('u.deletedAt IS NULL')
             ->andWhere('b.deletedAt IS NULL')
@@ -180,6 +180,7 @@ class UnitRepository extends ServiceEntityRepository
             ->groupBy('c.id, c.name')
             ->setParameter('cities', $cityIds)
             ->setParameter('activeStatus', LeaseStatus::ACTIVE)
+            ->setParameter('asOfDate', $asOfDate)
             ->getQuery()
             ->getScalarResult();
 
@@ -197,7 +198,7 @@ class UnitRepository extends ServiceEntityRepository
      *
      * @return Unit[]
      */
-    public function findAvailableByBuilding(Building $building): array
+    public function findAvailableByBuilding(Building $building, \DateTimeImmutable $asOfDate): array
     {
         return $this->createQueryBuilder('u')
             ->andWhere('u.building = :building')
@@ -206,10 +207,12 @@ class UnitRepository extends ServiceEntityRepository
                 'NOT EXISTS (
                     SELECT 1 FROM App\Entity\Rental\Lease l
                     WHERE (l.unit = u OR u MEMBER OF l.additionalUnits) AND l.status = :activeStatus AND l.deletedAt IS NULL
+                        AND l.startDate <= :asOfDate AND (l.endDate IS NULL OR l.endDate >= :asOfDate)
                 )'
             )
             ->setParameter('building', $building)
             ->setParameter('activeStatus', LeaseStatus::ACTIVE)
+            ->setParameter('asOfDate', $asOfDate)
             ->getQuery()
             ->getResult();
     }

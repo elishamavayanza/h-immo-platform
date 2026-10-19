@@ -24,7 +24,14 @@ final class CashOpeningBalanceRepository extends ServiceEntityRepository
         return $this->findOneBy(['city' => $city, 'currency' => $currency]);
     }
 
-    public function cashBalance(Organization $organization, City $city, Currency $currency, \DateTimeImmutable $from, string $opening): string
+    public function cashBalance(
+        Organization $organization,
+        City $city,
+        Currency $currency,
+        \DateTimeImmutable $from,
+        \DateTimeImmutable $asOf,
+        string $opening,
+    ): string
     {
         $sql = <<<'SQL'
 SELECT COALESCE(SUM(m.amount), 0.00)
@@ -38,11 +45,11 @@ FROM (
     INNER JOIN unit u ON u.id = l.unit_id
     INNER JOIN building b ON b.id = u.building_id
     INNER JOIN parcel pa ON pa.id = b.parcel_id
-    WHERE l.organization_id = :organization_payment AND pa.city_id = :city_payment AND p.currency = :currency_payment AND p.method = 'cash' AND p.payment_date >= :from_payment
+    WHERE l.organization_id = :organization_payment AND pa.city_id = :city_payment AND p.currency = :currency_payment AND p.method = 'cash' AND p.payment_date >= :from_payment AND p.payment_date <= :as_of_payment
     UNION ALL
     SELECT -e.amount AS amount
     FROM expense e
-    WHERE e.organization_id = :organization_expense AND e.city_id = :city_expense AND e.currency = :currency_expense AND e.method = 'cash' AND e.expense_date >= :from_expense
+    WHERE e.organization_id = :organization_expense AND e.city_id = :city_expense AND e.currency = :currency_expense AND e.method = 'cash' AND e.expense_date >= :from_expense AND e.expense_date <= :as_of_expense
 ) m
 SQL;
         $value = $this->getEntityManager()->getConnection()->fetchOne($sql, [
@@ -50,20 +57,24 @@ SQL;
             'city_payment' => $city->getId(),
             'currency_payment' => $currency->value,
             'from_payment' => $from->format('Y-m-d'),
+            'as_of_payment' => $asOf->format('Y-m-d'),
             'organization_expense' => $organization->getId(),
             'city_expense' => $city->getId(),
             'currency_expense' => $currency->value,
             'from_expense' => $from->format('Y-m-d'),
+            'as_of_expense' => $asOf->format('Y-m-d'),
             'opening' => $opening,
         ], [
             'organization_payment' => Types::INTEGER,
             'city_payment' => Types::INTEGER,
             'currency_payment' => Types::STRING,
             'from_payment' => Types::STRING,
+            'as_of_payment' => Types::STRING,
             'organization_expense' => Types::INTEGER,
             'city_expense' => Types::INTEGER,
             'currency_expense' => Types::STRING,
             'from_expense' => Types::STRING,
+            'as_of_expense' => Types::STRING,
             'opening' => Types::DECIMAL,
         ]);
 

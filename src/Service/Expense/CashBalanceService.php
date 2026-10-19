@@ -35,17 +35,32 @@ final readonly class CashBalanceService
     }
 
     /** @return array<string, mixed> */
-    public function view(User $user, string $organizationUuid, string $cityUuid, string $currencyValue): array
+    public function view(User $user, string $organizationUuid, string $cityUuid, string $currencyValue, ?string $asOfDateValue = null): array
     {
         [$organization, $city, $currency] = $this->resolveScope($user, $organizationUuid, $cityUuid, $currencyValue, SecurityAction::VIEW_PAYMENT);
+        $asOfDate = $asOfDateValue === null ? $this->dateTime->today() : $this->dateTime->parseDate($asOfDateValue);
+        if ($asOfDate === null) {
+            throw new \InvalidArgumentException('La date de référence doit respecter le format AAAA-MM-JJ.');
+        }
         $opening = $this->balances->findForCity($city, $currency);
-        $balance = $opening === null ? null : $this->balances->cashBalance($organization, $city, $currency, $opening->getOpeningDate(), $opening->getOpeningBalance());
+        if ($opening !== null && $asOfDate < $opening->getOpeningDate()) {
+            throw new \InvalidArgumentException('La date de référence ne peut pas précéder la date du solde d’ouverture.');
+        }
+        $balance = $opening === null ? null : $this->balances->cashBalance(
+            $organization,
+            $city,
+            $currency,
+            $opening->getOpeningDate(),
+            $asOfDate,
+            $opening->getOpeningBalance(),
+        );
 
         return [
             'cityUuid' => $city->getUuid()->toRfc4122(),
             'currency' => $currency->value,
             'openingBalance' => $opening?->getOpeningBalance(),
             'openingDate' => $opening?->getOpeningDate()->format('Y-m-d'),
+            'asOfDate' => $asOfDate->format('Y-m-d'),
             'balance' => $balance,
             'updatedAt' => $opening?->getUpdatedAt()->format(DATE_ATOM),
         ];

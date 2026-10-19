@@ -130,6 +130,14 @@ HELP);
                 $io->error('Bail introuvable.');
                 return Command::FAILURE;
             }
+            if ($lease->getStatus() !== LeaseStatus::ACTIVE) {
+                $io->error(sprintf(
+                    'Le bail %s n’est pas actif (%s) : aucune échéance ne peut être générée.',
+                    $lease->getReference(),
+                    $lease->getStatus()->value,
+                ));
+                return Command::FAILURE;
+            }
             $leases = [$lease];
         } else {
             $leases = $this->leaseRepository->findActiveLeases();
@@ -205,7 +213,7 @@ HELP);
 
             // Créer l'échéance
             // Date d'échéance = 5 du mois (configurable plus tard si besoin)
-            $dueDate = $current->modify('+5 days');
+            $dueDate = $current->modify('+4 days');
 
             $rent = new Rent();
             $rent->setLease($lease);

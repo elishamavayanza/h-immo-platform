@@ -170,7 +170,12 @@ class PaymentRepository extends ServiceEntityRepository
     public function sumAmountByRent(Rent $rent): string
     {
         $result = $this->createQueryBuilder('p')
-            ->select('SUM(p.amount) AS total')
+            // `amount` est exprimé dans la devise effectivement encaissée.
+            // Pour comparer au loyer, les paiements cross-devises doivent
+            // utiliser leur montant d'origine, déjà exprimé dans la devise
+            // de l'échéance. Les contre-écritures conservent ce montant avec
+            // son signe négatif.
+            ->select('SUM(CASE WHEN p.originalAmount IS NOT NULL THEN p.originalAmount ELSE p.amount END) AS total')
             ->andWhere('p.rent = :rent')
             ->setParameter('rent', $rent)
             ->getQuery()
@@ -180,7 +185,38 @@ class PaymentRepository extends ServiceEntityRepository
     }
 
     /**
-     * Résumé financier par période pour les paiements.
+     * Somme normalisée à la devise de l'échéance, à une date métier donnée.
+     * Les écritures enregistrées après cette date ne modifient pas la vue
+     * historique du solde.
+     */
+    public function sumAmountByRentAsOf(Rent $rent, \DateTimeImmutable $asOfDate): string
+    {
+        $result = $this->createQueryBuilder('p')
+            ->select('SUM(CASE WHEN p.originalAmount IS NOT NULL THEN p.originalAmount ELSE p.amount END) AS total')
+            ->andWhere('p.rent = :rent')
+            ->andWhere('p.paymentDate <= :asOfDate')
+            ->setParameter('rent', $rent)
+            ->setParameter('asOfDate', $asOfDate)
+            ->getQuery()
+            ->getSingleScalarResult();
+
+        return (string) ($result ?? '0');
+    }
+
+    public function hasPaymentsForRent(Rent $rent): bool
+    {
+        return $this->createQueryBuilder('p')
+            ->select('COUNT(p.id)')
+            ->andWhere('p.rent = :rent')
+            ->setParameter('rent', $rent)
+            ->getQuery()
+            ->getSingleScalarResult() > 0;
+    }
+
+    /**
+     * Résumé des loyers encaissés par période, normalisés dans la devise
+     * contractuelle de l'échéance. Pour un paiement converti, `originalAmount`
+     * est la part qui réduit le loyer et `originalCurrency` est sa devise.
      *
      * @return array<array{period: string, total: string, currency: string}>
      */
@@ -191,14 +227,14 @@ class PaymentRepository extends ServiceEntityRepository
         ?\DateTimeImmutable $periodTo = null
     ): array {
         $qb = $this->createQueryBuilder('p')
-            ->select('DATE_FORMAT(p.paymentDate, \'%Y-%m\') as period, SUM(p.amount) as total, p.currency, c.id as cityId')
+            ->select('DATE_FORMAT(p.paymentDate, \'%Y-%m\') as period, DATE_FORMAT(p.paymentDate, \'%Y-%m-%d\') as effectiveDate, SUM(CASE WHEN p.originalAmount IS NOT NULL THEN p.originalAmount ELSE p.amount END) as total, CASE WHEN p.originalCurrency IS NOT NULL THEN p.originalCurrency ELSE p.currency END as currency, c.id as cityId')
             ->innerJoin('p.rent', 'r')
             ->innerJoin('r.lease', 'l')
             ->innerJoin('l.unit', 'u')
             ->innerJoin('u.building', 'b')
             ->innerJoin('b.parcel', 'par')
             ->innerJoin('par.city', 'c')
-            ->groupBy('period, p.currency, c.id')
+            ->groupBy('effectiveDate, currency, c.id')
             ->orderBy('period', 'ASC');
 
         if ($organizationIds !== null && !empty($organizationIds)) {

@@ -21,6 +21,7 @@ use App\Security\SecurityAction;
 use App\Security\SecurityServiceInterface;
 use App\Service\System\AuditLogService;
 use App\Service\Identity\OrganizationCapacityService;
+use App\Service\System\DateTimeService;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 use Symfony\Component\Uid\Uuid;
@@ -50,6 +51,7 @@ final readonly class UnitService
         private EntityManagerInterface $entityManager,
         private ValidatorInterface $validator,
         private OrganizationCapacityService $capacityService,
+        private DateTimeService $dateTime,
     ) {
     }
 
@@ -548,7 +550,10 @@ final readonly class UnitService
 
     public function getOccupancyStatus(Unit $unit): UnitOccupancyStatus
     {
-        $activeLeases = $this->leaseRepository->findActiveLeasesForRelatedSpaces($this->unitRepository->findOverlappingSpaces($unit));
+        $activeLeases = $this->leaseRepository->findActiveLeasesForRelatedSpacesAtDate(
+            $this->unitRepository->findOverlappingSpaces($unit),
+            $this->dateTime->today(),
+        );
         if ($activeLeases === []) return UnitOccupancyStatus::VACANT;
 
         $hasOccupiedSpace = false;

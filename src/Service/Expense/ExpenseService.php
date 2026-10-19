@@ -203,6 +203,7 @@ final readonly class ExpenseService
 
         // Contrôle d'accès sur l'entité existante
         $this->securityService->checkExpenseAccess($expense, SecurityAction::UPDATE_EXPENSE);
+        $oldValues = $this->expenseAuditValues($expense);
 
         // Si cityUuid est fourni et différent, il faut revalider tout le périmètre
         if ($request->cityUuid !== null) {
@@ -274,26 +275,19 @@ final readonly class ExpenseService
         // Appliquer les changements scalaires via le mapper
         $this->expenseMapper->copyToEntity($request, $expense);
 
-        $this->entityManager->flush();
-
-        // Log d'audit : mise à jour de la dépense
-        $this->auditLogService->log(
-            action: 'UPDATE_EXPENSE',
-            entityType: Expense::class,
-            entityId: $expense->getId(),
-            organization: $expense->getOrganization(),
-            user: $currentUser,
-            oldValues: null,
-            newValues: [
-                'category' => $expense->getCategory()->value,
-                'amount' => $expense->getAmount(),
-                'currency' => $expense->getCurrency()->value,
-                'exchangeRate' => $expense->getExchangeRate(),
-                'originalAmount' => $expense->getOriginalAmount(),
-                'originalCurrency' => $expense->getOriginalCurrency()?->value,
-                'expenseDate' => $this->dateTime->format($expense->getExpenseDate(), 'Y-m-d'),
-            ],
-        );
+        $newValues = $this->expenseAuditValues($expense);
+        $this->entityManager->wrapInTransaction(function () use ($expense, $currentUser, $oldValues, $newValues): void {
+            $this->entityManager->flush();
+            $this->auditLogService->log(
+                action: 'UPDATE_EXPENSE',
+                entityType: Expense::class,
+                entityId: $expense->getId(),
+                organization: $expense->getOrganization(),
+                user: $currentUser,
+                oldValues: $oldValues,
+                newValues: $newValues,
+            );
+        });
 
         return $feedback
             ->setData($this->expenseMapper->toResponse($expense))
@@ -483,6 +477,7 @@ final readonly class ExpenseService
                 $cancellation->setExchangeRate($locked->getExchangeRate());
                 $cancellation->setOriginalAmount($locked->getOriginalAmount());
                 $cancellation->setOriginalCurrency($locked->getOriginalCurrency());
+                $cancellation->setMethod($locked->getMethod());
                 $cancellation->setExpenseDate($this->dateTime->now());
                 $cancellation->setReference(substr('ANNUL-' . ($locked->getReference() ?? $locked->getUuid()->toRfc4122()), 0, 100));
                 $cancellation->setReversalOf($locked);
@@ -744,5 +739,31 @@ final readonly class ExpenseService
         }
 
         return $expense;
+    }
+
+    /** @return array<string, mixed> */
+    private function expenseAuditValues(Expense $expense): array
+    {
+        return [
+            'cityUuid' => $expense->getCity()->getUuid()->toRfc4122(),
+            'category' => $expense->getCategory()->value,
+            'amount' => $expense->getAmount(),
+            'currency' => $expense->getCurrency()->value,
+            'exchangeRate' => $expense->getExchangeRate(),
+            'originalAmount' => $expense->getOriginalAmount(),
+            'originalCurrency' => $expense->getOriginalCurrency()?->value,
+            'expenseDate' => $this->dateTime->format($expense->getExpenseDate(), 'Y-m-d'),
+            'periodStart' => $expense->getPeriodStart() === null ? null : $this->dateTime->format($expense->getPeriodStart(), 'Y-m-d'),
+            'periodEnd' => $expense->getPeriodEnd() === null ? null : $this->dateTime->format($expense->getPeriodEnd(), 'Y-m-d'),
+            'method' => $expense->getMethod()?->value,
+            'supplier' => $expense->getSupplier(),
+            'reference' => $expense->getReference(),
+            'receiptNumber' => $expense->getReceiptNumber(),
+            'parcelUuid' => $expense->getParcel()?->getUuid()->toRfc4122(),
+            'buildingUuid' => $expense->getBuilding()?->getUuid()->toRfc4122(),
+            'unitUuid' => $expense->getUnit()?->getUuid()->toRfc4122(),
+            'workerUuid' => $expense->getWorker()?->getUuid()->toRfc4122(),
+            'notes' => $expense->getNotes(),
+        ];
     }
 }

@@ -70,6 +70,14 @@ final readonly class LeaseService
                 ->autoInitFlush();
         }
 
+        if ($request->endDate !== null && $request->endDate < $request->startDate) {
+            return $feedback
+                ->addError('endDate', 'La date de fin doit être égale ou postérieure à la date de début.')
+                ->setFlushDescriptionWithError('La période contractuelle du bail est invalide.')
+                ->setStatus(422)
+                ->autoInitFlush();
+        }
+
         $tenant = $this->resolveTenant($request->tenantUuid, SecurityAction::VIEW_TENANT, $feedback);
         if ($tenant === null) {
             return $feedback->autoInitFlush();
@@ -185,6 +193,16 @@ final readonly class LeaseService
                 ->autoInitFlush();
         }
 
+        $effectiveStartDate = $request->startDate ?? $lease->getStartDate();
+        $effectiveEndDate = $request->endDate ?? $lease->getEndDate();
+        if ($effectiveEndDate !== null && $effectiveEndDate < $effectiveStartDate) {
+            return $feedback
+                ->addError('endDate', 'La date de fin doit être égale ou postérieure à la date de début.')
+                ->setFlushDescriptionWithError('La période contractuelle du bail est invalide.')
+                ->setStatus(422)
+                ->autoInitFlush();
+        }
+
         // Un changement de locataire ou d'unité est traité comme un
         // changement de périmètre : l'entité cible doit être accessible,
         // sinon un bail d'une organization A pourrait être rattaché à un
@@ -218,9 +236,7 @@ final readonly class LeaseService
                 ->autoInitFlush();
         }
 
-        // Le conflit ne concerne que le passage au statut ACTIVE (ou son
-        // maintien) : les mises à jour de montants sur un bail déjà actif
-        // doivent rester possibles, d'où l'exclusion de ce bail.
+        $oldValues = $this->leaseAuditValues($lease);
         $this->leaseMapper->copyToEntity($request, $lease);
 
         if (!$this->persistLeaseExclusively($lease, $lease, $feedback)) {
@@ -234,14 +250,8 @@ final readonly class LeaseService
             entityId: $lease->getId(),
             organization: $lease->getOrganization(),
             user: $currentUser,
-            oldValues: null, // Pourrait être enrichi avec les valeurs avant modification
-            newValues: [
-                'reference' => $lease->getReference(),
-                'startDate' => $this->dateTime->format($lease->getStartDate(), 'Y-m-d'),
-                'endDate' => $lease->getEndDate()?->format('Y-m-d'),
-                'monthlyRent' => $lease->getMonthlyRent(),
-                'currency' => $lease->getCurrency()->value,
-            ],
+            oldValues: $oldValues,
+            newValues: $this->leaseAuditValues($lease),
         );
 
         return $feedback
@@ -610,13 +620,12 @@ final readonly class LeaseService
                     return false;
                 }
 
-                if (
-                    $lease->getStatus() === LeaseStatus::ACTIVE
-                    && $this->leaseRepository->findActiveLeaseForRelatedSpaces(
-                        array_values($overlappingSpaces),
-                        $exclude?->getUuid()
-                    ) !== null
-                ) {
+                if ($lease->getStatus() === LeaseStatus::ACTIVE && $this->leaseRepository->findActiveLeaseOverlappingPeriodForRelatedSpaces(
+                    array_values($overlappingSpaces),
+                    $lease->getStartDate(),
+                    $lease->getEndDate(),
+                    $exclude?->getUuid(),
+                ) !== null) {
                     if ($checkOperationalAvailability) {
                         $lease->setStatus(LeaseStatus::DRAFT);
                     }
@@ -684,6 +693,21 @@ final readonly class LeaseService
         return count($feedback->getErrors()) === 0;
     }
 
+    /** @return array<string, scalar|null> */
+    private function leaseAuditValues(Lease $lease): array
+    {
+        return [
+            'reference' => $lease->getReference(),
+            'startDate' => $this->dateTime->format($lease->getStartDate(), 'Y-m-d'),
+            'endDate' => $lease->getEndDate() === null ? null : $this->dateTime->format($lease->getEndDate(), 'Y-m-d'),
+            'monthlyRent' => $lease->getMonthlyRent(),
+            'depositAmount' => $lease->getDepositAmount(),
+            'currency' => $lease->getCurrency()->value,
+            'notes' => $lease->getNotes(),
+            'status' => $lease->getStatus()->value,
+        ];
+    }
+
     /**
      * Active un bail. Transition DRAFT -> ACTIVE.
      *
@@ -714,6 +738,14 @@ final readonly class LeaseService
                     'Activation impossible : le bail est à l\'état %s.',
                     $lease->getStatus()->value
                 ))
+                ->autoInitFlush()
+                ->setStatus(409);
+        }
+
+        if ($lease->getEndDate() !== null && $lease->getEndDate() < $this->dateTime->today()) {
+            return $feedback
+                ->addError('endDate', 'Un bail dont la période est déjà terminée ne peut pas être activé.')
+                ->setFlushDescriptionWithError('Activation impossible : la date de fin du bail est passée.')
                 ->autoInitFlush()
                 ->setStatus(409);
         }

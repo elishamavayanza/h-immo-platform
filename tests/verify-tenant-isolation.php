@@ -774,6 +774,13 @@ try {
     $occupantLease->setCurrency(Currency::USD);
     $occupantLease->setStatus(LeaseStatus::ACTIVE);
     $em->persist($occupantLease);
+    $today = new \DateTimeImmutable('today');
+    $futureStart = $today->modify('+20 days');
+    $futureEnd = $futureStart->modify('+10 days');
+    $futureLease = (new Lease())->setOrganization($orgA)->setTenant($tenantA)->setUnit($spaceRoomB)
+        ->setReference('BAIL-FUTUR')->setStartDate($futureStart)->setEndDate($futureEnd)
+        ->setMonthlyRent('175.00')->setCurrency(Currency::USD)->setStatus(LeaseStatus::ACTIVE);
+    $em->persist($futureLease);
     $em->flush();
 
     check(
@@ -781,8 +788,26 @@ try {
         $leaseRepo->findActiveLeaseForRelatedSpaces($unitRepo->findOverlappingSpaces($spaceParent)) !== null
     );
     check(
-        'Un bail sur un sous-espace ne bloque pas son espace frère',
-        $leaseRepo->findActiveLeaseForRelatedSpaces($unitRepo->findOverlappingSpaces($spaceRoomB)) === null
+        'Un bail futur ne compte pas comme occupation à la date actuelle',
+        $leaseRepo->findActiveLeasesForRelatedSpacesAtDate($unitRepo->findOverlappingSpaces($spaceRoomB), $today) === []
+    );
+    check(
+        'Un bail futur réserve bien l’espace pendant sa période',
+        $leaseRepo->findActiveLeaseOverlappingPeriodForRelatedSpaces(
+            $unitRepo->findOverlappingSpaces($spaceRoomB), $futureStart, $futureEnd,
+        )?->getUuid()->equals($futureLease->getUuid()) === true
+    );
+    check(
+        'La date de fin incluse crée un chevauchement le même jour',
+        $leaseRepo->findActiveLeaseOverlappingPeriodForRelatedSpaces(
+            $unitRepo->findOverlappingSpaces($spaceRoomB), $futureEnd, $futureEnd,
+        )?->getUuid()->equals($futureLease->getUuid()) === true
+    );
+    check(
+        'Deux périodes successives ne se chevauchent pas après la date de fin',
+        $leaseRepo->findActiveLeaseOverlappingPeriodForRelatedSpaces(
+            $unitRepo->findOverlappingSpaces($spaceRoomB), $futureEnd->modify('+1 day'), null,
+        ) === null
     );
 
     $archivedTreeRoot = $makeUnit('UA-ARCHIVE-ROOT', $buildingA1);
@@ -812,6 +837,8 @@ try {
         $leasedChildOccupancy === \App\Enum\UnitOccupancyStatus::OCCUPIED);
     check('Un sous-espace frère libre reste disponible malgré un autre bail actif',
         $vacantSiblingOccupancy === \App\Enum\UnitOccupancyStatus::VACANT);
+    check('Un bail futur ne rend pas l’unité occupée avant son début',
+        $unitService->getOccupancyStatus($spaceRoomB) === \App\Enum\UnitOccupancyStatus::VACANT);
 
     $spaceRoomC = $makeUnit('UA-ROOM-C', $buildingA1);
     $spaceRoomC->setParentUnit($spaceParent);
@@ -1030,6 +1057,20 @@ try {
     $movementService = $container->get(\App\Service\Rental\ResidentialMovementService::class);
     /** @var \App\Service\Rental\LeaseService $leaseService */
     $leaseService = $container->get(\App\Service\Rental\LeaseService::class);
+    $today = $container->get(\App\Service\System\DateTimeService::class)->today();
+    $invalidLeasePeriod = $leaseService->createLease(
+        new \App\Dto\Request\Rental\LeaseRequest(
+            tenantUuid: (string) $tenantA->getUuid(),
+            unitUuid: (string) $unitA3->getUuid(),
+            reference: 'BAIL-PERIODE-INVALIDE',
+            startDate: $today,
+            endDate: $today->modify('-1 day'),
+            monthlyRent: '100.00',
+            currency: Currency::USD,
+        ),
+        $adminVilleMovement,
+    );
+    check('Un bail dont la fin précède le début est refusé', $invalidLeasePeriod->getStatus() === 422, 'status=' . $invalidLeasePeriod->getStatus());
     $unitA2->setOperationalStatus(UnitOperationalStatus::UNDER_WORKS);
     $leaseUnavailable = (new Lease())->setOrganization($orgA)->setTenant($tenantA)->setUnit($unitA2)
         ->setReference('BAIL-INDISPONIBLE')->setStartDate(new \DateTimeImmutable('2026-10-01'))
@@ -1042,6 +1083,42 @@ try {
         $blockedActivation->getStatus() === 409 && $leaseUnavailable->getStatus() === LeaseStatus::DRAFT,
         'status=' . $blockedActivation->getStatus(),
     );
+
+    $futureUnit = $makeUnit('UA-FUTURE-OCCUPANCY', $buildingA1);
+    $futureStartDate = $today->modify('+30 days');
+    $futureEndDate = $futureStartDate->modify('+10 days');
+    $futureDraft = (new Lease())->setOrganization($orgA)->setTenant($tenantA)->setUnit($futureUnit)
+        ->setReference('BAIL-ACTIVATION-FUTURE')->setStartDate($futureStartDate)->setEndDate($futureEndDate)
+        ->setMonthlyRent('200.00')->setCurrency(Currency::USD)->setStatus(LeaseStatus::DRAFT);
+    $em->persist($futureDraft);
+    $em->flush();
+    $futureActivation = $leaseService->activateLease((string) $futureDraft->getUuid(), $adminVilleMovement);
+    $em->refresh($futureDraft);
+    check('Un bail futur peut être activé comme réservation contractuelle',
+        $futureActivation->getStatus() === 200 && $futureDraft->getStatus() === LeaseStatus::ACTIVE,
+        'status=' . $futureActivation->getStatus());
+    check('L’unité future reste non occupée avant la date de début',
+        $unitService->getOccupancyStatus($futureUnit) === \App\Enum\UnitOccupancyStatus::VACANT);
+    check('Le bail futur réserve la période à venir',
+        $leaseRepo->findActiveLeaseOverlappingPeriodForRelatedSpaces(
+            $unitRepo->findOverlappingSpaces($futureUnit), $futureDraft->getStartDate(), null,
+        )?->getUuid()->equals($futureDraft->getUuid()) === true);
+    check('Le bail futur est reconnu à sa date de début',
+        $leaseRepo->findActiveLeaseForUnitAtDate($futureUnit, $futureDraft->getStartDate())?->getUuid()->equals($futureDraft->getUuid()) === true);
+    $boundaryConflict = (new Lease())->setOrganization($orgA)->setTenant($tenantA)->setUnit($futureUnit)
+        ->setReference('BAIL-CHEVAUCHEMENT-FIN')->setStartDate($futureEndDate)->setEndDate($futureEndDate->modify('+5 days'))
+        ->setMonthlyRent('210.00')->setCurrency(Currency::USD)->setStatus(LeaseStatus::DRAFT);
+    $em->persist($boundaryConflict);
+    $em->flush();
+    $boundaryActivation = $leaseService->activateLease((string) $boundaryConflict->getUuid(), $adminVilleMovement);
+    check('L’activation d’un bail chevauchant le dernier jour inclus est refusée', $boundaryActivation->getStatus() === 409, 'status=' . $boundaryActivation->getStatus());
+    $successorLease = (new Lease())->setOrganization($orgA)->setTenant($tenantA)->setUnit($futureUnit)
+        ->setReference('BAIL-SUCCESSIF')->setStartDate($futureEndDate->modify('+1 day'))
+        ->setMonthlyRent('220.00')->setCurrency(Currency::USD)->setStatus(LeaseStatus::DRAFT);
+    $em->persist($successorLease);
+    $em->flush();
+    $successorActivation = $leaseService->activateLease((string) $successorLease->getUuid(), $adminVilleMovement);
+    check('L’activation d’un bail successif sans chevauchement est autorisée', $successorActivation->getStatus() === 200, 'status=' . $successorActivation->getStatus());
 
     $missingDestination = $movementService->record(
         (string) $tenantA->getUuid(),

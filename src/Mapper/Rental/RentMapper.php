@@ -58,8 +58,8 @@ final class RentMapper
      * lecture ou mise à jour d'un loyer renvoyait une erreur 500. La
      * duplication était la cause du défaut.
      */
-    public function toResponse(Rent $rent): RentResponse
+    public function toResponse(Rent $rent, ?string $paidAmount = null): RentResponse
     {
-        return RentResponse::fromEntity($rent, null, $this->dateTime->today());
+        return RentResponse::fromEntity($rent, $paidAmount, $this->dateTime->today());
     }
 }

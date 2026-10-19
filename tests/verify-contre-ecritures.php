@@ -24,6 +24,7 @@ declare(strict_types=1);
  */
 
 use App\Entity\Expense\Expense;
+use App\Entity\Financial\ExchangeRate;
 use App\Entity\Identity\Organization;
 use App\Entity\Identity\OrganizationUser;
 use App\Entity\Identity\User;
@@ -250,6 +251,30 @@ $makeChain = static function (string $ref, City $city) use ($em): Unit {
 $unitA = $makeChain('U-A', $cityA);
 $unitB = $makeChain('U-B', $cityB);
 
+// Le taux courant est volontairement différent du taux historique du paiement.
+$historicalRate = new ExchangeRate(
+    Currency::USD,
+    Currency::CDF,
+    '2900.00000000',
+    new \DateTimeImmutable('2026-09-01'),
+    $patronA,
+    new \DateTimeImmutable('2026-10-01'),
+    $orgA,
+    $cityA,
+);
+$currentRate = new ExchangeRate(
+    Currency::USD,
+    Currency::CDF,
+    '3000.00000000',
+    new \DateTimeImmutable('2026-10-01'),
+    $patronA,
+    null,
+    $orgA,
+    $cityA,
+);
+$em->persist($historicalRate);
+$em->persist($currentRate);
+
 /** Un bail actif et une échéance due dans le passé (donc « en retard » si impayée). */
 $makeRental = static function (string $ref, Organization $org, Unit $unit) use ($em): Rent {
     $tenant = (new Tenant())
@@ -284,6 +309,47 @@ $makeRental = static function (string $ref, Organization $org, Unit $unit) use (
 
 $rentA = $makeRental('BAIL-A', $orgA, $unitA);
 $rentB = $makeRental('BAIL-B', $orgB, $unitB);
+$closedTenant = (new Tenant())
+    ->setFullName('Locataire BAIL-CLOS')
+    ->setType(TenantType::INDIVIDUAL)
+    ->setPhone('+000')
+    ->setOrganization($orgA);
+$em->persist($closedTenant);
+$closedLease = (new Lease())
+    ->setOrganization($orgA)
+    ->setTenant($closedTenant)
+    ->setUnit($unitA)
+    ->setReference('BAIL-CLOS')
+    ->setStartDate(new \DateTimeImmutable('2026-01-01'))
+    ->setTerminationDate(new \DateTimeImmutable('2026-09-15'))
+    ->setMonthlyRent('100.00')
+    ->setCurrency(Currency::USD)
+    ->setStatus(LeaseStatus::TERMINATED);
+$em->persist($closedLease);
+$closedDueRent = (new Rent())
+    ->setLease($closedLease)
+    ->setPeriod(new \DateTimeImmutable('2026-09-01'))
+    ->setDueDate(new \DateTimeImmutable('2026-09-05'))
+    ->setAmount('100.00')
+    ->setCurrency(Currency::USD)
+    ->setStatus(RentStatus::PENDING);
+$closedFutureRent = (new Rent())
+    ->setLease($closedLease)
+    ->setPeriod(new \DateTimeImmutable('2026-10-01'))
+    ->setDueDate(new \DateTimeImmutable('2026-10-20'))
+    ->setAmount('100.00')
+    ->setCurrency(Currency::USD)
+    ->setStatus(RentStatus::PENDING);
+$em->persist($closedDueRent);
+$em->persist($closedFutureRent);
+$futureRentA = (new Rent())
+    ->setLease($rentA->getLease())
+    ->setPeriod(new \DateTimeImmutable('2026-02-01'))
+    ->setDueDate(new \DateTimeImmutable('2026-02-05'))
+    ->setAmount('500.00')
+    ->setCurrency(Currency::USD)
+    ->setStatus(RentStatus::PENDING);
+$em->persist($futureRentA);
 
 // Un paiement sur le bail de B, pour éprouver l'isolation multi-organisation.
 $paymentB = (new Payment())
@@ -296,7 +362,7 @@ $paymentB = (new Payment())
     ->setReference('PAY-B');
 $em->persist($paymentB);
 
-// Deux dépenses dans la ville A : une en USD, une en CDF (devises séparées).
+// Deux dépenses dans la ville A : espèces en USD et virement en CDF.
 $makeExpense = static function (string $ref, string $amount, Currency $currency) use ($em, $orgA, $cityA, $patronA): Expense {
     $expense = (new Expense())
         ->setOrganization($orgA)
@@ -305,6 +371,7 @@ $makeExpense = static function (string $ref, string $amount, Currency $currency)
         ->setCategory(ExpenseCategory::MAINTENANCE)
         ->setAmount($amount)
         ->setCurrency($currency)
+        ->setMethod($currency === Currency::USD ? PaymentMethod::CASH : PaymentMethod::BANK_TRANSFER)
         ->setExpenseDate(new \DateTimeImmutable('2026-09-10'))
         ->setReference($ref);
     $em->persist($expense);
@@ -314,16 +381,28 @@ $makeExpense = static function (string $ref, string $amount, Currency $currency)
 
 $expenseUsd = $makeExpense('DEP-USD', '100.00', Currency::USD);
 $expenseCdf = $makeExpense('DEP-CDF', '1000.00', Currency::CDF);
+$expenseUsdBank = $makeExpense('DEP-USD-BANK', '40.00', Currency::USD);
+$expenseUsdBank->setMethod(PaymentMethod::BANK_TRANSFER);
+$expenseUsdFuture = $makeExpense('DEP-USD-FUTURE', '50.00', Currency::USD);
+$expenseUsdFuture->setExpenseDate((new App\Service\System\DateTimeService())->today()->modify('+1 day'));
 
 $em->flush();
 
 // Captures avant détachement.
 $rentAId = $rentA->getId();
+$patronAId = $patronA->getId();
 $rentAUuid = $rentA->getUuid()->toRfc4122();
+$closedLeaseUuid = $closedLease->getUuid()->toRfc4122();
+$closedDueRentUuid = $closedDueRent->getUuid()->toRfc4122();
+$closedFutureRentUuid = $closedFutureRent->getUuid()->toRfc4122();
 $rentBUuid = $rentB->getUuid()->toRfc4122();
 $cityAId = $cityA->getId();
+$orgAUuid = $orgA->getUuid()->toRfc4122();
+$cityAUuid = $cityA->getUuid()->toRfc4122();
 $expenseUsdUuid = $expenseUsd->getUuid()->toRfc4122();
 $expenseCdfUuid = $expenseCdf->getUuid()->toRfc4122();
+$expenseUsdBankUuid = $expenseUsdBank->getUuid()->toRfc4122();
+$expenseUsdBankId = $expenseUsdBank->getId();
 $paymentBUuid = $paymentB->getUuid()->toRfc4122();
 
 $em->clear();
@@ -355,6 +434,10 @@ $sumPayments = static fn (int $rentId): string => (string) $connection->fetchOne
     'SELECT COALESCE(SUM(amount), 0) FROM payment WHERE rent_id = ?',
     [$rentId]
 );
+$sumPaymentsInRentCurrency = static fn (int $rentId): string => (string) $connection->fetchOne(
+    'SELECT COALESCE(SUM(CASE WHEN original_amount IS NOT NULL THEN original_amount ELSE amount END), 0) FROM payment WHERE rent_id = ?',
+    [$rentId]
+);
 $paymentIdByRef = static fn (string $ref): int => (int) $connection->fetchOne(
     'SELECT id FROM payment WHERE reference = ?',
     [$ref]
@@ -373,6 +456,19 @@ $recordPayment = static function (string $ref, string $amount) use ($request, $r
         'rentUuid' => $rentAUuid,
         'amount' => $amount,
         'currency' => 'USD',
+        'paymentDate' => '2026-09-01',
+        'method' => 'cash',
+        'reference' => $ref,
+    ], $patronAToken);
+};
+$recordCrossCurrencyPayment = static function (string $ref) use ($request, $rentAUuid, $patronAToken): array {
+    return $request('POST', '/api/v1/payments', [
+        'rentUuid' => $rentAUuid,
+        'amount' => '290000.00',
+        'currency' => 'CDF',
+        'exchangeRate' => '2900.00000000',
+        'originalAmount' => '100.00',
+        'originalCurrency' => 'USD',
         'paymentDate' => '2026-09-01',
         'method' => 'cash',
         'reference' => $ref,
@@ -422,6 +518,14 @@ check('nouveau paiement après annulation -> 2xx', in_array($status, [200, 201],
 check('échéance A de nouveau soldée', $rentStatus($rentAId) === 'paid', 'statut=' . $rentStatus($rentAId));
 check('somme payée = 500.00', bccomp($sumPayments($rentAId), '500.00', 2) === 0, 'somme=' . $sumPayments($rentAId));
 
+[$status, $partialPayload] = $recordPayment('PAY-PARTIAL-USD', '125.00');
+$partialPaymentUuid = is_array($partialPayload) ? ($partialPayload['data']['id'] ?? null) : null;
+check('paiement partiel dans la devise du loyer accepté', in_array($status, [200, 201], true) && is_string($partialPaymentUuid));
+check('le paiement partiel ajoute 125 USD au solde imputé', bccomp($sumPaymentsInRentCurrency($rentAId), '625.00', 2) === 0, 'somme=' . $sumPaymentsInRentCurrency($rentAId));
+[$status] = $request('POST', '/api/v1/payments/' . $partialPaymentUuid . '/cancel', ['reason' => 'Test paiement partiel'], $patronAToken);
+check('annulation d’un paiement partiel même devise -> 201', $status === 201, "obtenu {$status}");
+check('la contre-écriture partielle restaure les 500 USD nets', bccomp($sumPaymentsInRentCurrency($rentAId), '500.00', 2) === 0, 'somme=' . $sumPaymentsInRentCurrency($rentAId));
+
 // ---------------------------------------------------------------------
 section('3. Double annulation refusée (409) et unicité garantie');
 
@@ -442,6 +546,26 @@ check('annuler une contre-écriture -> 409', $status === 409, "obtenu {$status}"
 // ---------------------------------------------------------------------
 section('4. Dépense : annulation par contre-écriture négative');
 
+// Le solde de caisse est un solde courant depuis la date d'ouverture ; le
+// test utilise ici des opérations de septembre et une ouverture antérieure.
+$cashBalanceUri = '/api/v1/treasury/cash-balance?organizationUuid=' . $orgAUuid . '&cityUuid=' . $cityAUuid;
+[$status, $openingPayload] = $request('PUT', $cashBalanceUri, [
+    'currency' => 'USD',
+    'openingBalance' => '1000.00',
+    'openingDate' => '2026-09-01',
+], $patronAToken);
+check('solde initial USD enregistré -> 200', $status === 200, "obtenu {$status}");
+[$status, $historicalCash] = $request('GET', $cashBalanceUri . '&currency=USD&asOfDate=2026-09-30', null, $patronAToken);
+check('solde historique exclut les dépenses futures', $status === 200 && bccomp((string) ($historicalCash['data']['balance'] ?? 'x'), '900.00', 2) === 0, 'solde=' . var_export($historicalCash['data']['balance'] ?? null, true));
+$cashFutureDate = (new App\Service\System\DateTimeService())->today()->modify('+1 day')->format('Y-m-d');
+[$status, $futureCash] = $request('GET', $cashBalanceUri . '&currency=USD&asOfDate=' . $cashFutureDate, null, $patronAToken);
+check('le solde à la date de la dépense future l’inclut', $status === 200 && bccomp((string) ($futureCash['data']['balance'] ?? 'x'), '850.00', 2) === 0, 'solde=' . var_export($futureCash['data']['balance'] ?? null, true));
+[$status] = $request('GET', $cashBalanceUri . '&currency=USD&asOfDate=2030-99-99', null, $patronAToken);
+check('date de référence mal formée refusée -> 422', $status === 422, "obtenu {$status}");
+[$status, $cashPayload] = $request('GET', $cashBalanceUri . '&currency=USD', null, $patronAToken);
+$cashBeforeCancellation = $cashPayload['data']['balance'] ?? null;
+check('la dépense cash de 100 USD réduit la caisse à 900 USD', $status === 200 && bccomp((string) $cashBeforeCancellation, '900.00', 2) === 0, 'solde=' . var_export($cashBeforeCancellation, true));
+
 [$status, $payload, $raw] = $request('POST', '/api/v1/expenses/' . $expenseUsdUuid . '/cancel', ['reason' => 'Doublon'], $patronAToken);
 $expenseCancellation = is_array($payload) ? ($payload['data'] ?? []) : [];
 check('POST /api/v1/expenses/{uuid}/cancel -> 201', $status === 201, "obtenu {$status} : " . substr($raw, 0, 160));
@@ -452,6 +576,36 @@ check(
 );
 check('isReversal = true (dépense)', ($expenseCancellation['isReversal'] ?? null) === true);
 check('reversalOfUuid = dépense d\'origine', ($expenseCancellation['reversalOfUuid'] ?? null) === $expenseUsdUuid);
+check('mode cash conservé sur la contre-écriture', ($expenseCancellation['method'] ?? null) === 'cash');
+[$status, $cashPayload] = $request('GET', $cashBalanceUri . '&currency=USD', null, $patronAToken);
+$cashAfterCancellation = $cashPayload['data']['balance'] ?? null;
+check('l\'annulation rétablit la caisse à 1000 USD', $status === 200 && bccomp((string) $cashAfterCancellation, '1000.00', 2) === 0, 'solde=' . var_export($cashAfterCancellation, true));
+[$status, $historicalCashAfterCancellation] = $request('GET', $cashBalanceUri . '&currency=USD&asOfDate=2026-09-30', null, $patronAToken);
+check('l’annulation datée plus tard ne réécrit pas la caisse historique', $status === 200 && bccomp((string) ($historicalCashAfterCancellation['data']['balance'] ?? 'x'), '900.00', 2) === 0, 'solde=' . var_export($historicalCashAfterCancellation['data']['balance'] ?? null, true));
+[$status, $cashOnFutureExpenseDate] = $request('GET', $cashBalanceUri . '&currency=USD&asOfDate=' . $cashFutureDate, null, $patronAToken);
+check('le solde à la date future inclut la dépense prévue et l’annulation', $status === 200 && bccomp((string) ($cashOnFutureExpenseDate['data']['balance'] ?? 'x'), '950.00', 2) === 0, 'solde=' . var_export($cashOnFutureExpenseDate['data']['balance'] ?? null, true));
+[$status] = $request('POST', '/api/v1/expenses/' . $expenseUsdUuid . '/cancel', ['reason' => 'Deuxième annulation'], $patronAToken);
+check('double annulation de la dépense refusée -> 409', $status === 409, "obtenu {$status}");
+
+// Une dépense par virement ne doit pas influencer la caisse USD.
+[$status] = $request('PATCH', '/api/v1/expenses/' . $expenseUsdBankUuid, ['amount' => '45.00'], $patronAToken);
+check('modification de dépense bancaire -> 200', $status === 200, "obtenu {$status}");
+$expenseAudit = $connection->fetchAssociative(
+    "SELECT old_values, new_values FROM audit_log WHERE entity_type = ? AND entity_id = ? AND action = 'UPDATE_EXPENSE' ORDER BY id DESC LIMIT 1",
+    [Expense::class, $expenseUsdBankId],
+);
+$oldExpenseAuditValues = is_array($expenseAudit) ? json_decode((string) $expenseAudit['old_values'], true) : null;
+$newExpenseAuditValues = is_array($expenseAudit) ? json_decode((string) $expenseAudit['new_values'], true) : null;
+check('audit de dépense conserve montant avant et après',
+    is_array($oldExpenseAuditValues) && is_array($newExpenseAuditValues)
+    && bccomp((string) ($oldExpenseAuditValues['amount'] ?? 'x'), '40.00', 2) === 0
+    && bccomp((string) ($newExpenseAuditValues['amount'] ?? 'x'), '45.00', 2) === 0,
+    'audit=' . json_encode([$oldExpenseAuditValues['amount'] ?? null, $newExpenseAuditValues['amount'] ?? null]));
+[$status, $payload] = $request('POST', '/api/v1/expenses/' . $expenseUsdBankUuid . '/cancel', ['reason' => 'Test sans impact caisse'], $patronAToken);
+check('annulation d\'une dépense par virement -> 201', $status === 201, "obtenu {$status}");
+[$status, $cashPayload] = $request('GET', $cashBalanceUri . '&currency=USD', null, $patronAToken);
+$cashAfterBankCancellation = $cashPayload['data']['balance'] ?? null;
+check('contre-écriture de virement sans effet sur la caisse USD', $status === 200 && bccomp((string) $cashAfterBankCancellation, '1000.00', 2) === 0, 'solde=' . var_export($cashAfterBankCancellation, true));
 
 // ---------------------------------------------------------------------
 section('5. Devises séparées : annuler l\'USD n\'affecte pas le CDF');
@@ -498,8 +652,93 @@ check('annulation de PAY-5 -> 201', $status === 201, "obtenu {$status}");
 check('la somme payée retombe à 0', bccomp($sumPayments($rentAId), '0.00', 2) === 0, 'somme=' . $sumPayments($rentAId));
 check('l\'échéance en retard réapparaît', $inOverdue($rentAUuid) === true);
 
+$historicalReportUri = '/api/v1/reports/patron?organizationUuid=' . $orgAUuid
+    . '&periodFrom=2026-01-01&periodTo=2026-01-06'
+    . '&includeFinancials=false&includeCityBreakdown=false&includeExpenses=false&includeArrears=true';
+[$status, $historicalReport] = $request('GET', $historicalReportUri, null, $patronAToken);
+$historicalArrears = is_array($historicalReport) ? ($historicalReport['arrears'] ?? []) : [];
+check('rapport d’arriérés historique -> 200', $status === 200, "obtenu {$status}");
+check('rapport historique exclut l’échéance future et les paiements postérieurs à la date de référence',
+    count($historicalArrears) === 1
+    && ($historicalArrears[0]['leaseUuid'] ?? null) === $rentA->getLease()->getUuid()->toRfc4122()
+    && bccomp((string) ($historicalArrears[0]['arrears'] ?? '0'), '500.00', 2) === 0,
+    'impayés=' . json_encode($historicalArrears, JSON_UNESCAPED_UNICODE));
+
 // ---------------------------------------------------------------------
-section('9. Schéma : colonnes, index UNIQUE, FK et contraintes CHECK');
+section('9. Paiement converti : imputation et contre-écriture dans la devise du bail');
+
+[$status, $payload, $raw] = $recordCrossCurrencyPayment('PAY-CDF-1');
+$crossPaymentUuid = is_array($payload) ? ($payload['data']['id'] ?? null) : null;
+check('paiement CDF converti accepté sous le solde USD -> 2xx', in_array($status, [200, 201], true), "obtenu {$status} : " . substr($raw, 0, 160));
+check('montant imputé à l’échéance = 100 USD, pas 290000 CDF', bccomp($sumPaymentsInRentCurrency($rentAId), '100.00', 2) === 0, 'somme normalisée=' . $sumPaymentsInRentCurrency($rentAId));
+check('échéance partiellement payée après conversion', $rentStatus($rentAId) === 'partially_paid', 'statut=' . $rentStatus($rentAId));
+
+[$status, $payload] = $request('POST', '/api/v1/payments/' . $crossPaymentUuid . '/cancel', ['reason' => 'Conversion erronée'], $patronAToken);
+$crossReversal = is_array($payload) ? ($payload['data'] ?? []) : [];
+check('annulation du paiement converti -> 201', $status === 201, "obtenu {$status}");
+check('contre-écriture conserve le taux et -100 USD d’origine',
+    bccomp((string) ($crossReversal['originalAmount'] ?? 'x'), '-100.00', 2) === 0
+    && ($crossReversal['exchangeRate'] ?? null) === '2900.00000000'
+    && ($crossReversal['originalCurrency'] ?? null) === 'USD',
+    'originalAmount=' . var_export($crossReversal['originalAmount'] ?? null, true));
+check('annulation conserve le taux historique même si le taux courant vaut 3000',
+    $historicalRate->getRate() === '2900.00000000'
+    && $currentRate->getRate() === '3000.00000000'
+    && ($crossReversal['exchangeRate'] ?? null) === $historicalRate->getRate(),
+    'taux contre-écriture=' . var_export($crossReversal['exchangeRate'] ?? null, true));
+check('solde normalisé revient à zéro après contre-écriture', bccomp($sumPaymentsInRentCurrency($rentAId), '0.00', 2) === 0, 'somme normalisée=' . $sumPaymentsInRentCurrency($rentAId));
+check('échéance repasse à pending après annulation convertie', $rentStatus($rentAId) === 'pending', 'statut=' . $rentStatus($rentAId));
+check('l’échéance avec historique refuse la modification rétroactive du montant',
+    $request('PATCH', '/api/v1/rents/' . $rentAUuid, ['amount' => '600.00'], $patronAToken)[0] === 409,
+    'paiements historiques conservés');
+
+// Une créance émise avant la résiliation reste payable ; une échéance
+// postérieure ou une nouvelle échéance sur ce bail est refusée.
+[$status] = $request('POST', '/api/v1/payments', [
+    'rentUuid' => $closedDueRentUuid,
+    'amount' => '50.00',
+    'currency' => 'USD',
+    'paymentDate' => (new App\Service\System\DateTimeService())->today()->format('Y-m-d'),
+    'method' => 'cash',
+    'reference' => 'PAY-BAIL-CLOS',
+], $patronAToken);
+check('paiement partiel d’une échéance due avant résiliation accepté', in_array($status, [200, 201], true), "obtenu {$status}");
+[$status] = $request('POST', '/api/v1/payments', [
+    'rentUuid' => $closedFutureRentUuid,
+    'amount' => '25.00',
+    'currency' => 'USD',
+    'paymentDate' => (new App\Service\System\DateTimeService())->today()->format('Y-m-d'),
+    'method' => 'cash',
+    'reference' => 'PAY-BAIL-CLOS-FUTUR',
+], $patronAToken);
+check('paiement d’une échéance après résiliation refusé -> 409', $status === 409, "obtenu {$status}");
+[$status] = $request('POST', '/api/v1/rents', [
+    'leaseUuid' => $closedLeaseUuid,
+    'period' => '2026-09-01',
+    'dueDate' => '2026-09-05',
+    'amount' => '100.00',
+    'currency' => 'USD',
+], $patronAToken);
+check('création d’une nouvelle échéance sur bail résilié refusée -> 409', $status === 409, "obtenu {$status}");
+
+// Les données de conversion historiques incomplètes ne peuvent pas être
+// annulées en mélangeant les unités monétaires.
+$brokenPayment = (new Payment())
+    ->setRent($em->getReference(Rent::class, $rentAId))
+    ->setCreatedBy($em->getReference(User::class, $patronAId))
+    ->setAmount('2900.00')
+    ->setCurrency(Currency::CDF)
+    ->setPaymentDate((new App\Service\System\DateTimeService())->today())
+    ->setMethod(PaymentMethod::CASH)
+    ->setReference('PAY-CDF-MISSING-CONVERSION');
+$em->persist($brokenPayment);
+$em->flush();
+$brokenPaymentUuid = $brokenPayment->getUuid()->toRfc4122();
+[$status] = $request('POST', '/api/v1/payments/' . $brokenPaymentUuid . '/cancel', ['reason' => 'Données historiques incomplètes'], $patronAToken);
+check('conversion historique manquante refusée sans contre-écriture -> 409', $status === 409 && $reversalCount((int) $brokenPayment->getId()) === 0, "obtenu {$status}");
+
+// ---------------------------------------------------------------------
+section('10. Schéma : colonnes, index UNIQUE, FK et contraintes CHECK');
 
 $schemaProbe = static function (string $sql, array $params = []) use ($connection): int {
     return (int) $connection->fetchOne($sql, $params);

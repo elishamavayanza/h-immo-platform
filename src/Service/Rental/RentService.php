@@ -11,6 +11,8 @@ use App\Dto\Request\Rental\RentRequest;
 use App\Entity\Identity\User;
 use App\Entity\Rental\Lease;
 use App\Entity\Rental\Rent;
+use App\Enum\LeaseStatus;
+use App\Enum\RentStatus;
 use App\Mapper\Rental\RentMapper;
 use App\Repository\Identity\OrganizationRepository;
 use App\Repository\Property\CityRepository;
@@ -70,6 +72,27 @@ final readonly class RentService
             return $feedback->autoInitFlush();
         }
 
+        if ($lease->getStatus() !== LeaseStatus::ACTIVE) {
+            return $feedback
+                ->addError('leaseUuid', 'Une nouvelle échéance ne peut être créée que pour un bail actif.')
+                ->setFlushDescriptionWithError('Échéance refusée : le bail n’est pas actif.')
+                ->setStatus(409)
+                ->autoInitFlush();
+        }
+
+        $leaseEnd = $lease->getEndDate();
+        $terminationDate = $lease->getTerminationDate();
+        if ($terminationDate !== null && ($leaseEnd === null || $terminationDate < $leaseEnd)) {
+            $leaseEnd = $terminationDate;
+        }
+        if ($leaseEnd !== null && $request->dueDate !== null && $request->dueDate > $leaseEnd) {
+            return $feedback
+                ->addError('dueDate', 'La date d’exigibilité dépasse la période effective du bail.')
+                ->setFlushDescriptionWithError('L’échéance se situe après la fin du bail.')
+                ->setStatus(422)
+                ->autoInitFlush();
+        }
+
         // Unicité du couple (bail, période) : elle est déjà garantie par un
         // index unique en base, mais elle est vérifiée ici pour renvoyer un
         // 422 exploitable au lieu d'une violation de contrainte SQL.
@@ -109,7 +132,7 @@ final readonly class RentService
         );
 
         return $feedback
-            ->setData($this->rentMapper->toResponse($rent))
+            ->setData($this->rentMapper->toResponse($rent, $this->paymentRepository->sumAmountByRent($rent)))
             ->setFlushDescription('L\'échéance de loyer a été créée avec succès.')
             ->setStatus(201)
             ->autoInitFlush();
@@ -156,6 +179,31 @@ final readonly class RentService
             }
         }
 
+        $existingForPeriod = $request->period === null
+            ? null
+            : $this->rentRepository->findOneByLeaseAndPeriod($rent->getLease(), $request->period);
+        if ($existingForPeriod !== null && $existingForPeriod->getId() !== $rent->getId()) {
+            return $feedback
+                ->addError('period', 'Une autre échéance existe déjà pour ce mois et ce bail.')
+                ->setFlushDescriptionWithError('La période est déjà utilisée par une autre échéance.')
+                ->setStatus(409)
+                ->autoInitFlush();
+        }
+
+        $hasPaymentHistory = $this->paymentRepository->hasPaymentsForRent($rent);
+        $changesFinancialHistory = ($request->period !== null && $request->period != $rent->getPeriod())
+            || ($request->dueDate !== null && $request->dueDate != $rent->getDueDate())
+            || ($request->amount !== null && bccomp($request->amount, $rent->getAmount(), 2) !== 0)
+            || ($request->currency !== null && $request->currency !== $rent->getCurrency());
+        if ($hasPaymentHistory && $changesFinancialHistory) {
+            return $feedback
+                ->addError('rent', 'Une échéance ayant un historique de paiement ne peut pas être modifiée. Enregistrez une correction traçable.')
+                ->setFlushDescriptionWithError('Modification refusée afin de préserver les paiements déjà enregistrés.')
+                ->setStatus(409)
+                ->autoInitFlush();
+        }
+
+        $oldValues = $this->rentAuditValues($rent);
         $this->rentMapper->copyToEntity($request, $rent);
 
         // Changer le montant ou la date d'exigibilité change ce que doit
@@ -172,17 +220,12 @@ final readonly class RentService
             entityId: $rent->getId(),
             organization: $rent->getLease()->getOrganization(),
             user: $currentUser,
-            oldValues: null,
-            newValues: [
-                'period' => $this->dateTime->format($rent->getPeriod(), 'Y-m-d'),
-                'dueDate' => $this->dateTime->format($rent->getDueDate(), 'Y-m-d'),
-                'amount' => $rent->getAmount(),
-                'currency' => $rent->getCurrency()->value,
-            ],
+            oldValues: $oldValues,
+            newValues: $this->rentAuditValues($rent),
         );
 
         return $feedback
-            ->setData($this->rentMapper->toResponse($rent))
+            ->setData($this->rentMapper->toResponse($rent, $this->paymentRepository->sumAmountByRent($rent)))
             ->setFlushDescription('L\'échéance de loyer a été mise à jour avec succès.')
             ->setStatus(200)
             ->autoInitFlush();
@@ -200,7 +243,7 @@ final readonly class RentService
         $this->securityService->checkRentAccess($rent, SecurityAction::VIEW_RENT);
 
         return $feedback
-            ->setData($this->rentMapper->toResponse($rent))
+            ->setData($this->rentMapper->toResponse($rent, $this->paymentRepository->sumAmountByRent($rent)))
             ->setFlushDescription('Échéance de loyer récupérée.')
             ->setStatus(200)
             ->autoInitFlush();
@@ -281,7 +324,10 @@ final readonly class RentService
             return $this->securityService->canAccessRent($rent, SecurityAction::VIEW_RENT);
         });
 
-        $items = array_map(fn(Rent $r) => $this->rentMapper->toResponse($r), $items);
+        $items = array_map(
+            fn(Rent $r) => $this->rentMapper->toResponse($r, $this->paymentRepository->sumAmountByRent($r)),
+            $items,
+        );
 
         return $feedback
             ->setData([
@@ -315,6 +361,17 @@ final readonly class RentService
         if ($filter->from !== null && $filter->to !== null && $filter->from > $filter->to) {
             return $feedback
                 ->setErrorFlushDescription('La date de fin doit être égale ou postérieure à la date de début.')
+                ->setStatus(422)
+                ->autoInitFlush();
+        }
+
+        if ($filter->status !== null && !in_array($filter->status, array_map(
+            static fn (RentStatus $status): string => $status->value,
+            RentStatus::cases(),
+        ), true)) {
+            return $feedback
+                ->addError('status', 'Le statut d’échéance demandé est invalide.')
+                ->setFlushDescriptionWithError('Le filtre de statut est invalide.')
                 ->setStatus(422)
                 ->autoInitFlush();
         }
@@ -386,7 +443,10 @@ final readonly class RentService
 
         return $feedback
             ->setData([
-                'items' => array_map(fn (Rent $r) => $this->rentMapper->toResponse($r), $items),
+                'items' => array_map(
+                    fn (Rent $r) => $this->rentMapper->toResponse($r, $this->paymentRepository->sumAmountByRent($r)),
+                    $items,
+                ),
                 'total' => $result['total'],
                 'page' => max(1, $filter->page),
                 'limit' => $filter->limit,
@@ -486,5 +546,16 @@ final readonly class RentService
         }
 
         return $rent;
+    }
+
+    /** @return array<string, string> */
+    private function rentAuditValues(Rent $rent): array
+    {
+        return [
+            'period' => $this->dateTime->format($rent->getPeriod(), 'Y-m-d'),
+            'dueDate' => $this->dateTime->format($rent->getDueDate(), 'Y-m-d'),
+            'amount' => $rent->getAmount(),
+            'currency' => $rent->getCurrency()->value,
+        ];
     }
 }

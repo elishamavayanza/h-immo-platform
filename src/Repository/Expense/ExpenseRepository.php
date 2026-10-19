@@ -220,9 +220,9 @@ final class ExpenseRepository extends ServiceEntityRepository
         ?\DateTimeImmutable $periodTo = null
     ): array {
         $qb = $this->createQueryBuilder('e')
-            ->select('e.category, DATE_FORMAT(e.expenseDate, \'%Y-%m\') as period, SUM(e.amount) as total, COUNT(e.id) as count, e.currency, c.id as cityId')
+            ->select('e.category, DATE_FORMAT(e.expenseDate, \'%Y-%m\') as period, DATE_FORMAT(e.expenseDate, \'%Y-%m-%d\') as effectiveDate, SUM(e.amount) as total, COUNT(e.id) as count, e.currency, c.id as cityId')
             ->innerJoin('e.city', 'c')
-            ->groupBy('e.category, period, e.currency, c.id');
+            ->groupBy('e.category, effectiveDate, e.currency, c.id');
 
         if ($organizationIds !== null && !empty($organizationIds)) {
             $qb->andWhere('e.organization IN (:orgs)')
@@ -280,9 +280,9 @@ final class ExpenseRepository extends ServiceEntityRepository
         // résolu contre la classe racine, qui n'a pas de champ `uuid`. Le
         // champ doit être lu par l'alias du join, `c.uuid`.
         $qb = $this->createQueryBuilder('e')
-            ->select('c.uuid as cityUuid, c.name as cityName, c.id as cityId, DATE_FORMAT(e.expenseDate, \'%Y-%m\') as period, SUM(e.amount) as total, COUNT(e.id) as count, e.currency')
+            ->select('c.uuid as cityUuid, c.name as cityName, c.id as cityId, DATE_FORMAT(e.expenseDate, \'%Y-%m\') as period, DATE_FORMAT(e.expenseDate, \'%Y-%m-%d\') as effectiveDate, SUM(e.amount) as total, COUNT(e.id) as count, e.currency')
             ->innerJoin('e.city', 'c')
-            ->groupBy('c.uuid, c.name, c.id, period, e.currency')
+            ->groupBy('c.uuid, c.name, c.id, effectiveDate, e.currency')
             ->andWhere('e.city IN (:cities)')
             ->setParameter('cities', $cityIds);
 
@@ -323,7 +323,7 @@ final class ExpenseRepository extends ServiceEntityRepository
         $targetId = 'COALESCE(u.id, b.id, p.id, c.id)';
 
         return $this->createQueryBuilder('e')
-            ->select("e.category as category, $level as level, $label as levelLabel, $targetId as targetId, DATE_FORMAT(e.expenseDate, '%Y-%m') as period, SUM(e.amount) as total, COUNT(e.id) as count, e.currency as currency, c.id as cityId")
+            ->select("e.category as category, $level as level, $label as levelLabel, $targetId as targetId, DATE_FORMAT(e.expenseDate, '%Y-%m') as period, DATE_FORMAT(e.expenseDate, '%Y-%m-%d') as effectiveDate, SUM(e.amount) as total, COUNT(e.id) as count, e.currency as currency, c.id as cityId")
             ->innerJoin('e.city', 'c')
             ->leftJoin('e.parcel', 'p')
             ->leftJoin('e.building', 'b')
@@ -334,7 +334,7 @@ final class ExpenseRepository extends ServiceEntityRepository
             ->setParameter('cities', $cityIds)
             ->setParameter('periodFrom', $periodFrom)
             ->setParameter('periodTo', $periodTo)
-            ->groupBy("level, levelLabel, targetId, period, e.category, e.currency, c.id")
+            ->groupBy("level, levelLabel, targetId, effectiveDate, e.category, e.currency, c.id")
             ->orderBy('levelLabel', 'ASC')
             ->getQuery()
             ->getResult();
@@ -350,9 +350,9 @@ final class ExpenseRepository extends ServiceEntityRepository
         ?\DateTimeImmutable $periodTo = null
     ): array {
         $qb = $this->createQueryBuilder('e')
-            ->select('DATE_FORMAT(e.expenseDate, \'%Y-%m\') as period, SUM(e.amount) as total, e.currency, c.id as cityId')
+            ->select('DATE_FORMAT(e.expenseDate, \'%Y-%m\') as period, DATE_FORMAT(e.expenseDate, \'%Y-%m-%d\') as effectiveDate, SUM(e.amount) as total, e.currency, c.id as cityId')
             ->innerJoin('e.city', 'c')
-            ->groupBy('period, e.currency, c.id')
+            ->groupBy('effectiveDate, e.currency, c.id')
             ->orderBy('period', 'ASC');
 
         if ($organizationIds !== null && !empty($organizationIds)) {

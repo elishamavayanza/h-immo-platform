@@ -188,12 +188,40 @@ final readonly class PaymentService
             ];
         }
 
-        // 1) Bail doit être ACTIVE
+        // Une échéance déjà créée et exigible avant une clôture reste payable.
+        // Les nouveaux loyers des baux clos sont refusés à la création, et une
+        // échéance postérieure à la fin effective ne peut pas être encaissée.
         $lease = $rent->getLease();
-        if ($lease->getStatus() !== \App\Enum\LeaseStatus::ACTIVE) {
+        $leaseStatus = $lease->getStatus();
+        $closedLease = in_array($leaseStatus, [\App\Enum\LeaseStatus::EXPIRED, \App\Enum\LeaseStatus::TERMINATED], true);
+        if ($leaseStatus !== \App\Enum\LeaseStatus::ACTIVE && !$closedLease) {
             return [
                 'field' => 'rentUuid',
-                'message' => 'Impossible d\'enregistrer un paiement : le bail n\'est pas actif.',
+                'message' => 'Impossible d’enregistrer un paiement pour un bail brouillon ou annulé.',
+                'status' => 409,
+            ];
+        }
+
+        if (
+            ($leaseStatus === \App\Enum\LeaseStatus::EXPIRED && $lease->getEndDate() === null)
+            || ($leaseStatus === \App\Enum\LeaseStatus::TERMINATED && $lease->getTerminationDate() === null)
+        ) {
+            return [
+                'field' => 'rentUuid',
+                'message' => 'La date de fin effective du bail est absente ; le paiement doit être vérifié manuellement.',
+                'status' => 409,
+            ];
+        }
+
+        $leaseEnd = $lease->getEndDate();
+        $terminationDate = $lease->getTerminationDate();
+        if ($terminationDate !== null && ($leaseEnd === null || $terminationDate < $leaseEnd)) {
+            $leaseEnd = $terminationDate;
+        }
+        if ($leaseEnd !== null && $rent->getDueDate() > $leaseEnd) {
+            return [
+                'field' => 'rentUuid',
+                'message' => 'Cette échéance n’est pas exigible dans la période effective du bail.',
                 'status' => 409,
             ];
         }
@@ -262,8 +290,9 @@ final readonly class PaymentService
                 ];
             }
 
-            // Le montant à comparer au reste à payer est le montant dans la devise de l'échéance (request->amount)
-            $paymentAmountInRentCurrency = $request->amount;
+            // `amount` décrit l'encaissement dans la devise reçue. Le montant
+            // qui réduit l'échéance est `originalAmount`, dans sa devise.
+            $paymentAmountInRentCurrency = $request->originalAmount;
         } else {
             // Même devise : pas de taux requis, le montant est déjà dans la devise de l'échéance
             if ($request->exchangeRate !== null || $request->originalAmount !== null || $request->originalCurrency !== null) {
@@ -277,7 +306,9 @@ final readonly class PaymentService
         }
 
         // 4) Montant strictement positif (déjà validé par Assert\Regex dans le DTO)
-        // 5) Montant ne doit pas dépasser le reste à payer (comparaison en devise de l'échéance)
+        // 5) Le montant imputé (devise de l'échéance) ne doit pas dépasser
+        // le solde restant. `amount` peut être en CDF lorsque l'échéance est
+        // en USD : dans ce cas la comparaison porte sur `originalAmount`.
         $due = $rent->getAmount();
         $paid = $this->paymentRepository->sumAmountByRent($rent);
         $remaining = bcsub($due, $paid, 2);
@@ -285,7 +316,7 @@ final readonly class PaymentService
         if (bccomp($paymentAmountInRentCurrency, $remaining, 2) > 0) {
             return [
                 'field' => 'amount',
-                'message' => "Le montant du paiement ({$paymentAmountInRentCurrency}) dépasse le reste à payer ({$remaining}).",
+                'message' => "Le montant imputé sur l’échéance ({$paymentAmountInRentCurrency}) dépasse le reste à payer ({$remaining}) dans la devise {$rentCurrency->value}.",
                 'status' => 422,
             ];
         }
@@ -506,7 +537,26 @@ final readonly class PaymentService
                 // sous zéro. Avec une contre-écriture négative, c'est désormais
                 // une sécurité et non plus un cas normal.
                 $currentPaid = $this->paymentRepository->sumAmountByRent($rent);
-                $cancelAmount = $locked->getAmount();
+                if ($locked->getCurrency() === $rent->getCurrency()) {
+                    $cancelAmount = $locked->getAmount();
+                } else {
+                    $originalAmount = $locked->getOriginalAmount();
+                    $exchangeRate = $locked->getExchangeRate();
+                    if (
+                        $originalAmount === null
+                        || $locked->getOriginalCurrency() !== $rent->getCurrency()
+                        || $exchangeRate === null
+                        || bccomp(bcmul($originalAmount, $exchangeRate, 2), $locked->getAmount(), 2) !== 0
+                    ) {
+                        $feedback
+                            ->addError('amount', 'Les données de conversion historiques sont incomplètes ou incohérentes ; le paiement ne peut pas être annulé automatiquement.')
+                            ->setFlushDescriptionWithError('Annulation refusée : conversion historique à vérifier.')
+                            ->setStatus(409);
+
+                        return false;
+                    }
+                    $cancelAmount = $originalAmount;
+                }
                 $newPaid = bcsub($currentPaid, $cancelAmount, 2);
 
                 if (bccomp($newPaid, '0.00', 2) < 0) {
@@ -528,6 +578,13 @@ final readonly class PaymentService
                 $correction->setCurrency($locked->getCurrency());
                 $correction->setPaymentDate($this->dateTime->now());
                 $correction->setMethod($locked->getMethod());
+                if ($locked->getExchangeRate() !== null) {
+                    $correction->setExchangeRate($locked->getExchangeRate());
+                }
+                if ($locked->getOriginalAmount() !== null) {
+                    $correction->setOriginalAmount(bcmul($locked->getOriginalAmount(), '-1', 2));
+                }
+                $correction->setOriginalCurrency($locked->getOriginalCurrency());
                 $correction->setReference(substr('ANNUL-' . ($locked->getReference() ?? $locked->getUuid()->toRfc4122()), 0, 100));
                 $correction->setReversalOf($locked);
                 $correction->setNotes("Annulation du paiement {$locked->getReference()} : {$reason}");
@@ -553,6 +610,9 @@ final readonly class PaymentService
                     newValues: [
                         'amount' => $correction->getAmount(),
                         'currency' => $correction->getCurrency()->value,
+                        'exchangeRate' => $correction->getExchangeRate(),
+                        'originalAmount' => $correction->getOriginalAmount(),
+                        'originalCurrency' => $correction->getOriginalCurrency()?->value,
                         'reference' => $correction->getReference(),
                         'notes' => $correction->getNotes(),
                         'reversalOfUuid' => $locked->getUuid()->toRfc4122(),
