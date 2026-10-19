@@ -110,7 +110,7 @@ final readonly class UnitRequest
         public ?int $bedrooms = null,
 
         #[OA\Property(
-            description: 'Nombre total de pièces principales',
+            description: 'Nombre total de pièces principales, chambres comprises. Donnée descriptive, aucune pièce distincte n’est créée.',
             example: 4,
             nullable: true,
             minimum: 0,

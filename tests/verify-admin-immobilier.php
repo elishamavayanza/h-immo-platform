@@ -798,7 +798,9 @@ section('Patrimoine : cycle de vie des villes et droits CRUD organisationnels');
     'country' => 'CD',
 ], $adminImmobilierToken);
 check('ADMIN_IMMOBILIER crée une ville dans son organisation', $status === 201, 'obtenu ' . $status . ' : ' . substr(json_encode($payload), 0, 300));
-$createdCityUuid = is_array($payload) && is_string($payload['data']['uuid'] ?? null) ? $payload['data']['uuid'] : null;
+$createdCityUuid = is_array($payload)
+    ? ($payload['data']['uuid'] ?? $payload['data']['id'] ?? null)
+    : null;
 
 [$status] = $request('POST', '/api/v1/property/cities', [
     'organizationUuid' => $uuidOrgB,
@@ -838,7 +840,9 @@ if ($createdCityUuid !== null) {
         'area' => '500.00',
     ], $adminImmobilierToken);
     check('ADMIN_IMMOBILIER crée une parcelle dans une ville de son organisation', $status === 201, 'obtenu ' . $status);
-    $createdParcelUuid = is_array($payload) && is_string($payload['data']['uuid'] ?? null) ? $payload['data']['uuid'] : null;
+    $createdParcelUuid = is_array($payload)
+        ? ($payload['data']['uuid'] ?? $payload['data']['id'] ?? null)
+        : null;
 
     $createdBuildingUuid = null;
     if ($createdParcelUuid !== null) {
@@ -850,7 +854,9 @@ if ($createdCityUuid !== null) {
             'numberOfFloors' => 2,
         ], $adminImmobilierToken);
         check('ADMIN_IMMOBILIER crée un bâtiment sur une parcelle de son organisation', $status === 201, 'obtenu ' . $status);
-        $createdBuildingUuid = is_array($payload) && is_string($payload['data']['uuid'] ?? null) ? $payload['data']['uuid'] : null;
+        $createdBuildingUuid = is_array($payload)
+            ? ($payload['data']['uuid'] ?? $payload['data']['id'] ?? null)
+            : null;
     } else {
         check('ADMIN_IMMOBILIER crée un bâtiment sur une parcelle de son organisation', false, 'UUID de parcelle absent');
     }
@@ -868,12 +874,18 @@ if ($createdCityUuid !== null) {
             'currency' => 'USD',
         ], $adminImmobilierToken);
         check('ADMIN_IMMOBILIER crée une unité dans un bâtiment de son organisation', $status === 201, 'obtenu ' . $status);
-        $createdUnitUuid = is_array($payload) && is_string($payload['data']['uuid'] ?? null) ? $payload['data']['uuid'] : null;
+        $createdUnitUuid = is_array($payload)
+            ? ($payload['data']['uuid'] ?? $payload['data']['id'] ?? null)
+            : null;
     } else {
         check('ADMIN_IMMOBILIER crée une unité dans un bâtiment de son organisation', false, 'UUID de bâtiment absent');
     }
 
     if ($createdUnitUuid !== null) {
+        [$status] = $request('DELETE', '/api/v1/property/buildings/' . $createdBuildingUuid, null, $adminImmobilierToken);
+        check('ADMIN_IMMOBILIER ne supprime pas un bâtiment qui contient encore une unité', $status === 409, 'obtenu ' . $status);
+        [$status] = $request('DELETE', '/api/v1/parcels/' . $createdParcelUuid, null, $adminImmobilierToken);
+        check('ADMIN_IMMOBILIER ne supprime pas une parcelle qui contient encore un bâtiment', $status === 409, 'obtenu ' . $status);
         [$status] = $request('DELETE', '/api/v1/units/' . $createdUnitUuid, null, $adminImmobilierToken);
         check('ADMIN_IMMOBILIER supprime logiquement une unité de son organisation', $status === 200, 'obtenu ' . $status);
     } else {

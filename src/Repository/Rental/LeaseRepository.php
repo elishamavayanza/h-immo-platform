@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace App\Repository\Rental;
 
 use App\Entity\Identity\Organization;
+use App\Entity\Property\Building;
+use App\Entity\Property\Parcel;
 use App\Entity\Property\Unit;
 use App\Entity\Rental\Lease;
 use App\Repository\PaginatedResultTrait;
@@ -105,6 +107,43 @@ class LeaseRepository extends ServiceEntityRepository
         }
 
         return $qb->getQuery()->getOneOrNullResult();
+    }
+
+    /** Recherche un bail actif rattaché à une unité du bâtiment, principale ou supplémentaire. */
+    public function findActiveLeaseForBuilding(Building $building): ?Lease
+    {
+        return $this->createQueryBuilder('l')
+            ->leftJoin('l.unit', 'primaryUnit')
+            ->leftJoin('primaryUnit.building', 'primaryBuilding')
+            ->leftJoin('l.additionalUnits', 'additionalUnit')
+            ->leftJoin('additionalUnit.building', 'additionalBuilding')
+            ->andWhere('(primaryBuilding = :building OR additionalBuilding = :building)')
+            ->andWhere('l.status = :status')
+            ->andWhere('l.deletedAt IS NULL')
+            ->setParameter('building', $building)
+            ->setParameter('status', LeaseStatus::ACTIVE)
+            ->setMaxResults(1)
+            ->getQuery()
+            ->getOneOrNullResult();
+    }
+
+    /** Recherche un bail actif rattaché à une unité de la parcelle, principale ou supplémentaire. */
+    public function findActiveLeaseForParcel(Parcel $parcel): ?Lease
+    {
+        return $this->createQueryBuilder('l')
+            ->leftJoin('l.unit', 'primaryUnit')
+            ->leftJoin('primaryUnit.building', 'primaryBuilding')
+            ->leftJoin('primaryBuilding.parcel', 'primaryParcel')
+            ->leftJoin('l.additionalUnits', 'additionalUnit')
+            ->leftJoin('additionalUnit.building', 'additionalBuilding')
+            ->andWhere('(primaryParcel = :parcel OR additionalBuilding.parcel = :parcel)')
+            ->andWhere('l.status = :status')
+            ->andWhere('l.deletedAt IS NULL')
+            ->setParameter('parcel', $parcel)
+            ->setParameter('status', LeaseStatus::ACTIVE)
+            ->setMaxResults(1)
+            ->getQuery()
+            ->getOneOrNullResult();
     }
 
     /** Recherche un bail actif sur l'espace ou tout espace parent/enfant lié. */

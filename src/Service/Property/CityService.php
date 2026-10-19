@@ -195,8 +195,8 @@ final readonly class CityService
         return $feedback
             ->setData($this->mapper->toResponse($city))
             ->setFlushDescription('Ville enregistrée avec succès.')
-            ->setStatus(201)
-            ->autoInitFlush();
+            ->autoInitFlush()
+            ->setStatus(201);
     }
 
     public function update(string $uuid, CityRequest $request): Feedback

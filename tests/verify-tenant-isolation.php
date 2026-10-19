@@ -784,6 +784,24 @@ try {
         'Un bail sur un sous-espace ne bloque pas son espace frère',
         $leaseRepo->findActiveLeaseForRelatedSpaces($unitRepo->findOverlappingSpaces($spaceRoomB)) === null
     );
+
+    $archivedTreeRoot = $makeUnit('UA-ARCHIVE-ROOT', $buildingA1);
+    $archivedTreeMiddle = $makeUnit('UA-ARCHIVE-MIDDLE', $buildingA1);
+    $archivedTreeLeaf = $makeUnit('UA-ARCHIVE-LEAF', $buildingA1);
+    $archivedTreeMiddle->setParentUnit($archivedTreeRoot);
+    $archivedTreeLeaf->setParentUnit($archivedTreeMiddle);
+    $archivedTreeMiddle->softDelete();
+    $archivedLeafLease = (new Lease())->setOrganization($orgA)->setTenant($tenantA)->setUnit($archivedTreeLeaf)
+        ->setReference('BAIL-ARCHIVE-LEAF')->setStartDate(new \DateTimeImmutable('2026-03-01'))
+        ->setMonthlyRent('125.00')->setCurrency(Currency::USD)->setStatus(LeaseStatus::ACTIVE);
+    $em->persist($archivedLeafLease);
+    $em->flush();
+    check('Une unité active sous un sous-espace archivé empêche l’archivage du parent', $unitRepo->hasActiveSubspaces($archivedTreeRoot));
+    check(
+        'Le contrôle de bail du parent traverse aussi les sous-espaces déjà archivés',
+        $leaseRepo->findActiveLeaseForRelatedSpaces($unitRepo->findOverlappingSpaces($archivedTreeRoot, includeArchivedDescendants: true)) !== null
+    );
+
     $unitService = $container->get(\App\Service\Property\UnitService::class);
     $parentOccupancy = $unitService->getOccupancyStatus($spaceParent);
     $leasedChildOccupancy = $unitService->getOccupancyStatus($spaceRoomA);

@@ -12,6 +12,8 @@ use App\Entity\Property\Parcel;
 use App\Mapper\Property\ParcelMapper;
 use App\Repository\Property\CityRepository;
 use App\Repository\Property\ParcelRepository;
+use App\Repository\Property\BuildingRepository;
+use App\Repository\Rental\LeaseRepository;
 use App\Security\SecurityAction;
 use App\Security\SecurityServiceInterface;
 use App\Service\System\AuditLogService;
@@ -36,6 +38,8 @@ final readonly class ParcelService
     public function __construct(
         private ParcelRepository $parcelRepository,
         private CityRepository $cityRepository,
+        private BuildingRepository $buildingRepository,
+        private LeaseRepository $leaseRepository,
         private ParcelMapper $parcelMapper,
         private SecurityServiceInterface $securityService,
         private AuditLogService $auditLogService,
@@ -300,6 +304,22 @@ final readonly class ParcelService
         }
 
         $this->securityService->checkParcelAccess($parcelRepository, SecurityAction::DELETE_PARCEL);
+
+        if ($this->leaseRepository->findActiveLeaseForParcel($parcelRepository) !== null) {
+            return $feedback
+                ->addError('parcelUuid', 'Une parcelle liée à un bail actif ne peut pas être supprimée.')
+                ->setErrorFlushDescription('Terminez ou annulez les baux actifs et archivez les unités dépendantes avant de supprimer cette parcelle.')
+                ->autoInitFlush()
+                ->setStatus(409);
+        }
+
+        if ($this->buildingRepository->findByParcel($parcelRepository) !== []) {
+            return $feedback
+                ->addError('parcelUuid', 'Une parcelle qui contient encore des bâtiments ne peut pas être supprimée.')
+                ->setErrorFlushDescription('Archivez d’abord les bâtiments de cette parcelle. Les baux historiques restent conservés.')
+                ->autoInitFlush()
+                ->setStatus(409);
+        }
 
         $actor = $this->securityService->getCurrentUser();
         $parcelRepository->softDelete();

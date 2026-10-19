@@ -150,7 +150,7 @@ final class UnitController extends AbstractController
     #[Route('/{uuid}', name: 'delete', methods: ['DELETE'])]
     #[OA\Delete(
         summary: 'Supprimer une unité locative (Soft delete)',
-        description: 'Marque l\'unité comme supprimée.'
+        description: 'Marque l’unité comme supprimée. L’opération est refusée tant qu’un bail actif couvre cet espace, son parent ou un sous-espace, ou tant qu’il reste des sous-unités actives.'
     )]
     #[OA\Response(
         response: 200,
@@ -161,6 +161,11 @@ final class UnitController extends AbstractController
         response: 404,
         description: 'Unité non trouvée',
         content: new OA\JsonContent(ref: new Model(type: HttpErrorResponsePayload::class))
+    )]
+    #[OA\Response(
+        response: 409,
+        description: 'Bail actif ou sous-unité encore rattachée',
+        content: new OA\JsonContent(ref: new Model(type: Feedback::class))
     )]
     public function delete(string $uuid): JsonResponse
     {

@@ -354,13 +354,13 @@ export function UnitesTab({ units, buildings, role, isLoading, error, note, onRe
                     <FormField label="Surface (m²)" htmlFor="unit-surface" required error={formErrors.surface}>
                         <Input id="unit-surface" type="number" min="0" step="0.01" inputMode="decimal" value={form.surface} onChange={(event) => setForm((current) => ({ ...current, surface: event.target.value }))} placeholder="Ex. : 85" required fullWidth />
                     </FormField>
-                    <FormField label="Chambres" htmlFor="unit-bedrooms" error={formErrors.bedrooms}>
+                    <FormField label="Chambres à coucher" htmlFor="unit-bedrooms" helpText="Nombre descriptif : ces chambres ne deviennent pas des unités locatives." error={formErrors.bedrooms}>
                         <Input id="unit-bedrooms" type="number" min="0" step="1" inputMode="numeric" value={form.bedrooms} onChange={(event) => setForm((current) => ({ ...current, bedrooms: event.target.value }))} placeholder="Ex. : 2" fullWidth />
                     </FormField>
-                    <FormField label="Pièces" htmlFor="unit-rooms" error={formErrors.rooms}>
-                        <Input id="unit-rooms" type="number" min="0" step="1" inputMode="numeric" value={form.rooms} onChange={(event) => setForm((current) => ({ ...current, rooms: event.target.value }))} placeholder="Ex. : 3" fullWidth />
+                    <FormField label="Pièces principales (chambres comprises)" htmlFor="unit-rooms" helpText="Total descriptif du logement. Les pièces ne sont pas créées individuellement." error={formErrors.rooms}>
+                        <Input id="unit-rooms" type="number" min="0" step="1" inputMode="numeric" value={form.rooms} onChange={(event) => setForm((current) => ({ ...current, rooms: event.target.value }))} placeholder="Ex. : 4" fullWidth />
                     </FormField>
-                    <FormField label="Salles de bain" htmlFor="unit-bathrooms" error={formErrors.bathrooms}>
+                    <FormField label="Salles de bain / d’eau" htmlFor="unit-bathrooms" error={formErrors.bathrooms}>
                         <Input id="unit-bathrooms" type="number" min="0" step="1" inputMode="numeric" value={form.bathrooms} onChange={(event) => setForm((current) => ({ ...current, bathrooms: event.target.value }))} placeholder="Ex. : 1" fullWidth />
                     </FormField>
                     <FormField label="Loyer mensuel" htmlFor="unit-rent" required error={formErrors.monthlyRent}>
@@ -370,7 +370,7 @@ export function UnitesTab({ units, buildings, role, isLoading, error, note, onRe
                         <Select id="unit-currency" value={form.currency} onChange={(event) => setForm((current) => ({ ...current, currency: event.target.value }))} options={CURRENCY_OPTIONS} />
                     </FormField>
                     <FormField label="Description" htmlFor="unit-description" error={formErrors.description}>
-                        <Textarea id="unit-description" value={form.description} onChange={(event) => setForm((current) => ({ ...current, description: event.target.value }))} placeholder="Ex. : Appartement lumineux avec balcon et cuisine équipée." rows={3} fullWidth maxLength={1000} />
+                        <Textarea id="unit-description" value={form.description} onChange={(event) => setForm((current) => ({ ...current, description: event.target.value }))} placeholder="Ex. : Appartement lumineux avec balcon et cuisine équipée." rows={3} fullWidth maxLength={5000} />
                     </FormField>
                 </form>
             </Modal>
@@ -380,7 +380,7 @@ export function UnitesTab({ units, buildings, role, isLoading, error, note, onRe
                 onClose={() => setDeleteTarget(null)}
                 onConfirm={() => void confirmDelete()}
                 title="Supprimer l’unité"
-                message={deleteTarget ? `« ${deleteTarget.reference} » sera retirée de votre patrimoine.` : ''}
+                message={deleteTarget ? `« ${deleteTarget.reference} » ne peut être archivée que sans sous-unité active et sans bail actif sur elle, son parent ou ses sous-espaces.` : ''}
                 confirmLabel="Supprimer"
                 cancelLabel="Annuler"
             />

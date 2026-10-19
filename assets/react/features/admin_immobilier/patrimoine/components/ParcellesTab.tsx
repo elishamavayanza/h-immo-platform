@@ -306,7 +306,7 @@ export function ParcellesTab({ parcels, cities, role, isLoading, error, note, on
                         <Input id="parcel-address" value={form.address} onChange={(event) => setForm((current) => ({ ...current, address: event.target.value }))} placeholder="Ex. : Avenue du Lac 12" required fullWidth maxLength={255} />
                     </FormField>
                     <FormField label="Quartier" htmlFor="parcel-quarter" error={formErrors.quarter}>
-                        <Input id="parcel-quarter" value={form.quarter} onChange={(event) => setForm((current) => ({ ...current, quarter: event.target.value }))} placeholder="Ex. : Katindo" fullWidth maxLength={150} />
+                        <Input id="parcel-quarter" value={form.quarter} onChange={(event) => setForm((current) => ({ ...current, quarter: event.target.value }))} placeholder="Ex. : Katindo" fullWidth maxLength={100} />
                     </FormField>
                     <FormField label="Superficie (m²)" htmlFor="parcel-area" required error={formErrors.area}>
                         <Input id="parcel-area" type="number" min="0" step="0.01" inputMode="decimal" value={form.area} onChange={(event) => setForm((current) => ({ ...current, area: event.target.value }))} placeholder="Ex. : 850" required fullWidth />
@@ -321,7 +321,7 @@ export function ParcellesTab({ parcels, cities, role, isLoading, error, note, on
                         <Input id="parcel-longitude" type="number" min="-180" max="180" step="any" inputMode="decimal" value={form.longitude} onChange={(event) => setForm((current) => ({ ...current, longitude: event.target.value }))} placeholder="Ex. : 29.2228" fullWidth />
                     </FormField>
                     <FormField label="Description" htmlFor="parcel-description" error={formErrors.description}>
-                        <Textarea id="parcel-description" value={form.description} onChange={(event) => setForm((current) => ({ ...current, description: event.target.value }))} placeholder="Ex. : Parcelle clôturée située dans le quartier Les Volcans." rows={3} fullWidth maxLength={1000} />
+                        <Textarea id="parcel-description" value={form.description} onChange={(event) => setForm((current) => ({ ...current, description: event.target.value }))} placeholder="Ex. : Parcelle clôturée située dans le quartier Les Volcans." rows={3} fullWidth maxLength={5000} />
                     </FormField>
                 </form>
             </Modal>
@@ -331,7 +331,7 @@ export function ParcellesTab({ parcels, cities, role, isLoading, error, note, on
                 onClose={() => setDeleteTarget(null)}
                 onConfirm={() => void confirmDelete()}
                 title="Supprimer la parcelle"
-                message={deleteTarget ? `« ${deleteTarget.name} » sera retirée de votre patrimoine. Les immeubles et unités rattachés restent conservés.` : ''}
+                message={deleteTarget ? `« ${deleteTarget.name} » ne peut être supprimée que si elle ne contient plus de bâtiment. Les baux actifs doivent être terminés et l’historique reste conservé.` : ''}
                 confirmLabel="Supprimer"
                 cancelLabel="Annuler"
             />

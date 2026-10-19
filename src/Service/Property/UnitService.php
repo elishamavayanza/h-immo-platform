@@ -234,8 +234,8 @@ final readonly class UnitService
         return $feedback
             ->setData($this->toResponse($unitRepository))
             ->setFlushDescription('Le unité a été créé avec succès.')
-            ->setStatus(201)
-            ->autoInitFlush();
+            ->autoInitFlush()
+            ->setStatus(201);
     }
 
     public function update(string $uuid, UnitRequest $request): Feedback
@@ -399,6 +399,16 @@ final readonly class UnitService
         }
 
         $this->securityService->checkUnitAccess($unitRepository, SecurityAction::DELETE_UNIT);
+
+        if ($this->leaseRepository->findActiveLeaseForRelatedSpaces(
+            $this->unitRepository->findOverlappingSpaces($unitRepository, includeArchivedDescendants: true)
+        ) !== null) {
+            return $feedback
+                ->addError('unitUuid', 'Une unité liée à un bail actif ne peut pas être supprimée.')
+                ->setErrorFlushDescription('Terminez ou annulez les baux actifs de cet espace, de son parent ou de ses sous-espaces avant de l’archiver.')
+                ->autoInitFlush()
+                ->setStatus(409);
+        }
 
         if ($this->unitRepository->hasActiveSubspaces($unitRepository)) {
             return $feedback

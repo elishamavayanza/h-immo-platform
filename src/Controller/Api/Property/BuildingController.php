@@ -4,10 +4,13 @@ declare(strict_types=1);
 
 namespace App\Controller\Api\Property;
 
+use App\Dto\Feedback;
 use App\Dto\Request\Property\BuildingFilterDto;
 use App\Dto\Request\Property\BuildingRequest;
+use App\Dto\Response\HttpErrorResponsePayload;
 use App\Service\Property\BuildingService;
 use App\Trait\FeedbackTrait;
+use Nelmio\ApiDocBundle\Attribute\Model;
 use OpenApi\Attributes as OA;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
@@ -103,9 +106,28 @@ final class BuildingController extends AbstractController
 
     /**
      * Endpoint API réalisant la suppression logique d'un bâtiment.
-     * Désactive le bâtiment identifié sans impacter physiquement l'historique.
+     * Désactive le bâtiment identifié si ses unités sont archivées et qu'aucun bail actif ne le concerne.
      */
     #[Route('/{uuid}', name: 'delete', methods: ['DELETE'])]
+    #[OA\Delete(
+        summary: 'Supprimer un bâtiment (Soft delete)',
+        description: 'L’opération est refusée tant que des unités actives ou un bail actif sont rattachés au bâtiment.'
+    )]
+    #[OA\Response(
+        response: 200,
+        description: 'Bâtiment supprimé logiquement',
+        content: new OA\JsonContent(ref: new Model(type: Feedback::class))
+    )]
+    #[OA\Response(
+        response: 404,
+        description: 'Bâtiment non trouvé',
+        content: new OA\JsonContent(ref: new Model(type: HttpErrorResponsePayload::class))
+    )]
+    #[OA\Response(
+        response: 409,
+        description: 'Unités rattachées ou bail actif dans le bâtiment',
+        content: new OA\JsonContent(ref: new Model(type: Feedback::class))
+    )]
     public function delete(string $uuid): JsonResponse
     {
         $feedback = $this->buildingService->delete($uuid);

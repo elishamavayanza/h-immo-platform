@@ -157,6 +157,11 @@ final class ParcelController extends AbstractController
         description: 'Parcelle non trouvée',
         content: new OA\JsonContent(ref: new Model(type: HttpErrorResponsePayload::class))
     )]
+    #[OA\Response(
+        response: 409,
+        description: 'Bâtiment rattaché ou bail actif dans la parcelle',
+        content: new OA\JsonContent(ref: new Model(type: Feedback::class))
+    )]
     public function delete(string $uuid): JsonResponse
     {
         $feedback = $this->parcelService->delete($uuid);

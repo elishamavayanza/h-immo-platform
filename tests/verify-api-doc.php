@@ -131,6 +131,18 @@ check(
     'requestBody : ' . json_encode($post['requestBody'] ?? null)
 );
 
+foreach ([
+    '/api/v1/units/{uuid}',
+    '/api/v1/property/buildings/{uuid}',
+    '/api/v1/parcels/{uuid}',
+] as $path) {
+    check(
+        "La suppression {$path} documente le conflit 409",
+        isset($paths[$path]['delete']['responses']['409']),
+        'réponse 409 absente'
+    );
+}
+
 echo "\n  Contrôles exécutés : {$checks}\n";
 echo '  Échecs : ' . count($failures) . "\n";
 

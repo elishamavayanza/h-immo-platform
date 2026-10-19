@@ -50,7 +50,7 @@ final readonly class BuildingRequest
         public ?string $name = null,
 
         #[OA\Property(
-            description: 'Type de bâtiment (COMMERCIAL, RESIDENTIAL, MIXED, etc.)',
+            description: 'Type du bâtiment selon les catégories disponibles dans BuildingType.',
             type: 'string',
             example: 'apartment',
             enum: BuildingType::class
@@ -59,7 +59,7 @@ final readonly class BuildingRequest
         public ?BuildingType $type = null,
 
         #[OA\Property(
-            description: 'Nombre total d\'étages',
+            description: 'Nombre indicatif d’étages ; les niveaux déclarés sont gérés séparément.',
             example: 4,
             nullable: true,
             minimum: 0

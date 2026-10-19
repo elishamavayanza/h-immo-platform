@@ -47,10 +47,12 @@ const patrimoineAdminBuildings = resolveContextualHelp('/app/patrimoine/villes/c
 assert(patrimoineAdminBuildings?.title === 'Patrimoine · Bâtiments' && patrimoineAdminBuildings.questions.some((question) => question.id === 'property-access'), 'la FAQ suit la navigation vers les bâtiments');
 const patrimoineAdminUnits = resolveContextualHelp('/app/patrimoine/villes/city-uuid/parcelles/parcel-uuid/batiments/building-uuid/unites/unit-uuid', null, 'admin_immobilier');
 assert(patrimoineAdminUnits?.title === 'Patrimoine · Unités' && patrimoineAdminUnits.questions.some((question) => question.id === 'property-nested-spaces'), 'la FAQ suit la navigation vers une unité');
+assert(patrimoineAdminUnits?.questions.some((question) => question.id === 'property-unit-composition'), 'la FAQ explique les compteurs de chambres et pièces sur les unités');
+assert(patrimoineAdminUnits?.questions.some((question) => question.id === 'property-safe-delete'), 'la FAQ des unités explique les suppressions protégées');
 const patrimoinePatron = resolveContextualHelp('/app/patrimoine', null, 'patron');
 assert(patrimoinePatron?.questions.some((question) => question.id === 'property-patron-scope') && !patrimoinePatron.questions.some((question) => question.id === 'property-adminimmo-actions'), 'le PATRON reçoit une FAQ en lecture seule, adaptée à son rôle');
 const patrimoineAdminVille = resolveContextualHelp('/app/patrimoine', null, 'admin_ville');
-assert(patrimoineAdminVille?.title === 'Patrimoine · Parcelles' && patrimoineAdminVille.questions.some((question) => question.id === 'property-adminville-scope') && !patrimoineAdminVille.questions.some((question) => question.id === 'property-adminimmo-actions'), 'l’ADMIN_VILLE reçoit l’aide de son périmètre affecté');
+assert(patrimoineAdminVille?.title === 'Patrimoine · Parcelles' && patrimoineAdminVille.questions.some((question) => question.id === 'property-adminville-scope') && patrimoineAdminVille.questions.some((question) => question.id === 'property-safe-delete') && !patrimoineAdminVille.questions.some((question) => question.id === 'property-adminimmo-actions'), 'l’ADMIN_VILLE reçoit l’aide de son périmètre affecté et de ses suppressions protégées');
 assert(resolveContextualHelp('/app/depenses/gestion', null, 'admin_ville')?.title === 'Gestion des dépenses', 'la gestion des dépenses a une aide distincte de la trésorerie');
 assert(resolveContextualHelp('/app/personnel', null, 'admin_ville') === null, 'une page interdite n’expose pas une aide d’action');
 assert(resolveContextualHelp('/login', null, null)?.title === 'Connexion', 'la connexion possède une aide publique');

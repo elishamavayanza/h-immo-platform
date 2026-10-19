@@ -412,6 +412,13 @@ if (!is_string($token)) {
     exit(1);
 }
 
+[$status] = $request('DELETE', '/api/v1/units/' . $uuidUnitA1, null, $token);
+check('ADMIN_VILLE ne supprime pas une unité liée à un bail actif de sa ville', $status === 409, 'obtenu ' . $status);
+[$status] = $request('DELETE', '/api/v1/property/buildings/' . $uuidBuildingA1, null, $token);
+check('ADMIN_VILLE ne supprime pas un bâtiment contenant une unité sous bail actif', $status === 409, 'obtenu ' . $status);
+[$status] = $request('DELETE', '/api/v1/parcels/' . $uuidParcelA1, null, $token);
+check('ADMIN_VILLE ne supprime pas une parcelle contenant un bâtiment sous bail actif', $status === 409, 'obtenu ' . $status);
+
 [$status] = $request('DELETE', '/api/v1/media/organizations/' . $uuidOrgA . '/logo', null, $token);
 check('ADMIN_VILLE ne peut pas modifier le logo de l’organisation', $status === 403, 'obtenu ' . $status);
 

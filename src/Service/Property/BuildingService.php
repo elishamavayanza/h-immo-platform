@@ -13,6 +13,8 @@ use App\Entity\Property\Parcel;
 use App\Mapper\Property\BuildingMapper;
 use App\Repository\Property\ParcelRepository;
 use App\Repository\Property\BuildingRepository;
+use App\Repository\Property\UnitRepository;
+use App\Repository\Rental\LeaseRepository;
 use App\Security\SecurityAction;
 use App\Security\SecurityServiceInterface;
 use App\Service\System\AuditLogService;
@@ -37,6 +39,8 @@ final readonly class BuildingService
     public function __construct(
         private BuildingRepository $buildingRepository,
         private ParcelRepository $parcelRepository,
+        private UnitRepository $unitRepository,
+        private LeaseRepository $leaseRepository,
         private BuildingMapper $buildingMapper,
         private SecurityServiceInterface $securityService,
         private AuditLogService $auditLogService,
@@ -212,8 +216,8 @@ final readonly class BuildingService
         return $feedback
             ->setData($this->buildingMapper->toResponse($buildingRepository))
             ->setFlushDescription('Le bâtiment a été créé avec succès.')
-            ->setStatus(201)
-            ->autoInitFlush();
+            ->autoInitFlush()
+            ->setStatus(201);
     }
 
     public function update(string $uuid, BuildingRequest $request): Feedback
@@ -293,6 +297,22 @@ final readonly class BuildingService
         }
 
         $this->securityService->checkBuildingAccess($buildingRepository, SecurityAction::DELETE_BUILDING);
+
+        if ($this->leaseRepository->findActiveLeaseForBuilding($buildingRepository) !== null) {
+            return $feedback
+                ->addError('buildingUuid', 'Un bâtiment lié à un bail actif ne peut pas être supprimé.')
+                ->setErrorFlushDescription('Terminez ou annulez les baux actifs et archivez les unités avant de supprimer ce bâtiment.')
+                ->autoInitFlush()
+                ->setStatus(409);
+        }
+
+        if ($this->unitRepository->findByBuilding($buildingRepository) !== []) {
+            return $feedback
+                ->addError('buildingUuid', 'Un bâtiment qui contient encore des unités ne peut pas être supprimé.')
+                ->setErrorFlushDescription('Archivez d’abord les unités de ce bâtiment. Les baux historiques restent conservés.')
+                ->autoInitFlush()
+                ->setStatus(409);
+        }
 
         $actor = $this->securityService->getCurrentUser();
         $buildingRepository->softDelete();

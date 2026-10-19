@@ -259,7 +259,7 @@ class UnitRepository extends ServiceEntityRepository
     }
 
     /** @return list<Unit> L'unité, ses ancêtres et ses descendants, sans ses frères indépendants. */
-    public function findOverlappingSpaces(Unit $unit): array
+    public function findOverlappingSpaces(Unit $unit, bool $includeArchivedDescendants = false): array
     {
         $spaces = [];
         $parent = $unit;
@@ -271,12 +271,13 @@ class UnitRepository extends ServiceEntityRepository
         $pending = [$unit];
         while ($pending !== []) {
             $current = array_shift($pending);
-            $children = $this->createQueryBuilder('u')
+            $query = $this->createQueryBuilder('u')
                 ->andWhere('u.parentUnit = :parent')
-                ->andWhere('u.deletedAt IS NULL')
-                ->setParameter('parent', $current)
-                ->getQuery()
-                ->getResult();
+                ->setParameter('parent', $current);
+            if (!$includeArchivedDescendants) {
+                $query->andWhere('u.deletedAt IS NULL');
+            }
+            $children = $query->getQuery()->getResult();
             foreach ($children as $child) {
                 $key = (string) $child->getId();
                 if (isset($spaces[$key])) {
@@ -306,13 +307,31 @@ class UnitRepository extends ServiceEntityRepository
 
     public function hasActiveSubspaces(Unit $unit): bool
     {
-        return $this->createQueryBuilder('u')
-            ->select('COUNT(u.id)')
-            ->andWhere('u.parentUnit = :parent')
-            ->andWhere('u.deletedAt IS NULL')
-            ->setParameter('parent', $unit)
-            ->getQuery()
-            ->getSingleScalarResult() > 0;
+        $pending = [$unit];
+        $visited = [(string) $unit->getId() => true];
+
+        while ($pending !== []) {
+            $parent = array_shift($pending);
+            $children = $this->createQueryBuilder('u')
+                ->andWhere('u.parentUnit = :parent')
+                ->setParameter('parent', $parent)
+                ->getQuery()
+                ->getResult();
+
+            foreach ($children as $child) {
+                $id = (string) $child->getId();
+                if (isset($visited[$id])) {
+                    continue;
+                }
+                $visited[$id] = true;
+                if ($child->getDeletedAt() === null) {
+                    return true;
+                }
+                $pending[] = $child;
+            }
+        }
+
+        return false;
     }
 
     /**

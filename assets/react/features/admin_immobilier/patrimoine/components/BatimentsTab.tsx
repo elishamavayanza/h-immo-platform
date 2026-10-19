@@ -251,11 +251,11 @@ export function BatimentsTab({ buildings, parcels, cities, role, isLoading, erro
                     <FormField label="Type" htmlFor="building-type" required error={formErrors.type}>
                         <Select id="building-type" value={form.type} onChange={(event) => setForm((current) => ({ ...current, type: event.target.value }))} options={BUILDING_TYPE_OPTIONS} />
                     </FormField>
-                    <FormField label="Nombre de niveaux" htmlFor="building-floors" error={formErrors.numberOfFloors}>
+                    <FormField label="Nombre d’étages (indicatif)" htmlFor="building-floors" helpText="Cette indication est indépendante des niveaux déclarés dans Gérer les unités." error={formErrors.numberOfFloors}>
                         <Input id="building-floors" type="number" min="0" step="1" inputMode="numeric" value={form.numberOfFloors} onChange={(event) => setForm((current) => ({ ...current, numberOfFloors: event.target.value }))} placeholder="Ex. : 3" fullWidth />
                     </FormField>
                     <FormField label="Description" htmlFor="building-description" error={formErrors.description}>
-                        <Textarea id="building-description" value={form.description} onChange={(event) => setForm((current) => ({ ...current, description: event.target.value }))} placeholder="Ex. : Immeuble résidentiel de trois étages avec parking." rows={3} fullWidth maxLength={1000} />
+                        <Textarea id="building-description" value={form.description} onChange={(event) => setForm((current) => ({ ...current, description: event.target.value }))} placeholder="Ex. : Immeuble résidentiel de trois étages avec parking." rows={3} fullWidth maxLength={5000} />
                     </FormField>
                 </form>
             </Modal>
@@ -265,7 +265,7 @@ export function BatimentsTab({ buildings, parcels, cities, role, isLoading, erro
                 onClose={() => setDeleteTarget(null)}
                 onConfirm={() => void confirmDelete()}
                 title="Supprimer le bâtiment"
-                message={deleteTarget ? `« ${deleteTarget.name} » sera retiré de votre patrimoine. Les unités rattachées restent conservées.` : ''}
+                message={deleteTarget ? `« ${deleteTarget.name} » ne peut être supprimé que si toutes ses unités sont archivées. Les baux actifs doivent être terminés et l’historique reste conservé.` : ''}
                 confirmLabel="Supprimer"
                 cancelLabel="Annuler"
             />
