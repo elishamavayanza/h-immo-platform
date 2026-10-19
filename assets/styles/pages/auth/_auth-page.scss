@@ -144,3 +144,22 @@
         color: $color-primary-hover;
     }
 }
+
+.auth-login-spinner {
+    display: block;
+    width: 30px;
+    height: 30px;
+    flex: 0 0 30px;
+    color: currentColor;
+    animation: auth-login-spinner-rotate .9s linear infinite;
+}
+
+@keyframes auth-login-spinner-rotate {
+    to { transform: rotate(360deg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .auth-login-spinner {
+        animation-duration: 2.4s;
+    }
+}
