@@ -1,6 +1,11 @@
 import { apiClient } from '../../../../../services/api/client';
 import type { Feedback } from '../../../../../services/api/api.types';
 
+export interface UploadedPhotoFile {
+    path: string;
+    url: string;
+}
+
 /** Résout les chemins média renvoyés par l'API en URL utilisable côté navigateur. */
 export function mediaHref(path: string | null | undefined): string | null {
     if (!path) return null;
@@ -31,11 +36,11 @@ export const mediaService = {
      * `POST /api/v1/media/parcels/{uuid}/photos` — upload parcel photos (multiple).
      * Returns message in `data.flushDescription`.
      */
-    async uploadParcelPhotos(uuid: string, files: File[]): Promise<string> {
+    async uploadParcelPhotos(uuid: string, files: File[]): Promise<UploadedPhotoFile[]> {
         const formData = new FormData();
         files.forEach((file) => formData.append('files', file));
-        const { data } = await apiClient.post<Feedback<unknown>>(`/v1/media/parcels/${uuid}/photos`, formData);
-        return data.flushDescription ?? 'Photo(s) ajoutée(s).';
+        const { data } = await apiClient.post<Feedback<{ uploaded?: UploadedPhotoFile[] }>>(`/v1/media/parcels/${uuid}/photos`, formData);
+        return data.data?.uploaded ?? [];
     },
 
     /**
@@ -103,11 +108,11 @@ export const mediaService = {
      * `POST /api/v1/media/buildings/{uuid}/photos` — upload building photos (multiple).
      * Returns message in `data.flushDescription`.
      */
-    async uploadBuildingPhotos(uuid: string, files: File[]): Promise<string> {
+    async uploadBuildingPhotos(uuid: string, files: File[]): Promise<UploadedPhotoFile[]> {
         const formData = new FormData();
         files.forEach((file) => formData.append('files', file));
-        const { data } = await apiClient.post<Feedback<unknown>>(`/v1/media/buildings/${uuid}/photos`, formData);
-        return data.flushDescription ?? 'Photo(s) ajoutée(s).';
+        const { data } = await apiClient.post<Feedback<{ uploaded?: UploadedPhotoFile[] }>>(`/v1/media/buildings/${uuid}/photos`, formData);
+        return data.data?.uploaded ?? [];
     },
 
     /**

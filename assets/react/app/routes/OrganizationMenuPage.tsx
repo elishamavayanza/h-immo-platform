@@ -27,6 +27,7 @@ const AdminImmobilierReportsPage = lazyPage(() => import('../../features/admin_i
 const AdminImmobilierAdministrationPage = lazyPage(() => import('../../features/admin_immobilier/administration/pages/AdministrationPage'), 'AdministrationPage');
 const AdminVilleDashboardPage = lazyPage(() => import('../../features/admin_ville/dashboard/pages/AdminVilleDashboardPage'), 'AdminVilleDashboardPage');
 const AdminVillePatrimoinePage = lazyPage(() => import('../../features/admin_ville/patrimoine/pages/PatrimoinePage'), 'PatrimoinePage');
+const ParcelMapPage = lazyPage(() => import('../../features/admin_immobilier/patrimoine/pages/ParcelMapPage'), 'ParcelMapPage');
 const AdminVilleLocatairesPage = lazyPage(() => import('../../features/admin_ville/locataires/pages/LocatairesPage'), 'LocatairesPage');
 const AdminVilleLoyersPage = lazyPage(() => import('../../features/admin_ville/loyers/pages/LoyersPage'), 'LoyersPage');
 const AdminVilleDepensesPage = lazyPage(() => import('../../features/admin_ville/depenses/pages/DepensesPage'), 'DepensesPage');
@@ -44,7 +45,9 @@ export function OrganizationMenuPage({ path }: OrganizationMenuPageProps) {
     const showExpenseManagement = location.pathname === '/app/depenses/gestion';
     let page: ReactElement | null = null;
 
-    if (organizationRole === 'admin_immobilier') {
+    if (location.pathname === '/app/patrimoine/carte') {
+        page = <ParcelMapPage />;
+    } else if (organizationRole === 'admin_immobilier') {
         switch (path) {
             case '/app/dashboard': page = <AdminImmobilierDashboardPage />; break;
             case '/app/patrimoine': page = <AdminImmobilierPatrimoinePage />; break;

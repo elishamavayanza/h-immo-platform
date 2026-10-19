@@ -139,9 +139,11 @@
 .manual-navigation__icon svg { width:18px; height:18px; }
 .manual-navigation__empty,.manual-state { padding:18px; color:var(--color-text-secondary); }
 .manual-article { min-width:0; min-height:0; height:100%; box-sizing:border-box; overflow-y:auto; overscroll-behavior:contain; -webkit-overflow-scrolling:touch; touch-action:pan-y; padding:clamp(20px, 4vw, 44px); color:var(--color-text-primary); }
-.manual-article__breadcrumbs { display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:10px; margin:0 0 22px; color:var(--color-text-muted); font-size:.82rem; }
-.manual-article__breadcrumbs a { color:var(--color-primary); text-decoration:none; }
-.manual-article__breadcrumbs a:hover { text-decoration:underline; }
+.manual-article__location { display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:12px; margin:0 0 22px; padding:14px 16px; border:1px solid color-mix(in srgb, var(--color-primary) 24%, var(--color-border)); border-radius:10px; background:color-mix(in srgb, var(--color-primary) 7%, var(--color-bg-card)); }
+.manual-article__location h3 { margin:0 0 4px; color:var(--color-text-muted); font-size:.72rem; font-weight:700; letter-spacing:.06em; text-transform:uppercase; }
+.manual-article__location p { margin:0; color:var(--color-text-primary); font-size:.9rem; line-height:1.5; overflow-wrap:anywhere; }
+.manual-article__location a { flex:none; color:var(--color-primary); font-size:.85rem; font-weight:600; text-decoration:none; }
+.manual-article__location a:hover { text-decoration:underline; }
 .manual-article h2 { margin:0 0 26px; font-size:clamp(1.5rem, 3vw, 2rem); line-height:1.2; }
 .manual-article section { margin:0 0 26px; }
 .manual-article section h3 { margin:0 0 8px; font-size:1rem; }
@@ -193,6 +195,7 @@
     .manual-navigation.is-open { display:block; }
     .manual-navigation.is-open ~ .manual-article { grid-row:2; }
     .manual-article { grid-row:1; padding:20px 16px; }
+    .manual-article__location { align-items:flex-start; flex-direction:column; }
     .manual-article__footer { flex-wrap:wrap; }
     .settings-manual-page__back { width:100%; box-sizing:border-box; text-align:center; }
 }

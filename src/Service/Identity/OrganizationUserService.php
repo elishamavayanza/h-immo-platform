@@ -111,7 +111,7 @@ final readonly class OrganizationUserService
             ->setErrorFlushDescription('Liste indisponible.')->setStatus(404)->autoInitFlush();
         $actorRole = $this->security->getOrganizationRole($this->security->getCurrentUser(), $organization);
         $isPatron = $actorRole === OrganizationRole::PATRON;
-        $this->security->checkOrganizationAccess($organization, $isPatron ? SecurityAction::MANAGE_USERS : SecurityAction::CREATE_CITY_ADMIN);
+        $this->security->checkOrganizationAccess($organization, $isPatron ? SecurityAction::VIEW_USER : SecurityAction::CREATE_CITY_ADMIN);
         if (!$isPatron && $actorRole !== OrganizationRole::ADMIN_IMMOBILIER) {
             return (new Feedback())->setErrorFlushDescription('Votre rôle ne permet pas de gérer des affectations.')
                 ->setStatus(403)->autoInitFlush();
@@ -264,10 +264,12 @@ final readonly class OrganizationUserService
             return $feedback->setErrorFlushDescription('Votre rôle actif ne permet pas cette attribution.')
                 ->setStatus(403)->autoInitFlush();
         }
-        $this->security->checkOrganizationAccess(
-            $organization,
-            $actorRole === OrganizationRole::ADMIN_IMMOBILIER ? SecurityAction::CREATE_CITY_ADMIN : SecurityAction::MANAGE_USERS,
-        );
+        $action = match ($request->role) {
+            OrganizationRole::ADMIN_IMMOBILIER => SecurityAction::CREATE_ORGANIZATION_ADMIN,
+            OrganizationRole::ADMIN_VILLE => SecurityAction::CREATE_CITY_ADMIN,
+            default => throw new \LogicException('Rôle non délégable dans cette opération.'),
+        };
+        $this->security->checkOrganizationAccess($organization, $action);
 
         if ($this->orgUserRepository->findByOrganizationAndUser($organization, $target) === []) {
             return $feedback->addError('userUuid', 'Le compte doit déjà être membre de cette organisation.')
@@ -546,7 +548,9 @@ final readonly class OrganizationUserService
         // L'ADMIN_IMMOBILIER peut uniquement créer un ADMIN_VILLE.
         $this->security->checkOrganizationAccess(
             $organization,
-            $role === OrganizationRole::ADMIN_VILLE ? SecurityAction::CREATE_CITY_ADMIN : SecurityAction::MANAGE_USERS
+            $role === OrganizationRole::ADMIN_VILLE
+                ? SecurityAction::CREATE_CITY_ADMIN
+                : SecurityAction::CREATE_ORGANIZATION_ADMIN,
         );
         $currentUser = $this->security->getCurrentUser();
         $currentUserRole = $this->security->getOrganizationRole($currentUser, $organization);

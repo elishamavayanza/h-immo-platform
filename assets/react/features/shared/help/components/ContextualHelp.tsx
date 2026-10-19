@@ -183,7 +183,14 @@ export function ContextualHelp() {
                             const isExpanded = expanded === item.id;
                             return <section className="contextual-help__item" key={item.id}>
                                 <h3><button type="button" aria-expanded={isExpanded} aria-controls={`${id}-${item.id}`} onClick={() => setExpanded(isExpanded ? null : item.id)}>{item.question}<span aria-hidden="true">{isExpanded ? '−' : '+'}</span></button></h3>
-                                {isExpanded && <div id={`${id}-${item.id}`} className="contextual-help__answer"><p>{item.answer}</p></div>}
+                                {isExpanded && <div id={`${id}-${item.id}`} className="contextual-help__answer">
+                                    <p>{item.answer}</p>
+                                    {item.guide && <div className="contextual-help__guide">
+                                        <p className="contextual-help__guide-location"><strong>Où aller</strong><span>{item.guide.location}</span></p>
+                                        <div className="contextual-help__guide-procedure"><strong>Comment procéder</strong><ol>{item.guide.steps.map((step, index) => <li key={`${item.id}-step-${index}`}>{step}</li>)}</ol></div>
+                                        {item.guide.result && <p className="contextual-help__guide-result"><strong>À vérifier</strong><span>{item.guide.result}</span></p>}
+                                    </div>}
+                                </div>}
                             </section>;
                         })}
                     </div> : <div className="contextual-help__empty"><p>Aucune question ne correspond à « {search.trim()} ».</p><button type="button" onClick={() => setSearch('')}>Effacer la recherche</button></div>}

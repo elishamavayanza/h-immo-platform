@@ -385,7 +385,7 @@ export function UnitesTab({ units, buildings, role, isLoading, error, note, onRe
                 cancelLabel="Annuler"
             />
 
-            <Modal isOpen={photoTarget !== null} onClose={() => setPhotoTarget(null)} title={photoTarget ? `Photos de « ${photoTarget.reference} »` : 'Photos de l’unité'} size="large" footer={<Button variant="outline" onClick={() => setPhotoTarget(null)}>Fermer</Button>}>
+            <Modal isOpen={photoTarget !== null} onClose={() => setPhotoTarget(null)} title={photoTarget ? `Photos de « ${photoTarget.reference} »` : 'Photos de l’unité'} size="large" expandable expandToViewport footer={<Button variant="outline" onClick={() => setPhotoTarget(null)}>Fermer</Button>}>
                 {photoTarget && <PhotoGallery entityUuid={photoTarget.id} entityType="unit" mode="multiple" onChange={() => {}} />}
             </Modal>
             {accessBuildingId && buildingById.get(accessBuildingId)?.parcelId && <AccessPointsManager open buildingId={accessBuildingId} parcelId={buildingById.get(accessBuildingId)!.parcelId} buildingName={buildingById.get(accessBuildingId)?.name ?? 'Bâtiment'} units={units} canManage={!readOnly && canDo(role, 'update_unit')} onClose={() => setAccessBuildingId(null)} />}

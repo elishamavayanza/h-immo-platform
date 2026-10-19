@@ -74,6 +74,7 @@ export function UserManualSection() {
     const selectedArticle = articles.find((article) => manualArticleId(article) === currentId) ?? articles[0] ?? null;
     const actions = selectedArticle ? manualActions(selectedArticle) : [];
     const selectedAction = actions.find((action) => action.id === searchParams.get('action')) ?? null;
+    const selectedFeature = selectedArticle ? resolveManualFeature(selectedArticle, menu) : null;
     const groups = groupManualArticles(filterManualArticles(articles, query));
 
     useEffect(() => {
@@ -173,13 +174,16 @@ export function UserManualSection() {
                         </section>)}
                     </aside>
                     {selectedArticle ? <article className="manual-article" aria-label={`Article : ${selectedArticle.name}`} tabIndex={0} key={`${manual.role}:${manualArticleId(selectedArticle)}`}>
-                        <div className="manual-article__breadcrumbs"><span>{selectedArticle.menu}</span>{resolveManualFeature(selectedArticle, menu) && <Link to={resolveManualFeature(selectedArticle, menu)!.path}>Ouvrir cet écran</Link>}</div>
+                        <section className="manual-article__location" aria-label="Emplacement de l’écran">
+                            <div><h3>Où trouver cet écran</h3><p>{selectedArticle.menu}</p></div>
+                        {selectedFeature && <Link to={selectedFeature.path} target="_blank" rel="noreferrer">Ouvrir cet écran ↗</Link>}
+                        </section>
                         <h2>{selectedArticle.name}</h2>
                         <section><h3>Objectif</h3><p>{selectedArticle.goal}</p></section>
                         {selectedAction ? <section className="manual-article__action-focus">
-                            <div className="manual-article__action-title"><GuideGlyph kind={actionGlyphKind(selectedAction.instruction)} /><div><p>Action {selectedAction.index} sur {actions.length}</p><h3>{selectedAction.title}</h3></div></div>
+                            <div className="manual-article__action-title"><GuideGlyph kind={actionGlyphKind(selectedAction.instruction)} /><div><p>Étape {selectedAction.index} sur {actions.length} · Comment procéder</p><h3>{selectedAction.title}</h3></div></div>
                             <p>{selectedAction.instruction}</p>
-                        </section> : <section><h3>Procédure complète</h3><ol>{selectedArticle.steps.map((step, index) => <li key={`${index}-${step}`}>{step}</li>)}</ol></section>}
+                        </section> : <section><h3>Comment procéder</h3><ol>{selectedArticle.steps.map((step, index) => <li key={`${index}-${step}`}>{step}</li>)}</ol></section>}
                         {selectedArticle.fields && <section className="manual-article__callout manual-article__callout--note"><h3><GuideGlyph kind="note" /> À préparer / à vérifier</h3><p>{selectedArticle.fields}</p></section>}
                         {selectedArticle.result && <section className="manual-article__callout manual-article__callout--success"><h3><GuideGlyph kind="success" /> Comment reconnaître la réussite</h3><p>{selectedArticle.result}</p></section>}
                         <section className="manual-article__callout manual-article__callout--error"><h3><GuideGlyph kind="error" /> En cas de blocage ou d’erreur</h3><p>{errorGuidance(selectedArticle)}</p>{selectedArticle.limits && <p className="manual-article__limit-note">Règle d’accès : {selectedArticle.limits}</p>}</section>

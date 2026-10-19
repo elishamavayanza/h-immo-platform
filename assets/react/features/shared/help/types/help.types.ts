@@ -6,6 +6,11 @@ export interface HelpQuestion {
     id: string;
     question: string;
     answer: string;
+    guide?: {
+        location: string;
+        steps: readonly string[];
+        result?: string;
+    };
     keywords?: readonly string[];
     roles?: readonly Exclude<HelpRole, null>[];
 }

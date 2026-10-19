@@ -4,11 +4,14 @@ import { ImageEditor } from '../../../../components/UI/ImageEditor/ImageEditor';
 import { Button } from '../../../../components/UI/Button';
 import { Icon } from '../../../../components/UI/Icon/Icon';
 import { Spinner } from '../../../../components/UI/Spinner';
+import { ConfirmDialog } from '../../../../components/UI/ConfirmDialog';
 import { mediaService } from '../services/mediaService';
 import { useToast } from '../../../../app/layout/MainLayout/contexts/ToastContext';
+import '../../../../../styles/components/UI/PhotoGallery.scss';
 
 type PhotoGalleryMode = 'multiple' | 'single';
 interface PhotoItem { url: string; deleteId: string; }
+interface EditingPhoto { source: string; replacing: PhotoItem | null; }
 
 interface PhotoGalleryProps {
     /** ID de l'entité (parcelle, unité, bâtiment, etc.) */
@@ -30,10 +33,11 @@ export function PhotoGallery({ entityUuid, entityType, photos: initialPhotos, mo
     const entityDestination = entityType === 'parcel' ? 'à la parcelle' : entityType === 'unit' ? 'à l’unité' : 'au bâtiment';
     const entitySource = entityType === 'parcel' ? 'de la parcelle' : entityType === 'unit' ? 'de l’unité' : 'du bâtiment';
     const inputRef = useRef<HTMLInputElement>(null);
-    const [editing, setEditing] = useState<string | null>(null);
+    const [editing, setEditing] = useState<EditingPhoto | null>(null);
     const [isUploading, setIsUploading] = useState(false);
     const [isDeleting, setIsDeleting] = useState<string | null>(null);
     const [isLoading, setIsLoading] = useState(false);
+    const [pendingDelete, setPendingDelete] = useState<PhotoItem | null>(null);
     const [photos, setPhotos] = useState<PhotoItem[]>((initialPhotos ?? []).map((url) => ({ url, deleteId: url.split('/').pop() ?? url })));
 
     // Charger les photos au montage si non fournies
@@ -84,7 +88,7 @@ export function PhotoGallery({ entityUuid, entityType, photos: initialPhotos, mo
             const reader = new FileReader();
             reader.onload = () => {
                 if (typeof reader.result === 'string') {
-                    setEditing(reader.result);
+                    setEditing({ source: reader.result, replacing: isSingleMode ? photos[0] ?? null : null });
                 }
             };
             reader.readAsDataURL(files[0]);
@@ -115,18 +119,59 @@ export function PhotoGallery({ entityUuid, entityType, photos: initialPhotos, mo
         }
     };
 
-    const handleApply = async (dataUrl: string, file?: File) => {
+    const removePhoto = async (photo: PhotoItem) => {
+        if (entityType === 'parcel') {
+            await mediaService.deleteParcelPhoto(entityUuid, photo.deleteId);
+        } else if (entityType === 'unit') {
+            await mediaService.deleteUnitPhoto(entityUuid, photo.deleteId);
+        } else {
+            await mediaService.deleteBuildingPhoto(entityUuid, photo.deleteId);
+        }
+    };
+
+    const uploadOnePhoto = async (file: File, knownUnitPhotoIds?: Set<string>): Promise<PhotoItem> => {
+        if (entityType === 'parcel') {
+            const [uploaded] = await mediaService.uploadParcelPhotos(entityUuid, [file]);
+            if (!uploaded) throw new Error('Le serveur n’a pas confirmé l’ajout de la photo.');
+            return { url: uploaded.url, deleteId: uploaded.path.split('/').pop() ?? uploaded.path };
+        }
+        if (entityType === 'building') {
+            const [uploaded] = await mediaService.uploadBuildingPhotos(entityUuid, [file]);
+            if (!uploaded) throw new Error('Le serveur n’a pas confirmé l’ajout de la photo.');
+            return { url: uploaded.url, deleteId: uploaded.path.split('/').pop() ?? uploaded.path };
+        }
+
+        const before = knownUnitPhotoIds ?? new Set((await mediaService.fetchUnitPhotos(entityUuid)).map((photo) => photo.uuid));
+        await mediaService.uploadUnitPhoto(entityUuid, file);
+        const added = (await mediaService.fetchUnitPhotos(entityUuid)).find((photo) => !before.has(photo.uuid));
+        if (!added) throw new Error('La nouvelle photo a été envoyée, mais son identifiant n’a pas pu être confirmé. Actualisez la galerie avant de réessayer.');
+        return { url: added.url, deleteId: added.uuid };
+    };
+
+    const handleApply = async (_dataUrl: string, file?: File) => {
         if (!file) return;
         setIsUploading(true);
         try {
-            if (entityType === 'parcel') {
-                await mediaService.uploadParcelPhotos(entityUuid, [file]);
-            } else if (entityType === 'unit') {
-                await mediaService.uploadUnitPhoto(entityUuid, file);
+            if (editing?.replacing) {
+                const beforeUnitPhotos = entityType === 'unit'
+                    ? new Set((await mediaService.fetchUnitPhotos(entityUuid)).map((photo) => photo.uuid))
+                    : undefined;
+                const replacement = await uploadOnePhoto(file, beforeUnitPhotos);
+                try {
+                    await removePhoto(editing.replacing);
+                } catch (cause) {
+                    try {
+                        await removePhoto(replacement);
+                    } catch {
+                        throw new Error('La nouvelle photo a été ajoutée, mais le remplacement n’a pas pu être finalisé. Vérifiez la galerie avant de recommencer.');
+                    }
+                    throw cause;
+                }
+                push('success', `La photo a été remplacée ${entityDestination}.`);
             } else {
-                await mediaService.uploadBuildingPhotos(entityUuid, [file]);
+                await uploadOnePhoto(file);
+                push('success', `La photo « ${file.name} » a été ajoutée ${entityDestination}.`);
             }
-            push('success', `La photo « ${file.name} » a été ajoutée ${entityDestination}.`);
             await loadPhotos();
             onChange?.();
         } catch (cause) {
@@ -138,7 +183,6 @@ export function PhotoGallery({ entityUuid, entityType, photos: initialPhotos, mo
     };
 
     const handleDelete = async (photo: PhotoItem) => {
-        if (!confirm('Retirer cette photo ?')) return;
         setIsDeleting(photo.deleteId);
         try {
             if (entityType === 'parcel') {
@@ -175,11 +219,11 @@ export function PhotoGallery({ entityUuid, entityType, photos: initialPhotos, mo
                     Glissez la photo pour ajuster le cadrage, zoomez ou pivotez, puis validez.
                 </p>
                 <ImageEditor
-                    src={editing}
+                    src={editing.source}
                     shape="square"
                     outputSize={400}
                     onCancel={() => setEditing(null)}
-                    onApply={handleApply}
+                    onApply={(dataUrl, file) => void handleApply(dataUrl, file)}
                 />
             </div>
         );
@@ -202,15 +246,17 @@ export function PhotoGallery({ entityUuid, entityType, photos: initialPhotos, mo
                 {photos.map((photo, index) => (
                     <div key={`${photo.deleteId}-${index}`} className="photo-gallery__item">
                         <div className="photo-gallery__preview">
-                            <img src={photo.url} alt={`Photo ${index + 1}`} />
+                            <img src={photo.url} alt={`Photo ${index + 1}`} loading="lazy" />
                         </div>
                         <div className="photo-gallery__item-actions">
                             <Button
                                 type="button"
                                 variant="outline"
                                 size="small"
-                                onClick={() => setEditing(photo.url)}
+                                onClick={() => setEditing({ source: photo.url, replacing: photo })}
                                 disabled={disabled || isUploading || isDeleting === photo.deleteId}
+                                aria-label={`Recadrer et remplacer la photo ${index + 1}`}
+                                title="Recadrer et remplacer"
                             >
                                 <Icon name="edit" size={14} />
                             </Button>
@@ -218,8 +264,10 @@ export function PhotoGallery({ entityUuid, entityType, photos: initialPhotos, mo
                                 type="button"
                                 variant="danger"
                                 size="small"
-                                onClick={() => handleDelete(photo)}
+                                onClick={() => setPendingDelete(photo)}
                                 disabled={disabled || isUploading || isDeleting === photo.deleteId}
+                                aria-label={`Supprimer la photo ${index + 1}`}
+                                title="Supprimer"
                             >
                                 <Icon name="trash" size={14} />
                             </Button>
@@ -258,6 +306,18 @@ export function PhotoGallery({ entityUuid, entityType, photos: initialPhotos, mo
                     ? 'Une seule photo. Cliquez pour la remplacer.'
                     : `Jusqu'à ${maxPhotos} photos.`}
             </p>
+            <ConfirmDialog
+                isOpen={pendingDelete !== null}
+                onClose={() => setPendingDelete(null)}
+                onCancel={() => setPendingDelete(null)}
+                onConfirm={() => {
+                    if (pendingDelete) void handleDelete(pendingDelete);
+                    setPendingDelete(null);
+                }}
+                title="Retirer cette photo ?"
+                message="Cette photo sera supprimée définitivement."
+                confirmLabel="Retirer"
+            />
         </div>
     );
 }

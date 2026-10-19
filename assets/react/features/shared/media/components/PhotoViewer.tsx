@@ -19,11 +19,15 @@ export function PhotoViewer({ entityUuid, entityType, entityName }: PhotoViewerP
     const [error, setError] = useState<string | null>(null);
     const [reloadKey, setReloadKey] = useState(0);
     const [zoom, setZoom] = useState(1);
+    const [stageAspectRatio, setStageAspectRatio] = useState<number | null>(null);
     const [offset, setOffset] = useState({ x: 0, y: 0 });
     const stageRef = useRef<HTMLDivElement>(null);
     const zoomRef = useRef(zoom);
     zoomRef.current = zoom;
     const dragRef = useRef<{ pointerId: number; x: number; y: number; offsetX: number; offsetY: number; mode: 'pan' | 'swipe' } | null>(null);
+    const pointersRef = useRef(new Map<number, { x: number; y: number }>());
+    const pinchRef = useRef<{ distance: number; zoom: number } | null>(null);
+    const multiTouchRef = useRef(false);
 
     useEffect(() => {
         let active = true;
@@ -48,6 +52,7 @@ export function PhotoViewer({ entityUuid, entityType, entityName }: PhotoViewerP
         setActiveIndex((activeIndex + direction + photos.length) % photos.length);
         setZoom(1);
         setOffset({ x: 0, y: 0 });
+        setStageAspectRatio(null);
     };
 
     useEffect(() => {
@@ -84,32 +89,6 @@ export function PhotoViewer({ entityUuid, entityType, entityName }: PhotoViewerP
         setZoom(bounded);
         setOffset((current) => bounded === 1 ? { x: 0, y: 0 } : clampOffset(current.x, current.y, bounded));
     };
-    const startDrag = (event: ReactPointerEvent<HTMLDivElement>) => {
-        event.currentTarget.setPointerCapture(event.pointerId);
-        dragRef.current = {
-            pointerId: event.pointerId,
-            x: event.clientX,
-            y: event.clientY,
-            offsetX: offset.x,
-            offsetY: offset.y,
-            mode: zoom > 1 ? 'pan' : 'swipe',
-        };
-    };
-    const moveDrag = (event: ReactPointerEvent<HTMLDivElement>) => {
-        const drag = dragRef.current;
-        if (!drag || drag.pointerId !== event.pointerId || drag.mode !== 'pan') return;
-        setOffset(clampOffset(drag.offsetX + event.clientX - drag.x, drag.offsetY + event.clientY - drag.y));
-    };
-    const stopDrag = (event: ReactPointerEvent<HTMLDivElement>, allowSwipe = true) => {
-        const drag = dragRef.current;
-        if (!drag || drag.pointerId !== event.pointerId) return;
-        dragRef.current = null;
-        const deltaX = event.clientX - drag.x;
-        const deltaY = event.clientY - drag.y;
-        if (allowSwipe && drag.mode === 'swipe' && Math.abs(deltaX) >= 48 && Math.abs(deltaX) > Math.abs(deltaY) * 1.2) {
-            nextPhoto(deltaX < 0 ? 1 : -1);
-        }
-    };
     useEffect(() => {
         const stage = stageRef.current;
         if (activeIndex === null || !stage) return;
@@ -125,25 +104,76 @@ export function PhotoViewer({ entityUuid, entityType, entityName }: PhotoViewerP
         stage.addEventListener('wheel', handleWheel, { passive: false });
         return () => stage.removeEventListener('wheel', handleWheel);
     }, [activeIndex]);
-
+    const startDrag = (event: ReactPointerEvent<HTMLDivElement>) => {
+        event.currentTarget.setPointerCapture(event.pointerId);
+        pointersRef.current.set(event.pointerId, { x: event.clientX, y: event.clientY });
+        if (pointersRef.current.size === 2) {
+            const [first, second] = [...pointersRef.current.values()];
+            pinchRef.current = { distance: Math.hypot(second.x - first.x, second.y - first.y), zoom };
+            multiTouchRef.current = true;
+            dragRef.current = null;
+            return;
+        }
+        if (pointersRef.current.size > 2) return;
+        dragRef.current = {
+            pointerId: event.pointerId,
+            x: event.clientX,
+            y: event.clientY,
+            offsetX: offset.x,
+            offsetY: offset.y,
+            mode: zoom > 1 ? 'pan' : 'swipe',
+        };
+    };
+    const moveDrag = (event: ReactPointerEvent<HTMLDivElement>) => {
+        if (pointersRef.current.has(event.pointerId)) {
+            pointersRef.current.set(event.pointerId, { x: event.clientX, y: event.clientY });
+        }
+        if (pinchRef.current && pointersRef.current.size >= 2) {
+            const [first, second] = [...pointersRef.current.values()];
+            const nextZoom = Math.max(1, Math.min(5, pinchRef.current.zoom * Math.hypot(second.x - first.x, second.y - first.y) / Math.max(1, pinchRef.current.distance)));
+            setZoom(nextZoom);
+            setOffset((current) => nextZoom === 1 ? { x: 0, y: 0 } : clampOffset(current.x, current.y, nextZoom));
+            return;
+        }
+        const drag = dragRef.current;
+        if (!drag || drag.pointerId !== event.pointerId || drag.mode !== 'pan') return;
+        setOffset(clampOffset(drag.offsetX + event.clientX - drag.x, drag.offsetY + event.clientY - drag.y));
+    };
+    const stopDrag = (event: ReactPointerEvent<HTMLDivElement>, allowSwipe = true) => {
+        const hadMultiplePointers = multiTouchRef.current;
+        pointersRef.current.delete(event.pointerId);
+        if (pointersRef.current.size < 2) pinchRef.current = null;
+        if (pointersRef.current.size === 0) multiTouchRef.current = false;
+        const drag = dragRef.current;
+        if (!drag || drag.pointerId !== event.pointerId) return;
+        dragRef.current = null;
+        const deltaX = event.clientX - drag.x;
+        const deltaY = event.clientY - drag.y;
+        if (allowSwipe && !hadMultiplePointers && drag.mode === 'swipe' && Math.abs(deltaX) >= 48 && Math.abs(deltaX) > Math.abs(deltaY) * 1.2) {
+            nextPhoto(deltaX < 0 ? 1 : -1);
+        }
+    };
     if (isLoading) return <EmptyState icon={<Spinner size="large" />} title="Chargement des photos…" description={`Récupération des photos de ${entityName}.`} />;
     if (error) return <EmptyState title="Photos indisponibles" description={error} action={<Button onClick={() => setReloadKey((value) => value + 1)}>Réessayer</Button>} />;
     if (photos.length === 0) return <EmptyState title="Aucune photo pour le moment" description={`Les photos ajoutées à « ${entityName} » apparaîtront ici.`} />;
 
     if (activeIndex !== null) return <div className="photo-viewer__preview" aria-label={`Photo ${activeIndex + 1} sur ${photos.length}`}>
         <div className="photo-viewer__preview-toolbar">
-            <Button variant="outline" onClick={closePreview}>← Retour à la galerie</Button>
-            <span>{activeIndex + 1} / {photos.length}</span>
+            <div className="photo-viewer__preview-navigation">
+                <Button variant="outline" onClick={closePreview}>← Retour à la galerie</Button>
+                <span>{activeIndex + 1} / {photos.length}</span>
+            </div>
             <div className="photo-viewer__zoom-controls" aria-label="Zoom de la photo">
                 <Button variant="outline" onClick={() => changeZoom(zoom - 0.5)} aria-label="Dézoomer" disabled={zoom <= 1}>−</Button>
                 <span>{Math.round(zoom * 100)} %</span>
                 <Button variant="outline" onClick={() => changeZoom(zoom + 0.5)} aria-label="Zoomer" disabled={zoom >= 5}>＋</Button>
                 <Button variant="outline" onClick={() => changeZoom(1)} disabled={zoom === 1}>Réinitialiser</Button>
             </div>
-            <div><Button variant="outline" onClick={() => nextPhoto(-1)} aria-label="Photo précédente">‹</Button><Button variant="outline" onClick={() => nextPhoto(1)} aria-label="Photo suivante">›</Button></div>
+            <div className="photo-viewer__step-controls"><Button variant="outline" onClick={() => nextPhoto(-1)} aria-label="Photo précédente">‹</Button><Button variant="outline" onClick={() => nextPhoto(1)} aria-label="Photo suivante">›</Button></div>
         </div>
-        <div ref={stageRef} className={`photo-viewer__stage${zoom > 1 ? ' is-zoomed' : ' is-swipeable'}`} onPointerDown={startDrag} onPointerMove={moveDrag} onPointerUp={stopDrag} onPointerCancel={(event) => stopDrag(event, false)} onLostPointerCapture={(event) => stopDrag(event, false)}>
-            <img src={photos[activeIndex]} alt={`${entityName} — photo ${activeIndex + 1}`} draggable={false} style={{ transform: `translate(${offset.x}px, ${offset.y}px) scale(${zoom})` }} />
+        <span className="photo-viewer__touch-hint">Pincez pour zoomer ; glissez pour déplacer l’image ou passer à la photo suivante.</span>
+        <div ref={stageRef} className={`photo-viewer__stage${zoom > 1 ? ' is-zoomed' : ' is-swipeable'}`} style={{ aspectRatio: stageAspectRatio ? String(stageAspectRatio) : '4 / 3' }} onPointerDown={startDrag} onPointerMove={moveDrag} onPointerUp={stopDrag} onPointerCancel={(event) => stopDrag(event, false)} onLostPointerCapture={(event) => stopDrag(event, false)}>
+            <img src={photos[activeIndex]} alt={`${entityName} — photo ${activeIndex + 1}`} draggable={false} onLoad={(event) => setStageAspectRatio(event.currentTarget.naturalWidth / event.currentTarget.naturalHeight)} style={{ transform: `translate(${offset.x}px, ${offset.y}px) scale(${zoom})` }} />
         </div>
     </div>;
 

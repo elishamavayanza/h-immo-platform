@@ -1,6 +1,6 @@
 {
-  "version": "1.3.8",
-  "updatedAt": "2026-10-18",
+  "version": "1.3.9",
+  "updatedAt": "2026-10-19",
   "roles": {
     "super_admin": {
       "title": "Manuel d’utilisation — Administration de la plateforme",
@@ -13,13 +13,14 @@
           "menu": "Vue générale → Tableau de bord",
           "goal": "Suivre l’état général de la plateforme et repérer les indicateurs nécessitant une vérification.",
           "steps": [
-            "Ouvrez le tableau de bord depuis le menu latéral.",
-            "Lisez les indicateurs et les graphiques affichés.",
-            "Ouvrez les modules concernés pour examiner les détails avant toute intervention."
+            "Dans le menu latéral, ouvrez « Vue générale → Tableau de bord » et vérifiez que les indicateurs portent sur la plateforme entière.",
+            "Repérez les compteurs ou graphiques qui signalent une évolution à examiner, puis notez la période et les unités affichées.",
+            "Pour vérifier une organisation, ouvrez « Administration plateforme → Organisations » et recherchez son nom ou son code ; pour un compte, passez par « Utilisateurs ».",
+            "Pour analyser un événement sensible, ouvrez « Audit » ; pour une synthèse chiffrée, utilisez « Rapports ». Revenez au tableau de bord après avoir consulté le détail."
           ],
-          "fields": "Aucun formulaire de modification n’est présent sur cette page.",
+          "fields": "Les cartes et graphiques sont des liens de navigation vers les modules de détail lorsqu’ils sont interactifs. Cette page ne contient pas de formulaire de modification.",
           "result": "Les indicateurs globaux disponibles sont affichés selon les données de la plateforme.",
-          "limits": "Les droits SUPER_ADMIN ne donnent pas automatiquement les droits métier d’une organisation.",
+          "limits": "Une synthèse attire l’attention mais ne remplace pas la vérification de la fiche détaillée ni le journal d’audit.",
           "id": "tableau-de-bord"
         },
         {
@@ -35,7 +36,7 @@
             "Pour suspendre un espace, choisissez la durée, saisissez le motif obligatoire et vérifiez les informations avant de confirmer. Une suspension coupe l’accès des membres de l’organisation.",
             "Pour rétablir un espace suspendu ou inactif, utilisez l’action de réactivation puis vérifiez le nouvel état dans la liste."
           ],
-          "fields": "La création se déroule en trois étapes : organisation et capacités initiales, PATRON, puis logo facultatif. Pour chaque capacité, indiquez un entier positif ou cochez « Sans limite ». Les plafonds sont distincts par organisation. Une suspension exige un motif et peut être indéterminée ou limitée dans le temps.",
+          "fields": "La création suit quatre étapes : « Identité », « Capacités », « Compte PATRON » et « Logo » (facultatif). Dans Capacités, chaque ressource reçoit un plafond entier positif ou « Sans limite ». Une suspension exige un motif et peut être indéterminée ou limitée dans le temps.",
           "result": "La liste affiche les nouveaux espaces et leur état. La création ajoute l’organisation et son PATRON dans la même opération ; le compte reçoit un lien de configuration du mot de passe. Les plafonds, l’autorisation de vitrine, les suspensions et les réactivations sont modifiables par le SUPER_ADMIN et tracés.",
           "limits": "La réduction d’un plafond ne supprime aucune donnée. Si l’usage dépasse le nouveau plafond, les données restent consultables et seules les nouvelles créations de cette ressource sont bloquées. Les organisations existantes reçoivent des capacités sans limite jusqu’à leur configuration manuelle. Les opérations portent sur les comptes et organisations de la plateforme ; le rôle SUPER_ADMIN ne donne pas les droits métier.",
           "id": "organisations"
@@ -81,14 +82,14 @@
           "menu": "Administration plateforme → Audit",
           "goal": "Reconstituer les actions sensibles réalisées sur la plateforme.",
           "steps": [
-            "Ouvrez le journal d’audit.",
-            "Utilisez les filtres disponibles pour réduire la période ou le type d’événement.",
-            "Lisez l’action, la date et le contexte avant d’investiguer.",
-            "Conservez l’identifiant de l’événement pour le support."
+            "Dans le menu latéral, ouvrez « Administration plateforme → Audit ».",
+            "Choisissez les filtres proposés pour isoler l’organisation, la période ou le type d’action concerné ; appliquez-les avant d’interpréter la liste.",
+            "Pour chaque ligne pertinente, relevez l’horodatage, l’auteur, l’action et la ressource indiqués. Ouvrez le détail lorsqu’il est proposé afin de comparer le contexte et les valeurs enregistrées.",
+            "Croisez l’événement avec la fiche de l’organisation ou du compte dans son module dédié. Pour une demande de support, communiquez l’identifiant de l’événement sans copier de secret ni de donnée personnelle inutile."
           ],
-          "fields": "Filtres disponibles dans l’interface ; aucune donnée secrète ne doit être copiée dans un rapport.",
+          "fields": "Les filtres disponibles et le détail dépendent des événements enregistrés. Le journal peut contenir des valeurs avant/après expurgées ; il ne sert pas à modifier une ressource.",
           "result": "Les événements correspondants sont affichés selon les droits plateforme.",
-          "limits": "Le journal est une trace de consultation ; ne modifiez pas les événements historiques.",
+          "limits": "Le journal est une trace en lecture seule. Une absence d’événement ne prouve pas à elle seule qu’une action n’a pas eu lieu : vérifiez aussi la période et les filtres sélectionnés.",
           "id": "journal-daudit"
         },
         {
@@ -96,14 +97,14 @@
           "menu": "Vue générale → Rapports",
           "goal": "Consulter les synthèses transversales disponibles à l’administration plateforme.",
           "steps": [
-            "Ouvrez Rapports.",
-            "Choisissez la période et les filtres proposés.",
-            "Lancez l’affichage ou l’export disponible.",
-            "Vérifiez la période, les unités et les totaux avant de partager le document."
+            "Dans « Vue générale », ouvrez « Rapports » et sélectionnez le rapport correspondant à la question à vérifier.",
+            "Renseignez la période et les filtres affichés par ce rapport, puis lancez son calcul ou son affichage.",
+            "Avant de comparer les résultats, vérifiez l’organisation ou le périmètre, les dates couvertes, les unités et la devise indiqués.",
+            "Utilisez l’export uniquement après avoir contrôlé l’aperçu. Conservez avec le document la période et les filtres utilisés pour que le résultat soit interprétable."
           ],
-          "fields": "Les filtres varient selon le rapport.",
+          "fields": "Les filtres, indicateurs et possibilités d’export varient selon le rapport choisi. Les montants restent séparés par devise.",
           "result": "Une synthèse correspondant aux filtres retenus est affichée ou téléchargée.",
-          "limits": "Les rapports ne remplacent pas les pièces comptables des organisations.",
+          "limits": "Un rapport est une synthèse calculée selon ses filtres ; il ne remplace ni les pièces justificatives ni le journal d’audit.",
           "id": "rapports-de-la-plateforme"
         },
         {
@@ -124,7 +125,7 @@
           "id": "profil-et-preferences"
         }
       ],
-      "pageCount": 17
+      "pageCount": 19
     },
     "patron": {
       "title": "Manuel d’utilisation — Espace Patron",
@@ -137,11 +138,12 @@
           "menu": "Vue générale → Tableau de bord",
           "goal": "Suivre les indicateurs importants de votre organisation.",
           "steps": [
-            "Ouvrez le tableau de bord.",
-            "Vérifiez les indicateurs, graphiques et alertes affichés.",
-            "Utilisez les raccourcis de navigation pour consulter le module concerné."
+            "Ouvrez « Vue générale → Tableau de bord » après avoir vérifié l’organisation active dans l’en-tête de l’application.",
+            "Lisez les indicateurs et graphiques avec leur période, leur ville et leur devise ; n’additionnez pas des montants de devises différentes.",
+            "Utilisez le raccourci ou le lien de l’indicateur pour ouvrir le module correspondant, puis appliquez les filtres de détail.",
+            "Pour une action quotidienne qui n’est pas disponible dans votre rôle, notez la ville et l’élément concernés et transmettez la demande à l’ADMIN_VILLE affecté."
           ],
-          "fields": "Aucun formulaire de modification sur la page d’accueil.",
+          "fields": "La page d’accueil est une synthèse et ne contient pas de formulaire d’écriture. Les liens affichés ouvrent les modules accessibles dans l’organisation active.",
           "result": "Vue de synthèse selon les données accessibles à votre organisation.",
           "limits": "Les résultats sont bornés à l’organisation active.",
           "id": "tableau-de-bord"
@@ -151,12 +153,12 @@
           "menu": "Vue générale → Rapports",
           "goal": "Analyser l’activité et les résultats de l’organisation.",
           "steps": [
-            "Ouvrez Rapports.",
-            "Choisissez la période et les filtres proposés.",
-            "Consultez les tableaux ou graphiques.",
-            "Téléchargez un rapport si l’action d’export est proposée."
+            "Dans « Vue générale → Rapports », choisissez le rapport qui répond à votre question (activité, patrimoine ou finances selon les choix affichés).",
+            "Sélectionnez la période et les filtres proposés ; si une ville est sélectionnée, vérifiez qu’elle correspond au périmètre recherché.",
+            "Lancez l’affichage, puis comparez les totaux avec les tableaux de détail du module concerné.",
+            "Si un export est proposé, vérifiez son aperçu et gardez la période, les filtres et la devise avec le fichier."
           ],
-          "fields": "Période et filtres visibles dans le rapport.",
+          "fields": "Les filtres dépendent du rapport sélectionné. Les montants sont présentés dans leur devise d’origine et ne doivent pas être additionnés entre devises.",
           "result": "Rapport calculé pour l’organisation et la période sélectionnées.",
           "limits": "Les sommes doivent être lues avec leur devise d’origine et la devise de référence indiquée.",
           "id": "rapports"
@@ -166,14 +168,15 @@
           "menu": "Gestion immobilière → Patrimoine",
           "goal": "Décrire le patrimoine réel de la parcelle au bâtiment, au niveau et aux espaces locatifs, puis gérer les accès physiques.",
           "steps": [
-            "Ouvrez Patrimoine et sélectionnez la ville, la parcelle ou le bâtiment à consulter.",
-            "Parcourez les unités pour distinguer les espaces indépendants des subdivisions.",
-            "Consultez les types d’usage, références, niveaux et relations parents affichés.",
-            "Ouvrez Locataires pour vérifier les contrats et les occupants associés."
+            "Dans « Gestion immobilière → Patrimoine », vérifiez l’organisation active. La vue d’ensemble propose les onglets « Villes » et « Tous les biens ».",
+            "Sélectionnez une ville pour ouvrir son patrimoine, puis suivez les éléments parents jusqu’à la parcelle, au bâtiment et aux unités.",
+            "Dans une fiche de ville ou de bien, utilisez « Aperçu » pour consulter les informations et « Gérer les parcelles », « Gérer les bâtiments » ou « Gérer les unités » pour parcourir le niveau correspondant.",
+            "Pour vérifier une unité, contrôlez son bâtiment, son niveau, son type et son occupation, puis ouvrez « Locataires » pour consulter les informations locatives accessibles.",
+            "Si une donnée est incorrecte, transmettez à l’ADMIN_IMMOBILIER l’identifiant ou le nom de la ville et du bien ainsi que la correction attendue."
           ],
-          "fields": "Les champs du patrimoine sont consultables en lecture seule. Les niveaux déclarés pour chaque bâtiment peuvent être associés aux unités ; à défaut, un libellé libre permet de décrire un niveau particulier. Les accès sont gérés séparément par les rôles autorisés. Pour un magasin, bureau, restaurant, entrepôt ou atelier, renseignez aussi l’activité exercée ; elle est facultative pour les autres espaces.",
+          "fields": "Le parcours de navigation est : ville → parcelle → bâtiment → unité. Les onglets de gestion permettent de consulter les listes ; les formulaires de création et de modification ne sont pas disponibles au PATRON.",
           "result": "La structure visible correspond au périmètre de l’organisation active.",
-          "limits": "Le rôle PATRON consulte le patrimoine en lecture seule. La création et les modifications sont réservées aux rôles de gestion autorisés.",
+          "limits": "Le PATRON consulte le patrimoine en lecture seule. La création, la modification et la suppression sont réservées aux rôles de gestion autorisés.",
           "id": "patrimoine"
         },
         {
@@ -256,12 +259,12 @@
           "menu": "Administration → Administration",
           "goal": "Gérer les réglages d’organisation autorisés à votre rôle.",
           "steps": [
-            "Ouvrez Administration.",
-            "Parcourez les sections disponibles.",
-            "Avant une modification partagée, vérifiez l’organisation active et l’effet annoncé.",
-            "Enregistrez puis vérifiez la confirmation."
+            "Ouvrez « Administration → Administration » depuis le menu latéral et contrôlez l’organisation active avant d’intervenir.",
+            "Parcourez les sections réellement visibles : seules les commandes accordées à votre rôle sont affichées.",
+            "Avant d’enregistrer un réglage partagé, lisez son effet et vérifiez les valeurs déjà en place ; ne validez pas une modification dont la portée n’est pas claire.",
+            "Après l’enregistrement, relisez la confirmation et revisitez la section pour vérifier la valeur conservée. Si une action d’accès ou d’équipe manque, demandez-la au SUPER_ADMIN ou à l’ADMIN_IMMOBILIER selon le réglage."
           ],
-          "fields": "Les champs affichés varient selon les réglages activés.",
+          "fields": "Les champs varient selon les options activées pour l’organisation et les autorisations du compte.",
           "result": "Le réglage est appliqué au périmètre de l’organisation.",
           "limits": "Les opérations non disponibles à votre rôle sont absentes ou refusées par le serveur.",
           "id": "administration-de-lorganisation"
@@ -298,7 +301,7 @@
           "id": "profil-et-parametres"
         }
       ],
-      "pageCount": 20
+      "pageCount": 21
     },
     "admin_immobilier": {
       "title": "Manuel d’utilisation — Administration immobilière",
@@ -311,11 +314,12 @@
           "menu": "Vue générale → Tableau de bord",
           "goal": "Suivre les indicateurs de l’organisation.",
           "steps": [
-            "Ouvrez Tableau de bord.",
-            "Consultez les indicateurs et alertes.",
-            "Suivez un raccourci pour examiner un module."
+            "Ouvrez « Vue générale → Tableau de bord » et contrôlez l’organisation active.",
+            "Examinez les indicateurs avec leur période et, lorsque disponible, leur ventilation par ville.",
+            "Ouvrez le module de détail correspondant à une alerte : Patrimoine pour vérifier les biens, Locataires ou Loyers pour les données locatives, Trésorerie pour les mouvements.",
+            "Pour une opération réservée à une ville, identifiez l’ADMIN_VILLE concerné et transmettez-lui la référence et l’action attendue."
           ],
-          "fields": "Aucune saisie sur la synthèse.",
+          "fields": "La synthèse ne contient pas de formulaire d’écriture. Les liens mènent aux vues de détail accessibles à votre rôle.",
           "result": "Le résultat s’affiche dans la liste ou la fiche après confirmation.",
           "limits": "Les droits et les données sont limités au rôle et au périmètre actifs.",
           "id": "tableau-de-bord"
@@ -325,12 +329,12 @@
           "menu": "Vue générale → Rapports",
           "goal": "Analyser l’activité de l’organisation.",
           "steps": [
-            "Ouvrez Rapports.",
-            "Choisissez période et filtres.",
-            "Lancez le rapport et vérifiez devise et période.",
-            "Utilisez l’export proposé."
+            "Dans « Vue générale → Rapports », choisissez le rapport correspondant à l’indicateur à examiner.",
+            "Sélectionnez la période et les filtres disponibles, notamment la ville si le rapport la propose.",
+            "Lancez le rapport puis contrôlez la couverture, les unités, les statuts et la devise avant de comparer les résultats.",
+            "Ouvrez le module source pour vérifier une ligne. Pour corriger une opération locale, transmettez la référence à l’ADMIN_VILLE compétent ; exportez seulement après validation des filtres."
           ],
-          "fields": "Filtres visibles selon le rapport.",
+          "fields": "Les filtres et les exports visibles dépendent du rapport. Les montants de devises différentes restent séparés.",
           "result": "Le rapport reflète les filtres sélectionnés.",
           "limits": "Les montants de devises différentes restent distincts.",
           "id": "rapports"
@@ -424,13 +428,13 @@
           "menu": "Opérations → Personnel",
           "goal": "Gérer le répertoire organisationnel des collaborateurs et consulter leurs affectations.",
           "steps": [
-            "Ouvrez Personnel.",
-            "Recherchez un membre ou filtrez par ville.",
-            "Consultez les affectations via les actions de ligne.",
-            "Créez ou mettez à jour la fiche d’un collaborateur si nécessaire.",
-            "Confiez à l’ADMIN_VILLE toute affectation locale à une ville ou à un bien."
+            "Ouvrez « Opérations → Personnel » et choisissez la ville si le filtre est affiché.",
+            "Recherchez un collaborateur ou utilisez « Ajouter un membre » / l’action de création effectivement proposée pour enregistrer sa fiche.",
+            "Ouvrez le menu d’actions de la ligne pour consulter ou modifier les informations disponibles, puis enregistrez et vérifiez la fiche dans la liste.",
+            "Pour affecter le collaborateur à une ville ou à un bien, ouvrez la section des affectations et renseignez le périmètre et la fonction demandés.",
+            "Vérifiez la période et l’état de l’affectation ; confiez à l’ADMIN_VILLE une affectation locale si cette opération n’est pas proposée dans votre écran."
           ],
-          "fields": "Membre, fonction, ville et bien selon l’opération.",
+          "fields": "Les champs varient selon la fiche et l’affectation : membre, fonction, ville et bien. Ne créez pas un second profil si la personne existe déjà ; recherchez-la avant l’ajout.",
           "result": "Le répertoire partagé reste à jour et les affectations sont suivies localement.",
           "limits": "L’ADMIN_IMMOBILIER gère les fiches organisationnelles ; l’ADMIN_VILLE gère les affectations de sa ville.",
           "id": "personnel"
@@ -454,12 +458,13 @@
           "menu": "Administration → Administration",
           "goal": "Gérer les réglages de l’organisation autorisés.",
           "steps": [
-            "Ouvrez Administration.",
-            "Choisissez le réglage concerné.",
-            "Vérifiez l’organisation active et l’effet annoncé.",
-            "Enregistrez et contrôlez la confirmation."
+            "Ouvrez « Administration → Administration » et vérifiez le contexte de l’organisation affiché.",
+            "Choisissez la section correspondant à l’action recherchée : équipe et accès, ou réglages disponibles à votre rôle.",
+            "Pour confier un périmètre local, sélectionnez le membre et le rôle proposés, puis attribuez uniquement la ville concernée lorsque le formulaire le demande.",
+            "Relisez le membre, le rôle et le périmètre avant de valider ; après confirmation, contrôlez l’affectation dans la liste de l’équipe.",
+            "Si la fonction souhaitée n’apparaît pas, vérifiez le rôle du compte et demandez l’autorisation au SUPER_ADMIN plutôt que de contourner le refus."
           ],
-          "fields": "Dépend des sections disponibles.",
+          "fields": "Les champs dépendent des sections accessibles. L’attribution d’un rôle doit être associée au périmètre de ville requis par l’application.",
           "result": "Le changement s’applique au périmètre indiqué.",
           "limits": "L’API applique aussi les droits d’action.",
           "id": "administration"
@@ -496,7 +501,7 @@
           "id": "profil-et-parametres"
         }
       ],
-      "pageCount": 22
+      "pageCount": 25
     },
     "admin_ville": {
       "title": "Manuel d’utilisation — Administration de ville",
@@ -509,11 +514,12 @@
           "menu": "Vue générale → Tableau de bord",
           "goal": "Suivre les indicateurs des villes attribuées.",
           "steps": [
-            "Ouvrez Tableau de bord.",
-            "Consultez les indicateurs et alertes.",
-            "Utilisez les liens disponibles pour ouvrir les détails."
+            "Ouvrez « Vue générale → Tableau de bord » et vérifiez la ville sélectionnée dans le contexte de travail.",
+            "Lisez chaque indicateur avec sa période et son statut ; les résultats sont limités aux villes attribuées à votre compte.",
+            "Ouvrez le module lié à l’indicateur pour consulter les lignes sources et appliquer ses filtres.",
+            "Si une donnée concerne une autre ville ou dépasse vos droits, demandez à l’ADMIN_IMMOBILIER de vérifier le périmètre plutôt que de changer de contexte par l’URL."
           ],
-          "fields": "Aucune saisie sur la synthèse.",
+          "fields": "La page est une synthèse sans saisie directe. Les modules de détail filtrent les données selon les villes attribuées.",
           "result": "Les indicateurs sont bornés à vos villes.",
           "limits": "Les droits et les données sont limités au rôle et au périmètre actifs.",
           "id": "tableau-de-bord"
@@ -523,11 +529,12 @@
           "menu": "Vue générale → Rapports",
           "goal": "Consulter les rapports de votre périmètre.",
           "steps": [
-            "Ouvrez Rapports.",
-            "Choisissez période et filtres disponibles.",
-            "Lancez le rapport et vérifiez la ville et la période."
+            "Dans « Vue générale → Rapports », sélectionnez le rapport voulu.",
+            "Choisissez la période et les filtres accessibles ; vérifiez la ville ou le groupe de villes indiqué avant de lancer le calcul.",
+            "Lisez les résultats avec leur unité, leur devise et leur statut. Ouvrez le module source pour vérifier une ligne ou une échéance.",
+            "Si l’export est proposé, contrôlez l’aperçu et conservez les filtres utilisés avec le fichier."
           ],
-          "fields": "Filtres visibles selon le rapport.",
+          "fields": "Les filtres dépendent du rapport et restent bornés aux villes attribuées à votre compte. Les montants de devises différentes doivent rester séparés.",
           "result": "Les données des autres villes ne sont pas incluses.",
           "limits": "Les droits et les données sont limités au rôle et au périmètre actifs.",
           "id": "rapports-de-ville"
@@ -537,14 +544,14 @@
           "menu": "Gestion immobilière → Patrimoine",
           "goal": "Décrire le patrimoine réel de la parcelle au bâtiment, au niveau et aux espaces locatifs, puis gérer les accès physiques.",
           "steps": [
-            "Ouvrez Patrimoine, puis sélectionnez la ville et la parcelle concernées.",
-            "Ajoutez les bâtiments indépendants réellement présents sur la parcelle.",
-            "Dans chaque bâtiment, créez une unité par espace réellement louable ; utilisez le numéro et le libellé du niveau pour ordonner des désignations comme sous-sol, rez-de-chaussée ou mezzanine.",
-            "Pour une maison subdivisée, reliez les espaces enfants à leur parent. Un parent ou ses subdivisions ne peuvent pas être loués simultanément.",
-            "Dans Bâtiments, choisissez « Gérer les entrées de la parcelle » pour les accès extérieurs. Dans Unités, ouvrez un bâtiment et choisissez « Gérer les accès » pour ses portes ; cochez les unités desservies par un accès partagé.",
-            "Dans Locataires, créez le bail sur un ou plusieurs espaces de la même ville et ajoutez les cotitulaires ou occupants avec leurs dates."
+            "Ouvrez « Gestion immobilière → Patrimoine ». Dans la vue d’ensemble, utilisez « Villes » pour retrouver vos villes attribuées ; ouvrez la ville concernée.",
+            "Dans le parcours de la ville, consultez « Aperçu » ou ouvrez « Gérer les parcelles » pour créer, corriger ou consulter une parcelle selon les actions affichées.",
+            "Ouvrez une parcelle puis « Gérer les bâtiments » pour ajouter ou modifier un bâtiment ; ouvrez ensuite le bâtiment et « Gérer les unités » pour gérer ses unités.",
+            "Dans la liste, choisissez « Ajouter une parcelle », « Ajouter un bâtiment » ou « Ajouter une unité » selon le niveau. Pour modifier, utilisez l’action de la ligne ; relisez les rattachements parents avant l’enregistrement.",
+            "Dans les unités, sélectionnez le bâtiment puis « Gérer les niveaux » pour déclarer ou corriger les niveaux ; utilisez « Gérer les accès » pour configurer les accès partagés autorisés.",
+            "Avant toute restructuration, vérifiez les baux et les occupations. Pour une erreur de capacité ou un besoin de création de ville, contactez le PATRON ou l’ADMIN_IMMOBILIER."
           ],
-          "fields": "Les champs dépendent du niveau immobilier. Déclarez les niveaux d’un bâtiment avec une référence, un libellé, un ordre et une description, puis associez-y les unités. Un libellé libre reste possible pour les cas particuliers ; les accès, usages commerciaux et occupants ne sont renseignés que lorsque nécessaire. Pour un magasin, bureau, restaurant, entrepôt ou atelier, renseignez aussi l’activité exercée ; elle est facultative pour les autres espaces.",
+          "fields": "Ville : consultation seulement. Parcelle, bâtiment, unité : champs propres au niveau et rattachement au parent ; niveaux : référence, libellé, ordre et description ; accès : nom et unités desservies selon le formulaire.",
           "result": "Les espaces, baux et accès sont rattachés à leurs parents et restent bornés au périmètre autorisé. Les nouvelles créations peuvent être refusées si l’organisation a atteint une capacité globale attribuée par la plateforme.",
           "limits": "Avant de restructurer des espaces, vérifiez les baux actifs. Les paiements historiques restent associés au bail et ne sont pas modifiés par un changement d’occupation. Les plafonds sont définis au niveau de l’organisation et ne sont pas visibles dans votre espace. Si une création est refusée pour capacité atteinte, contactez le PATRON ou l’ADMIN_IMMOBILIER ; les données déjà présentes restent accessibles.",
           "id": "patrimoine"
@@ -575,12 +582,13 @@
           "menu": "Finances → Loyers",
           "goal": "Suivre les échéances dans les villes attribuées.",
           "steps": [
-            "Ouvrez Loyers.",
-            "Filtrez par période ou statut.",
-            "Vérifiez bien, date, montant et devise.",
-            "Enregistrez un paiement uniquement si l’action est disponible."
+            "Ouvrez « Finances → Loyers » et vérifiez la ville ainsi que la période sélectionnées.",
+            "Filtrez les échéances par statut ou période et ouvrez la ligne à traiter pour confirmer le locataire, le bail, l’échéance, le montant restant et la devise.",
+            "Choisissez « Enregistrer un paiement » uniquement pour un versement réellement reçu. Saisissez le montant, la date, le mode et la référence demandés ; vérifiez que la devise correspond à l’échéance.",
+            "Relisez le récapitulatif avant de confirmer. Après validation, vérifiez le paiement dans l’historique et le statut recalculé de l’échéance.",
+            "En cas d’erreur après validation, n’effacez pas la trace comptable : suivez la procédure de correction ou d’annulation autorisée et vérifiez son audit."
           ],
-          "fields": "Champs indiqués par le formulaire.",
+          "fields": "Les champs requis sont ceux du formulaire de paiement ; montant et devise doivent correspondre à l’encaissement. Un paiement enregistré devient une trace comptable.",
           "result": "Aucune donnée d’une ville hors périmètre.",
           "limits": "Les droits et les données sont limités au rôle et au périmètre actifs.",
           "id": "loyers"
@@ -590,12 +598,13 @@
           "menu": "Finances → Trésorerie",
           "goal": "Lire les entrées et sorties visibles dans votre périmètre.",
           "steps": [
-            "Ouvrez Trésorerie.",
-            "Sélectionnez période ou ville si proposés.",
-            "Consultez recettes et dépenses séparées par devise.",
-            "Ouvrez un mouvement pour vérifier son origine."
+            "Ouvrez « Finances → Trésorerie » et choisissez la période et la ville si ces filtres sont disponibles.",
+            "Consultez séparément les recettes et les dépenses, en gardant les devises distinctes.",
+            "Ouvrez le mouvement pour vérifier la date, la source, la catégorie et la référence à l’opération d’origine.",
+            "Pour une dépense autorisée, utilisez le formulaire de création proposé, complétez le motif, le montant, la devise et les références demandées puis relisez avant de valider.",
+            "Après validation, retrouvez l’écriture dans la liste et contrôlez son statut. Une écriture comptabilisée ne doit pas être supprimée pour corriger une erreur."
           ],
-          "fields": "Les champs de saisie ne sont affichés que si autorisés.",
+          "fields": "Les champs de dépense varient selon le formulaire et la catégorie ; le montant, la devise, la date et le motif doivent être vérifiés avant validation.",
           "result": "La devise d’origine et la devise de référence restent distinctes.",
           "limits": "Les droits et les données sont limités au rôle et au périmètre actifs.",
           "id": "tresorerie"
@@ -605,12 +614,12 @@
           "menu": "Opérations → Opérations",
           "goal": "Suivre les membres et leurs affectations aux biens.",
           "steps": [
-            "Ouvrez Opérations et sélectionnez la ville active.",
-            "Recherchez un membre et vérifiez ses affectations.",
-            "Si Ajouter du personnel est visible, utilisez-le pour les opérations permises.",
-            "Sinon, demandez à votre administrateur immobilier de déléguer cette autorisation."
+            "Ouvrez « Opérations → Opérations » et sélectionnez l’une de vos villes attribuées.",
+            "Recherchez le membre ou le bien et consultez les affectations déjà présentes avant de créer une nouvelle attribution.",
+            "Si l’action « Ajouter du personnel » est visible, choisissez le membre existant, sa fonction et le périmètre demandé puis confirmez.",
+            "Vérifiez l’affectation dans la liste. Si l’action est absente ou refusée, transmettez la demande au PATRON ou à l’ADMIN_IMMOBILIER ; ne créez pas un doublon de membre."
           ],
-          "fields": "Ville, fonction, personne et bien selon l’action.",
+          "fields": "Les champs dépendent de l’opération : personne, fonction, ville et bien. Les options de gestion sont affichées selon vos permissions réelles.",
           "result": "Une personne peut être affectée à plusieurs biens ; contrôlez les doublons et le périmètre.",
           "limits": "Les droits et les données sont limités au rôle et au périmètre actifs.",
           "id": "operations-et-personnel"
@@ -620,12 +629,13 @@
           "menu": "Opérations → Maintenance",
           "goal": "Suivre les interventions d’une ville attribuée.",
           "steps": [
-            "Choisissez la ville active.",
-            "Créez l’intervention avec bien, titre, priorité et description.",
-            "Vérifiez sa présence dans la liste de cette ville.",
-            "Modifiez, démarrez, terminez ou annulez selon son statut."
+            "Ouvrez « Opérations → Maintenance » et choisissez une ville qui vous est attribuée.",
+            "Pour déclarer un besoin, lancez « Nouvelle intervention », choisissez le bien concerné, indiquez le titre, la priorité et la description puis ajoutez l’intervention.",
+            "Ouvrez l’intervention créée pour vérifier son bien, son responsable, son échéance et son statut.",
+            "Selon le statut courant, utilisez « Modifier », « Démarrer », « Terminer » ou « Annuler » ; renseignez le motif ou le compte rendu demandé et confirmez la transition.",
+            "Revenez à la liste et vérifiez que le statut et l’historique correspondent à l’action effectuée."
           ],
-          "fields": "Bien et titre ; responsable et date selon le besoin.",
+          "fields": "Le formulaire demande un bien et un titre ; le responsable, la priorité, l’échéance et la description dépendent des champs visibles. Les transitions disponibles dépendent du statut courant.",
           "result": "Chaque intervention appartient à la ville sélectionnée.",
           "limits": "Les droits et les données sont limités au rôle et au périmètre actifs.",
           "id": "maintenance"
@@ -647,7 +657,7 @@
           "id": "profil-et-parametres"
         }
       ],
-      "pageCount": 19
+      "pageCount": 21
     }
   }
 }

@@ -285,7 +285,7 @@ export function BatimentsTab({ buildings, parcels, cities, role, isLoading, erro
                 />
             </Modal>
 
-            <Modal isOpen={viewTarget !== null} onClose={() => setViewTarget(null)} title={viewTarget ? `Photos — ${viewTarget.name}` : 'Photos du bâtiment'} size="large" expandable initiallyExpanded footer={<Button variant="outline" onClick={() => setViewTarget(null)}>Fermer</Button>}>
+            <Modal isOpen={viewTarget !== null} onClose={() => setViewTarget(null)} title={viewTarget ? `Photos — ${viewTarget.name}` : 'Photos du bâtiment'} size="large" expandable expandToViewport footer={<Button variant="outline" onClick={() => setViewTarget(null)}>Fermer</Button>}>
                 {viewTarget && <PhotoViewer entityUuid={viewTarget.id} entityType="building" entityName={viewTarget.name} />}
             </Modal>
             {accessParcelId && <AccessPointsManager open buildingId={null} parcelId={accessParcelId} buildingName={parcelById.get(accessParcelId)?.name ?? 'Parcelle'} units={[]} canManage={!readOnly && canDo(role, 'update_unit')} onClose={() => setAccessParcelId(null)} />}

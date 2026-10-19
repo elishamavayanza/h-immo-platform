@@ -1147,6 +1147,8 @@ final class SecurityService implements SecurityServiceInterface
             SecurityAction::VIEW,
             SecurityAction::VIEW_ORGANIZATION,
             SecurityAction::VIEW_USER,
+            SecurityAction::CREATE_CITY_ADMIN,
+            SecurityAction::CREATE_ORGANIZATION_ADMIN,
             SecurityAction::MANAGE_ORGANIZATION_LOGO,
             SecurityAction::MANAGE_EXCHANGE_RATE,
             SecurityAction::VIEW_CITY,

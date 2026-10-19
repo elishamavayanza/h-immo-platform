@@ -110,6 +110,7 @@ export function AppRoutes() {
                     <Route index element={<AppLanding />} />
 
                     <Route path="publications/:uuid" element={<Suspense fallback={pageFallback}><PublicationDetailPage /></Suspense>} />
+                    <Route path="patrimoine/carte" element={<Suspense fallback={pageFallback}><OrganizationMenuPage path="/app/patrimoine" /></Suspense>} />
                     <Route path="admin/organisations/nouvelle" element={<Suspense fallback={pageFallback}><OrganizationSetupPage /></Suspense>} />
                     <Route path="admin/organisations/:uuid/modifier" element={<Suspense fallback={pageFallback}><OrganizationSetupPage /></Suspense>} />
 

@@ -196,6 +196,13 @@ $propertyAdmin = (new User())
     ->setIsActive(true);
 $em->persist($propertyAdmin);
 
+$existingMember = (new User())
+    ->setEmail('membre.' . $suffix . '@test.local')
+    ->setFullName('Membre à promouvoir')
+    ->setPassword(password_hash('MotDePasse!123', PASSWORD_BCRYPT))
+    ->setIsActive(true);
+$em->persist($existingMember);
+
 $root = (new User())
     ->setEmail('root.' . $suffix . '@test.local')
     ->setFullName('Root Test')
@@ -214,6 +221,7 @@ $em->persist($org);
 
 $em->persist((new OrganizationUser())->setUser($patron)->setOrganization($org)->setRole(OrganizationRole::PATRON));
 $em->persist((new OrganizationUser())->setUser($propertyAdmin)->setOrganization($org)->setRole(OrganizationRole::ADMIN_IMMOBILIER));
+$em->persist((new OrganizationUser())->setUser($existingMember)->setOrganization($org)->setRole(OrganizationRole::PATRON));
 
 $city = (new City())
     ->setName('Ville Test')
@@ -243,6 +251,16 @@ if (!is_string($bearer)) {
 $orgUuid = $org->getUuid()->toRfc4122();
 $cityUuid = $city->getUuid()->toRfc4122();
 
+section('PATRON : attribution de l’espace ADMIN_IMMOBILIER à un membre existant');
+[$status, $assignmentPayload, $assignmentRaw] = $request('POST', '/api/v1/identity/organization-users/assign-existing', [
+    'organizationUuid' => $orgUuid,
+    'userUuid' => $existingMember->getUuid()->toRfc4122(),
+    'role' => 'admin_immobilier',
+    'cityUuids' => [],
+], $bearer);
+check('le PATRON attribue ADMIN_IMMOBILIER à un membre de son organisation', $status === 201, "obtenu {$status} : " . substr($assignmentRaw, 0, 250));
+check('l’affectation renvoie le rôle demandé', ($assignmentPayload['data']['role'] ?? null) === 'admin_immobilier');
+
 // L'ADMIN_IMMOBILIER peut créer uniquement un ADMIN_VILLE, dans cette
 // organisation et avec un périmètre de ville explicite.
 section('ADMIN_IMMOBILIER : création limitée à ADMIN_VILLE');
@@ -253,6 +271,14 @@ section('ADMIN_IMMOBILIER : création limitée à ADMIN_VILLE');
 ]);
 $propertyBearer = $propertyPayload['accessToken'] ?? null;
 check('l’ADMIN_IMMOBILIER est authentifié', $status === 200 && is_string($propertyBearer), "obtenu {$status}");
+
+[$status, , $restrictedAssignmentRaw] = $request('POST', '/api/v1/identity/organization-users/assign-existing', [
+    'organizationUuid' => $orgUuid,
+    'userUuid' => $existingMember->getUuid()->toRfc4122(),
+    'role' => 'admin_immobilier',
+    'cityUuids' => [],
+], is_string($propertyBearer) ? $propertyBearer : null);
+check('l’ADMIN_IMMOBILIER ne peut pas attribuer un autre rôle ADMIN_IMMOBILIER', $status === 403, "obtenu {$status} : " . substr($restrictedAssignmentRaw, 0, 250));
 
 [$status, $propertyAdminPayload, $propertyAdminRaw] = $request('POST', '/api/v1/identity/organization-users/create-admin', [
     'organizationUuid' => $orgUuid,

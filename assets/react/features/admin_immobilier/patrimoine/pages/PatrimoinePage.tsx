@@ -90,6 +90,10 @@ export function PatrimoinePage({ readOnly = false }: { readOnly?: boolean } = {}
     const location = useLocation();
     const navigate = useNavigate();
     const isCityAdmin = organizationRole === 'admin_ville';
+    const restoreManagementTab = location.state !== null
+        && typeof location.state === 'object'
+        && 'restorePatrimoineTab' in location.state
+        && location.state.restorePatrimoineTab === 'manage';
     const selection = resolvePatrimoineSelection(location.pathname, isCityAdmin);
     const { level: activeLevel, cityId: selectedCityId, parcelId: selectedParcelId, buildingId: selectedBuildingId, unitId: selectedUnitId } = selection;
 
@@ -623,7 +627,7 @@ export function PatrimoinePage({ readOnly = false }: { readOnly?: boolean } = {}
             return <ParcellesTab parcels={parcels} cities={cities} role={organizationRole} isLoading={isLoading} error={error} note={note} onReload={() => void reload()} onCreate={createParcel} onUpdate={updateParcel} onDelete={deleteParcel} selectedCityId={isCityAdmin ? (selectedCityId ?? (activeCityUuid || null)) : selectedCityId} onCityFilter={(id) => {
                 if (isCityAdmin && id) selectCity(id);
                 goToLevel('parcelles', id ?? (isCityAdmin ? activeCityUuid || null : null), null, null);
-            }} onOpen={(id) => openParcel(id)} readOnly={readOnly} />;
+            }} onOpen={(id) => openParcel(id)} onOpenMap={(parcelIds, initialParcelId) => navigate('/app/patrimoine/carte', { state: { parcelIds, initialParcelId, returnTo: `${location.pathname}${location.search}${location.hash}` } })} readOnly={readOnly} />;
         }
         if (level === 'batiments') {
             return <BatimentsTab buildings={buildings} parcels={parcels} cities={cities} role={organizationRole} isLoading={isLoading} error={error} note={note} onReload={() => void reload()} onCreate={createBuilding} onUpdate={updateBuilding} onDelete={deleteBuilding} selectedParcelId={selectedParcelId} onParcelFilter={openParcel} onOpen={(id) => openBuilding(id)} readOnly={readOnly} />;
@@ -714,7 +718,7 @@ export function PatrimoinePage({ readOnly = false }: { readOnly?: boolean } = {}
                 key={`${activeLevel}:${selectedCityId ?? ''}:${selectedParcelId ?? ''}:${selectedBuildingId ?? ''}:${selectedUnitId ?? ''}`}
                 variant="underline"
                 tabs={[{ id: 'overview', label: 'Aperçu' }, { id: 'manage', label: managementLabel }]}
-                defaultActiveTabId="overview"
+                defaultActiveTabId={restoreManagementTab ? 'manage' : 'overview'}
                 renderContent={(tabId) => tabId === 'overview' ? contextBody : renderTab(activeLevel)}
             />
         );
@@ -813,6 +817,8 @@ export function PatrimoinePage({ readOnly = false }: { readOnly?: boolean } = {}
                 onClose={() => setPhotoParcel(null)}
                 title={photoParcel ? `Photos — ${photoParcel.name}` : 'Photos de la parcelle'}
                 size="large"
+                expandable
+                expandToViewport
                 footer={<Button variant="outline" onClick={() => setPhotoParcel(null)}>Fermer</Button>}
             >
                 {photoParcel && <PhotoViewer entityUuid={photoParcel.id} entityType="parcel" entityName={photoParcel.name} />}

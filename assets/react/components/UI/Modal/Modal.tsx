@@ -7,6 +7,7 @@ export interface ModalProps extends UseModalProps {
     children: React.ReactNode;
     footer?: React.ReactNode;
     expandable?: boolean;
+    expandToViewport?: boolean;
     initiallyExpanded?: boolean;
 }
 
@@ -21,6 +22,7 @@ export function Modal({
                           children,
                           footer,
                           expandable = false,
+                          expandToViewport = false,
                           initiallyExpanded = false,
                       }: ModalProps) {
     const { classes, overlayClick } = useModal({
@@ -35,7 +37,7 @@ export function Modal({
     const [centerBounds, setCenterBounds] = useState<React.CSSProperties>();
 
     useEffect(() => {
-        if (!isOpen || !expanded) {
+        if (!isOpen || !expanded || expandToViewport) {
             setCenterBounds(undefined);
             return;
         }
@@ -61,7 +63,7 @@ export function Modal({
             observer.disconnect();
             window.removeEventListener('resize', updateBounds);
         };
-    }, [isOpen, expanded]);
+    }, [isOpen, expanded, expandToViewport]);
 
     useEffect(() => {
         setExpanded(isOpen && initiallyExpanded);
@@ -70,13 +72,13 @@ export function Modal({
     if (!isOpen) return null;
 
     return createPortal(
-        <div className={`modal__overlay${expanded ? ' modal__overlay--center-expanded' : ''}`} style={expanded ? centerBounds : undefined} onClick={overlayClick}>
-            <div className={`${classes}${expandable ? ' modal--expandable' : ''}${expanded ? ' modal--center-expanded' : ''}`} role="dialog" aria-modal="true">
+        <div className={`modal__overlay${expanded ? expandToViewport ? ' modal__overlay--viewport-expanded' : ' modal__overlay--center-expanded' : ''}`} style={expanded && !expandToViewport ? centerBounds : undefined} onClick={overlayClick}>
+            <div className={`${classes}${expandable ? ' modal--expandable' : ''}${expanded ? expandToViewport ? ' modal--viewport-expanded' : ' modal--center-expanded' : ''}`} role="dialog" aria-modal="true">
                 <button className="modal__close" onClick={onClose} aria-label={('Fermer')}>
                     &times;
                 </button>
                 {title && <div className="modal__header">{title}</div>}
-                {expandable && <button className="modal__expand" type="button" onClick={() => setExpanded((value) => !value)} aria-label={expanded ? 'Réduire au format normal' : 'Agrandir au panneau central'} title={expanded ? 'Réduire' : 'Agrandir au panneau central'}>{expanded ? '⤢' : '⛶'}</button>}
+                {expandable && <button className="modal__expand" type="button" onClick={() => setExpanded((value) => !value)} aria-label={expanded ? 'Réduire au format normal' : expandToViewport ? 'Afficher en plein écran' : 'Agrandir au panneau central'} title={expanded ? 'Réduire' : expandToViewport ? 'Plein écran' : 'Agrandir au panneau central'}>{expanded ? '⤢' : '⛶'}</button>}
                 <div className="modal__body">{children}</div>
                 {footer && <div className="modal__footer">{footer}</div>}
             </div>

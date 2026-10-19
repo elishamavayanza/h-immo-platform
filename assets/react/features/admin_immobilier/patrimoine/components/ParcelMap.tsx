@@ -70,11 +70,10 @@ function clusters(points: Point[], threshold = 42) {
 interface ParcelMapProps {
     parcels: MapParcel[];
     initialParcelId: string | null;
-    onClose: () => void;
 }
 
 /** Carte légère basée sur les tuiles OSM, sans clé externe ni dépendance cartographique. */
-export function ParcelMap({ parcels, initialParcelId, onClose }: ParcelMapProps) {
+export function ParcelMap({ parcels, initialParcelId }: ParcelMapProps) {
     const hostRef = useRef<HTMLDivElement>(null);
     const dragRef = useRef<{ x: number; y: number; center: { x: number; y: number } } | null>(null);
     const pointersRef = useRef(new Map<number, { x: number; y: number }>());
@@ -226,7 +225,6 @@ export function ParcelMap({ parcels, initialParcelId, onClose }: ParcelMapProps)
                 <Button variant="outline" onClick={() => zoomAt(zoom + 1)} aria-label="Zoom avant" disabled={zoom >= MAX_ZOOM}>＋</Button>
                 <Button variant="outline" onClick={() => zoomAt(zoom - 1)} aria-label="Zoom arrière" disabled={zoom <= MIN_ZOOM}>−</Button>
                 <Button variant="outline" onClick={fit}>Tout voir</Button>
-                <Button variant="outline" onClick={onClose}>Fermer</Button>
             </div>
         </div>
         <div

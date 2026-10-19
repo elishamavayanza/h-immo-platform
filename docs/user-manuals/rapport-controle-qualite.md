@@ -1,8 +1,18 @@
 # Rapport de contrôle qualité des manuels Soft-IMMO
 
-**Révision :** 1.3.5 — 18 octobre 2026
+**Révision :** 1.3.9 — 19 octobre 2026
 **Sources :** `catalog.json` et `tools/generate_user_manuals.py`  
 **PDF concernés :** SUPER_ADMIN, PATRON, ADMIN_IMMOBILIER et ADMIN_VILLE.
+
+## Révision 1.3.9 — Procédures guidées par rôle
+
+- Les articles des quatre rôles donnent maintenant un parcours plus concret : menu à ouvrir, onglet ou liste à utiliser, vérifications avant confirmation et contrôle du résultat.
+- Les guides Patrimoine distinguent la vue d’ensemble (« Villes », « Tous les biens ») des onglets de gestion des parcelles, bâtiments et unités. Les responsabilités de lecture seule du PATRON et les périmètres de l’ADMIN_VILLE restent explicites.
+- Les guides des opérations locatives, financières, du personnel et de la maintenance détaillent les étapes et les contrôles utiles sans élargir les droits du rôle.
+- Le lecteur web met en évidence « Où trouver cet écran » et permet d’ouvrir la page concernée dans un nouvel onglet. Les étapes sont présentées sous « Comment procéder ».
+- La création d’organisation SUPER_ADMIN est corrigée : le parcours comporte quatre étapes — Identité, Capacités, Compte PATRON et Logo facultatif.
+- Les quatre PDF et leurs pages de lecture ont été régénérés depuis le catalogue. Pagination : 19 pages (SUPER_ADMIN), 21 (PATRON), 25 (ADMIN_IMMOBILIER), 21 (ADMIN_VILLE).
+- À cette révision, la génération PDF a réussi avec le runtime Python du workspace ; `yarn type-check` et `yarn build` ont réussi. Le contrôle visuel manuel des pages n’a pas été exécuté.
 
 ## Révision 1.3.5 — Capacités configurables par organisation
 
