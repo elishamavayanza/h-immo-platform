@@ -1,5 +1,5 @@
 {
-  "version": "1.3.9",
+  "version": "1.4.0",
   "updatedAt": "2026-10-19",
   "roles": {
     "super_admin": {
@@ -174,7 +174,7 @@
             "Pour vérifier une unité, contrôlez son bâtiment, son niveau, son type et son occupation, puis ouvrez « Locataires » pour consulter les informations locatives accessibles.",
             "Si une donnée est incorrecte, transmettez à l’ADMIN_IMMOBILIER l’identifiant ou le nom de la ville et du bien ainsi que la correction attendue."
           ],
-          "fields": "Le parcours de navigation est : ville → parcelle → bâtiment → unité. Les onglets de gestion permettent de consulter les listes ; les formulaires de création et de modification ne sont pas disponibles au PATRON.",
+          "fields": "Le parcours de navigation est : ville → parcelle → bâtiment → unité. Le nombre d’étages compte les étages au-dessus du rez-de-chaussée ; 0 signifie RDC seulement. Les niveaux utilisent 0 pour le RDC, les nombres positifs pour les étages supérieurs et les nombres négatifs pour les sous-sols. Les onglets de gestion permettent de consulter les listes ; les formulaires de création et de modification ne sont pas disponibles au PATRON.",
           "result": "La structure visible correspond au périmètre de l’organisation active.",
           "limits": "Le PATRON consulte le patrimoine en lecture seule. La création, la modification et la suppression sont réservées aux rôles de gestion autorisés.",
           "id": "patrimoine"
@@ -353,10 +353,11 @@
             "Ouvrez une ville puis l’onglet de gestion des parcelles. Dans les actions d’une parcelle, choisissez « Modifier » pour corriger sa fiche.",
             "Ouvrez la parcelle puis l’onglet de gestion des bâtiments. Utilisez « Modifier » sur le bâtiment concerné.",
             "Ouvrez le bâtiment puis l’onglet de gestion des unités. Utilisez « Modifier » sur l’unité concernée.",
+            "Lors de la création ou modification du bâtiment, indiquez les étages au-dessus du RDC : 0 = plain-pied, 1 = jusqu’au 1er, 2 = jusqu’au 2e. Dans Gérer les unités → Gérer les niveaux, numérotez le RDC 0, les étages supérieurs 1…N et les sous-sols −1, −2… ; associez ensuite les unités à ces niveaux.",
             "Si la Vitrine est autorisée pour l’organisation, choisissez Actions → « Publier » pour rendre l’unité visible ou « Retirer de la vitrine » pour la masquer ; gérez ses photos depuis le même menu.",
             "Vérifiez la ville et les éléments parents avant chaque enregistrement ; la modification ne déplace pas le bien vers une autre ville, parcelle ou bâtiment."
           ],
-          "fields": "Ville : nom et code uniques obligatoires, province et pays facultatifs. Parcelle, bâtiment et unité : les formulaires valident leurs champs et conservent les rattachements parents. La publication d’une unité dépend de l’autorisation Vitrine de l’organisation.",
+          "fields": "Ville : nom et code uniques obligatoires, province et pays facultatifs. Parcelle, bâtiment et unité : les formulaires valident leurs champs et conservent les rattachements parents. Le nombre d’étages compte ceux au-dessus du RDC ; les unités et niveaux partagés utilisent le même repère (RDC 0, étages positifs, sous-sols négatifs). La publication d’une unité dépend de l’autorisation Vitrine de l’organisation.",
           "result": "Les créations, modifications et suppressions logiques sont enregistrées dans le patrimoine de l’organisation. Les changements et publications sont soumis aux contrôles de capacité et de rattachement.",
           "limits": "L’ADMIN_IMMOBILIER dispose du CRUD des villes, parcelles, bâtiments et unités de son organisation, ainsi que de leur publication lorsque la Vitrine est autorisée. Les plafonds de capacité s’appliquent. La suppression est logique et peut retirer une ville et ses éléments du patrimoine actif ; vérifiez les baux et l’historique avant de confirmer. Le rattachement à une autre organisation n’est jamais permis. Les opérations locatives et financières restent réservées aux rôles autorisés de la ville.",
           "id": "patrimoine"
@@ -547,11 +548,12 @@
             "Ouvrez « Gestion immobilière → Patrimoine ». Dans la vue d’ensemble, utilisez « Villes » pour retrouver vos villes attribuées ; ouvrez la ville concernée.",
             "Dans le parcours de la ville, consultez « Aperçu » ou ouvrez « Gérer les parcelles » pour créer, corriger ou consulter une parcelle selon les actions affichées.",
             "Ouvrez une parcelle puis « Gérer les bâtiments » pour ajouter ou modifier un bâtiment ; ouvrez ensuite le bâtiment et « Gérer les unités » pour gérer ses unités.",
+            "À la création ou modification d’un bâtiment, le nombre demandé correspond aux étages au-dessus du RDC : 0 = plain-pied, 1 = jusqu’au 1er, 2 = jusqu’au 2e. Dans Gérer les unités → Gérer les niveaux, utilisez 0 pour le RDC, 1…N pour les étages supérieurs et −1, −2… pour les sous-sols. Les unités et les niveaux ne peuvent pas dépasser cette limite.",
             "Dans la liste, choisissez « Ajouter une parcelle », « Ajouter un bâtiment » ou « Ajouter une unité » selon le niveau. Pour modifier, utilisez l’action de la ligne ; relisez les rattachements parents avant l’enregistrement.",
             "Dans les unités, sélectionnez le bâtiment puis « Gérer les niveaux » pour déclarer ou corriger les niveaux ; utilisez « Gérer les accès » pour configurer les accès partagés autorisés.",
             "Avant toute restructuration, vérifiez les baux et les occupations. Pour une erreur de capacité ou un besoin de création de ville, contactez le PATRON ou l’ADMIN_IMMOBILIER."
           ],
-          "fields": "Ville : consultation seulement. Parcelle, bâtiment, unité : champs propres au niveau et rattachement au parent ; niveaux : référence, libellé, ordre et description ; accès : nom et unités desservies selon le formulaire.",
+          "fields": "Ville : consultation seulement. Parcelle, bâtiment, unité : champs propres au niveau et rattachement au parent ; niveaux : référence, libellé, numéro (RDC 0, étage positif, sous-sol négatif) et description ; accès : nom et unités desservies selon le formulaire. Le nombre d’étages du bâtiment compte les étages au-dessus du RDC.",
           "result": "Les espaces, baux et accès sont rattachés à leurs parents et restent bornés au périmètre autorisé. Les nouvelles créations peuvent être refusées si l’organisation a atteint une capacité globale attribuée par la plateforme.",
           "limits": "Avant de restructurer des espaces, vérifiez les baux actifs. Les paiements historiques restent associés au bail et ne sont pas modifiés par un changement d’occupation. Les plafonds sont définis au niveau de l’organisation et ne sont pas visibles dans votre espace. Si une création est refusée pour capacité atteinte, contactez le PATRON ou l’ADMIN_IMMOBILIER ; les données déjà présentes restent accessibles.",
           "id": "patrimoine"

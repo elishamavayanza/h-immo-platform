@@ -13,6 +13,7 @@ use App\Entity\Property\Parcel;
 use App\Mapper\Property\BuildingMapper;
 use App\Repository\Property\ParcelRepository;
 use App\Repository\Property\BuildingRepository;
+use App\Repository\Property\BuildingLevelRepository;
 use App\Repository\Property\UnitRepository;
 use App\Repository\Rental\LeaseRepository;
 use App\Security\SecurityAction;
@@ -40,6 +41,7 @@ final readonly class BuildingService
         private BuildingRepository $buildingRepository,
         private ParcelRepository $parcelRepository,
         private UnitRepository $unitRepository,
+        private BuildingLevelRepository $buildingLevelRepository,
         private LeaseRepository $leaseRepository,
         private BuildingMapper $buildingMapper,
         private SecurityServiceInterface $securityService,
@@ -204,6 +206,9 @@ final readonly class BuildingService
         $buildingRepository = new Building();
         $buildingRepository->setParcel($parent);
         $this->buildingMapper->copyToEntity($request, $buildingRepository);
+        // Les anciennes requêtes peuvent omettre ce champ : elles décrivent
+        // alors un bâtiment de plain-pied (rez-de-chaussée uniquement).
+        $buildingRepository->setNumberOfFloors($request->numberOfFloors ?? 0);
 
         $attempt = $this->capacityService->executeWithinLimit($organization, 'buildings', function () use ($buildingRepository): void {
             $this->entityManager->persist($buildingRepository);
@@ -269,8 +274,22 @@ final readonly class BuildingService
             }
         }
 
+        $newFloorCount = $request->numberOfFloors
+            ?? $buildingRepository->getNumberOfFloors()
+            ?? max(0, $this->unitRepository->highestFloor($buildingRepository), $this->buildingLevelRepository->highestFloor($buildingRepository));
+        if ($this->unitRepository->hasFloorAbove($buildingRepository, $newFloorCount)
+            || $this->buildingLevelRepository->hasFloorAbove($buildingRepository, $newFloorCount)
+        ) {
+            return $feedback
+                ->addError('numberOfFloors', 'Le nombre d’étages ne peut pas être inférieur à un niveau ou à une unité déjà déclaré(e).')
+                ->setErrorFlushDescription('Ajustez d’abord les unités et les niveaux concernés, puis réduisez le nombre d’étages.')
+                ->autoInitFlush()
+                ->setStatus(409);
+        }
+
         $oldValues = ['reference' => $buildingRepository->getReference(), 'name' => $buildingRepository->getName(), 'type' => $buildingRepository->getType()->value, 'numberOfFloors' => $buildingRepository->getNumberOfFloors(), 'description' => $buildingRepository->getDescription()];
         $this->buildingMapper->copyToEntity($request, $buildingRepository);
+        $buildingRepository->setNumberOfFloors($newFloorCount);
         $this->auditLogService->log(
             action: 'UPDATE_BUILDING', entityType: Building::class, entityId: (int) $buildingRepository->getId(),
             organization: $buildingRepository->getParcel()->getCity()->getOrganization(), user: $this->securityService->getCurrentUser(),

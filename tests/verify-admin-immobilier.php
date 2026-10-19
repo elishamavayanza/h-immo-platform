@@ -863,20 +863,62 @@ if ($createdCityUuid !== null) {
 
     $createdUnitUuid = null;
     if ($createdBuildingUuid !== null) {
+        [$status] = $request('POST', '/api/v1/units', [
+            'buildingUuid' => $createdBuildingUuid,
+            'reference' => 'CRUD-' . strtoupper(substr($suffix, 0, 8)) . '-TOO-HIGH',
+            'type' => 'apartment',
+            'operationalStatus' => 'available',
+            'floor' => 3,
+            'surface' => '50.00',
+            'monthlyRent' => '100.00',
+            'currency' => 'USD',
+        ], $adminImmobilierToken);
+        check('ADMIN_IMMOBILIER ne crée pas une unité au-dessus des étages déclarés', $status === 422, 'obtenu ' . $status);
+
+        [$status] = $request('POST', '/api/v1/property/buildings/' . $createdBuildingUuid . '/levels', [
+            'reference' => 'LEVEL-TOO-HIGH-' . strtoupper(substr($suffix, 0, 6)),
+            'label' => 'Troisième étage non autorisé',
+            'displayOrder' => 3,
+        ], $adminImmobilierToken);
+        check('ADMIN_IMMOBILIER ne déclare pas un niveau au-dessus des étages du bâtiment', $status === 422, 'obtenu ' . $status);
+
+        [$status, $levelPayload] = $request('POST', '/api/v1/property/buildings/' . $createdBuildingUuid . '/levels', [
+            'reference' => 'LEVEL-' . strtoupper(substr($suffix, 0, 8)),
+            'label' => 'Deuxième étage',
+            'displayOrder' => 2,
+        ], $adminImmobilierToken);
+        $createdLevelUuid = is_array($levelPayload) ? ($levelPayload['data']['id'] ?? null) : null;
+        check('ADMIN_IMMOBILIER peut déclarer le dernier étage autorisé', $status === 201 && $createdLevelUuid !== null, 'obtenu ' . $status);
+
         [$status, $payload] = $request('POST', '/api/v1/units', [
             'buildingUuid' => $createdBuildingUuid,
             'reference' => 'CRUD-' . strtoupper(substr($suffix, 0, 8)) . '-U',
             'type' => 'apartment',
             'operationalStatus' => 'available',
-            'floor' => 0,
+            'floor' => 2,
+            'levelUuid' => $createdLevelUuid,
             'surface' => '50.00',
             'monthlyRent' => '100.00',
             'currency' => 'USD',
         ], $adminImmobilierToken);
-        check('ADMIN_IMMOBILIER crée une unité dans un bâtiment de son organisation', $status === 201, 'obtenu ' . $status);
+        check('ADMIN_IMMOBILIER crée une unité au niveau déclaré dans son bâtiment', $status === 201, 'obtenu ' . $status);
         $createdUnitUuid = is_array($payload)
             ? ($payload['data']['uuid'] ?? $payload['data']['id'] ?? null)
             : null;
+
+        [$status] = $request('PUT', '/api/v1/property/building-levels/' . $createdLevelUuid, [
+            'reference' => 'LEVEL-' . strtoupper(substr($suffix, 0, 8)),
+            'label' => 'Premier étage',
+            'displayOrder' => 1,
+        ], $adminImmobilierToken);
+        check('Modifier un niveau partagé met à jour son étage sur les unités liées', $status === 200, 'obtenu ' . $status);
+        if ($createdUnitUuid !== null) {
+            [$status, $unitPayload] = $request('GET', '/api/v1/units/' . $createdUnitUuid, null, $adminImmobilierToken);
+            check('L’unité liée reprend le numéro du niveau partagé modifié', $status === 200 && ($unitPayload['data']['floor'] ?? null) === 1, 'obtenu ' . $status);
+        }
+
+        [$status] = $request('PUT', '/api/v1/property/buildings/' . $createdBuildingUuid, ['numberOfFloors' => 0], $adminImmobilierToken);
+        check('ADMIN_IMMOBILIER ne réduit pas les étages sous un niveau encore utilisé', $status === 409, 'obtenu ' . $status);
     } else {
         check('ADMIN_IMMOBILIER crée une unité dans un bâtiment de son organisation', false, 'UUID de bâtiment absent');
     }

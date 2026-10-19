@@ -220,6 +220,9 @@ final readonly class UnitService
         $this->unitMapper->copyToEntity($request, $unitRepository);
         $level = $this->resolveBuildingLevel($request->levelUuid, $parent, $feedback);
         if ($request->levelUuid !== null && $request->levelUuid !== '' && $level === null) return $feedback->autoInitFlush();
+        if (!$this->isFloorAllowed($parent, $level?->getDisplayOrder() ?? $request->floor, $feedback)) {
+            return $feedback->autoInitFlush();
+        }
         $unitRepository->setLevel($level);
         if ($level !== null) $unitRepository->setFloor($level->getDisplayOrder())->setFloorLabel($level->getLabel());
 
@@ -287,6 +290,11 @@ final readonly class UnitService
                         ->autoInitFlush()->setStatus(409);
                 }
             }
+        }
+
+        $effectiveFloor = $level?->getDisplayOrder() ?? $request->floor ?? $unitRepository->getFloor();
+        if (!$this->isFloorAllowed($unitRepository->getBuilding(), $effectiveFloor, $feedback)) {
+            return $feedback->autoInitFlush();
         }
 
         if ($request->parentUnitUuid !== null) {
@@ -387,6 +395,24 @@ final readonly class UnitService
         }
         $this->securityService->checkBuildingAccess($building, SecurityAction::VIEW_UNIT);
         return $level;
+    }
+
+    private function isFloorAllowed(Building $building, ?int $floor, Feedback $feedback): bool
+    {
+        $maximumFloor = $building->getNumberOfFloors()
+            ?? max(0, $this->unitRepository->highestFloor($building), $this->buildingLevelRepository->highestFloor($building));
+        if ($floor === null || $floor > $maximumFloor) {
+            $feedback->addError('floor', sprintf(
+                'Cet étage dépasse la capacité déclarée du bâtiment. Les valeurs autorisées vont du sous-sol (−1, −2…) à %d (0 = rez-de-chaussée).',
+                $maximumFloor
+            ))
+                ->setErrorFlushDescription('Choisissez un étage compris dans les limites du bâtiment.')
+                ->setStatus(422);
+
+            return false;
+        }
+
+        return true;
     }
 
     public function delete(string $uuid): Feedback

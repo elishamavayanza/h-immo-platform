@@ -467,7 +467,7 @@ export function PatrimoinePage({ readOnly = false }: { readOnly?: boolean } = {}
                         subtitle: building.reference,
                         meta: [
                             { label: 'Type', value: buildingTypeLabel(building.type) },
-                            { label: 'Étages indicatifs', value: building.numberOfFloors !== null ? String(building.numberOfFloors) : '—' },
+                            { label: 'Étages au-dessus du RDC', value: building.numberOfFloors === null ? 'À préciser' : String(building.numberOfFloors) },
                             { label: 'Occupation', value: occupancy ? formatPercent(occupancy.occupancyRate) : '—' },
                         ],
                         to: buildPatrimoinePath('unites', { cityId: contextCity?.id ?? selectedCityId, parcelId: selectedParcel.id, buildingId: building.id }),
@@ -494,7 +494,7 @@ export function PatrimoinePage({ readOnly = false }: { readOnly?: boolean } = {}
                     return [
                         { label: 'Référence', value: selectedBuilding.reference },
                         { label: 'Type', value: buildingTypeLabel(selectedBuilding.type) },
-                        { label: 'Étages indicatifs', value: selectedBuilding.numberOfFloors !== null ? String(selectedBuilding.numberOfFloors) : '—' },
+                        { label: 'Étages au-dessus du RDC', value: selectedBuilding.numberOfFloors === null ? 'À préciser' : String(selectedBuilding.numberOfFloors) },
                         { label: 'Parcelle', value: contextParcel?.name ?? '—' },
                         { label: 'Ville', value: contextCity?.name ?? '—' },
                         { label: 'Unités', value: formatInteger(unitCount(occupancy, buildingUnits)) },

@@ -49,7 +49,7 @@ class Building extends SoftDeletableEntity
     private BuildingType $type;
 
     /**
-     * Nombre d'étages du bâtiment.
+     * Nombre d'étages au-dessus du rez-de-chaussée ; 0 décrit un plain-pied.
      */
     #[ORM\Column(type: Types::SMALLINT, nullable: true)]
     private ?int $numberOfFloors = null;

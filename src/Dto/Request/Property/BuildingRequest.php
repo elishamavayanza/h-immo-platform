@@ -59,12 +59,12 @@ final readonly class BuildingRequest
         public ?BuildingType $type = null,
 
         #[OA\Property(
-            description: 'Nombre indicatif d’étages ; les niveaux déclarés sont gérés séparément.',
-            example: 4,
+            description: 'Nombre d’étages au-dessus du rez-de-chaussée. 0 signifie que le bâtiment ne comporte que le rez-de-chaussée. Les sous-sols sont numérotés négativement dans les niveaux et ne sont pas comptés ici.',
+            example: 2,
             nullable: true,
             minimum: 0
         )]
-        #[Assert\PositiveOrZero(groups: ['create', 'update'])]
+        #[Assert\Range(min: 0, max: 1000, groups: ['create', 'update'])]
         public ?int $numberOfFloors = null,
 
         #[OA\Property(

@@ -6,6 +6,7 @@ namespace App\Repository\Property;
 
 use App\Entity\Identity\Organization;
 use App\Entity\Property\Building;
+use App\Entity\Property\BuildingLevel;
 use App\Entity\Property\City;
 use App\Entity\Property\Unit;
 use App\Enum\Currency;
@@ -94,6 +95,40 @@ class UnitRepository extends ServiceEntityRepository
             ->andWhere('u.deletedAt IS NULL')
             ->setParameter('building', $building)
             ->orderBy('u.reference', 'ASC')
+            ->getQuery()
+            ->getResult();
+    }
+
+    public function hasFloorAbove(Building $building, int $maximumFloor): bool
+    {
+        return (int) $this->createQueryBuilder('u')
+            ->select('COUNT(u.id)')
+            ->andWhere('u.building = :building')
+            ->andWhere('u.floor > :maximumFloor')
+            ->andWhere('u.deletedAt IS NULL')
+            ->setParameter('building', $building)
+            ->setParameter('maximumFloor', $maximumFloor)
+            ->getQuery()
+            ->getSingleScalarResult() > 0;
+    }
+
+    public function highestFloor(Building $building): int
+    {
+        return (int) $this->createQueryBuilder('u')
+            ->select('COALESCE(MAX(u.floor), 0)')
+            ->andWhere('u.building = :building')
+            ->andWhere('u.deletedAt IS NULL')
+            ->setParameter('building', $building)
+            ->getQuery()
+            ->getSingleScalarResult();
+    }
+
+    /** @return list<Unit> */
+    public function findByLevel(BuildingLevel $level): array
+    {
+        return $this->createQueryBuilder('u')
+            ->andWhere('u.level = :level')
+            ->setParameter('level', $level)
             ->getQuery()
             ->getResult();
     }

@@ -39,4 +39,29 @@ final class BuildingLevelRepository extends ServiceEntityRepository
         if ($exclude !== null) $qb->andWhere('level.id != :exclude')->setParameter('exclude', $exclude->getId());
         return (int) $qb->getQuery()->getSingleScalarResult() > 0;
     }
+
+    public function hasFloorAbove(Building $building, int $maximumFloor): bool
+    {
+        return (int) $this->createQueryBuilder('level')
+            ->select('COUNT(level.id)')
+            ->andWhere('level.building = :building')
+            ->andWhere('level.displayOrder > :maximumFloor')
+            ->andWhere('level.deletedAt IS NULL')
+            ->setParameter('building', $building)
+            ->setParameter('maximumFloor', $maximumFloor)
+            ->getQuery()
+            ->getSingleScalarResult() > 0;
+    }
+
+    public function highestFloor(Building $building): int
+    {
+        return (int) $this->createQueryBuilder('level')
+            ->select('COALESCE(MAX(level.displayOrder), 0)')
+            ->andWhere('level.building = :building')
+            ->andWhere('level.deletedAt IS NULL')
+            ->setParameter('building', $building)
+            ->getQuery()
+            ->getSingleScalarResult();
+    }
+
 }

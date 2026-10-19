@@ -35,7 +35,7 @@ final readonly class BuildingResponse
         #[OA\Property(description: 'Type de bâtiment', type: 'string', example: 'apartment', enum: BuildingType::class)]
         public BuildingType $type,
 
-        #[OA\Property(description: 'Nombre de niveaux / étages', example: 4, nullable: true)]
+        #[OA\Property(description: 'Nombre d’étages au-dessus du rez-de-chaussée ; 0 signifie RDC seulement. Null indique une ancienne fiche à préciser.', example: 2, nullable: true)]
         public ?int $numberOfFloors,
 
         #[OA\Property(description: 'Description complémentaire', example: 'Bâtiment à 4 niveaux avec ascenseur', nullable: true)]

@@ -37,7 +37,7 @@ interface BuildingForm {
     description: string;
 }
 
-const EMPTY_BUILDING_FORM: BuildingForm = { parcelUuid: '', reference: '', name: '', type: 'apartment', numberOfFloors: '', description: '' };
+const EMPTY_BUILDING_FORM: BuildingForm = { parcelUuid: '', reference: '', name: '', type: 'apartment', numberOfFloors: '0', description: '' };
 
 function buildingToForm(building: BuildingItem): BuildingForm {
     return {
@@ -45,7 +45,7 @@ function buildingToForm(building: BuildingItem): BuildingForm {
         reference: building.reference,
         name: building.name,
         type: building.type,
-        numberOfFloors: building.numberOfFloors !== null ? String(building.numberOfFloors) : '',
+        numberOfFloors: building.numberOfFloors === null ? '' : String(building.numberOfFloors),
         description: building.description ?? '',
     };
 }
@@ -137,7 +137,7 @@ export function BatimentsTab({ buildings, parcels, cities, role, isLoading, erro
             reference: form.reference.trim(),
             name: form.name.trim(),
             type: form.type,
-            numberOfFloors: form.numberOfFloors.trim() === '' ? null : Number(form.numberOfFloors),
+            numberOfFloors: Number(form.numberOfFloors),
             description: form.description.trim() || null,
         };
         try {
@@ -179,7 +179,7 @@ export function BatimentsTab({ buildings, parcels, cities, role, isLoading, erro
         },
         { key: 'parcel', title: 'Parcelle', sortable: true, render: (building) => <button type="button" className="patrimoine-link" onClick={() => onParcelFilter(building.parcelId)}>{parcelById.get(building.parcelId)?.name ?? '—'}</button> },
         { key: 'type', title: 'Type', sortable: true, render: (building) => BUILDING_TYPE_LABELS[building.type] ?? building.type },
-        { key: 'floors', title: 'Niveaux', render: (building) => (building.numberOfFloors !== null ? String(building.numberOfFloors) : '—') },
+        { key: 'floors', title: 'Étages supérieurs', render: (building) => building.numberOfFloors === null ? 'À préciser' : String(building.numberOfFloors) },
         {
             key: 'actions',
             title: 'Actions',
@@ -251,8 +251,8 @@ export function BatimentsTab({ buildings, parcels, cities, role, isLoading, erro
                     <FormField label="Type" htmlFor="building-type" required error={formErrors.type}>
                         <Select id="building-type" value={form.type} onChange={(event) => setForm((current) => ({ ...current, type: event.target.value }))} options={BUILDING_TYPE_OPTIONS} />
                     </FormField>
-                    <FormField label="Nombre d’étages (indicatif)" htmlFor="building-floors" helpText="Cette indication est indépendante des niveaux déclarés dans Gérer les unités." error={formErrors.numberOfFloors}>
-                        <Input id="building-floors" type="number" min="0" step="1" inputMode="numeric" value={form.numberOfFloors} onChange={(event) => setForm((current) => ({ ...current, numberOfFloors: event.target.value }))} placeholder="Ex. : 3" fullWidth />
+                    <FormField label="Étages au-dessus du rez-de-chaussée" htmlFor="building-floors" required helpText="0 = rez-de-chaussée seulement ; 2 = rez-de-chaussée, 1er et 2e étages. Les sous-sols se notent −1, −2 dans les niveaux ou unités." error={formErrors.numberOfFloors}>
+                        <Input id="building-floors" type="number" min="0" max="1000" step="1" inputMode="numeric" value={form.numberOfFloors} onChange={(event) => setForm((current) => ({ ...current, numberOfFloors: event.target.value }))} placeholder="Ex. : 2" required fullWidth />
                     </FormField>
                     <FormField label="Description" htmlFor="building-description" error={formErrors.description}>
                         <Textarea id="building-description" value={form.description} onChange={(event) => setForm((current) => ({ ...current, description: event.target.value }))} placeholder="Ex. : Immeuble résidentiel de trois étages avec parking." rows={3} fullWidth maxLength={5000} />

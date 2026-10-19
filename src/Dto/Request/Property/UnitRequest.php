@@ -70,12 +70,13 @@ final readonly class UnitRequest
         public ?string $commercialActivity = null,
 
         #[OA\Property(
-            description: 'Numéro de l\'étage (0 pour le rez-de-chaussée)',
+            description: 'Position de l’unité : 0 pour le rez-de-chaussée, nombre positif pour l’étage au-dessus, nombre négatif pour un sous-sol.',
             example: 1,
-            minimum: 0,
+            minimum: -1000,
+            maximum: 1000,
         )]
         #[Assert\NotBlank(groups: ['create'])]
-        #[Assert\PositiveOrZero(groups: ['create', 'update'])]
+        #[Assert\Range(min: -1000, max: 1000, groups: ['create', 'update'])]
         #[Groups(['create', 'update'])]
         public ?int $floor = null,
 
