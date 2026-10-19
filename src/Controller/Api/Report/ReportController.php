@@ -452,7 +452,10 @@ final class ReportController extends AbstractController
         // Appartenance + statut ACTIVE de l'Organization : un compte
         //Patron d'une organisation désactivée ne doit pas lire ses
         // chiffres.
-        if (!$this->securityService->canAccessOrganization($organization, SecurityAction::VIEW)) {
+        // La permission dédiée au rapport doit être vérifiée ici : VIEW seul
+        // autorise la lecture générale de l'organisation, mais ne doit pas
+        // remplacer le droit explicite de consulter les rapports.
+        if (!$this->securityService->canAccessOrganization($organization, SecurityAction::VIEW_REPORT)) {
             return [
                 null,
                 $this->json(
