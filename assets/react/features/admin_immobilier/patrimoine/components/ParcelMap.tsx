@@ -134,6 +134,25 @@ export function ParcelMap({ parcels, initialParcelId, onClose }: ParcelMapProps)
         setCenter(unproject(anchoredPixel.x - x + size.width / 2, anchoredPixel.y - y + size.height / 2, boundedZoom));
         setZoom(boundedZoom);
     };
+    const zoomAtRef = useRef(zoomAt);
+    zoomAtRef.current = zoomAt;
+    const zoomRef = useRef(zoom);
+    zoomRef.current = zoom;
+
+    useEffect(() => {
+        const host = hostRef.current;
+        if (!host) return;
+
+        const handleWheel = (event: WheelEvent) => {
+            event.preventDefault();
+            const rect = host.getBoundingClientRect();
+            zoomAtRef.current(zoomRef.current + (event.deltaY < 0 ? 1 : -1), event.clientX - rect.left, event.clientY - rect.top);
+        };
+
+        host.addEventListener('wheel', handleWheel, { passive: false });
+        return () => host.removeEventListener('wheel', handleWheel);
+    }, []);
+
     const distanceBetween = (first: { x: number; y: number }, second: { x: number; y: number }) => Math.hypot(first.x - second.x, first.y - second.y);
     const handlePointerDown = (event: ReactPointerEvent<HTMLDivElement>) => {
         if ((event.target as HTMLElement).closest('button')) return;
@@ -221,11 +240,6 @@ export function ParcelMap({ parcels, initialParcelId, onClose }: ParcelMapProps)
             onPointerCancel={handlePointerEnd}
             onLostPointerCapture={handlePointerEnd}
             tabIndex={0}
-            onWheel={(event) => {
-                event.preventDefault();
-                const rect = event.currentTarget.getBoundingClientRect();
-                zoomAt(zoom + (event.deltaY < 0 ? 1 : -1), event.clientX - rect.left, event.clientY - rect.top);
-            }}
             onDoubleClick={(event) => {
                 if ((event.target as HTMLElement).closest('button')) return;
                 const rect = event.currentTarget.getBoundingClientRect();

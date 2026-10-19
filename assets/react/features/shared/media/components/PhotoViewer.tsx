@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type PointerEvent as ReactPointerEvent, type WheelEvent as ReactWheelEvent } from 'react';
+import { useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react';
 
 import { Button } from '../../../../components/UI/Button';
 import { EmptyState } from '../../../../components/Data/EmptyState';
@@ -21,6 +21,8 @@ export function PhotoViewer({ entityUuid, entityType, entityName }: PhotoViewerP
     const [zoom, setZoom] = useState(1);
     const [offset, setOffset] = useState({ x: 0, y: 0 });
     const stageRef = useRef<HTMLDivElement>(null);
+    const zoomRef = useRef(zoom);
+    zoomRef.current = zoom;
     const dragRef = useRef<{ pointerId: number; x: number; y: number; offsetX: number; offsetY: number; mode: 'pan' | 'swipe' } | null>(null);
 
     useEffect(() => {
@@ -108,10 +110,21 @@ export function PhotoViewer({ entityUuid, entityType, entityName }: PhotoViewerP
             nextPhoto(deltaX < 0 ? 1 : -1);
         }
     };
-    const handleWheel = (event: ReactWheelEvent<HTMLDivElement>) => {
-        event.preventDefault();
-        changeZoom(zoom + (event.deltaY < 0 ? 0.25 : -0.25));
-    };
+    useEffect(() => {
+        const stage = stageRef.current;
+        if (activeIndex === null || !stage) return;
+
+        const handleWheel = (event: WheelEvent) => {
+            event.preventDefault();
+            const nextZoom = Math.max(1, Math.min(5, zoomRef.current + (event.deltaY < 0 ? 0.25 : -0.25)));
+            zoomRef.current = nextZoom;
+            setZoom(nextZoom);
+            setOffset((current) => nextZoom === 1 ? { x: 0, y: 0 } : clampOffset(current.x, current.y, nextZoom));
+        };
+
+        stage.addEventListener('wheel', handleWheel, { passive: false });
+        return () => stage.removeEventListener('wheel', handleWheel);
+    }, [activeIndex]);
 
     if (isLoading) return <EmptyState icon={<Spinner size="large" />} title="Chargement des photos…" description={`Récupération des photos de ${entityName}.`} />;
     if (error) return <EmptyState title="Photos indisponibles" description={error} action={<Button onClick={() => setReloadKey((value) => value + 1)}>Réessayer</Button>} />;
@@ -129,7 +142,7 @@ export function PhotoViewer({ entityUuid, entityType, entityName }: PhotoViewerP
             </div>
             <div><Button variant="outline" onClick={() => nextPhoto(-1)} aria-label="Photo précédente">‹</Button><Button variant="outline" onClick={() => nextPhoto(1)} aria-label="Photo suivante">›</Button></div>
         </div>
-        <div ref={stageRef} className={`photo-viewer__stage${zoom > 1 ? ' is-zoomed' : ' is-swipeable'}`} onPointerDown={startDrag} onPointerMove={moveDrag} onPointerUp={stopDrag} onPointerCancel={(event) => stopDrag(event, false)} onLostPointerCapture={(event) => stopDrag(event, false)} onWheel={handleWheel}>
+        <div ref={stageRef} className={`photo-viewer__stage${zoom > 1 ? ' is-zoomed' : ' is-swipeable'}`} onPointerDown={startDrag} onPointerMove={moveDrag} onPointerUp={stopDrag} onPointerCancel={(event) => stopDrag(event, false)} onLostPointerCapture={(event) => stopDrag(event, false)}>
             <img src={photos[activeIndex]} alt={`${entityName} — photo ${activeIndex + 1}`} draggable={false} style={{ transform: `translate(${offset.x}px, ${offset.y}px) scale(${zoom})` }} />
         </div>
     </div>;
