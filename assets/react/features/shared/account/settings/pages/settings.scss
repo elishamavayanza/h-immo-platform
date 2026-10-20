@@ -102,7 +102,7 @@
 }
 .manual-workspace { min-width:0; overflow:hidden; border:1px solid var(--color-border); border-radius:var(--radius-lg, 14px); background:var(--color-bg-card); }
 .manual-workspace__header { display:flex; align-items:flex-start; justify-content:space-between; gap:24px; padding:24px; border-bottom:1px solid var(--color-border); }
-.manual-workspace__header > div { min-width:0; }
+.manual-workspace__header > div:first-child { flex:1 1 24rem; min-width:0; }
 .manual-workspace__eyebrow { margin:0 0 8px; color:var(--color-primary); font-size:.72rem; font-weight:700; letter-spacing:.09em; }
 .manual-workspace__header h2 { margin:0 0 8px; color:var(--color-text-primary); font-size:clamp(1.35rem, 2.4vw, 1.8rem); line-height:1.2; }
 .manual-workspace__header p:not(.manual-workspace__eyebrow) { max-width:70ch; margin:0; color:var(--color-text-secondary); line-height:1.55; }
@@ -174,6 +174,15 @@
 .settings-manual-page__back:hover { border-color:var(--color-primary); background:var(--color-bg-card-hover); }
 .settings-manual-page__back:focus-visible { outline:3px solid var(--color-focus-ring); outline-offset:2px; }
 
+@container settings-page (max-width:760px) {
+    .settings-manual-page .account-page__header { align-items:stretch; flex-direction:column; gap:12px; }
+    .settings-manual-page__back { width:100%; box-sizing:border-box; text-align:center; }
+    .manual-workspace__header { align-items:stretch; justify-content:flex-start; flex-direction:column; gap:16px; padding:clamp(16px, 3vw, 22px); }
+    .manual-workspace__header > div:first-child { flex:0 1 auto; }
+    .manual-workspace__downloads { display:grid; grid-template-columns:repeat(auto-fit, minmax(min(100%, 220px), 1fr)); width:100%; }
+    .manual-workspace__downloads > .btn { min-width:0; max-width:100%; box-sizing:border-box; white-space:normal; }
+}
+
 @media(max-width:600px) {
     .settings-page__sections { grid-template-columns:minmax(0, 1fr); gap:12px; }
     .settings-manual-page .account-page__header { align-items:stretch; flex-direction:column; gap:12px; }
@@ -203,8 +212,7 @@
 }
 
 @container settings-page (max-width:600px) {
-    .settings-manual-page .account-page__header { align-items:stretch; flex-direction:column; gap:12px; }
-    .settings-manual-page__back { width:100%; box-sizing:border-box; text-align:center; }
+    .manual-workspace__downloads { grid-template-columns:minmax(0, 1fr); }
 }
 
 @media(max-width:380px) {

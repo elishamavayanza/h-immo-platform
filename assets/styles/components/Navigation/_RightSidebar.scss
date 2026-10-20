@@ -161,6 +161,11 @@ body.right-sidebar-resizing {
     padding: $spacing-3 $spacing-4;
     overflow-y: auto;
     overflow-x: hidden;
+    // Le panneau droit ne doit pas transmettre son geste de défilement au
+    // contenu central lorsqu'il atteint ses limites.
+    overscroll-behavior-y: contain;
+    -webkit-overflow-scrolling: touch;
+    touch-action: pan-y;
 }
 
 .right-sidebar__footer {

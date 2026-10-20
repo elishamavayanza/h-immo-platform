@@ -257,6 +257,12 @@
     padding: $spacing-3 $spacing-2;
     overflow-y: auto;
     overflow-x: hidden;
+    // Le menu et le panneau central défilent chacun dans leur propre zone.
+    // Sans containment, atteindre le haut ou le bas du menu transmet le geste
+    // au panneau central, ce qui donne l'impression que le menu « accroche ».
+    overscroll-behavior-y: contain;
+    -webkit-overflow-scrolling: touch;
+    touch-action: pan-y;
 }
 
 

@@ -11,7 +11,7 @@
 // passe faux ».
 // ============================================================
 
-import { useCallback, useState, type FormEvent } from 'react';
+import { useCallback, useRef, useState, type FormEvent } from 'react';
 
 import { useAuth } from '../../../app/providers/AuthProvider';
 import { ApiError } from '../../../../services/api/api.types';
@@ -75,6 +75,10 @@ export function useLoginForm(onSuccess: () => void): UseLoginFormReturn {
     const [errors, setErrors] = useState<LoginFormErrors>({});
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [serverError, setServerError] = useState<string | null>(null);
+    // Le rendu désactive le bouton après `setIsSubmitting`, mais un double
+    // clic très rapide peut arriver avant ce rendu. Le verrou synchrone
+    // garantit qu'une seule requête d'authentification part par formulaire.
+    const submitInFlight = useRef(false);
 
     const handleChange = useCallback((field: LoginFormField, value: string) => {
         setValues((previous) => ({ ...previous, [field]: value }));
@@ -90,6 +94,7 @@ export function useLoginForm(onSuccess: () => void): UseLoginFormReturn {
 
     const handleSubmit = useCallback(async (event: FormEvent<HTMLFormElement>) => {
         event.preventDefault();
+        if (submitInFlight.current) return;
 
         setTouched({ email: true, password: true });
         const nextErrors = validate(values);
@@ -101,6 +106,7 @@ export function useLoginForm(onSuccess: () => void): UseLoginFormReturn {
             return;
         }
 
+        submitInFlight.current = true;
         setIsSubmitting(true);
         setServerError(null);
 
@@ -111,6 +117,7 @@ export function useLoginForm(onSuccess: () => void): UseLoginFormReturn {
             if (error instanceof ApiError) queueLoginNetworkError(error);
             setServerError(getLoginErrorMessage(error));
         } finally {
+            submitInFlight.current = false;
             setIsSubmitting(false);
         }
     }, [values, login, onSuccess]);
