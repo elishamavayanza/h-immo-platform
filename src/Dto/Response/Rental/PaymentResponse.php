@@ -27,6 +27,12 @@ final readonly class PaymentResponse
         #[OA\Property(description: 'UUID public de la quittance / loyer concerné', format: 'uuid', example: 'c3019a82-3ad4-4861-a53c-1123a1a3b110')]
         public string $rentId,
 
+        #[OA\Property(description: 'UUID public de la ville du logement associé au paiement', format: 'uuid')]
+        public string $cityUuid,
+
+        #[OA\Property(description: 'Nom de la ville du logement associé au paiement')]
+        public string $cityName,
+
         #[OA\Property(description: 'UUID public de l\'agent ayant enregistré le paiement', format: 'uuid', example: 'd5e6f7a8-b9c0-1d2e-3f4a-5b6c7d8e9f0a')]
         public string $createdById,
 
@@ -79,9 +85,13 @@ final readonly class PaymentResponse
 
     public static function fromEntity(Payment $payment): self
     {
+        $city = $payment->getRent()->getLease()->getUnit()->getBuilding()->getParcel()->getCity();
+
         return new self(
             id: (string) $payment->getUuid(),
             rentId: (string) $payment->getRent()->getUuid(),
+            cityUuid: $city->getUuid()->toRfc4122(),
+            cityName: $city->getName(),
             createdById: (string) $payment->getCreatedBy()->getUuid(),
             createdByName: $payment->getCreatedBy()->getFullName(),
             amount: $payment->getAmount(),

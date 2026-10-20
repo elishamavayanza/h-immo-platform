@@ -6,6 +6,7 @@
 // mobile-first) pour que le TypeScript et le CSS ne puissent pas
 // diverger :
 //     $breakpoint-mobile :  480px
+//     navigation mobile :  600px (le rail tablette reste visible dès 601px)
 //     $breakpoint-tablet :  768px
 //     $breakpoint-desktop: 1024px
 //     $breakpoint-medium-desktop: 1200px (deux barres latérales visibles)
@@ -13,12 +14,12 @@
 //     $breakpoint-xlarge : 1920px
 //
 // Classification en trois familles (seuils tablette / desktop) :
-//     mobile : width  < 768   → layout off-canvas / drawer
-//     tablet : 768 <= width < 1024
+//     mobile : width  < 768   → largeur mobile
+//     tablet : 768 <= width < 1024 → largeur tablette, rail visible en portrait
 //     desktop: width >= 1024
 //
 // « Compact » (nav repliée, panneaux en drawer) = mobile + tablette,
-// soit width < 1024.
+// soit width < 1024. Le tiroir du sidebar est limité aux écrans de 600px ou moins.
 //
 // Les primitives utilisent `window.matchMedia` (jamais d'événement
 // `resize` global) et sont sûres pour le SSR : un environnement sans
@@ -54,8 +55,8 @@ export const MEDIA_QUERIES = {
     touch: '(pointer: coarse)',
     finePointer: '(pointer: fine)',
     reducedMotion: '(prefers-reduced-motion: reduce)',
-    /** Le tiroir hors-canvas est réservé aux écrans mobiles. */
-    drawer: `(max-width: ${BREAKPOINTS.tablet - 1}px)`,
+    /** Les écrans étroits utilisent un tiroir ; les tablettes portrait gardent leur rail visible. */
+    drawer: '(max-width: 600px)',
 } as const;
 
 export const isClient = typeof window !== 'undefined';

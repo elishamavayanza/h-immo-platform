@@ -28,7 +28,7 @@
 
 
 // ============================================================
-// BOUTON HAMBURGER FLOTTANT MOBILE — VISIBLE < 768px UNIQUEMENT
+// BOUTON HAMBURGER FLOTTANT — VISIBLE À 600PX OU MOINS
 // ============================================================
 
 .main-layout__mobile-toggle {
@@ -55,7 +55,7 @@
     z-index: $z-fixed; // au-dessus du contenu, sous le drawer/backdrop
 
     // Le bouton n'apparaît que lorsque le sidebar est un tiroir mobile.
-    @media (max-width: #{$breakpoint-tablet - 1px}) {
+    @media (max-width: #{$breakpoint-mobile-navigation}) {
         display: flex;
     }
 
@@ -135,7 +135,7 @@
     // Sur mobile, le sidebar est un tiroir qui glisse par-dessus le contenu
     // (pas de rail permanent). Le contenu prend toute la largeur.
     // Mode tiroir réservé aux écrans mobiles.
-    @media (max-width: #{$breakpoint-tablet - 1px}) {
+    @media (max-width: #{$breakpoint-mobile-navigation}) {
         padding-left: 0;
     }
 }
@@ -164,7 +164,7 @@
     }
 }
 
-@media (max-width: #{$breakpoint-desktop - 1px}) {
+@media (max-width: #{$breakpoint-mobile-navigation}) {
     .main-layout__right-dock {
         flex-basis: 0;
         width: 0;
@@ -192,7 +192,7 @@
     overflow-y: auto;
     background-color: $color-bg-content;
 
-    @media (max-width: #{$breakpoint-tablet - 1px}) {
+    @media (max-width: #{$breakpoint-mobile-navigation}) {
         // Réserve l’espace du bouton hamburger fixe : sans cette marge,
         // le titre et le libellé de section se retrouvent sous le menu.
         padding: 64px $spacing-3 $spacing-3;
@@ -320,7 +320,7 @@
 
     // En tiroir mobile, le panneau est `position: fixed` : il doit couvrir
     // toute la hauteur visible, donc `100dvh` et non `100vh`.
-    @media (max-width: #{$breakpoint-tablet - 1px}) {
+    @media (max-width: #{$breakpoint-mobile-navigation}) {
         height: 100dvh;
     }
 }
@@ -351,7 +351,7 @@
     &-name {
         font-size: $font-size-xl;  // plus grand : 1.25rem (20px)
         font-weight: $font-weight-bold;
-        color: $color-text-primary;
+        color: inherit;
         @include truncate;
         text-transform: uppercase;
         letter-spacing: 0.04em;
@@ -364,8 +364,8 @@
     @include flex-center;
     font-size: $font-size-xs;  // 12px
     font-weight: $font-weight-medium;
-    color: $color-text-primary;
-    background-color: $color-primary-soft;  // fond accent léger
+    color: inherit;
+    background-color: color-mix(in srgb, var(--color-text-inverse) 16%, transparent);
     border-radius: $radius-full;  // pilule
     padding: 1px $spacing-2;  // hauteur compacte, padding horizontal
     @include truncate;
@@ -576,7 +576,7 @@
     flex-basis: 30px;
 }
 
-@media (max-width: #{$breakpoint-tablet - 1px}) {
+@media (max-width: #{$breakpoint-mobile-navigation}) {
     .main-layout__sidebar-header-stack { gap: $spacing-2; }
     .main-layout__workspace-switcher--mobile .main-layout__workspace-trigger {
         min-height: 50px;

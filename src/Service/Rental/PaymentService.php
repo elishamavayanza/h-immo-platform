@@ -18,6 +18,7 @@ use App\Repository\Rental\PaymentRepository;
 use App\Repository\Rental\RentRepository;
 use App\Security\SecurityAction;
 use App\Security\SecurityServiceInterface;
+use App\Service\Financial\CurrencyAmountCalculator;
 use App\Service\System\AuditLogService;
 use App\Service\System\DateTimeService;
 use Doctrine\ORM\EntityManagerInterface;
@@ -58,6 +59,7 @@ final readonly class PaymentService
         private ValidatorInterface $validator,
         private AuditLogService $auditLogService,
         private DateTimeService $dateTime,
+        private CurrencyAmountCalculator $amountCalculator,
     ) {
     }
 
@@ -281,7 +283,11 @@ final readonly class PaymentService
             }
 
             // Vérifier la cohérence : montant_paiement = montant_original * taux (arrondi 2 décimales)
-            $expectedPaymentAmount = bcmul($request->originalAmount, $request->exchangeRate, 2);
+            $expectedPaymentAmount = $this->amountCalculator->multiplyByRate(
+                $request->originalAmount,
+                $request->exchangeRate,
+                $request->currency ?? $rentCurrency,
+            );
             if (bccomp($expectedPaymentAmount, $request->amount, 2) !== 0) {
                 return [
                     'field' => 'amount',
@@ -452,7 +458,7 @@ final readonly class PaymentService
         return $feedback
             ->setData([
                 'items' => array_values($items),
-                'total' => count($items),
+                'total' => $result['total'],
                 'page' => max(1, $filter->page),
                 'limit' => $filter->limit,
             ])
@@ -546,7 +552,7 @@ final readonly class PaymentService
                         $originalAmount === null
                         || $locked->getOriginalCurrency() !== $rent->getCurrency()
                         || $exchangeRate === null
-                        || bccomp(bcmul($originalAmount, $exchangeRate, 2), $locked->getAmount(), 2) !== 0
+                        || bccomp($this->amountCalculator->multiplyByRate($originalAmount, $exchangeRate, $locked->getCurrency()), $locked->getAmount(), 2) !== 0
                     ) {
                         $feedback
                             ->addError('amount', 'Les données de conversion historiques sont incomplètes ou incohérentes ; le paiement ne peut pas être annulé automatiquement.')

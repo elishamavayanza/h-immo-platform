@@ -206,13 +206,13 @@
 
         // ----- Bouton Appliquer -----
         &:last-child {
-            color: $color-text-inverse;
-            background-color: $color-primary;
-            border-color: $color-primary;
+            color: var(--color-button-primary-text, #{$color-text-inverse});
+            background-color: var(--color-button-primary, #{$color-primary});
+            border-color: var(--color-button-primary, #{$color-primary});
 
             &:hover {
-                background-color: $color-primary-hover;
-                border-color: $color-primary-hover;
+                background-color: var(--color-button-primary-hover, #{$color-primary-hover});
+                border-color: var(--color-button-primary-hover, #{$color-primary-hover});
             }
         }
     }

@@ -1,34 +1,16 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useOrganization } from '../../../../app/providers/OrganizationProvider';
 import { useAdminCity } from '../../../../app/providers/AdminCityProvider';
 import { ApiError } from '../../../../../services/api/api.types';
 import { fetchTreasuryData } from '../services/treasuryService';
-import type { FinancialMovement, FinancialMovementKind, TreasuryData } from '../types/finance.types';
+import type { FinancialMovementKind, TreasuryData } from '../types/finance.types';
+import { negateDecimal, sumMovements } from '../utils/financeAmounts';
 
 function localDate(date: Date): string {
     return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
 }
 
-function cents(amount: string): bigint {
-    const match = /^(-?)(\d+)(?:\.(\d{0,2})\d*)?$/.exec(amount.trim());
-    if (!match) return 0n;
-    const value = BigInt(match[2]) * 100n + BigInt((match[3] ?? '').padEnd(2, '0') || '0');
-    return match[1] ? -value : value;
-}
-
-function decimal(value: bigint): string {
-    const sign = value < 0n ? '-' : '';
-    const absolute = value < 0n ? -value : value;
-    return `${sign}${absolute / 100n}.${String(absolute % 100n).padStart(2, '0')}`;
-}
-
-export function sumMovements(movements: FinancialMovement[], predicate: (movement: FinancialMovement) => boolean): Map<string, string> {
-    const totals = new Map<string, bigint>();
-    for (const movement of movements) {
-        if (predicate(movement)) totals.set(movement.currency, (totals.get(movement.currency) ?? 0n) + cents(movement.amount));
-    }
-    return new Map([...totals].map(([currency, amount]) => [currency, decimal(amount)]));
-}
+export { sumMovements } from '../utils/financeAmounts';
 
 export function useTreasury() {
     const { currentOrganization, organizationRole } = useOrganization();
@@ -43,42 +25,59 @@ export function useTreasury() {
     const [data, setData] = useState<TreasuryData | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
+    const requestId = useRef(0);
 
     const reload = useCallback(async () => {
+        const currentRequestId = ++requestId.current;
         if (!organizationUuid) {
             setData(null);
+            setError(null);
             setLoading(false);
             return;
         }
-        if (organizationRole === 'admin_ville' && cityLoading) return;
+        if (organizationRole === 'admin_ville' && cityLoading) {
+            setData(null);
+            setError(null);
+            setLoading(true);
+            return;
+        }
         if (from > to) {
+            setData(null);
             setError('La date de début doit être antérieure ou égale à la date de fin.');
             setLoading(false);
             return;
         }
         if (!cityUuid && organizationRole === 'admin_ville') {
             setData({ movements: [], expenseTotal: 0, paymentTotal: 0, note: null });
+            setError(null);
             setLoading(false);
             return;
         }
+        setData(null);
         setLoading(true);
         setError(null);
         try {
-            setData(await fetchTreasuryData(organizationUuid, from, to, cityUuid ?? undefined, activeCity?.name));
+            const nextData = await fetchTreasuryData(organizationUuid, from, to, cityUuid ?? undefined);
+            if (currentRequestId === requestId.current) setData(nextData);
         } catch (cause) {
-            setError(cause instanceof ApiError ? cause.message : 'Impossible de charger les mouvements financiers.');
+            if (currentRequestId === requestId.current) {
+                setError(cause instanceof ApiError || cause instanceof Error ? cause.message : 'Impossible de charger les mouvements financiers.');
+            }
         } finally {
-            setLoading(false);
+            if (currentRequestId === requestId.current) setLoading(false);
         }
     }, [organizationUuid, organizationRole, cityLoading, cityUuid, activeCity?.name, from, to]);
 
-    useEffect(() => { void reload(); }, [reload]);
+    useEffect(() => {
+        void reload();
+        return () => { requestId.current++; };
+    }, [reload]);
 
     const movements = data?.movements ?? [];
     const totals = useMemo(() => {
         const expenses = new Map<string, string>();
         for (const [currency, amount] of sumMovements(movements, (row) => row.kind === 'expense')) {
-            expenses.set(currency, decimal(-cents(amount)));
+            expenses.set(currency, negateDecimal(amount));
         }
         return {
             income: sumMovements(movements, (row) => row.kind === 'income'),

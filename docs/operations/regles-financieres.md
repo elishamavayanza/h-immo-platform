@@ -14,19 +14,35 @@ certification comptable ou réglementaire.
   un bail qui n’est pas actif.
 - La première période est le mois civil du début du bail. La génération inclut
   le mois demandé et s’arrête au mois de fin contractuelle lorsqu’il existe.
-- Le montant généré est le loyer mensuel enregistré sur le bail. La date
-  d’exigibilité actuellement générée est le 5 du mois. Les échéances dont la
-  date d’exigibilité dépasse la fin effective du bail ne sont pas comptées dans
-  les loyers exigibles ou les arriérés des rapports.
+- Les jours du bail sont comptés de façon inclusive. Un mois partiel est
+  calculé au prorata du nombre réel de jours du mois civil :
+  `loyer mensuel × jours couverts / jours du mois`. Les mois complets gardent
+  le montant mensuel contractuel.
+- Pour USD, le résultat est arrondi au centime selon la règle commerciale
+  « demi au supérieur » (half-up), sans flottant. Exemple : 100 USD × 12 / 31
+  donne 38,71 USD.
+- Les échéances CDF de mois complet restent au montant contractuel. Le prorata
+  CDF est bloqué jusqu’à validation de sa précision et de sa règle d’arrondi ;
+  la commande refuse la génération avant toute écriture si son calendrier
+  contient un mois partiel CDF.
+- Le stockage et les formulaires actuels autorisent deux décimales pour CDF,
+  mais cela ne prouve pas que les contrats ou la caisse utilisent des fractions
+  de franc. Proposition à faire valider avant activation : conserver les deux
+  décimales déjà stockées et arrondir half-up au centime CDF.
+- Le jour d’exigibilité habituel reste le 5 du mois. S’il tombe avant le début
+  couvert du bail, la date est reportée au début ; s’il tombe après la fin
+  couverte, elle est avancée à cette fin. Ainsi, l’échéance reste dans la
+  période contractuelle. Aucune clause de jour d’exigibilité différente n’est
+  portée par les champs structurés du bail.
 - Une génération répétée ne modifie pas et ne supprime pas une échéance déjà
   créée.
 
-**Décision métier encore requise :** le dépôt ne définit pas de règle validée
-pour proratiser un début ou une fin de bail en cours de mois, ni pour appliquer
-une modification de loyer à partir d’une date d’effet. En l’état, la commande
-génère le montant mensuel entier pour le mois concerné. Les parties payées ne
-peuvent plus être modifiées rétroactivement par l’API ; une régularisation
-traçable doit être définie avant d’automatiser le prorata.
+**Règles restant à confirmer :** le modèle permet de saisir des conditions
+libres, mais n’expose pas de calendrier d’exigibilité ni de mécanisme de
+révision de loyer avec date d’effet. Une clause écrite incompatible doit primer
+et faire l’objet d’un traitement explicite avant génération. Les échéances
+déjà créées ne sont jamais recalculées ; une correction après facturation doit
+passer par une régularisation traçable.
 
 ## Paiements et soldes des échéances
 
@@ -48,6 +64,10 @@ traçable doit être définie avant d’automatiser le prorata.
 - Les rapports de loyers encaissés regroupent les paiements dans la devise du
   loyer (montant d’origine lorsque la devise a été convertie). Le journal de
   paiements affiche le montant et la devise réellement reçus.
+- Une conversion vers USD applique également l’arrondi half-up au centime.
+  Les montants CDF convertis conservent le comportement existant à deux
+  décimales jusqu’à validation de leur convention ; ce résultat ne doit pas
+  être interprété comme une décision métier d’arrondi CDF.
 
 ## Retards et arriérés
 

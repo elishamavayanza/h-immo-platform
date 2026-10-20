@@ -26,7 +26,7 @@ export type SecurityAction =
     | 'view_document' | 'create_document' | 'delete_document'
     | 'view_worker' | 'create_worker' | 'update_worker' | 'delete_worker'
     | 'view_worker_assignment' | 'create_worker_assignment' | 'update_worker_assignment' | 'delete_worker_assignment'
-    | 'view_expense' | 'create_expense' | 'update_expense' | 'delete_expense'
+    | 'view_expense' | 'create_expense' | 'update_expense' | 'delete_expense' | 'manage_treasury_balance'
     | 'view_report' | 'export_report'
     | 'view_audit_log' | 'export_audit_log'
     | 'view_maintenance' | 'create_maintenance' | 'update_maintenance';
@@ -63,7 +63,7 @@ const ADMIN_VILLE_ACTIONS: ReadonlyArray<SecurityAction> = [
     'view_payment', 'create_payment', 'cancel_payment',
     'view_worker',
     'view_worker_assignment', 'create_worker_assignment', 'update_worker_assignment', 'delete_worker_assignment',
-    'view_expense', 'create_expense', 'update_expense',
+    'view_expense', 'create_expense', 'update_expense', 'create_document', 'manage_treasury_balance',
     'view_report', 'export_report',
     'view_maintenance', 'create_maintenance', 'update_maintenance',
 ];

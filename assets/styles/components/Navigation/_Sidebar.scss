@@ -136,7 +136,7 @@
     // `sidebar--collapsed` n'est plus posée (c'est le hook qui la retire à
     // l'ouverture), donc les libellés reviennent d'eux-mêmes.
     // Le tiroir ouvert est réservé aux écrans mobiles.
-    @media (max-width: #{$breakpoint-tablet - 1px}) {
+    @media (max-width: #{$breakpoint-mobile-navigation}) {
         width: var(--sidebar-width, #{$sidebar-width});
     }
 }
@@ -153,7 +153,19 @@
     gap: $spacing-2;
     min-height: $sidebar-header-min-height;
     padding: $spacing-4;
-    border-bottom: 1px solid $color-border;
+    --sidebar-header-foreground: var(--color-text-inverse);
+    --sidebar-header-background: var(--color-primary);
+    color: var(--sidebar-header-foreground);
+    background-color: var(--sidebar-header-background);
+    border-bottom: 1px solid color-mix(in srgb, var(--sidebar-header-foreground) 20%, var(--sidebar-header-background));
+}
+
+// Les accents du thème sombre sont volontairement clairs pour les surfaces
+// ordinaires. Assombrir uniquement ce bandeau permet de garder un texte clair
+// lisible tout en conservant la teinte choisie par l'utilisateur.
+html[data-theme='dark'] .sidebar__header {
+    --sidebar-header-foreground: #F5F8F8;
+    --sidebar-header-background: color-mix(in srgb, var(--color-primary) 48%, #000);
 }
 
 // Conteneur de l'en-tête : il peut héberger plusieurs contrôles interactifs.
@@ -168,7 +180,7 @@
     font-family: $font-family-heading;
     font-size: $font-size-lg;
     font-weight: $font-weight-semibold;
-    color: $color-text-primary;
+    color: inherit;
     text-align: left;
     transition: color $transition-fast;
 }
@@ -199,7 +211,7 @@
     background: transparent;
     border: 1px solid transparent;
     border-radius: $radius-sm;
-    color: $color-text-muted;
+    color: inherit;
     cursor: pointer;
     transition:
         background-color $transition-fast,
@@ -207,14 +219,14 @@
         color $transition-fast;
 
     &:hover {
-        background-color: $color-bg-card-hover;
-        border-color: $color-border-light;
-        color: $color-text-primary;
+        background-color: color-mix(in srgb, var(--sidebar-header-foreground) 12%, transparent);
+        border-color: color-mix(in srgb, var(--sidebar-header-foreground) 28%, transparent);
+        color: inherit;
     }
 
     &:focus-visible {
         outline: none;
-        box-shadow: 0 0 0 2px $color-primary;
+        box-shadow: 0 0 0 2px var(--sidebar-header-foreground);
     }
 
     svg {
@@ -520,14 +532,14 @@
 
 
 // ============================================================
-// RESPONSIVE — SOUS 768px : TIROIR CACHÉ PAR DÉFAUT + HAMBURGER
+// RESPONSIVE — SOUS LE SEUIL TABLETTE : TIROIR CACHÉ + HAMBURGER
 // ============================================================
 // Ce bloc est placé en FIN de fichier, après les règles de base, pour une
 // raison précise : une media query n'ajoute aucune spécificité, donc
 // `display: none` posé ici avant le `display: flex` de `.sidebar__collapse`
 // serait purement et simplement ignoré.
 //
-// Sous 768px le menu est COMPLÈTEMENT CACHÉ par défaut (pas de rail).
+// Sous 600px le menu est COMPLÈTEMENT CACHÉ par défaut (pas de rail).
 // Un bouton hamburger dans l'en-tête mobile l'ouvre en tiroir qui glisse
 // depuis la gauche. Le contenu principal prend 100% de la largeur.
 //
@@ -538,10 +550,10 @@
 // La transition utilise `transform` (GPU) plutôt que `width` pour éviter
 // les recalculs de layout. `will-change: transform` optimise l'animation.
 //
-// Le tiroir est réservé aux écrans de moins de 768px. Une tablette en
-// orientation portrait garde le sidebar visible sous forme de rail replié.
+// Les écrans de plus de 600px gardent le rail visible ; seule la navigation
+// étroite passe au tiroir hors-canvas.
 //
-@media (max-width: #{$breakpoint-tablet - 1px}) {
+@media (max-width: #{$breakpoint-mobile-navigation}) {
     .sidebar {
         position: fixed;
         top: 0;
@@ -593,7 +605,7 @@
     // Le tiroir garde son état final (ouvert/fermé) mais sans glissement, et
     // `will-change` est retiré : sans animation, la promotion GPU est une
     // réservation de mémoire inutile.
-    @media (max-width: #{$breakpoint-tablet - 1px}) {
+    @media (max-width: #{$breakpoint-mobile-navigation}) {
         .sidebar {
             will-change: auto;
         }

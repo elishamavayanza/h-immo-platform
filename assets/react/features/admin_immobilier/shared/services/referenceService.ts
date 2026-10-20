@@ -144,9 +144,9 @@ export function tenantLabel(tenant: TenantItem): string {
  * appliqué côté serveur à partir des organisations et villes accessibles de
  * l'appelant. Passer un `organizationId` inconnu du DTO serait inopérant.
  */
-export function fetchExpenses(from?: string, to?: string, cityIds?: string[]): Promise<ListPage<ExpenseItem>> {
+export function fetchExpenses(from?: string, to?: string, cityIds?: string[], page = 1): Promise<ListPage<ExpenseItem>> {
     if (cityIds && cityIds.length === 0) return Promise.resolve({ items: [], total: 0, page: 1, pages: 0 });
-    const params = new URLSearchParams({ limit: String(REFERENCE_LIMIT), sortBy: 'expenseDate', sortOrder: 'DESC' });
+    const params = new URLSearchParams({ limit: String(REFERENCE_LIMIT), page: String(page), sortBy: 'expenseDate', sortOrder: 'DESC' });
     if (from) params.set('from', from);
     if (to) params.set('to', to);
     cityIds?.forEach((cityId) => params.append('cityIds[]', cityId));

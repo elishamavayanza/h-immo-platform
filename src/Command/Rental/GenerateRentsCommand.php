@@ -9,6 +9,7 @@ use App\Entity\Rental\Rent;
 use App\Enum\LeaseStatus;
 use App\Repository\Rental\LeaseRepository;
 use App\Repository\Rental\RentRepository;
+use App\Service\Rental\RentScheduleCalculator;
 use App\Service\System\DateTimeService;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\Console\Attribute\AsCommand;
@@ -47,6 +48,7 @@ final class GenerateRentsCommand extends Command
         private RentRepository $rentRepository,
         private EntityManagerInterface $em,
         private DateTimeService $dateTime,
+        private RentScheduleCalculator $scheduleCalculator,
     ) {
         parent::__construct();
     }
@@ -153,11 +155,31 @@ HELP);
             $io->warning('Mode DRY-RUN : aucune écriture en base.');
         }
 
+        // Valider tous les calendriers avant le premier flush. Une période
+        // partielle CDF non spécifiée ne doit pas laisser une génération
+        // globale partiellement persistée.
+        $schedules = [];
+        try {
+            foreach ($leases as $lease) {
+                $schedules[spl_object_id($lease)] = $this->scheduleCalculator->calculate(
+                    $lease->getStartDate(),
+                    $lease->getEndDate(),
+                    $endDate,
+                    $lease->getMonthlyRent(),
+                    $lease->getCurrency(),
+                );
+            }
+        } catch (\DomainException $exception) {
+            $io->error($exception->getMessage());
+            $io->warning('Aucune échéance n’a été écrite : le calendrier complet doit être validé avant la génération.');
+            return Command::FAILURE;
+        }
+
         $totalCreated = 0;
         $totalSkipped = 0;
 
         foreach ($leases as $lease) {
-            $created = $this->generateForLease($lease, $endDate, $dryRun, $io);
+            $created = $this->generateForLease($lease, $schedules[spl_object_id($lease)], $dryRun, $io);
             $totalCreated += $created['created'];
             $totalSkipped += $created['skipped'];
         }
@@ -175,51 +197,52 @@ HELP);
     /**
      * Génère les échéances pour un bail donné.
      *
+     * @param list<array{period: \DateTimeImmutable, coveredStart: \DateTimeImmutable, coveredEnd: \DateTimeImmutable, coveredDays: int, daysInMonth: int, amount: string, dueDate: \DateTimeImmutable}> $schedule
      * @return array{created: int, skipped: int}
      */
-    private function generateForLease(Lease $lease, \DateTimeImmutable $endDate, bool $dryRun, SymfonyStyle $io): array
+    private function generateForLease(Lease $lease, array $schedule, bool $dryRun, SymfonyStyle $io): array
     {
-        $startDate = $lease->getStartDate();
-        $leaseEndDate = $lease->getEndDate();
-
-        // La période effective de fin est le minimum entre la fin du bail et la date demandée
-        $effectiveEndDate = $endDate;
-        if ($leaseEndDate !== null && $leaseEndDate < $effectiveEndDate) {
-            $effectiveEndDate = $leaseEndDate->modify('first day of this month');
-        }
-
-        // Si le bail commence après la date de fin effective, rien à faire
-        if ($startDate > $effectiveEndDate) {
-            $io->comment(sprintf('  Bail %s : début (%s) après fin effective (%s), ignoré.', $lease->getReference(), $startDate->format('Y-m'), $effectiveEndDate->format('Y-m')));
+        if ($schedule === []) {
+            $io->comment(sprintf('  Bail %s : aucune période ne tombe dans la plage demandée, ignoré.', $lease->getReference()));
             return ['created' => 0, 'skipped' => 0];
         }
 
-        $io->text(sprintf('  Bail %s (%s) : %s → %s', $lease->getReference(), $lease->getUuid()->toRfc4122(), $startDate->format('Y-m'), $effectiveEndDate->format('Y-m')));
+        $firstPeriod = $schedule[0]['period'];
+        $lastPeriod = $schedule[array_key_last($schedule)]['period'];
+        $io->text(sprintf('  Bail %s (%s) : %s → %s', $lease->getReference(), $lease->getUuid()->toRfc4122(), $firstPeriod->format('Y-m'), $lastPeriod->format('Y-m')));
 
         $created = 0;
         $skipped = 0;
 
-        // Itérer mois par mois
-        $current = $startDate->modify('first day of this month');
-        while ($current <= $effectiveEndDate) {
+        foreach ($schedule as $period) {
             // Vérifier si l'échéance existe déjà
-            $existing = $this->rentRepository->findOneByLeaseAndPeriod($lease, $current);
+            $existing = $this->rentRepository->findOneByLeaseAndPeriod($lease, $period['period']);
 
             if ($existing !== null) {
                 ++$skipped;
-                $current = $current->modify('+1 month');
                 continue;
             }
 
-            // Créer l'échéance
-            // Date d'échéance = 5 du mois (configurable plus tard si besoin)
-            $dueDate = $current->modify('+4 days');
+            if ($dryRun) {
+                $io->comment(sprintf(
+                    '    Prévision %s : %s–%s (%d/%d jours), %s %s, exigible le %s',
+                    $period['period']->format('Y-m'),
+                    $period['coveredStart']->format('Y-m-d'),
+                    $period['coveredEnd']->format('Y-m-d'),
+                    $period['coveredDays'],
+                    $period['daysInMonth'],
+                    $period['amount'],
+                    $lease->getCurrency()->value,
+                    $period['dueDate']->format('Y-m-d'),
+                ));
+            }
 
+            // Créer l'échéance
             $rent = new Rent();
             $rent->setLease($lease);
-            $rent->setPeriod($current);
-            $rent->setDueDate($dueDate);
-            $rent->setAmount($lease->getMonthlyRent());
+            $rent->setPeriod($period['period']);
+            $rent->setDueDate($period['dueDate']);
+            $rent->setAmount($period['amount']);
             $rent->setCurrency($lease->getCurrency());
             // status = PENDING par défaut (entité)
 
@@ -227,8 +250,6 @@ HELP);
                 $this->em->persist($rent);
             }
             ++$created;
-
-            $current = $current->modify('+1 month');
         }
 
         if (!$dryRun && $created > 0) {

@@ -13,10 +13,11 @@ interface Props {
     relatedType: 'lease' | 'payment' | 'expense';
     relatedUuid: string;
     cityUuid?: string;
+    canUpload: boolean;
     canDelete: boolean;
 }
 
-export function PrivateDocumentsModal({ open, onClose, organizationUuid, relatedType, relatedUuid, cityUuid, canDelete }: Props) {
+export function PrivateDocumentsModal({ open, onClose, organizationUuid, relatedType, relatedUuid, cityUuid, canUpload, canDelete }: Props) {
     const [items, setItems] = useState<PrivateDocumentItem[]>([]);
     const [file, setFile] = useState<File | null>(null);
     const [loading, setLoading] = useState(false);
@@ -71,12 +72,12 @@ export function PrivateDocumentsModal({ open, onClose, organizationUuid, related
         <ConfirmDialog isOpen={pendingDelete !== null} onClose={() => setPendingDelete(null)} onConfirm={() => void remove()} title="Supprimer cette pièce ?" message="Cette suppression est définitive et sera inscrite au journal d’audit." confirmLabel="Supprimer" />
         <div className="private-documents-modal">
             <p>Les fichiers sont conservés en espace privé et accessibles selon les droits de votre organisation.</p>
-            <form onSubmit={(event) => { event.preventDefault(); void upload(); }}>
+            {canUpload && <form onSubmit={(event) => { event.preventDefault(); void upload(); }}>
                 <label>Ajouter un document (PDF, JPEG, PNG ou WebP, 15 Mo maximum)
                     <input type="file" accept="application/pdf,image/jpeg,image/png,image/webp" onChange={(event) => setFile(event.target.files?.[0] ?? null)} />
                 </label>
                 <Button type="submit" disabled={!file || saving}>{saving ? 'Envoi…' : 'Ajouter'}</Button>
-            </form>
+            </form>}
             {error && <div role="alert"><p>{error}</p><Button type="button" variant="secondary" onClick={() => void reload()}>Réessayer</Button></div>}
             {loading ? <p role="status">Chargement des documents…</p> : items.length === 0 ? <p>Aucune pièce jointe pour cet élément.</p> : <ul>
                 {items.map((item) => <li key={item.uuid}>

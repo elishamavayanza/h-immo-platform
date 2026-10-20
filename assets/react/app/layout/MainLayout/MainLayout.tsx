@@ -235,8 +235,8 @@ export function MainLayout() {
 
 return (
         <div className="main-layout">
-            {/* Bouton hamburger flottant — réservé au mode mobile
-                (largeur < 768px). Fixed,
+            {/* Bouton hamburger flottant — réservé aux écrans étroits
+                (largeur ≤ 600px). Fixed,
                 z-index sous le drawer. */}
             <button
                 type="button"
@@ -272,7 +272,7 @@ return (
                     groups={groups}
                     variant="dark"
                     collapsible
-                    defaultCollapsed={!isMobile && (sidebarCollapsedPreference ?? (isPortrait || isNarrowDesktop))}
+                    defaultCollapsed={!isMobile && (isPortrait || (sidebarCollapsedPreference ?? isNarrowDesktop))}
                     onCollapsedChange={persistSidebarCollapsed}
                     width="264px"
                     header={(

@@ -132,17 +132,17 @@
 // ============================================================
 
 .icon-btn--primary {
-    background-color: $color-primary;
-    color: $color-text-inverse;
-    border-color: $color-primary;
+    background-color: var(--color-button-primary, #{$color-primary});
+    color: var(--color-button-primary-text, #{$color-text-inverse});
+    border-color: var(--color-button-primary, #{$color-primary});
 
     &:hover:not(:disabled):not(.icon-btn--disabled) {
-        background-color: $color-primary-hover;
-        border-color: $color-primary-hover;
+        background-color: var(--color-button-primary-hover, #{$color-primary-hover});
+        border-color: var(--color-button-primary-hover, #{$color-primary-hover});
     }
 
     &:active:not(:disabled):not(.icon-btn--disabled) {
-        background-color: $color-primary-active;
+        background-color: var(--color-button-primary-active, #{$color-primary-active});
     }
 }
 

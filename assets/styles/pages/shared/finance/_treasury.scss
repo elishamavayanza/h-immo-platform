@@ -14,16 +14,18 @@
         gap: 0.65rem;
     }
 
+    &__scope { color: var(--color-text-muted, #7f8992); font-size: 0.82rem; }
+
     &__link {
         display: inline-flex;
         min-height: 2.65rem;
         align-items: center;
         justify-content: center;
         padding: 0.6rem 0.9rem;
-        border: 1px solid var(--color-primary, #287f8f);
+        border: 1px solid var(--color-button-primary, var(--color-primary, #287f8f));
         border-radius: 0.65rem;
-        background: var(--color-primary, #287f8f);
-        color: var(--color-text-inverse, #fff);
+        background: var(--color-button-primary, var(--color-primary, #287f8f));
+        color: var(--color-button-primary-text, var(--color-text-inverse, #fff));
         font-weight: 600;
         text-decoration: none;
 
@@ -38,25 +40,50 @@
 }
 
 .treasury-cash-note {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) minmax(14rem, auto);
-    align-items: start;
-    gap: 0.75rem 1rem;
     margin: 1rem 0;
+
+    // Card ajoute un wrapper `.card__body` autour du contenu : la grille doit
+    // être portée par ce wrapper, sinon les colonnes déclarées sur la carte
+    // ne contrôlent pas les sélecteurs et le formulaire.
+    > .card__body {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr);
+        gap: 0.75rem;
+        min-width: 0;
+        width: 100%;
+    }
 
     strong { font-size: 0.95rem; }
     p { margin: 0.25rem 0 0; color: var(--color-text-muted, #7f8992); font-size: 0.82rem; line-height: 1.45; }
 
-    &__controls, &__form { display: flex; flex-wrap: wrap; align-items: end; gap: 0.65rem; }
-    &__controls > *, &__form > * { flex: 1 1 10rem; min-width: 0; }
-    &__balance { grid-column: 1 / -1; font-size: 1.35rem !important; font-variant-numeric: tabular-nums; }
-    &__form { grid-column: 1 / -1; }
+    &__controls, &__form { display: grid; width: 100%; min-width: 0; gap: 0.65rem; }
+    &__controls { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    &__form { grid-template-columns: repeat(3, minmax(0, 1fr)); align-items: end; }
+    &__controls > *, &__form > * { min-width: 0; width: 100%; }
+    &__balance { font-size: 1.35rem !important; font-variant-numeric: tabular-nums; }
     &__form label { display: grid; gap: 0.35rem; color: var(--color-text-secondary, #66717b); font-size: 0.8rem; }
     &__form input { width: 100%; min-height: 2.65rem; padding: 0.55rem 0.7rem; border: 1px solid var(--color-border, #ccd3d7); border-radius: 0.6rem; background: var(--color-bg-input, transparent); color: var(--color-text-primary, inherit); }
-    > p:last-child { grid-column: 1 / -1; }
 }
 
 .treasury-table-card { min-width: 0; }
+.treasury-movement-cards { display: none; }
+.treasury-mobile-pagination { display: none; }
+
+// Trois indicateurs alignés sur tablette évitent une dernière cellule isolée.
+@media (max-width: 900px) {
+    .treasury-page > .inline-summary { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    .treasury-page > .inline-summary .inline-summary__item:nth-child(odd) { border-inline-start: 1px solid var(--color-border, #ccd3d7); }
+    .treasury-page > .inline-summary .inline-summary__item:first-child { border-inline-start: 0; }
+    .treasury-page > .inline-summary .inline-summary__item:nth-child(n + 3) { border-block-start: 0; }
+}
+
+.treasury-confirmation {
+    p { margin: 0 0 0.75rem; }
+    dl { display: grid; gap: 0.45rem; margin: 0; }
+    dl > div { display: flex; justify-content: space-between; gap: 1rem; }
+    dt { color: var(--color-text-muted, #7f8992); }
+    dd { margin: 0; text-align: right; font-weight: 600; }
+}
 
 .treasury-toolbar {
     align-items: flex-start;
@@ -68,7 +95,7 @@
     grid-template-columns: repeat(4, minmax(8rem, 1fr));
     align-items: end;
     gap: 0.65rem;
-    width: min(100%, 68rem);
+    width: 100%;
 
     > label {
         display: grid;
@@ -105,21 +132,69 @@
 }
 
 .treasury-table__note { display: block; color: var(--color-text-muted, #7f8992); }
+.treasury-movement-reference { display: grid; justify-items: start; gap: 0.35rem; }
+.treasury-movement-reference > button { min-height: 2.35rem; padding: 0.35rem 0.6rem; }
+.treasury-payment-details { display: grid; gap: 0.65rem; margin: 0; }
+.treasury-payment-details > div { display: grid; grid-template-columns: minmax(7rem, 0.7fr) minmax(0, 1fr); gap: 0.75rem; }
+.treasury-payment-details dt { color: var(--color-text-muted, #7f8992); }
+.treasury-payment-details dd { margin: 0; overflow-wrap: anywhere; text-align: right; }
 .treasury-amount { white-space: nowrap; font-variant-numeric: tabular-nums; }
 .treasury-amount--negative { color: var(--color-danger, #a13d45); }
 .treasury-amount--positive { color: var(--color-success, #24704c); }
 
 @media (max-width: 900px) {
     .treasury-page__header { align-items: flex-start; flex-direction: column; }
+    .treasury-page__actions { width: 100%; justify-content: flex-start; }
+    .treasury-page__link { flex: 1 1 12rem; }
+    .treasury-cash-note__form { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .treasury-cash-note__form > button { grid-column: 1 / -1; }
     .treasury-filters { grid-template-columns: repeat(2, minmax(0, 1fr)); width: 100%; }
+}
+
+@media (max-width: 600px) {
+    .treasury-page > .inline-summary { grid-template-columns: minmax(0, 1fr); }
+    .treasury-page > .inline-summary .inline-summary__item,
+    .treasury-page > .inline-summary .inline-summary__item:nth-child(odd) { border-inline-start: 0; }
+    .treasury-page > .inline-summary .inline-summary__item + .inline-summary__item { border-block-start: 1px solid var(--color-border, #ccd3d7); }
 }
 
 @media (max-width: 520px) {
     .treasury-filters { grid-template-columns: minmax(0, 1fr); }
-    .treasury-cash-note { grid-template-columns: minmax(0, 1fr); }
-    .treasury-cash-note__controls, .treasury-cash-note__form { flex-direction: column; align-items: stretch; }
-    .treasury-cash-note__controls > *, .treasury-cash-note__form > * { width: 100%; flex: 1 1 auto; }
-    .treasury-cash-note__balance, .treasury-cash-note__form, .treasury-cash-note > p:last-child { grid-column: auto; }
-    .treasury-page__actions { width: 100%; }
+    .treasury-cash-note__controls, .treasury-cash-note__form { grid-template-columns: minmax(0, 1fr); }
+    .treasury-cash-note__form > button { grid-column: auto; }
     .treasury-page__link { flex: 1 1 100%; }
+}
+
+@media (max-width: 700px) {
+    .treasury-movement-table { display: none; }
+    .treasury-movement-cards { display: grid; gap: 0.75rem; }
+    .treasury-movement-card {
+        display: grid;
+        gap: 0.7rem;
+        min-width: 0;
+        padding: 0.85rem;
+        border: 1px solid var(--color-border, #ccd3d7);
+        border-radius: 0.8rem;
+        background: var(--color-bg-card, transparent);
+
+        &__top, &__title { display: flex; align-items: center; flex-wrap: wrap; gap: 0.45rem 0.65rem; }
+        &__top { justify-content: space-between; color: var(--color-text-secondary, #66717b); font-size: 0.85rem; }
+        &__title strong { min-width: 0; overflow-wrap: anywhere; }
+        dl { display: grid; gap: 0.5rem; margin: 0; }
+        dl > div { display: grid; grid-template-columns: 5rem minmax(0, 1fr); gap: 0.5rem; }
+        dt { color: var(--color-text-muted, #7f8992); font-size: 0.8rem; }
+        dd { min-width: 0; margin: 0; overflow-wrap: anywhere; }
+        > button { width: 100%; min-height: 2.75rem; }
+    }
+
+    .treasury-mobile-pagination {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 0.5rem;
+        margin-top: 0.75rem;
+
+        button { min-height: 2.75rem; }
+        span { text-align: center; font-size: 0.85rem; }
+    }
 }

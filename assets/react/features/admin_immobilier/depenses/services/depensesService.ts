@@ -16,6 +16,7 @@ import type { Feedback } from '../../../../../services/api/api.types';
 import { REFERENCE_LIMIT, fetchExpenses, fetchPropertyCatalog, fetchWorkers } from '../../shared/services/referenceService';
 import type { BuildingItem, CityItem, ExpenseItem, ParcelItem, UnitItem, WorkerItem } from '../../shared/types/reference.types';
 import type { DepenseRow, DepensesData } from '../types/depense.types';
+import { loadCompletePages } from '../../../shared/finance/utils/treasuryPagination';
 
 const CATEGORY_LABEL: Record<string, string> = {
     salary: 'Personnel',
@@ -70,7 +71,7 @@ function descriptionLabel(expense: ExpenseItem, workers: Map<string, WorkerItem>
         || '—';
 }
 
-export async function fetchDepenses(organizationUuid: string, from?: string, to?: string, cityUuid?: string): Promise<DepensesData> {
+export async function fetchDepenses(organizationUuid: string, from?: string, to?: string, cityUuid?: string, loadAllPages = false): Promise<DepensesData> {
     const [catalog, workers] = await Promise.all([
         fetchPropertyCatalog(organizationUuid),
         fetchWorkers(organizationUuid),
@@ -81,7 +82,10 @@ export async function fetchDepenses(organizationUuid: string, from?: string, to?
     const allowedCityIds = catalog.cities.items
         .filter((city) => !cityUuid || city.id === cityUuid)
         .map((city) => city.id);
-    const expenses = await fetchExpenses(from, to, allowedCityIds);
+    const firstExpensePage = await fetchExpenses(from, to, allowedCityIds);
+    const expenseItems = loadAllPages
+        ? await loadCompletePages(firstExpensePage, (page) => fetchExpenses(from, to, allowedCityIds, page), 'dépenses', REFERENCE_LIMIT)
+        : firstExpensePage.items;
 
     const cities = new Map(catalog.cities.items.map((city) => [city.id, city]));
     const parcels = new Map(catalog.parcels.items.map((parcel) => [parcel.id, parcel]));
@@ -89,7 +93,7 @@ export async function fetchDepenses(organizationUuid: string, from?: string, to?
     const units = new Map(catalog.units.items.map((unit) => [unit.id, unit]));
     const workerById = new Map(workers.items.map((worker) => [worker.id, worker]));
 
-    const rows: DepenseRow[] = expenses.items.map((expense) => ({
+    const rows: DepenseRow[] = expenseItems.map((expense) => ({
         id: expense.id,
         date: expense.expenseDate,
         city: cities.get(expense.cityId)?.name ?? '—',
@@ -114,11 +118,11 @@ export async function fetchDepenses(organizationUuid: string, from?: string, to?
         reversalOfId: expense.reversalOfUuid ?? null,
     }));
 
-    const note = expenses.total > expenses.items.length
-        ? `Liste partielle : ${expenses.total} dépenses au total, les ${REFERENCE_LIMIT} plus récentes sont affichées.`
+    const note = firstExpensePage.total > expenseItems.length
+        ? `Liste partielle : ${firstExpensePage.total} dépenses au total, les ${expenseItems.length} premières sont affichées.`
         : null;
 
-    return { rows, cities: catalog.cities.items, total: expenses.total, note };
+    return { rows, cities: catalog.cities.items, total: firstExpensePage.total, note };
 }
 
 export const CATEGORY_OPTIONS = Object.entries(CATEGORY_LABEL).map(([value, label]) => ({ value, label }));

@@ -410,6 +410,7 @@ export function LocatairesPage({ readOnly = false }: { readOnly?: boolean } = {}
                 relatedType="lease"
                 relatedUuid={documentsTarget.leaseUuid}
                 cityUuid={documentsTarget.cityUuid ?? undefined}
+                canUpload={canDo(organizationRole, 'create_document')}
                 canDelete={canDo(organizationRole, 'delete_document')}
             />
         )}

@@ -709,6 +709,11 @@ check(
     ($report['totalExpenses'] ?? null) === '120.00',
     'totalExpenses=' . ($report['totalExpenses'] ?? 'null')
 );
+check(
+    'Rapport : une période homogène en USD reste exploitable sans taux USD/CDF',
+    ($report['currency'] ?? null) === Currency::USD->value && ($report['totalExpenses'] ?? null) === '120.00',
+    'currency=' . ($report['currency'] ?? 'null') . ', totalExpenses=' . ($report['totalExpenses'] ?? 'null')
+);
 $upcomingLeaseUuids = is_array($report['upcomingLeaseExpirations'] ?? null)
     ? array_map(static fn ($lease) => $lease['leaseUuid'] ?? null, $report['upcomingLeaseExpirations'])
     : [];

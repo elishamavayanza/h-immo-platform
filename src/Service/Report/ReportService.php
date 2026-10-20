@@ -51,10 +51,10 @@ use App\Repository\Rental\TenantRepository;
 use App\Repository\Staff\WorkerAssignmentRepository;
 use App\Repository\Staff\WorkerRepository;
 use App\Security\SecurityServiceInterface;
+use App\Service\Financial\HistoricalCurrencyConverter;
 use App\Service\System\DateTimeService;
 use Symfony\Component\HttpKernel\Exception\BadRequestHttpException;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
-use Symfony\Component\HttpKernel\Exception\UnprocessableEntityHttpException;
 use Symfony\Component\Uid\Uuid;
 
 /**
@@ -89,6 +89,7 @@ final readonly class ReportService
         private DateTimeService $dateTime,
         private ExchangeRateRepository $exchangeRateRepository,
         private OrganizationUserRepository $organizationUserRepository,
+        private HistoricalCurrencyConverter $currencyConverter,
     ) {
     }
 
@@ -138,7 +139,7 @@ final readonly class ReportService
             $response->expensesByCategory = $this->buildExpensesByCategory($organization->getId(), $cityIds, $periodFrom, $periodTo);
         }
 
-        $response->currency = $this->getMainCurrency($organization->getId(), $cityIds);
+        $response->currency = $this->getMainCurrency($organization->getId(), $cityIds, $periodFrom, $periodTo);
 
         return $response;
     }
@@ -191,7 +192,7 @@ final readonly class ReportService
         $response->totalUnits = $totalUnits;
         $response->globalOccupancyRate = $totalUnits > 0 ? round(($totalOccupied / $totalUnits) * 100, 2) : 0.0;
 
-        $response->currency = $this->getMainCurrency($organization->getId(), $cityIds);
+        $response->currency = $this->getMainCurrency($organization->getId(), $cityIds, $periodFrom, $periodTo);
 
         return $response;
     }
@@ -245,7 +246,7 @@ final readonly class ReportService
         $response->occupancyRate = $totalUnits > 0 ? round(($totalOccupied / $totalUnits) * 100, 2) : 0.0;
 
         $response->totalExpenses = $this->sumExpenses(null, $cityIds, $periodFrom, $periodTo);
-        $response->currency = $this->getMainCurrency(null, $cityIds);
+        $response->currency = $this->getMainCurrency(null, $cityIds, $periodFrom, $periodTo);
 
         return $response;
     }
@@ -549,7 +550,7 @@ final readonly class ReportService
 
         // Les synthèses financières de l'organisation suivent sa devise de
         // référence ; les enregistrements comptables gardent leur devise.
-        $referenceCurrency = $this->getReferenceCurrency($organizationId, $cityIds);
+        $referenceCurrency = $this->getReferenceCurrency($organizationId, $cityIds, $periodFrom, $periodTo);
         $byPeriod = [];
         foreach ([[$expenseResults, 'expenses'], [$revenueResults, 'revenues'], [$expectedResults, 'expected']] as [$rows, $field]) {
             foreach ($rows as $row) {
@@ -831,7 +832,7 @@ final readonly class ReportService
         );
 
         $items = [];
-        $referenceCurrency = $this->getReferenceCurrency($organizationId, $cityIds);
+        $referenceCurrency = $this->getReferenceCurrency($organizationId, $cityIds, $periodFrom, $periodTo);
         $totalsByCategory = [];
         $countsByCategory = [];
         foreach ($results as $row) {
@@ -880,7 +881,7 @@ final readonly class ReportService
         $results = $this->expenseRepository->sumByCity($cityIds, $periodFrom, $periodTo);
 
         $items = [];
-        $referenceCurrency = $this->getReferenceCurrency(null, $cityIds);
+        $referenceCurrency = $this->getReferenceCurrency(null, $cityIds, $periodFrom, $periodTo);
         $totalsByCity = [];
         foreach ($results as $row) {
             $currencyCode = $row['currency'] instanceof \BackedEnum ? $row['currency']->value : (string) $row['currency'];
@@ -916,7 +917,7 @@ final readonly class ReportService
         }
 
         $rows = $this->expenseRepository->sumByPropertyLevel($cityIds, $periodFrom, $periodTo);
-        $referenceCurrency = $this->getReferenceCurrency(null, $cityIds);
+        $referenceCurrency = $this->getReferenceCurrency(null, $cityIds, $periodFrom, $periodTo);
         $totals = [];
 
         foreach ($rows as $row) {
@@ -1003,7 +1004,8 @@ final readonly class ReportService
     /**
      * Convertit un montant d'une devise vers la devise de référence de l'organisation.
      * Utilise le taux de change historique applicable à la date de l'opération.
-     * Si pas de taux trouvé, retourne le montant original (fallback).
+     * Une conversion sans taux historique applicable est refusée afin de ne
+     * jamais additionner des montants de devises différentes.
      */
     private function convertToReferenceCurrency(string $amount, Currency $fromCurrency, Currency $toCurrency, \DateTimeImmutable $date, ?int $cityId = null): string
     {
@@ -1015,30 +1017,25 @@ final readonly class ReportService
         $organizationId = $city?->getOrganization()->getId();
         $cityOverrideAllowed = $city !== null && $this->organizationUserRepository->hasCityExchangeRateManagerForCity($city);
         $rate = $this->exchangeRateRepository->findApplicableRate($fromCurrency, $toCurrency, $date, $organizationId, $cityId, $cityOverrideAllowed);
-        if ($rate === null) {
-            // Fallback : essayer le taux inverse
-            $inverseRate = $this->exchangeRateRepository->findApplicableRate($toCurrency, $fromCurrency, $date, $organizationId, $cityId, $cityOverrideAllowed);
-            if ($inverseRate !== null) {
-                return bcdiv($amount, $inverseRate->getRate(), 2);
-            }
-            throw new UnprocessableEntityHttpException(sprintf(
-                'Le rapport ne peut pas convertir %s vers %s au %s : aucun taux historique applicable n’est enregistré.',
-                $fromCurrency->value,
-                $toCurrency->value,
-                $this->dateTime->format($date, 'Y-m-d'),
-            ));
-        }
+        $inverseRate = $rate === null
+            ? $this->exchangeRateRepository->findApplicableRate($toCurrency, $fromCurrency, $date, $organizationId, $cityId, $cityOverrideAllowed)
+            : null;
 
-        return $rate->convertBaseToQuote($amount);
+        return $this->currencyConverter->convert($amount, $fromCurrency, $toCurrency, $date, $rate, $inverseRate);
     }
 
     /**
-     * Détermine la devise de référence pour une organisation.
-     * Utilise getMainCurrency comme fallback.
+     * Détermine la devise de présentation du rapport, selon ses opérations.
+     * Une seule devise permet d'éviter une conversion inutile ; plusieurs
+     * devises nécessitent la devise de référence de l'organisation et ses taux.
      */
-    private function getReferenceCurrency(?int $organizationId, array $cityIds): Currency
-    {
-        $currencyCode = $this->getMainCurrency($organizationId, $cityIds);
+    private function getReferenceCurrency(
+        ?int $organizationId,
+        array $cityIds,
+        ?\DateTimeImmutable $periodFrom = null,
+        ?\DateTimeImmutable $periodTo = null,
+    ): Currency {
+        $currencyCode = $this->getMainCurrency($organizationId, $cityIds, $periodFrom, $periodTo);
         return \App\Enum\Currency::from($currencyCode);
     }
 
@@ -1074,7 +1071,7 @@ final readonly class ReportService
             $to
         );
 
-        $referenceCurrency = $this->getReferenceCurrency($organizationId, $cityIds);
+        $referenceCurrency = $this->getReferenceCurrency($organizationId, $cityIds, $from, $to);
         $total = '0.00';
         foreach ($results as $row) {
             $currency = $row['currency'] instanceof \BackedEnum ? $row['currency']->value : (string) $row['currency'];
@@ -1093,7 +1090,7 @@ final readonly class ReportService
             $to
         );
 
-        $referenceCurrency = $this->getReferenceCurrency($organizationId, $cityIds);
+        $referenceCurrency = $this->getReferenceCurrency($organizationId, $cityIds, $from, $to);
         $total = '0.00';
         foreach ($results as $row) {
             $currency = $row['currency'] instanceof \BackedEnum ? $row['currency']->value : (string) $row['currency'];
@@ -1110,7 +1107,7 @@ final readonly class ReportService
             $cityIds
         );
 
-        $referenceCurrency = $this->getReferenceCurrency($organizationId, $cityIds);
+        $referenceCurrency = $this->getReferenceCurrency($organizationId, $cityIds, null, $asOfDate);
         $total = '0.00';
         foreach ($leases as $lease) {
             $rents = $this->rentRepository->findByLease($lease);
@@ -1204,12 +1201,17 @@ final readonly class ReportService
         return $units > 0 ? round(($occupied / $units) * 100, 2) : 0.0;
     }
 
-    private function getMainCurrency(?int $organizationId, array $cityIds): string
-    {
+    private function getMainCurrency(
+        ?int $organizationId,
+        array $cityIds,
+        ?\DateTimeImmutable $periodFrom = null,
+        ?\DateTimeImmutable $periodTo = null,
+    ): string {
+        $organizationCurrency = null;
         if ($organizationId !== null) {
             $organization = $this->organizationRepository->find($organizationId);
             if ($organization instanceof Organization) {
-                return $organization->getCurrency()->value;
+                $organizationCurrency = $organization->getCurrency()->value;
             }
         } elseif ($cityIds !== []) {
             $city = $this->cityRepository->find($cityIds[0]);
@@ -1223,18 +1225,22 @@ final readonly class ReportService
                         break;
                     }
                 }
-                if ($allBelongToOrganization) return $organization->getCurrency()->value;
+                if ($allBelongToOrganization) {
+                    $organizationCurrency = $organization->getCurrency()->value;
+                }
             }
         }
 
-        // Compter les devises utilisées dans les paiements et dépenses du périmètre
+        // Repérer les devises des paiements, dépenses et échéances de la période.
         $currencyCounts = [];
 
+        $periodFrom ??= $this->dateTime->startOfCurrentYear();
+        $periodTo ??= $this->dateTime->endOfCurrentYear();
         $payments = $this->paymentRepository->getFinancialSummary(
             $organizationId ? [$organizationId] : null,
             $cityIds ?: null,
-            $this->dateTime->startOfCurrentYear(),
-            $this->dateTime->endOfCurrentYear()
+            $periodFrom,
+            $periodTo
         );
         foreach ($payments as $row) {
             $currencyKey = $row['currency'] instanceof \BackedEnum ? $row['currency']->value : (string) $row['currency'];
@@ -1244,12 +1250,34 @@ final readonly class ReportService
         $expenses = $this->expenseRepository->getFinancialSummary(
             $organizationId ? [$organizationId] : null,
             $cityIds ?: null,
-            $this->dateTime->startOfCurrentYear(),
-            $this->dateTime->endOfCurrentYear()
+            $periodFrom,
+            $periodTo
         );
         foreach ($expenses as $row) {
             $currencyKey = $row['currency'] instanceof \BackedEnum ? $row['currency']->value : (string) $row['currency'];
             $currencyCounts[$currencyKey] = ($currencyCounts[$currencyKey] ?? 0) + 1;
+        }
+
+        $expectedRents = $this->rentRepository->getExpectedRentsSummary(
+            $organizationId ? [$organizationId] : null,
+            $cityIds ?: null,
+            $periodFrom,
+            $periodTo
+        );
+        foreach ($expectedRents as $row) {
+            $currencyKey = $row['currency'] instanceof \BackedEnum ? $row['currency']->value : (string) $row['currency'];
+            $currencyCounts[$currencyKey] = ($currencyCounts[$currencyKey] ?? 0) + 1;
+        }
+
+        // Une devise unique peut être présentée telle quelle, même si elle
+        // diffère de la devise de référence configurée. Une conversion n'est
+        // requise que lorsqu'un rapport doit réellement agréger plusieurs devises.
+        if (count($currencyCounts) === 1) {
+            return (string) array_key_first($currencyCounts);
+        }
+
+        if ($organizationCurrency !== null) {
+            return $organizationCurrency;
         }
 
         if (empty($currencyCounts)) {
@@ -1272,7 +1300,7 @@ final readonly class ReportService
             $to
         );
 
-        $referenceCurrency = $this->getReferenceCurrency($organizationId, $cityIds);
+        $referenceCurrency = $this->getReferenceCurrency($organizationId, $cityIds, $from, $to);
         $total = '0.00';
         foreach ($results as $row) {
             $currency = $row['currency'] instanceof \BackedEnum ? $row['currency']->value : (string) $row['currency'];
