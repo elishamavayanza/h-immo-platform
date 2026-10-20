@@ -15,6 +15,7 @@ from reportlab.pdfbase.ttfonts import TTFont
 from reportlab.platypus import (
     BaseDocTemplate,
     Frame,
+    Image,
     NextPageTemplate,
     PageBreak,
     PageTemplate,
@@ -29,6 +30,7 @@ from reportlab.platypus.tableofcontents import TableOfContents
 ROOT = Path(__file__).resolve().parents[1]
 OUTPUT = ROOT / 'assets/react/app/public/documents/presentation-generale-soft-immo.pdf'
 SERVER_OUTPUT = ROOT / 'public/documents/presentation-generale-soft-immo.pdf'
+LOGO = ROOT / 'tools/assets/soft-immo-logo-pdf.png'
 FONT_DIR = Path('/usr/share/fonts/truetype/msttcorefonts')
 
 for name, filename in (
@@ -77,6 +79,7 @@ class PresentationDoc(BaseDocTemplate):
         canvas.saveState()
         canvas.setTitle('Soft-IMMO - Guide général et calculs')
         canvas.setAuthor('Soft-GUIDE ACADEMY')
+        PresentationDoc.draw_footer(canvas, doc)
         canvas.restoreState()
 
     @staticmethod
@@ -89,7 +92,19 @@ class PresentationDoc(BaseDocTemplate):
         canvas.setFillColor(MUTED)
         canvas.drawString(LEFT, PAGE_HEIGHT - 12 * mm, 'SOFT-IMMO  |  PRÉSENTATION GÉNÉRALE')
         canvas.line(LEFT, 15 * mm, PAGE_WIDTH - RIGHT, 15 * mm)
-        canvas.drawString(LEFT, 10 * mm, 'Document administratif  -  Soft-GUIDE ACADEMY')
+        PresentationDoc.draw_footer(canvas, doc)
+        canvas.restoreState()
+
+    @staticmethod
+    def draw_footer(canvas, doc):
+        canvas.saveState()
+        canvas.setFillAlpha(0.22)
+        canvas.drawImage(str(LOGO), LEFT, 7.2 * mm, width=8 * mm, height=7.2 * mm,
+                         preserveAspectRatio=True, anchor='c', mask='auto')
+        canvas.setFillAlpha(1)
+        canvas.setFont('TimesNewRoman', 9)
+        canvas.setFillColor(MUTED)
+        canvas.drawString(LEFT + 10 * mm, 10 * mm, 'Document administratif  -  Soft-GUIDE ACADEMY')
         canvas.drawRightString(PAGE_WIDTH - RIGHT, 10 * mm, f'Page {doc.page}')
         canvas.restoreState()
 
@@ -187,7 +202,8 @@ def section_title(text):
 
 def build_story():
     story = []
-    story += [Spacer(1, 44 * mm), para('DOCUMENT ADMINISTRATIF · ÉDITION 2.1', 'CoverKicker')]
+    story += [Spacer(1, 22 * mm), Image(str(LOGO), width=38 * mm, height=34.3 * mm),
+              Spacer(1, 8 * mm), para('DOCUMENT ADMINISTRATIF · ÉDITION 2.2', 'CoverKicker')]
     story += [para('SOFT-IMMO', 'CoverTitle'), para('Guide général de l’application et de ses calculs', 'CoverSubtitle')]
     story += [Spacer(1, 4 * mm)]
     rule = Table([['']], colWidths=[74 * mm], rowHeights=[1])
@@ -197,7 +213,7 @@ def build_story():
     story += [para('Expliquer le fonctionnement, les usages, les rôles, les indicateurs et les calculs actuellement réalisés par Soft-IMMO, ainsi que les limites à connaître.', 'CoverMeta')]
     story += [Spacer(1, 37 * mm)]
     story += [para('<b>Élaboré par</b>', 'CoverMeta'), Spacer(1, 2 * mm), para('SOFT-GUIDE ACADEMY', 'CoverKicker')]
-    story += [para('Version 2.1 · 20 octobre 2026', 'CoverMeta'), NextPageTemplate('Body'), PageBreak()]
+    story += [para('Version 2.2 · 20 octobre 2026', 'CoverMeta'), NextPageTemplate('Body'), PageBreak()]
 
     story += [para('Table des matières', 'TocTitle')]
     toc = TableOfContents()
