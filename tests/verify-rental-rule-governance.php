@@ -36,6 +36,7 @@ $security = file_get_contents(dirname(__DIR__) . '/src/Security/SecurityService.
 $delegationRepository = file_get_contents(dirname(__DIR__) . '/src/Repository/Identity/RentalRulePublicationDelegationRepository.php');
 $migration = file_get_contents(dirname(__DIR__) . '/migrations/Version20261020110000RentalRuleGovernance.php');
 $ruleMigration = file_get_contents(dirname(__DIR__) . '/migrations/Version20261020100000RentalRuleModel.php');
+$settingsUi = file_get_contents(dirname(__DIR__) . '/assets/react/features/shared/account/settings/components/RentalRulesSettings.tsx');
 $assert(str_contains($governance, 'wrapInTransaction'), 'Governance mutations are transaction wrapped');
 $assert(str_contains($governance, 'PESSIMISTIC_WRITE'), 'Publication/delegation mutations serialize on organization');
 $assert(str_contains($governance, 'RENTAL_RULE_PUBLISHED'), 'Publication audit event');
@@ -50,6 +51,11 @@ $assert(str_contains($migration, 'trg_rule_draft_immutable_after_publish') && st
 $assert(str_contains($migration, 'trg_rule_delegation_immutable_grant') && str_contains($migration, 'trg_rule_delegation_no_delete'), 'Delegation grants are immutable and retained at database level');
 $assert(str_contains($ruleMigration, 'trg_rental_rule_immutable_update') && str_contains($ruleMigration, 'trg_rental_rule_immutable_delete'), 'Published rule versions are database-immutable');
 $assert(!preg_match('/\b(?:UPDATE|DELETE)\s+(?:rent|payment)\b/i', $migration), 'Governance migration does not alter rents or payments');
+$assert(str_contains($settingsUi, 'capabilities?.canManageDelegations'), 'Delegation controls are displayed only when server capabilities allow them');
+$assert(str_contains($settingsUi, 'membership.organizationId === currentOrganization.uuid && membership.role === \'admin_immobilier\''), 'Delegation candidates are limited to ADMIN_IMMOBILIER members of the current organization');
+$assert(str_contains($settingsUi, 'member.isActive'), 'Inactive members cannot receive a publication delegation from the UI');
+$assert(str_contains($settingsUi, 'type="datetime-local"') && str_contains($settingsUi, 'required fullWidth'), 'The UI requires a bounded delegation expiration');
+$assert(str_contains($settingsUi, '/delegations/${pendingRevoke.uuid}/revoke'), 'The UI exposes the server-side delegation revocation flow');
 
 if ($failures !== []) {
     fwrite(STDERR, "Échec — {$checks} contrôles :\n- " . implode("\n- ", $failures) . "\n");

@@ -1,6 +1,6 @@
 {
-  "version": "1.4.0",
-  "updatedAt": "2026-10-19",
+  "version": "1.5.1",
+  "updatedAt": "2026-10-20",
   "roles": {
     "super_admin": {
       "title": "Manuel d’utilisation — Administration de la plateforme",
@@ -196,6 +196,25 @@
           "id": "locataires"
         },
         {
+          "name": "Règles locatives",
+          "menu": "Paramètres → Organisation",
+          "goal": "Définir les règles de l’organisation, autoriser temporairement un ADMIN_IMMOBILIER à les publier et suivre leur application aux prochaines périodes de loyer.",
+          "steps": [
+            "Ouvrez Paramètres → Organisation, vérifiez l’organisation active, puis repérez « Règles de loyer ». Consultez l’historique avant de préparer une version afin d’éviter une date d’effet ou une règle en double.",
+            "Pour déléguer la publication, ouvrez la section Délégations de publication. Choisissez un ADMIN_IMMOBILIER actif de cette organisation et saisissez une date et une heure futures d’expiration. Cette échéance est obligatoire : choisissez une durée limitée au besoin prévu.",
+            "Sélectionnez « Déléguer la publication », puis vérifiez dans la liste le nom du compte, l’état Actif et l’heure d’expiration. Cette délégation porte uniquement sur la publication des règles locatives ; elle ne change pas le rôle ni les autres permissions du membre.",
+            "Préparez vous-même une règle ou demandez à l’ADMIN_IMMOBILIER délégué de créer le brouillon. Vérifiez le mode (paiement d’avance ou à terme échu), le jour habituel, les politiques du premier et du dernier mois partiels, la date d’effet (premier jour d’un mois) et le motif.",
+            "Avant la publication, relisez le récapitulatif de la version et sa date d’effet. Confirmez que les montants sont cohérents avec la règle de calcul et que le prorata partiel CDF n’est pas activé tant que sa précision et son arrondi ne sont pas approuvés.",
+            "Après publication, vérifiez que la version apparaît dans l’historique comme publiée et immuable. Elle s’applique aux périodes facturées à partir de sa date d’effet ; les échéances déjà émises et les paiements ne changent pas.",
+            "Pour interrompre l’autorisation plus tôt, choisissez « Retirer l’accès » sur la délégation concernée et confirmez. Vérifiez son état inactif dans l’historique. À l’expiration ou après retrait, le membre peut conserver son brouillon mais ne peut plus le publier.",
+            "Pour contrôler un bail futur, demandez à l’ADMIN_VILLE responsable de comparer les périodes, les montants, les dates d’exigibilité et les règles résolues dans l’aperçu du formulaire de bail. Cet aperçu ne crée ni échéance ni paiement."
+          ],
+          "fields": "Règle : paiement d’avance ou à terme échu, jour habituel (1–31), politique du premier et du dernier mois partiels, date d’effet (premier du mois) et motif. Délégation : ADMIN_IMMOBILIER actif de la même organisation et expiration future obligatoire, saisie en heure locale de l’appareil. USD : jours réels du mois et arrondi au centime demi au supérieur. Le prorata partiel CDF reste bloqué jusqu’à validation de sa précision et de son arrondi.",
+          "result": "La liste des délégations affiche le membre, son état et son expiration. Les publications figurent dans l’historique avec leur date d’effet ; les versions publiées ne sont pas modifiées en place. Les délégations et publications sont contrôlées côté serveur et auditées.",
+          "limits": "Réservé au PATRON pour gérer les délégations. Seul un ADMIN_IMMOBILIER actif de la même organisation peut recevoir cette permission, limitée à la publication et automatiquement inutilisable après expiration ou révocation. Une publication ne recalcule pas les échéances émises et ne crée aucun paiement. Les clauses libres ne sont pas interprétées automatiquement. Le prorata partiel CDF reste bloqué.",
+          "id": "regles-locatives"
+        },
+        {
           "name": "Loyers",
           "menu": "Finances → Loyers",
           "goal": "Suivre les échéances, paiements et retards de l’organisation.",
@@ -301,7 +320,7 @@
           "id": "profil-et-parametres"
         }
       ],
-      "pageCount": 21
+      "pageCount": 25
     },
     "admin_immobilier": {
       "title": "Manuel d’utilisation — Administration immobilière",
@@ -378,6 +397,25 @@
           "result": "La supervision consolidée permet de comparer les résultats des villes et de suivre les anomalies.",
           "limits": "L’ADMIN_IMMOBILIER supervise l’organisation. Les opérations locales sont exécutées par l’ADMIN_VILLE ; voir une donnée ne donne pas le droit de la modifier.",
           "id": "locataires"
+        },
+        {
+          "name": "Règles locatives",
+          "menu": "Paramètres → Organisation",
+          "goal": "Préparer des brouillons de règles locatives et, lorsque le PATRON vous délègue ce droit, publier la version correcte pour les prochaines périodes de facturation.",
+          "steps": [
+            "Ouvrez Paramètres → Organisation et vérifiez le nom de l’organisation active. Consultez les règles publiées, leurs dates d’effet et les brouillons existants.",
+            "Choisissez « Préparer une nouvelle règle ». Sélectionnez le paiement d’avance ou à terme échu, le jour habituel (1–31) et les politiques du premier et du dernier mois partiels. Choisissez une date d’effet au premier jour d’un mois et indiquez le motif.",
+            "Enregistrez le brouillon puis relisez ses valeurs. Un brouillon n’est pas une règle active : tant qu’il n’est pas publié, la règle applicable ne change pas.",
+            "Si le bouton « Publier » est absent, vous pouvez quand même préparer et corriger le brouillon. Demandez au PATRON de vous accorder une délégation active dans cette organisation. Vérifiez ensuite l’organisation active et actualisez la section pour recharger les droits.",
+            "Avant de publier, vérifiez votre délégation dans la section dédiée : elle doit être active et ne pas avoir atteint son heure d’expiration. Si elle a été retirée ou a expiré, le serveur refusera la publication ; demandez au PATRON de publier ou de renouveler l’autorisation.",
+            "Sélectionnez « Publier », relisez le récapitulatif (mode, jour, règles des mois partiels et date d’effet), puis confirmez « Publier la règle ». La publication est immuable et son action est auditée.",
+            "Vérifiez que la version apparaît dans l’historique avec le statut publié et la date prévue. Elle s’applique aux périodes facturées à partir de cette date ; les échéances déjà émises et les paiements restent inchangés.",
+            "Coordonnez avec l’ADMIN_VILLE responsable la vérification d’un bail futur dans l’aperçu : période, montant, exigibilité et provenance des règles. L’aperçu ne persiste rien ; la publication ne génère pas elle-même d’échéance ou de paiement."
+          ],
+          "fields": "Mode de paiement (d’avance ou à terme échu), jour habituel (1–31), règle de date du premier et du dernier mois partiels, date d’effet (premier du mois) et motif obligatoire. USD : prorata aux jours calendaires réels et arrondi au centime demi au supérieur. Le prorata partiel CDF est bloqué jusqu’à validation de sa précision et de son arrondi.",
+          "result": "Sans délégation, le brouillon est conservé et le bouton de publication reste masqué ou l’action est refusée. Avec une délégation active et non expirée, la version publiée apparaît dans l’historique et devient applicable aux nouvelles périodes à sa date d’effet.",
+          "limits": "Vous pouvez préparer un brouillon. Vous ne pouvez publier qu’avec une délégation explicite, active, non expirée et accordée par le PATRON de la même organisation. Cette délégation ne change pas vos autres droits et peut être retirée à tout moment. Une publication ne modifie pas les échéances émises et ne crée aucun paiement. Les clauses libres ne sont pas interprétées automatiquement ; le calcul CDF partiel reste bloqué.",
+          "id": "regles-locatives"
         },
         {
           "name": "Loyers",
@@ -502,7 +540,7 @@
           "id": "profil-et-parametres"
         }
       ],
-      "pageCount": 25
+      "pageCount": 27
     },
     "admin_ville": {
       "title": "Manuel d’utilisation — Administration de ville",
@@ -572,10 +610,12 @@
             "Pour un transfert effectif, créez un bail brouillon à destination avec ses conditions, puis dans l’historique choisissez le bail source, le bail brouillon et la date réelle. La validation clôt le premier et active le second.",
             "Pour le départ d’un seul cotitulaire ou occupant, utilisez le formulaire de sortie individuelle : seule sa période se termine, le bail et les autres présences continuent.",
             "Si un ancien occupant revient dans un bail encore actif, choisissez « Réintégrer un ancien occupant » dans l’historique et saisissez sa nouvelle date d’entrée. Une nouvelle période est créée après contrôle des chevauchements ; l’ancienne période reste conservée.",
-            "Tant qu’un mouvement n’est pas réalisé, utilisez « Corriger » pour modifier ses informations ou le passer à « Annulé » ; indiquez le motif obligatoire. Un mouvement réalisé est verrouillé pour préserver le bail et les paiements déjà traités."
+            "Tant qu’un mouvement n’est pas réalisé, utilisez « Corriger » pour modifier ses informations ou le passer à « Annulé » ; indiquez le motif obligatoire. Un mouvement réalisé est verrouillé pour préserver le bail et les paiements déjà traités.",
+            "Lors de la création d’un bail, utilisez « Aperçu des échéances » pour contrôler les périodes, montants et dates d’exigibilité. Pour chaque paramètre proposé, choisissez explicitement entre « Règle héritée de l’organisation » et « Règle particulière de ce bail » ; une clause libre ne remplace pas ce choix structuré.",
+            "Vérifiez les règles résolues et leur provenance avant d’enregistrer le bail. L’aperçu est une simulation sans écriture ; l’enregistrement du bail et la génération future des échéances sont deux opérations distinctes."
           ],
-          "fields": "Le titulaire principal porte les conditions financières du bail. Les personnes supplémentaires sont reliées comme cotitulaires ou occupants avec leurs périodes propres.",
-          "result": "Le contrat conserve ses unités, son titulaire, ses occupants et ses dates ; les échéances et paiements restent rattachés au contrat.",
+          "fields": "Le titulaire principal porte les conditions financières du bail. Les personnes supplémentaires sont reliées comme cotitulaires ou occupants avec leurs périodes propres. Les conditions locatives structurées distinguent explicitement l’héritage de l’organisation et le remplacement par bail pour le mode, le jour d’exigibilité, les mois partiels, le prorata et l’arrondi. Les clauses en texte libre ne sont pas interprétées. Le prorata partiel CDF est refusé tant que ses règles ne sont pas approuvées.",
+          "result": "Le contrat conserve ses unités, son titulaire, ses occupants et ses dates ; les échéances et paiements restent rattachés au contrat. L’aperçu distingue la période couverte, le montant, la date d’exigibilité et la source des règles. Il ne crée ni échéance ni paiement.",
           "limits": "Les personnes et unités doivent appartenir à l’organisation et à la ville autorisées. Les occupations incompatibles avec un bail actif sont refusées.",
           "id": "locataires"
         },
@@ -659,7 +699,7 @@
           "id": "profil-et-parametres"
         }
       ],
-      "pageCount": 21
+      "pageCount": 22
     }
   }
 }

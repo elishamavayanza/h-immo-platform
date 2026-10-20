@@ -12,6 +12,13 @@ certification comptable ou réglementaire.
   période et organisation est déléguée à `RentalRuleResolutionService` :
   surcharge structurée du bail, puis version publiée applicable au premier
   jour facturé, puis défaut Soft-IMMO. Le texte libre `terms` n'est pas lu.
+- Les champs de surcharge d’un bail distinguent explicitement `inherit` et
+  `override`. Un champ absent ne doit pas être présenté comme une désactivation
+  ou une décision explicite. Le formulaire de création peut simuler le
+  calendrier avant l’enregistrement du bail ; l’aperçu montre période,
+  montant, date d’exigibilité, source de chaque règle et version d’organisation
+  lorsqu’elle s’applique. Cette simulation ne crée ni bail, ni échéance, ni
+  paiement.
 - La génération automatique parcourt les mois et calcule seulement ceux qui
   n'ont pas encore d'échéance. La création manuelle passe par le même calcul et
   refuse le montant, la devise ou la date transmis s'ils diffèrent du résultat.
@@ -35,6 +42,19 @@ certification comptable ou réglementaire.
 - Pour USD, le résultat est arrondi au centime selon la règle commerciale
   « demi au supérieur » (half-up), sans flottant. Exemple : 100 USD × 12 / 31
   donne 38,71 USD.
+- La date d’exigibilité est résolue séparément du montant : le mode anticipé ou
+  à terme échu déplace le jour habituel dans le mois facturé ou suivant, puis
+  la politique du mois partiel borne ou remplace cette date par le début ou la
+  fin de la période couverte. Ainsi, pour un loyer de 100 USD du 1er au
+  19 octobre 2027, le montant reste 61,29 USD (19/31) : une règle de jour 5
+  peut rendre l’échéance exigible le 05/10/2027, tandis que la politique
+  `coverage_end` la rend exigible le 19/10/2027. Seule la date change ; la
+  période couverte et le montant restent identiques.
+- Pour le bail de référence du 20/10/2026 au 19/10/2027 à 100 USD par mois,
+  le premier prorata est 38,71 USD (12/31) et le dernier 61,29 USD (19/31).
+  Une règle différente peut déplacer les dates d’exigibilité de ces mêmes
+  périodes sans changer ces proratas si le loyer et les jours couverts restent
+  identiques.
 - Les échéances CDF de mois complet restent au montant contractuel. Le prorata
   CDF est bloqué jusqu’à validation de sa précision et de sa règle d’arrondi ;
   la commande refuse la génération avant toute écriture si son calendrier
@@ -68,6 +88,33 @@ traduite en surcharge explicite et valide avant génération ; sinon la créatio
 est à traiter manuellement hors du calcul standard. Les échéances déjà créées
 ne sont jamais recalculées ; une correction après facturation doit passer par
 une régularisation traçable.
+
+### Configuration et cycle de vie des règles locatives
+
+Les règles d’organisation sont préparées comme brouillons, puis publiées en
+versions immuables. L’écran Paramètres → Organisation présente l’historique,
+la date d’effet et les choix configurés ; les valeurs initiales d’un formulaire
+ne deviennent pas actives tant qu’elles ne sont pas enregistrées et publiées.
+Une nouvelle version prend effet au premier jour de sa date d’effet mensuelle
+et la résolution choisit la dernière version applicable au premier jour de la
+période facturée. Une échéance déjà émise conserve son calcul historique, même
+si une version plus récente est publiée.
+
+Le PATRON peut préparer, publier et gérer les délégations de publication.
+L’ADMIN_IMMOBILIER peut préparer un brouillon et publier uniquement lorsqu’une
+délégation active de la même organisation l’y autorise. L’ADMIN_VILLE consulte
+les versions publiées et agit sur les baux de ses villes selon les permissions
+de l’organisation ; il ne publie pas de règle générale. Le SUPER_ADMIN ne
+dispose pas implicitement de droits métier. Les contrôles sont effectués côté
+serveur, et les publications ainsi que changements de délégation sont audités.
+
+Lors de la création d’un bail, chaque surcharge structurée doit indiquer si
+elle hérite de la règle d’organisation ou remplace explicitement cette règle.
+La priorité est : surcharge valide du bail, version publiée applicable, puis
+défaut documenté de Soft-IMMO. La simulation compare les résultats sans
+enregistrer de données. L’enregistrement du bail, la génération idempotente
+des échéances et la saisie ultérieure de paiements sont des opérations
+distinctes.
 
 ## Paiements et soldes des échéances
 
@@ -173,6 +220,33 @@ délégation `rental_rule_publish` active, non expirée et appartenant à la mê
 organisation. `ADMIN_VILLE` peut consulter les versions publiées, mais ne peut
 ni préparer, publier, ni déléguer. `SUPER_ADMIN` ne reçoit aucun droit métier
 implicite sur ces règles.
+
+## Procédure de délégation et de publication
+
+1. Le PATRON vérifie l'organisation active, ouvre Paramètres → Organisation →
+   Règles de loyer, puis la gestion des délégations.
+2. Il choisit un ADMIN_IMMOBILIER actif de cette organisation et définit une
+   expiration future obligatoire. La date et l'heure sont saisies dans le
+   fuseau local de l'appareil : il faut relire l'heure affichée avant de
+   confirmer. La délégation est limitée à la publication des règles locatives.
+3. Le PATRON contrôle dans la liste le compte, l'état actif et l'expiration.
+   Pour interrompre le droit avant cette échéance, il choisit « Retirer
+   l'accès » et confirme. La révocation reste visible pour l'audit.
+4. L'ADMIN_IMMOBILIER peut préparer et enregistrer un brouillon sans délégation.
+   Pour publier, il vérifie que le droit est actif, que l'expiration n'est pas
+   passée et que la bonne organisation est sélectionnée, puis relit le
+   récapitulatif et confirme la publication. Le serveur revérifie le droit au
+   moment précis de l'action ; masquer ou afficher le bouton dans l'interface
+   ne remplace pas ce contrôle.
+5. Après expiration ou révocation, l'ADMIN_IMMOBILIER ne peut plus publier.
+   Son brouillon n'est pas supprimé : le PATRON peut le publier lui-même ou
+   accorder une nouvelle délégation limitée dans le temps.
+
+Une publication crée une nouvelle version immuable avec une date d'effet au
+premier du mois. Elle ne change pas les échéances déjà émises et ne crée aucun
+paiement. Les versions publiées, les délégations accordées ou retirées et les
+refus d'autorisation sont contrôlés et tracés selon les événements d'audit
+disponibles.
 
 Les versions publiées sont immuables au niveau applicatif et protégées par des
 déclencheurs MariaDB. Pour modifier une politique, créer et publier une nouvelle

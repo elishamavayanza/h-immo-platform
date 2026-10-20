@@ -10,6 +10,8 @@ import { Input } from '../../../../../components/Forms/Input';
 import { Select } from '../../../../../components/Forms/Select';
 import { ApiError, type Feedback } from '../../../../../../services/api/api.types';
 import { apiClient } from '../../../../../../services/api/client';
+import { administrationService } from '../../../../patron/administration/services/administrationService';
+import type { AdminApiUser } from '../../../../patron/administration/types/administration.types';
 import './RentalRulesSettings.scss';
 
 type PaymentMode = 'in_advance' | 'in_arrears';
@@ -33,6 +35,7 @@ type RentalRuleVersion = Omit<RentalRuleDraft, 'changeReason' | 'published'> & {
 };
 type DraftForm = Omit<RentalRuleDraft, 'uuid' | 'published'>;
 type RentalRuleCapabilities = { canView: boolean; canPrepare: boolean; canPublish: boolean; canManageDelegations: boolean };
+type PublicationDelegation = { uuid: string; userUuid: string; permission: string; active: boolean; expiresAt: string | null; revokedAt: string | null; revocationReason: string | null };
 
 const nextMonthStart = () => {
     const today = new Date();
@@ -58,7 +61,7 @@ const partialLabel = (value: PartialPolicy) => ({
 }[value]);
 
 function messageFor(error: unknown, fallback: string): string {
-    if (!(error instanceof ApiError)) return fallback;
+    if (!(error instanceof ApiError)) return error instanceof Error ? error.message : fallback;
     if (error.status === 401) return 'Votre session a expiré. Reconnectez-vous avant de continuer.';
     if (error.status === 403) return 'Votre rôle ne permet pas cette action. Les autorisations sont contrôlées par le serveur.';
     if (error.status === 404) return 'Cette règle ou cette organisation est introuvable.';
@@ -81,6 +84,13 @@ export function RentalRulesSettings() {
     const [formError, setFormError] = useState<string | null>(null);
     const [formFieldErrors, setFormFieldErrors] = useState<Record<string, string>>({});
     const [publishTarget, setPublishTarget] = useState<RentalRuleDraft | null>(null);
+    const [delegations, setDelegations] = useState<PublicationDelegation[]>([]);
+    const [eligibleMembers, setEligibleMembers] = useState<AdminApiUser[]>([]);
+    const [delegateUserUuid, setDelegateUserUuid] = useState('');
+    const [delegationExpiry, setDelegationExpiry] = useState('');
+    const [delegationError, setDelegationError] = useState<string | null>(null);
+    const [delegationBusy, setDelegationBusy] = useState(false);
+    const [pendingRevoke, setPendingRevoke] = useState<PublicationDelegation | null>(null);
     const loadSequence = useRef(0);
     const saveInFlight = useRef(false);
     const publishInFlight = useRef(false);
@@ -100,6 +110,7 @@ export function RentalRulesSettings() {
         }
         setLoading(true);
         setError(null);
+        setDelegationError(null);
         const base = `/v1/organizations/${currentOrganization.uuid}/rental-rules`;
         const [versionResult, draftResult, capabilityResult] = await Promise.allSettled([
             apiClient.get<Feedback<RentalRuleVersion[]>>(`${base}/versions`),
@@ -117,6 +128,28 @@ export function RentalRulesSettings() {
         else if (draftResult.status === 'rejected' && !loadError) loadError = messageFor(draftResult.reason, 'Impossible de charger les brouillons.');
         if (capabilityResult.status === 'fulfilled') setCapabilities(capabilityResult.value.data.data);
         else setCapabilities(null);
+        const canManageDelegations = capabilityResult.status === 'fulfilled' && capabilityResult.value.data.data.canManageDelegations;
+        if (canManageDelegations) {
+            const [delegationResult, membersResult] = await Promise.allSettled([
+                apiClient.get<Feedback<PublicationDelegation[]>>(`${base}/delegations`),
+                administrationService.list(currentOrganization.uuid),
+            ]);
+            if (requestId !== loadSequence.current) return;
+            if (delegationResult.status === 'fulfilled') setDelegations(delegationResult.value.data.data);
+            else setDelegationError(messageFor(delegationResult.reason, 'Impossible de charger les délégations.'));
+            if (membersResult.status === 'fulfilled') {
+                const eligible = membersResult.value.filter((member) => member.isActive && member.memberships.some((membership) => membership.organizationId === currentOrganization.uuid && membership.role === 'admin_immobilier'));
+                setEligibleMembers(eligible);
+                setDelegateUserUuid((current) => eligible.some((member) => member.id === current) ? current : eligible[0]?.id ?? '');
+            } else {
+                setEligibleMembers([]);
+                setDelegationError((current) => current ?? messageFor(membersResult.reason, 'Impossible de charger les membres autorisés.'));
+            }
+        } else {
+            setDelegations([]);
+            setEligibleMembers([]);
+            setDelegationError(null);
+        }
         setError(loadError);
         setLoading(false);
     }, [currentOrganization, canView, canPrepare]);
@@ -203,6 +236,45 @@ export function RentalRulesSettings() {
         }
     };
 
+    const grantDelegation = async (event: FormEvent<HTMLFormElement>) => {
+        event.preventDefault();
+        if (!currentOrganization || !delegateUserUuid || !delegationExpiry || delegationBusy) return;
+        setDelegationBusy(true);
+        setDelegationError(null);
+        try {
+            const expiresAt = new Date(delegationExpiry);
+            if (!Number.isFinite(expiresAt.getTime()) || expiresAt <= new Date()) throw new Error('Choisissez une date et une heure futures.');
+            const { data } = await apiClient.post<Feedback<PublicationDelegation>>(
+                `/v1/organizations/${currentOrganization.uuid}/rental-rules/delegations`,
+                { userUuid: delegateUserUuid, expiresAt: expiresAt.toISOString() },
+            );
+            setDelegations((current) => [...current.filter((entry) => entry.uuid !== data.data.uuid), data.data]);
+            setDelegationExpiry('');
+        } catch (cause) {
+            setDelegationError(messageFor(cause, 'La délégation n’a pas été enregistrée.'));
+        } finally {
+            setDelegationBusy(false);
+        }
+    };
+
+    const revokeDelegation = async () => {
+        if (!currentOrganization || !pendingRevoke || delegationBusy) return;
+        setDelegationBusy(true);
+        setDelegationError(null);
+        try {
+            const { data } = await apiClient.post<Feedback<PublicationDelegation>>(
+                `/v1/organizations/${currentOrganization.uuid}/rental-rules/delegations/${pendingRevoke.uuid}/revoke`,
+                { reason: 'Retrait demandé depuis les paramètres des règles locatives.' },
+            );
+            setDelegations((current) => current.map((entry) => entry.uuid === pendingRevoke.uuid ? data.data : entry));
+        } catch (cause) {
+            setDelegationError(messageFor(cause, 'La délégation n’a pas pu être révoquée.'));
+        } finally {
+            setDelegationBusy(false);
+            setPendingRevoke(null);
+        }
+    };
+
     if (!canView) return null;
 
     return <section id="settings-rental-rules" className="settings-section">
@@ -225,6 +297,26 @@ export function RentalRulesSettings() {
 
             {canPrepare && <div className="rental-rules-settings__actions"><Button onClick={startNewDraft}>Préparer une nouvelle règle</Button></div>}
             {organizationRole === 'admin_immobilier' && <p className="rental-rules-settings__notice">La publication est affichée uniquement si le serveur confirme une délégation active pour votre compte. Le serveur revérifie cette autorisation au moment de publier.</p>}
+
+            {capabilities?.canManageDelegations && <div className="rental-rules-settings__delegations">
+                <h3>Autoriser la publication</h3>
+                <p>Le PATRON peut déléguer temporairement la publication des règles à un ADMIN_IMMOBILIER actif de cette organisation. Cette autorisation est vérifiée par le serveur et peut être retirée à tout moment.</p>
+                {delegationError && <div className="rental-rules-settings__error" role="alert"><p>{delegationError}</p><Button variant="secondary" onClick={() => void reload()}>Actualiser</Button></div>}
+                <form className="rental-rules-settings__delegation-form" onSubmit={(event) => void grantDelegation(event)}>
+                    <FormField label="Administrateur immobilier" htmlFor="rental-rule-delegate-user">
+                        <Select id="rental-rule-delegate-user" value={delegateUserUuid} onChange={(event) => setDelegateUserUuid(event.target.value)} options={eligibleMembers.map((member) => ({ value: member.id, label: `${member.fullName} · ${member.email}` }))} placeholder="Choisir un membre actif" disabled={eligibleMembers.length === 0 || delegationBusy} required />
+                    </FormField>
+                    <FormField label="Expiration de la délégation" htmlFor="rental-rule-delegate-expiry" helpText="Une date future est obligatoire pour limiter la durée de cette autorisation.">
+                        <Input id="rental-rule-delegate-expiry" type="datetime-local" value={delegationExpiry} onChange={(event) => setDelegationExpiry(event.target.value)} required fullWidth />
+                    </FormField>
+                    <div className="rental-rules-settings__actions"><Button type="submit" disabled={delegationBusy || !delegateUserUuid || !delegationExpiry}>{delegationBusy ? 'Traitement…' : 'Déléguer la publication'}</Button></div>
+                </form>
+                {eligibleMembers.length === 0 && <p className="rental-rules-settings__empty">Aucun ADMIN_IMMOBILIER actif de cette organisation n’est disponible pour recevoir la délégation.</p>}
+                {delegations.length > 0 ? <ul className="rental-rules-settings__delegation-list">{delegations.map((delegation) => {
+                    const member = eligibleMembers.find((candidate) => candidate.id === delegation.userUuid);
+                    return <li key={delegation.uuid}><div><strong>{member?.fullName ?? 'Membre de l’organisation'}</strong><span>{delegation.active ? 'Active' : 'Inactive'} · expire {delegation.expiresAt ? new Date(delegation.expiresAt).toLocaleString('fr-FR') : 'sans date connue'}</span></div>{delegation.active && <Button variant="secondary" disabled={delegationBusy} onClick={() => setPendingRevoke(delegation)}>Retirer l’accès</Button>}</li>;
+                })}</ul> : <p className="rental-rules-settings__empty">Aucune délégation de publication enregistrée.</p>}
+            </div>}
 
             {drafts.length > 0 && <div className="rental-rules-settings__drafts">
                 <h3>Brouillons</h3>
@@ -267,5 +359,6 @@ export function RentalRulesSettings() {
             <p className="rental-rules-settings__link"><Link to="/app/location/loyers">Consulter les échéances de loyer</Link></p>
         </Card>
         <ConfirmDialog isOpen={publishTarget !== null} onClose={() => setPublishTarget(null)} onCancel={() => setPublishTarget(null)} onConfirm={() => void publishDraft()} title="Publier cette règle ?" message={publishTarget ? <div><p>À partir du {publishTarget.effectiveFrom} : {paymentLabel(publishTarget.dueMode)}, le {publishTarget.dueDay}.</p><p>Premier mois partiel : {partialLabel(publishTarget.firstPartialPolicy)}. Dernier mois partiel : {partialLabel(publishTarget.lastPartialPolicy)}.</p><p>Cette publication concerne les calculs futurs à partir de sa date d’effet. Les échéances déjà émises et les paiements ne seront pas modifiés.</p></div> : ''} confirmLabel="Publier la règle" cancelLabel="Annuler" />
+        <ConfirmDialog isOpen={pendingRevoke !== null} onClose={() => setPendingRevoke(null)} onCancel={() => setPendingRevoke(null)} onConfirm={() => void revokeDelegation()} title="Retirer cette autorisation ?" message="L’ADMIN_IMMOBILIER ne pourra plus publier les règles locatives de cette organisation. Les règles déjà publiées resteront inchangées." confirmLabel={delegationBusy ? 'Retrait…' : 'Retirer l’accès'} cancelLabel="Garder l’accès" />
     </section>;
 }

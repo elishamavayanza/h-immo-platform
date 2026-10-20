@@ -12,6 +12,16 @@
 .rental-rules-settings__draft-actions,.rental-rules-settings__actions { display:flex; flex-wrap:wrap; gap:8px; }
 .rental-rules-settings__actions { justify-content:flex-end; margin-top:14px; }
 .rental-rules-settings__form { margin-top:20px; padding-top:18px; border-top:1px solid var(--color-border); }
+.rental-rules-settings__delegations { margin-top:20px; padding-top:18px; border-top:1px solid var(--color-border); }
+.rental-rules-settings__delegations h3 { margin:0 0 8px; font-size:1rem; }
+.rental-rules-settings__delegations > p { color:var(--color-text-secondary); line-height:1.55; }
+.rental-rules-settings__delegation-form { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); align-items:end; gap:14px; }
+.rental-rules-settings__delegation-form > * { min-width:0; }
+.rental-rules-settings__delegation-form .rental-rules-settings__actions { grid-column:1 / -1; margin-top:0; }
+.rental-rules-settings__delegation-list { margin:12px 0 0; padding:0; list-style:none; }
+.rental-rules-settings__delegation-list li { display:flex; align-items:center; justify-content:space-between; gap:14px; padding:12px 0; border-top:1px solid var(--color-border); }
+.rental-rules-settings__delegation-list li div { display:grid; gap:4px; min-width:0; }
+.rental-rules-settings__delegation-list li span { color:var(--color-text-muted); font-size:.84rem; }
 .rental-rules-settings__form > p { color:var(--color-text-secondary); font-size:.88rem; line-height:1.55; }
 .rental-rules-settings__fields { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:14px; }
 .rental-rules-settings__fields > * { min-width:0; }
@@ -20,7 +30,10 @@
 .rental-rules-settings button:focus-visible,.rental-rules-settings a:focus-visible { outline:3px solid var(--color-focus-ring); outline-offset:2px; }
 @media(max-width:600px) {
   .rental-rules-settings__fields { grid-template-columns:minmax(0,1fr); }
+  .rental-rules-settings__delegation-form { grid-template-columns:minmax(0,1fr); }
+  .rental-rules-settings__delegation-form .rental-rules-settings__actions { grid-column:auto; }
   .rental-rules-settings__draft { flex-direction:column; }
   .rental-rules-settings__draft-actions,.rental-rules-settings__draft-actions button,.rental-rules-settings__actions button { width:100%; }
+  .rental-rules-settings__delegation-list li { align-items:flex-start; flex-direction:column; }
   .rental-rules-settings__version-heading { flex-direction:column; gap:4px; }
 }

@@ -187,7 +187,7 @@ def section_title(text):
 
 def build_story():
     story = []
-    story += [Spacer(1, 44 * mm), para('DOCUMENT ADMINISTRATIF · ÉDITION 2.0', 'CoverKicker')]
+    story += [Spacer(1, 44 * mm), para('DOCUMENT ADMINISTRATIF · ÉDITION 2.1', 'CoverKicker')]
     story += [para('SOFT-IMMO', 'CoverTitle'), para('Guide général de l’application et de ses calculs', 'CoverSubtitle')]
     story += [Spacer(1, 4 * mm)]
     rule = Table([['']], colWidths=[74 * mm], rowHeights=[1])
@@ -197,7 +197,7 @@ def build_story():
     story += [para('Expliquer le fonctionnement, les usages, les rôles, les indicateurs et les calculs actuellement réalisés par Soft-IMMO, ainsi que les limites à connaître.', 'CoverMeta')]
     story += [Spacer(1, 37 * mm)]
     story += [para('<b>Élaboré par</b>', 'CoverMeta'), Spacer(1, 2 * mm), para('SOFT-GUIDE ACADEMY', 'CoverKicker')]
-    story += [para('Version 2.0 · 19 octobre 2026', 'CoverMeta'), NextPageTemplate('Body'), PageBreak()]
+    story += [para('Version 2.1 · 20 octobre 2026', 'CoverMeta'), NextPageTemplate('Body'), PageBreak()]
 
     story += [para('Table des matières', 'TocTitle')]
     toc = TableOfContents()
@@ -296,6 +296,12 @@ def build_story():
               para('Les plafonds configurés par le SUPER_ADMIN concernent séparément les villes, parcelles, bâtiments, unités et membres actifs. Pour une ressource, une création est refusée lorsque <b>usage actuel ≥ plafond</b>. Un plafond non configuré n’impose pas de limite. Atteindre un plafond n’efface pas les enregistrements existants.'),
               heading('6.9 Périodes et horodatage', 1),
               para('Les rapports d’organisation prennent par défaut l’année civile courante, sauf période choisie par l’utilisateur. Les synthèses financières sont regroupées par mois. Le stockage et les calculs temporels utilisent UTC ; le fuseau Africa/Kinshasa ne sert qu’à la présentation lorsque celle-ci le demande.'),
+              heading('6.10 Règles locatives configurables et calcul des échéances', 1),
+              para('Les règles locatives sont désormais configurables par organisation et peuvent être remplacées explicitement dans un bail. Le calcul partagé par la création manuelle et la génération automatique résout chaque paramètre dans cet ordre : surcharge valide du bail, version d’organisation publiée applicable au premier jour de la période facturée, puis défaut Soft-IMMO. Une valeur absente n’est pas interprétée comme un choix explicite et le texte libre des clauses du bail n’est pas analysé automatiquement.'),
+              para('Une règle générale définit le paiement d’avance ou à terme échu, le jour habituel d’exigibilité et le traitement du premier et du dernier mois partiels. Une date d’effet doit être le premier jour du mois. Les versions publiées sont immuables ; publier une nouvelle règle ne modifie pas les échéances déjà émises ni leurs paiements. Un snapshot de chaque nouvelle échéance conserve les valeurs et sources résolues, la période, la devise et la version du calculateur.'),
+              para('<b>Exemple :</b> pour un loyer mensuel de 100 USD couvrant 1–19 octobre sur un mois de 31 jours, le prorata reste 100 × 19/31 = <b>61,29 USD</b>. Avec un jour habituel 5 et la règle qui borne le jour régulier dans la couverture, la date peut être le 5 octobre ; avec la règle « fin de la période couverte », elle est le 19 octobre. La date d’exigibilité change, mais pas la période ni le montant. Pour le bail du 20 octobre 2026 au 19 octobre 2027, les proratas de référence sont 38,71 USD pour les 12 jours du premier mois et 61,29 USD pour les 19 jours du dernier mois.'),
+              para('Le prorata USD utilise les jours calendaires réels et un arrondi au centime demi au supérieur, sans nombres flottants. Le prorata partiel CDF reste bloqué jusqu’à l’approbation de sa précision et de son arrondi. La génération est idempotente : elle ne crée que les périodes manquantes, ne crée jamais de paiement et ne recalcule pas une échéance existante. L’aperçu du bail montre la période, le montant, la date et la provenance des règles sans persister ces résultats.'),
+              para('Le PATRON peut préparer, publier et déléguer la publication. L’ADMIN_IMMOBILIER peut préparer un brouillon et publier uniquement si une délégation active l’y autorise. L’ADMIN_VILLE consulte les règles d’organisation publiées et intervient sur les baux de ses villes selon les permissions actives. Les contrôles d’autorisation sont effectués côté serveur et les publications sont auditées.'),
               section_title('7. Exemples de parcours de travail'),
               heading('7.1 Préparer une organisation', 1),
               para('Le SUPER_ADMIN crée l’organisation, fixe ses capacités et active éventuellement la Vitrine. Les responsables recensent ensuite les villes, créent les accès de l’équipe et attribuent uniquement les rôles et villes nécessaires.'),
@@ -342,7 +348,7 @@ def build_story():
               para('<b>Soft-IMMO</b> est une plateforme web multi-organisation conçue pour structurer et suivre le patrimoine immobilier et les activités locatives associées. Elle fournit des outils de gestion, de consultation et de traçabilité selon les rôles attribués.'),
               para('Elle aide les équipes à travailler à partir d’informations centralisées, mais ne remplace ni les institutions financières, ni les professionnels du droit ou de la comptabilité, ni la vérification des documents originaux. L’organisation reste responsable de ses décisions, de ses justificatifs et de la qualité des données.'),
               Spacer(1, 4 * mm),
-              para('<b>Document préparé par Soft-GUIDE ACADEMY</b><br/>Guide général de l’application et de ses calculs · Version 2.0 · 19 octobre 2026', 'BodyCompactFR')]
+              para('<b>Document préparé par Soft-GUIDE ACADEMY</b><br/>Guide général de l’application et de ses calculs · Version 2.1 · 20 octobre 2026', 'BodyCompactFR')]
     return story
 
 
