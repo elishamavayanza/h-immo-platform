@@ -52,6 +52,7 @@ final readonly class RentService
         private ValidatorInterface $validator,
         private AuditLogService $auditLogService,
         private DateTimeService $dateTime,
+        private RentScheduleCalculator $scheduleCalculator,
     ) {
     }
 
@@ -80,19 +81,6 @@ final readonly class RentService
                 ->autoInitFlush();
         }
 
-        $leaseEnd = $lease->getEndDate();
-        $terminationDate = $lease->getTerminationDate();
-        if ($terminationDate !== null && ($leaseEnd === null || $terminationDate < $leaseEnd)) {
-            $leaseEnd = $terminationDate;
-        }
-        if ($leaseEnd !== null && $request->dueDate !== null && $request->dueDate > $leaseEnd) {
-            return $feedback
-                ->addError('dueDate', 'La date d’exigibilité dépasse la période effective du bail.')
-                ->setFlushDescriptionWithError('L’échéance se situe après la fin du bail.')
-                ->setStatus(422)
-                ->autoInitFlush();
-        }
-
         // Unicité du couple (bail, période) : elle est déjà garantie par un
         // index unique en base, mais elle est vérifiée ici pour renvoyer un
         // 422 exploitable au lieu d'une violation de contrainte SQL.
@@ -106,12 +94,33 @@ final readonly class RentService
                 ->autoInitFlush();
         }
 
-        $rent = new Rent();
-        $rent->setLease($lease);
-        $this->rentMapper->copyToEntity($request, $rent);
+        try {
+            $calculated = $this->scheduleCalculator->calculatePeriod($lease, $request->period);
+        } catch (\DomainException|\Symfony\Component\HttpKernel\Exception\BadRequestHttpException $exception) {
+            return $feedback
+                ->addError('period', $exception->getMessage())
+                ->setFlushDescriptionWithError('Le calcul de l’échéance a été refusé.')
+                ->setStatus(422)
+                ->autoInitFlush();
+        }
+
+        if (bccomp($request->amount, $calculated->amount, 2) !== 0
+            || $request->currency !== $calculated->currency
+            || $request->dueDate != $calculated->dueDate
+        ) {
+            return $feedback
+                ->addError('amount', 'Le montant, la devise ou la date ne correspondent pas aux règles applicables au bail.')
+                ->setFlushDescriptionWithError('Les valeurs de l’échéance doivent correspondre au calcul métier du bail.')
+                ->setStatus(422)
+                ->autoInitFlush();
+        }
+
+        $rent = $calculated->createRent();
+        $snapshot = $calculated->createSnapshot($rent);
         $rent->syncStatus($this->paymentRepository->sumAmountByRent($rent));
 
         $this->entityManager->persist($rent);
+        $this->entityManager->persist($snapshot);
         $this->entityManager->flush();
 
         // Log d'audit : création de l'échéance

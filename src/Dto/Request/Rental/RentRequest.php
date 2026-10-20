@@ -38,7 +38,7 @@ final readonly class RentRequest
         public ?string $leaseUuid = null,
 
         #[OA\Property(
-            description: 'Mois/Période couverte par le loyer (généralement le 1er du mois)',
+            description: 'Premier jour du mois facturé. Le serveur détermine les jours couverts à partir du bail.',
             format: 'date',
             example: '2026-09-01'
         )]
@@ -46,7 +46,7 @@ final readonly class RentRequest
         public ?\DateTimeImmutable $period = null,
 
         #[OA\Property(
-            description: 'Date limite d\'exigibilité du règlement',
+            description: 'Date attendue par le calcul serveur; toute valeur différente est refusée.',
             format: 'date',
             example: '2026-09-05'
         )]
@@ -54,7 +54,7 @@ final readonly class RentRequest
         public ?\DateTimeImmutable $dueDate = null,
 
         #[OA\Property(
-            description: 'Montant facturé pour la période',
+            description: 'Montant attendu par le calcul serveur; les valeurs différentes du loyer calculé sont refusées.',
             example: '500.00'
         )]
         #[Assert\NotBlank(groups: ['create'])]

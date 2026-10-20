@@ -7,6 +7,20 @@ certification comptable ou réglementaire.
 
 ## Échéances de loyer
 
+- Toute nouvelle échéance calculée passe par `RentScheduleCalculator` et son
+  résultat typé `CalculatedRentInstallment`. La résolution des règles par bail,
+  période et organisation est déléguée à `RentalRuleResolutionService` :
+  surcharge structurée du bail, puis version publiée applicable au premier
+  jour facturé, puis défaut Soft-IMMO. Le texte libre `terms` n'est pas lu.
+- La génération automatique parcourt les mois et calcule seulement ceux qui
+  n'ont pas encore d'échéance. La création manuelle passe par le même calcul et
+  refuse le montant, la devise ou la date transmis s'ils diffèrent du résultat.
+  Les champs manuels actuels servent donc à confirmer le calcul, pas à le
+  remplacer. Aucun paiement n'est créé lors de la création d'une échéance.
+- Toute nouvelle échéance conserve la référence à la version publiée utilisée
+  (si applicable) et un snapshot des valeurs, sources, période couverte, devise
+  et version du calculateur. Les échéances historiques sans snapshot restent
+  telles quelles.
 - Une échéance est unique par bail et par période (`lease_id + period`). La
   contrainte MariaDB complète le contrôle du service ; relancer la génération
   ignore une période déjà créée.
@@ -29,20 +43,31 @@ certification comptable ou réglementaire.
   mais cela ne prouve pas que les contrats ou la caisse utilisent des fractions
   de franc. Proposition à faire valider avant activation : conserver les deux
   décimales déjà stockées et arrondir half-up au centime CDF.
-- Le jour d’exigibilité habituel reste le 5 du mois. S’il tombe avant le début
-  couvert du bail, la date est reportée au début ; s’il tombe après la fin
-  couverte, elle est avancée à cette fin. Ainsi, l’échéance reste dans la
-  période contractuelle. Aucune clause de jour d’exigibilité différente n’est
-  portée par les champs structurés du bail.
+- Le défaut est le paiement anticipé le 5 du mois. Pour le mode `in_advance`,
+  le jour configuré est placé dans le mois facturé ; un jour impossible (par
+  exemple le 31 février) est ramené au dernier jour du mois. Pour `in_arrears`,
+  il est placé dans le mois suivant. Dans les deux cas, la date est ensuite
+  bornée aux jours effectivement couverts par le bail, conformément à la règle
+  de période du produit. Pour un mois partiel, `coverage_start` et
+  `coverage_end` sélectionnent explicitement une borne ; la politique par
+  défaut `clamp_regular_due_day` conserve le jour régulier et le borne à la
+  couverture. Si un bail d'un seul mois définit des politiques de premier et
+  dernier mois contradictoires, le calcul est refusé plutôt que d'en choisir
+  une silencieusement.
 - Une génération répétée ne modifie pas et ne supprime pas une échéance déjà
-  créée.
+  créée et ne recalcule pas ses règles ou montants. Une contrainte unique en
+  base reste la dernière protection contre deux créations concurrentes.
+- Les erreurs de période hors bail, de surcharge invalide, de configuration
+  incohérente et de prorata CDF sont refusées avant persistance. Le calcul
+  préalable des nouvelles périodes empêche une période CDF partielle de laisser
+  une génération partiellement écrite.
 
-**Règles restant à confirmer :** le modèle permet de saisir des conditions
-libres, mais n’expose pas de calendrier d’exigibilité ni de mécanisme de
-révision de loyer avec date d’effet. Une clause écrite incompatible doit primer
-et faire l’objet d’un traitement explicite avant génération. Les échéances
-déjà créées ne sont jamais recalculées ; une correction après facturation doit
-passer par une régularisation traçable.
+**Règles restant à confirmer :** les clauses libres ne sont pas interprétées
+automatiquement. Une clause incompatible avec les règles structurées doit être
+traduite en surcharge explicite et valide avant génération ; sinon la création
+est à traiter manuellement hors du calcul standard. Les échéances déjà créées
+ne sont jamais recalculées ; une correction après facturation doit passer par
+une régularisation traçable.
 
 ## Paiements et soldes des échéances
 
@@ -139,3 +164,32 @@ journaux débit/crédit ou clôture comptable complète n’est implémenté ici
 format d’export comptable spécifique devra être défini avec le logiciel cible
 et le professionnel responsable. Ce document ne revendique pas de conformité
 SYSCOHADA/AUDCIF, IFRS ou autre référentiel.
+# Gouvernance des règles locatives
+
+La politique locative globale est gérée par organisation. `PATRON` peut préparer
+et publier une version, et accorder ou révoquer la délégation de publication.
+`ADMIN_IMMOBILIER` peut préparer un brouillon; il ne publie qu'avec une
+délégation `rental_rule_publish` active, non expirée et appartenant à la même
+organisation. `ADMIN_VILLE` peut consulter les versions publiées, mais ne peut
+ni préparer, publier, ni déléguer. `SUPER_ADMIN` ne reçoit aucun droit métier
+implicite sur ces règles.
+
+Les versions publiées sont immuables au niveau applicatif et protégées par des
+déclencheurs MariaDB. Pour modifier une politique, créer et publier une nouvelle
+version avec une date d'effet au premier du mois; l'unicité organisation/date
+est contrôlée pendant une transaction verrouillée par organisation. Les
+brouillons publiés restent conservés et liés à la version issue de leur
+publication. Les délégations révoquées restent conservées pour l'audit et sont
+reconsultées en base à chaque publication.
+
+Les routes backend correspondantes sont sous
+`/api/v1/organizations/{organizationUuid}/rental-rules`. Elles sont soumises
+aux contrôles serveur; un identifiant ou un rôle envoyé par le client ne confère
+aucun accès. Les publications et changements de délégation produisent des
+événements `AuditLog` transactionnellement liés à l'opération. Les refus
+d'autorisation de publication peuvent également produire une trace minimale;
+aucune règle ni délégation n'est écrite lorsqu'une autorisation est refusée.
+
+Le prorata partiel CDF demeure bloqué tant que sa précision et son arrondi ne
+sont pas approuvés. La publication d'une règle ne modifie jamais une échéance
+ou un paiement existant.

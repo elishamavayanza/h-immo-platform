@@ -131,4 +131,10 @@ enum SecurityAction: string
     // Audit
     case VIEW_AUDIT_LOG = 'view_audit_log';
     case EXPORT_AUDIT_LOG = 'export_audit_log';
+
+    // Politique locative globale : permissions dédiées, distinctes des réglages financiers généraux.
+    case VIEW_RENTAL_RULE = 'view_rental_rule';
+    case PREPARE_RENTAL_RULE = 'prepare_rental_rule';
+    case PUBLISH_RENTAL_RULE = 'publish_rental_rule';
+    case DELEGATE_RENTAL_RULE_PUBLICATION = 'delegate_rental_rule_publication';
 }

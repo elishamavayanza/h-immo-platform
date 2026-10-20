@@ -19,6 +19,7 @@ import { useAccountSettings } from '../hooks/useAccountSettings';
 import { usePwaInstallation } from '../hooks/usePwaInstallation';
 import { OrganizationLogoPicker, type OrganizationLogoChange } from '../../../../super_admin/organizations/components/OrganizationLogoPicker';
 import { organizationsService } from '../../../../super_admin/organizations/services/organizationsService';
+import { RentalRulesSettings } from '../components/RentalRulesSettings';
 import './settings.scss';
 
 type FxRate = { baseCurrency: string; quoteCurrency: string; rate: string; effectiveFrom: string };
@@ -272,6 +273,7 @@ export function SettingsPage() {
             </header>
 
             <div className="settings-page__sections">
+                {isOrganizationPage && <RentalRulesSettings />}
                 {isOrganizationPage && ['patron', 'admin_immobilier'].includes(organizationRole ?? '') && <section id="settings-organization-capacity" className="settings-section"><Card header="Offre et capacités" className="settings-card">
                     <p>Cette configuration est attribuée manuellement par l’administration de la plateforme. Pour la modifier, contactez votre SUPER_ADMIN. Aucun paiement en ligne n’est géré ici.</p>
                     {capacityLoading && <p role="status">Chargement des capacités…</p>}
@@ -558,12 +560,12 @@ export function SettingsPage() {
                     </Card></section>
                 )}
             </div>
-            <RightSidebar title="Paramètres" size="small" variant="dark" collapsible defaultCollapsed={false} collapsedWidth={48} closeOnSelect className="settings-rightbar" collapsedContent={<div className="settings-rightbar__rail" aria-label="Raccourcis paramètres"><NavigationRailPopover title="Pages des paramètres" label="Ouvrir le menu des paramètres"><nav className="settings-rightbar__nav" aria-label="Pages des paramètres"><Link to="/settings" aria-current={!isOrganizationPage ? 'page' : undefined}>Mon compte</Link>{(organizationRole === 'patron' || organizationRole === 'admin_immobilier' || (organizationRole === 'admin_ville' && fxSettings?.scope === 'city' && fxSettings.enabled)) && <Link to="/settings/organisation" aria-current={isOrganizationPage ? 'page' : undefined}>Organisation</Link>}<Link to="/settings/manuel">Manuel d’utilisation</Link></nav></NavigationRailPopover>{isOrganizationPage && <CalendarRailPopover title="Historique des taux" label="Ouvrir le calendrier des taux"><Calendar selectedDate={new Date(`${historyDate}T12:00:00`)} onDateSelect={(date) => setHistoryDate(localDateKey(date))} className="settings-calendar__picker" weekdayFormat="compact" /></CalendarRailPopover>}</div>}>
+            <RightSidebar title="Paramètres" size="small" variant="dark" collapsible defaultCollapsed={false} collapsedWidth={48} closeOnSelect className="settings-rightbar" collapsedContent={<div className="settings-rightbar__rail" aria-label="Raccourcis paramètres"><NavigationRailPopover title="Pages des paramètres" label="Ouvrir le menu des paramètres"><nav className="settings-rightbar__nav" aria-label="Pages des paramètres"><Link to="/settings" aria-current={!isOrganizationPage ? 'page' : undefined}>Mon compte</Link>{(['patron', 'admin_immobilier', 'admin_ville'].includes(organizationRole ?? '') || (organizationRole === 'admin_ville' && fxSettings?.scope === 'city' && fxSettings.enabled)) && <Link to="/settings/organisation" aria-current={isOrganizationPage ? 'page' : undefined}>Organisation</Link>}<Link to="/settings/manuel">Manuel d’utilisation</Link></nav></NavigationRailPopover>{isOrganizationPage && <CalendarRailPopover title="Historique des taux" label="Ouvrir le calendrier des taux"><Calendar selectedDate={new Date(`${historyDate}T12:00:00`)} onDateSelect={(date) => setHistoryDate(localDateKey(date))} className="settings-calendar__picker" weekdayFormat="compact" /></CalendarRailPopover>}</div>}>
                 {isOrganizationPage && <section className="settings-calendar" aria-label="Navigation dans l’historique"><h2>Historique des taux</h2><p>Choisissez une date pour consulter le taux applicable à vos rapports.</p><Calendar selectedDate={new Date(`${historyDate}T12:00:00`)} onDateSelect={(date) => setHistoryDate(localDateKey(date))} className="settings-calendar__picker" weekdayFormat="compact" /></section>}
                 <nav className="settings-rightbar__nav" aria-label="Sections des paramètres">
                     <span className="settings-rightbar__label">Pages</span>
                     <Link to="/settings" aria-current={!isOrganizationPage ? 'page' : undefined}>Mon compte</Link>
-                    {(organizationRole === 'patron' || organizationRole === 'admin_immobilier' || (organizationRole === 'admin_ville' && fxSettings?.scope === 'city' && fxSettings.enabled)) && <Link to="/settings/organisation" aria-current={isOrganizationPage ? 'page' : undefined}>Organisation</Link>}
+                    {(['patron', 'admin_immobilier', 'admin_ville'].includes(organizationRole ?? '') || (organizationRole === 'admin_ville' && fxSettings?.scope === 'city' && fxSettings.enabled)) && <Link to="/settings/organisation" aria-current={isOrganizationPage ? 'page' : undefined}>Organisation</Link>}
                     <Link to="/settings/manuel">Manuel d’utilisation</Link>
                     {!isOrganizationPage && <div className="settings-rightbar__subnav" aria-label="Sections du compte">
                         <span className="settings-rightbar__label">Préférences</span>
@@ -575,6 +577,7 @@ export function SettingsPage() {
                         {isSuperAdmin && <a href="#settings-platform" className={activeSection === 'settings-platform' ? 'is-active' : undefined} aria-current={activeSection === 'settings-platform' ? 'location' : undefined}>Plateforme</a>}
                     </div>}
                     {isOrganizationPage && <div className="settings-rightbar__subnav" aria-label="Sections de l’organisation">
+                        <a href="#settings-rental-rules" className={activeSection === 'settings-rental-rules' ? 'is-active' : undefined} aria-current={activeSection === 'settings-rental-rules' ? 'location' : undefined}>Règles de loyer</a>
                         {['patron', 'admin_immobilier'].includes(organizationRole ?? '') && <a href="#settings-organization-capacity">Offre et capacités</a>}
                         <span className="settings-rightbar__label">Réglages partagés</span>
                         {organizationRole === 'admin_immobilier' && <a href="#settings-organization-logo" className={activeSection === 'settings-organization-logo' ? 'is-active' : undefined} aria-current={activeSection === 'settings-organization-logo' ? 'location' : undefined}>Logo de l’organisation</a>}

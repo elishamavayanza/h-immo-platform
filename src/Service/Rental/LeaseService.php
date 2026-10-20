@@ -7,6 +7,7 @@ namespace App\Service\Rental;
 use App\Dto\Feedback;
 use App\Dto\Request\Rental\LeaseFilterDto;
 use App\Dto\Request\Rental\LeaseRequest;
+use App\Dto\Request\Rental\LeaseSimulationRequest;
 use App\Dto\Request\Rental\LeaseOccupantRequest;
 use App\Dto\Request\Rental\LeaseOccupantDepartureRequest;
 use App\Entity\Identity\User;
@@ -55,7 +56,131 @@ final readonly class LeaseService
         private ValidatorInterface $validator,
         private AuditLogService $auditLogService,
         private DateTimeService $dateTime,
+        private RentScheduleCalculator $scheduleCalculator,
     ) {
+    }
+
+    /** Calcule un aperçu d’échéancier en mémoire, sans persister le bail ni ses échéances. */
+    public function simulateLeaseSchedule(LeaseSimulationRequest $request, User $currentUser): Feedback
+    {
+        $feedback = new Feedback();
+        $violations = $this->validator->validate($request);
+        if (count($violations) > 0) {
+            return $feedback->bind($violations)->setFlushDescriptionWithError('Les paramètres de simulation sont invalides.')->setStatus(422)->autoInitFlush();
+        }
+
+        $payload = $request->lease;
+        $violations = $this->validator->validate($payload, null, ['create']);
+        if (count($violations) > 0) {
+            return $feedback->bind($violations)->setFlushDescriptionWithError('Les données du bail à simuler sont invalides.')->setStatus(422)->autoInitFlush();
+        }
+        if ($request->throughDate === null || $request->throughDate < $payload->startDate) {
+            return $feedback->addError('throughDate', 'La fin de l’aperçu doit être égale ou postérieure au début du bail.')
+                ->setFlushDescriptionWithError('La période de simulation est invalide.')->setStatus(422)->autoInitFlush();
+        }
+        if ($payload->endDate !== null && $payload->endDate < $payload->startDate) {
+            return $feedback->addError('endDate', 'La date de fin doit être égale ou postérieure à la date de début.')
+                ->setFlushDescriptionWithError('La période contractuelle du bail est invalide.')->setStatus(422)->autoInitFlush();
+        }
+
+        $tenant = $this->resolveTenant($payload->tenantUuid, SecurityAction::VIEW_TENANT, $feedback);
+        if ($tenant === null) return $feedback->autoInitFlush();
+        $unit = $this->resolveUnit($payload->unitUuid, SecurityAction::VIEW_UNIT, $feedback);
+        if ($unit === null) return $feedback->autoInitFlush();
+        $organization = $tenant->getOrganization();
+        if ($unit->getBuilding()->getParcel()->getCity()->getOrganization() !== $organization) {
+            return $feedback->addError('unitUuid', 'Le locataire et l’unité doivent appartenir à la même organisation.')
+                ->setFlushDescriptionWithError('Le bail ne peut pas réunir des ressources de plusieurs organisations.')
+                ->setStatus(422)->autoInitFlush();
+        }
+        $this->securityService->checkOrganizationAccess($organization, SecurityAction::CREATE_LEASE);
+
+        $lease = (new Lease())->setOrganization($organization)->setTenant($tenant)->setUnit($unit);
+        $selectedUnits = [$unit];
+        foreach (array_unique($payload->additionalUnitUuids) as $unitUuid) {
+            $extra = $this->resolveUnit($unitUuid, SecurityAction::VIEW_UNIT, $feedback);
+            if ($extra === null) return $feedback->autoInitFlush();
+            if ($extra->getBuilding()->getParcel()->getCity()->getOrganization() !== $organization
+                || $extra->getBuilding()->getParcel()->getCity() !== $unit->getBuilding()->getParcel()->getCity()) {
+                return $feedback->addError('additionalUnitUuids', 'Les espaces supplémentaires doivent appartenir à la même organisation et à la même ville.')
+                    ->setFlushDescriptionWithError('Le périmètre du bail à simuler est incohérent.')
+                    ->setStatus(422)->autoInitFlush();
+            }
+            if ($extra !== $unit) {
+                $lease->addAdditionalUnit($extra);
+                $selectedUnits[] = $extra;
+            }
+        }
+        foreach ($selectedUnits as $index => $selected) {
+            foreach (array_slice($selectedUnits, $index + 1) as $other) {
+                if ($this->unitRepository->isDescendantOf($selected, $other) || $this->unitRepository->isDescendantOf($other, $selected)) {
+                    return $feedback->addError('additionalUnitUuids', 'Un espace parent et son sous-espace ne peuvent pas être inclus ensemble.')
+                        ->setFlushDescriptionWithError('Le périmètre du bail à simuler est incohérent.')
+                        ->setStatus(422)->autoInitFlush();
+                }
+            }
+        }
+        $this->leaseMapper->copyToEntity($payload, $lease);
+        if (!$this->attachOccupants($payload->occupants, $tenant, $lease, $feedback)) {
+            return $feedback->autoInitFlush();
+        }
+
+        try {
+            $candidate = null;
+            if ($request->ruleCandidate !== null) {
+                $rule = $request->ruleCandidate;
+                if ($rule->effectiveFrom === null || $rule->dueMode === null || $rule->dueDay === null
+                    || $rule->firstPartialPolicy === null || $rule->lastPartialPolicy === null
+                    || $rule->prorationMethod === null || $rule->roundingRule === null) {
+                    return $feedback->addError('ruleCandidate', 'Tous les paramètres de la règle candidate sont obligatoires.')
+                        ->setFlushDescriptionWithError('La règle candidate est incomplète.')
+                        ->setStatus(422)->autoInitFlush();
+                }
+                if ($rule->effectiveFrom->format('d') !== '01') {
+                    return $feedback->addError('ruleCandidate.effectiveFrom', 'La date d’effet candidate doit être le premier jour d’un mois.')
+                        ->setFlushDescriptionWithError('La date d’effet candidate est invalide.')
+                        ->setStatus(422)->autoInitFlush();
+                }
+                $candidate = new RentalRuleCandidate(
+                    $organization,
+                    $rule->effectiveFrom,
+                    new RentalRuleSet($rule->dueMode, $rule->dueDay, $rule->firstPartialPolicy, $rule->lastPartialPolicy, $rule->prorationMethod, $rule->roundingRule),
+                );
+            }
+            $installments = $this->scheduleCalculator->calculate($lease, $request->throughDate, $candidate);
+        } catch (\DomainException $exception) {
+            return $feedback->addError('schedule', $exception->getMessage())
+                ->setFlushDescriptionWithError('L’aperçu ne peut pas être calculé avec les règles financières disponibles.')
+                ->setStatus(422)->autoInitFlush();
+        }
+
+        $rows = array_map(static function (CalculatedRentInstallment $item): array {
+            $rules = $item->rules;
+            return [
+                'periodStart' => $item->period->periodStart->format('Y-m-d'),
+                'coveredStart' => $item->period->coveredStart->format('Y-m-d'),
+                'coveredEnd' => $item->period->coveredEnd->format('Y-m-d'),
+                'amount' => $item->amount,
+                'currency' => $item->currency->value,
+                'dueDate' => $item->dueDate->format('Y-m-d'),
+                'coveredDays' => $item->coveredDays,
+                'daysInMonth' => $item->daysInMonth,
+                'rules' => [
+                    'dueMode' => ['value' => $rules->dueMode->value, 'source' => $rules->dueModeSource->value],
+                    'dueDay' => ['value' => $rules->dueDay, 'source' => $rules->dueDaySource->value],
+                    'firstPartialPolicy' => ['value' => $rules->firstPartialPolicy->value, 'source' => $rules->firstPartialPolicySource->value],
+                    'lastPartialPolicy' => ['value' => $rules->lastPartialPolicy->value, 'source' => $rules->lastPartialPolicySource->value],
+                    'prorationMethod' => ['value' => $rules->prorationMethod->value, 'source' => $rules->prorationMethodSource->value],
+                    'roundingRule' => ['value' => $rules->roundingRule->value, 'source' => $rules->roundingRuleSource->value],
+                    'organizationVersion' => $rules->organizationVersionNumber,
+                    'candidateApplied' => $rules->candidateApplied,
+                ],
+            ];
+        }, $installments);
+
+        return $feedback->setData(['calculatorVersion' => RentScheduleCalculator::CALCULATOR_VERSION, 'items' => $rows])
+            ->setFlushDescription('Aperçu calculé sans créer de bail, d’échéance ou de paiement.')
+            ->setStatus(200)->autoInitFlush();
     }
 
     public function createLease(LeaseRequest $request, User $currentUser): Feedback
@@ -137,6 +262,10 @@ final readonly class LeaseService
             }
         }
         $this->leaseMapper->copyToEntity($request, $lease);
+        $entityViolations = $this->validator->validate($lease);
+        if (count($entityViolations) > 0) {
+            return $feedback->bind($entityViolations)->setFlushDescriptionWithError('Les règles particulières du bail sont invalides.')->setStatus(422)->autoInitFlush();
+        }
         if (!$this->attachOccupants($request->occupants, $tenant, $lease, $feedback)) return $feedback->autoInitFlush();
 
         if (!$this->persistLeaseExclusively($lease, null, $feedback, $selectedUnits)) {
@@ -238,6 +367,10 @@ final readonly class LeaseService
 
         $oldValues = $this->leaseAuditValues($lease);
         $this->leaseMapper->copyToEntity($request, $lease);
+        $entityViolations = $this->validator->validate($lease);
+        if (count($entityViolations) > 0) {
+            return $feedback->bind($entityViolations)->setFlushDescriptionWithError('Les règles particulières du bail sont invalides.')->setStatus(422)->autoInitFlush();
+        }
 
         if (!$this->persistLeaseExclusively($lease, $lease, $feedback)) {
             return $feedback->autoInitFlush();

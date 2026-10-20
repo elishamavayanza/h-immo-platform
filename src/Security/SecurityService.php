@@ -25,11 +25,13 @@ use App\Enum\PlatformRole;
 use App\Exception\AccessDeniedException;
 use App\Exception\UnauthenticatedException;
 use App\Repository\Identity\OrganizationUserRepository;
+use App\Repository\Identity\RentalRulePublicationDelegationRepository;
 use App\Repository\Identity\UserCityRepository;
 use App\Repository\Property\CityRepository;
 use App\Repository\Rental\TenantRepository;
 use Symfony\Bundle\SecurityBundle\Security;
 use Symfony\Component\HttpFoundation\RequestStack;
+use App\Service\System\DateTimeService;
 
 /**
  * SecurityService
@@ -81,6 +83,8 @@ final class SecurityService implements SecurityServiceInterface
         private readonly CityRepository $cityRepository,
         private readonly TenantRepository $tenantRepository,
         private readonly RequestStack $requestStack,
+        private readonly RentalRulePublicationDelegationRepository $rentalRuleDelegationRepository,
+        private readonly DateTimeService $dateTimeService,
     ) {
     }
 
@@ -516,6 +520,37 @@ final class SecurityService implements SecurityServiceInterface
                 sprintf('L\'organisation "%s" est désactivée.', $organization->getName())
             );
         }
+    }
+
+    /**
+     * Vérifie l'accès à la politique locative dans le contexte exact de
+     * l'organisation. Une délégation ne donne que le droit de publication.
+     */
+    public function checkRentalRuleAccess(Organization $organization, SecurityAction $action): void
+    {
+        $this->checkOrganizationAccess($organization, SecurityAction::VIEW);
+        $user = $this->getCurrentUser();
+        $role = $this->getOrganizationRole($user, $organization);
+
+        $hasDelegation = $action === SecurityAction::PUBLISH_RENTAL_RULE
+            && $role === OrganizationRole::ADMIN_IMMOBILIER
+            && $this->rentalRuleDelegationRepository->hasValidPublicationDelegation($organization, $user, $this->dateTimeService->now());
+        $allowed = RentalRulePermissionPolicy::allows($role, $action, $this->isSuperAdmin(), $hasDelegation);
+
+        if (!$allowed) {
+            throw new AccessDeniedException('Accès refusé pour cette opération sur la politique locative.');
+        }
+    }
+
+    public function isEligibleRentalRuleDelegate(Organization $organization, User $user): bool
+    {
+        return $user->isActive()
+            && $user->getDeletedAt() === null
+            && $this->organizationUserRepository->findOneByOrganizationUserAndRole(
+                $organization,
+                $user,
+                OrganizationRole::ADMIN_IMMOBILIER,
+            ) !== null;
     }
 
     public function checkCurrentUserOrganizationActive(): void

@@ -9,10 +9,17 @@ use App\Entity\Property\Unit;
 use App\Entity\Shared\SoftDeletableEntity;
 use App\Enum\Currency;
 use App\Enum\LeaseStatus;
-use Doctrine\DBAL\Types\Types;
+use App\Enum\PartialRentPolicy;
+use App\Enum\RentalPaymentMode;
+use App\Enum\RentalRuleOverrideMode;
+use App\Enum\RentProrationMethod;
+use App\Enum\RentRoundingRule;
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
+use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
+use Symfony\Component\Validator\Constraints as Assert;
+use Symfony\Component\Validator\Context\ExecutionContextInterface;
 
 /**
  * Lease
@@ -33,6 +40,7 @@ use Doctrine\ORM\Mapping as ORM;
 #[ORM\Entity]
 #[ORM\Table(name: 'lease')]
 #[ORM\UniqueConstraint(name: 'uniq_lease_org_reference', columns: ['organization_id', 'reference'])]
+#[ORM\UniqueConstraint(name: 'uniq_lease_id_org', columns: ['id', 'organization_id'])]
 class Lease extends SoftDeletableEntity
 {
     /** @var Collection<int, Unit> Espaces secondaires couverts par le même contrat. */
@@ -176,6 +184,67 @@ class Lease extends SoftDeletableEntity
      */
     #[ORM\Column(type: Types::TEXT, nullable: true)]
     private ?string $terms = null;
+
+    /** Règles structurées du bail : l'héritage est un choix explicite par champ. */
+    #[ORM\Column(name: 'due_mode_override_mode', type: Types::STRING, length: 12, enumType: RentalRuleOverrideMode::class)]
+    private RentalRuleOverrideMode $dueModeOverrideMode = RentalRuleOverrideMode::INHERIT;
+
+    #[ORM\Column(name: 'due_mode_override_value', type: Types::STRING, length: 16, enumType: RentalPaymentMode::class, nullable: true)]
+    private ?RentalPaymentMode $dueModeOverrideValue = null;
+
+    #[ORM\Column(name: 'due_day_override_mode', type: Types::STRING, length: 12, enumType: RentalRuleOverrideMode::class)]
+    private RentalRuleOverrideMode $dueDayOverrideMode = RentalRuleOverrideMode::INHERIT;
+
+    #[ORM\Column(name: 'due_day_override_value', type: Types::SMALLINT, nullable: true, options: ['unsigned' => true])]
+    #[Assert\Range(min: 1, max: 31)]
+    private ?int $dueDayOverrideValue = null;
+
+    #[ORM\Column(name: 'first_partial_override_mode', type: Types::STRING, length: 12, enumType: RentalRuleOverrideMode::class)]
+    private RentalRuleOverrideMode $firstPartialOverrideMode = RentalRuleOverrideMode::INHERIT;
+
+    #[ORM\Column(name: 'first_partial_override_value', type: Types::STRING, length: 32, enumType: PartialRentPolicy::class, nullable: true)]
+    private ?PartialRentPolicy $firstPartialOverrideValue = null;
+
+    #[ORM\Column(name: 'last_partial_override_mode', type: Types::STRING, length: 12, enumType: RentalRuleOverrideMode::class)]
+    private RentalRuleOverrideMode $lastPartialOverrideMode = RentalRuleOverrideMode::INHERIT;
+
+    #[ORM\Column(name: 'last_partial_override_value', type: Types::STRING, length: 32, enumType: PartialRentPolicy::class, nullable: true)]
+    private ?PartialRentPolicy $lastPartialOverrideValue = null;
+
+    #[ORM\Column(name: 'proration_override_mode', type: Types::STRING, length: 12, enumType: RentalRuleOverrideMode::class)]
+    private RentalRuleOverrideMode $prorationOverrideMode = RentalRuleOverrideMode::INHERIT;
+
+    #[ORM\Column(name: 'proration_override_value', type: Types::STRING, length: 32, enumType: RentProrationMethod::class, nullable: true)]
+    private ?RentProrationMethod $prorationOverrideValue = null;
+
+    #[ORM\Column(name: 'rounding_override_mode', type: Types::STRING, length: 12, enumType: RentalRuleOverrideMode::class)]
+    private RentalRuleOverrideMode $roundingOverrideMode = RentalRuleOverrideMode::INHERIT;
+
+    #[ORM\Column(name: 'rounding_override_value', type: Types::STRING, length: 32, enumType: RentRoundingRule::class, nullable: true)]
+    private ?RentRoundingRule $roundingOverrideValue = null;
+
+    #[Assert\Callback]
+    public function validateRentalRuleOverrides(ExecutionContextInterface $context): void
+    {
+        $pairs = [
+            [$this->dueModeOverrideMode, 'dueModeOverrideValue', $this->dueModeOverrideValue],
+            [$this->dueDayOverrideMode, 'dueDayOverrideValue', $this->dueDayOverrideValue],
+            [$this->firstPartialOverrideMode, 'firstPartialOverrideValue', $this->firstPartialOverrideValue],
+            [$this->lastPartialOverrideMode, 'lastPartialOverrideValue', $this->lastPartialOverrideValue],
+            [$this->prorationOverrideMode, 'prorationOverrideValue', $this->prorationOverrideValue],
+            [$this->roundingOverrideMode, 'roundingOverrideValue', $this->roundingOverrideValue],
+        ];
+
+        foreach ($pairs as [$mode, $valuePath, $value]) {
+            $mustHaveValue = $mode === RentalRuleOverrideMode::OVERRIDE;
+            if ($mustHaveValue === ($value === null)) {
+                $message = $mustHaveValue
+                    ? 'Une valeur est obligatoire lorsque la règle est remplacée.'
+                    : 'Une valeur ne peut pas être fournie lorsque la règle est héritée.';
+                $context->buildViolation($message)->atPath($valuePath)->addViolation();
+            }
+        }
+    }
 
     public function getOrganization(): Organization
     {
@@ -368,4 +437,29 @@ class Lease extends SoftDeletableEntity
 
         return $this;
     }
+
+    public function getDueModeOverrideMode(): RentalRuleOverrideMode { return $this->dueModeOverrideMode; }
+    public function setDueModeOverrideMode(RentalRuleOverrideMode $mode): static { $this->dueModeOverrideMode = $mode; return $this; }
+    public function getDueModeOverrideValue(): ?RentalPaymentMode { return $this->dueModeOverrideValue; }
+    public function setDueModeOverrideValue(?RentalPaymentMode $value): static { $this->dueModeOverrideValue = $value; return $this; }
+    public function getDueDayOverrideMode(): RentalRuleOverrideMode { return $this->dueDayOverrideMode; }
+    public function setDueDayOverrideMode(RentalRuleOverrideMode $mode): static { $this->dueDayOverrideMode = $mode; return $this; }
+    public function getDueDayOverrideValue(): ?int { return $this->dueDayOverrideValue; }
+    public function setDueDayOverrideValue(?int $value): static { $this->dueDayOverrideValue = $value; return $this; }
+    public function getFirstPartialOverrideMode(): RentalRuleOverrideMode { return $this->firstPartialOverrideMode; }
+    public function setFirstPartialOverrideMode(RentalRuleOverrideMode $mode): static { $this->firstPartialOverrideMode = $mode; return $this; }
+    public function getFirstPartialOverrideValue(): ?PartialRentPolicy { return $this->firstPartialOverrideValue; }
+    public function setFirstPartialOverrideValue(?PartialRentPolicy $value): static { $this->firstPartialOverrideValue = $value; return $this; }
+    public function getLastPartialOverrideMode(): RentalRuleOverrideMode { return $this->lastPartialOverrideMode; }
+    public function setLastPartialOverrideMode(RentalRuleOverrideMode $mode): static { $this->lastPartialOverrideMode = $mode; return $this; }
+    public function getLastPartialOverrideValue(): ?PartialRentPolicy { return $this->lastPartialOverrideValue; }
+    public function setLastPartialOverrideValue(?PartialRentPolicy $value): static { $this->lastPartialOverrideValue = $value; return $this; }
+    public function getProrationOverrideMode(): RentalRuleOverrideMode { return $this->prorationOverrideMode; }
+    public function setProrationOverrideMode(RentalRuleOverrideMode $mode): static { $this->prorationOverrideMode = $mode; return $this; }
+    public function getProrationOverrideValue(): ?RentProrationMethod { return $this->prorationOverrideValue; }
+    public function setProrationOverrideValue(?RentProrationMethod $value): static { $this->prorationOverrideValue = $value; return $this; }
+    public function getRoundingOverrideMode(): RentalRuleOverrideMode { return $this->roundingOverrideMode; }
+    public function setRoundingOverrideMode(RentalRuleOverrideMode $mode): static { $this->roundingOverrideMode = $mode; return $this; }
+    public function getRoundingOverrideValue(): ?RentRoundingRule { return $this->roundingOverrideValue; }
+    public function setRoundingOverrideValue(?RentRoundingRule $value): static { $this->roundingOverrideValue = $value; return $this; }
 }

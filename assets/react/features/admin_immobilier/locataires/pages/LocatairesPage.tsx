@@ -17,6 +17,7 @@ import { PrivateDocumentsModal } from '../../../shared/finance/components/Privat
 import { useOrganization } from '../../../../app/providers/OrganizationProvider';
 import { useAdminCity } from '../../../../app/providers/AdminCityProvider';
 import { useLocataires } from '../hooks/useLocataires';
+import { simulateLeaseSchedule, type CreateLeasePayload, type LeaseSchedulePreview } from '../services/locatairesService';
 import { LocatairesTable } from '../components/LocatairesTable';
 import { ResidentialHistoryModal } from '../components/ResidentialHistoryModal';
 import { fieldErrorMap } from '../../../shared/utils/actionErrors';
@@ -102,9 +103,19 @@ export function LocatairesPage({ readOnly = false }: { readOnly?: boolean } = {}
         depositAmount: '',
         currency: 'USD' as 'USD' | 'CDF',
         notes: '',
+        dueModeOverrideMode: 'inherit' as 'inherit' | 'override', dueModeOverrideValue: 'in_advance' as 'in_advance' | 'in_arrears',
+        dueDayOverrideMode: 'inherit' as 'inherit' | 'override', dueDayOverrideValue: 5,
+        firstPartialOverrideMode: 'inherit' as 'inherit' | 'override', firstPartialOverrideValue: 'clamp_regular_due_day' as 'clamp_regular_due_day' | 'coverage_start' | 'coverage_end',
+        lastPartialOverrideMode: 'inherit' as 'inherit' | 'override', lastPartialOverrideValue: 'clamp_regular_due_day' as 'clamp_regular_due_day' | 'coverage_start' | 'coverage_end',
+        prorationOverrideMode: 'inherit' as 'inherit' | 'override', prorationOverrideValue: 'actual_calendar_days' as 'actual_calendar_days',
+        roundingOverrideMode: 'inherit' as 'inherit' | 'override', roundingOverrideValue: 'usd_half_up_cent' as 'usd_half_up_cent',
     });
     const [leaseFormErrors, setLeaseFormErrors] = useState<Record<string, string>>({});
     const [submittingLease, setSubmittingLease] = useState(false);
+    const [previewThroughDate, setPreviewThroughDate] = useState('');
+    const [previewState, setPreviewState] = useState<{ signature: string; data: LeaseSchedulePreview } | null>(null);
+    const [previewLoading, setPreviewLoading] = useState(false);
+    const [previewError, setPreviewError] = useState<string | null>(null);
     const [documentsTarget, setDocumentsTarget] = useState<LocataireRow | null>(null);
     const [historyTarget, setHistoryTarget] = useState<LocataireRow | null>(null);
     const primaryLeaseUnit = data?.units.find((unit) => unit.id === leaseForm.unitUuid);
@@ -200,8 +211,11 @@ export function LocatairesPage({ readOnly = false }: { readOnly?: boolean } = {}
         setLeaseTarget(target);
         const now = new Date();
         const startDate = new Date(now.getTime() - now.getTimezoneOffset() * 60_000).toISOString().slice(0, 10);
-        setLeaseForm({ unitUuid: '', additionalUnitUuids: [], occupants: [], reference: '', startDate, endDate: '', monthlyRent: '', depositAmount: '', currency: 'USD', notes: '' });
+        setLeaseForm({ unitUuid: '', additionalUnitUuids: [], occupants: [], reference: '', startDate, endDate: '', monthlyRent: '', depositAmount: '', currency: 'USD', notes: '', dueModeOverrideMode: 'inherit', dueModeOverrideValue: 'in_advance', dueDayOverrideMode: 'inherit', dueDayOverrideValue: 5, firstPartialOverrideMode: 'inherit', firstPartialOverrideValue: 'clamp_regular_due_day', lastPartialOverrideMode: 'inherit', lastPartialOverrideValue: 'clamp_regular_due_day', prorationOverrideMode: 'inherit', prorationOverrideValue: 'actual_calendar_days', roundingOverrideMode: 'inherit', roundingOverrideValue: 'usd_half_up_cent' });
         setLeaseFormErrors({});
+        setPreviewThroughDate('');
+        setPreviewState(null);
+        setPreviewError(null);
         setLeaseModalOpen(true);
     };
 
@@ -210,13 +224,9 @@ export function LocatairesPage({ readOnly = false }: { readOnly?: boolean } = {}
         setLeaseTarget(null);
     };
 
-    const submitLease = async (event: FormEvent<HTMLFormElement>) => {
-        event.preventDefault();
-        if (submittingLease || !leaseTarget) return;
-        setSubmittingLease(true);
-        setLeaseFormErrors({});
-
-        const payload = {
+    const buildLeasePayload = (): CreateLeasePayload | null => {
+        if (!leaseTarget) return null;
+        return {
             tenantUuid: leaseTarget.id,
             unitUuid: leaseForm.unitUuid,
             additionalUnitUuids: leaseForm.additionalUnitUuids.filter((uuid) => uuid !== leaseForm.unitUuid),
@@ -228,7 +238,53 @@ export function LocatairesPage({ readOnly = false }: { readOnly?: boolean } = {}
             depositAmount: leaseForm.depositAmount.trim() || undefined,
             currency: leaseForm.currency,
             notes: leaseForm.notes.trim() || undefined,
+            dueModeOverrideMode: leaseForm.dueModeOverrideMode,
+            dueModeOverrideValue: leaseForm.dueModeOverrideMode === 'override' ? leaseForm.dueModeOverrideValue : null,
+            dueDayOverrideMode: leaseForm.dueDayOverrideMode,
+            dueDayOverrideValue: leaseForm.dueDayOverrideMode === 'override' ? leaseForm.dueDayOverrideValue : null,
+            firstPartialOverrideMode: leaseForm.firstPartialOverrideMode,
+            firstPartialOverrideValue: leaseForm.firstPartialOverrideMode === 'override' ? leaseForm.firstPartialOverrideValue : null,
+            lastPartialOverrideMode: leaseForm.lastPartialOverrideMode,
+            lastPartialOverrideValue: leaseForm.lastPartialOverrideMode === 'override' ? leaseForm.lastPartialOverrideValue : null,
+            prorationOverrideMode: leaseForm.prorationOverrideMode,
+            prorationOverrideValue: leaseForm.prorationOverrideMode === 'override' ? leaseForm.prorationOverrideValue : null,
+            roundingOverrideMode: leaseForm.roundingOverrideMode,
+            roundingOverrideValue: leaseForm.roundingOverrideMode === 'override' ? leaseForm.roundingOverrideValue : null,
         };
+    };
+
+    const currentPreviewSignature = (): string => JSON.stringify([buildLeasePayload(), previewThroughDate]);
+    const ruleOrigin = (source: 'lease_override' | 'organization_version' | 'organization_candidate' | 'soft_immo_default') => source === 'lease_override' ? 'Bail' : source === 'organization_candidate' ? 'Candidat simulé' : source === 'organization_version' ? 'Organisation' : 'Valeur par défaut';
+    const dueModeLabel = (value: string) => value === 'in_advance' ? 'D’avance' : 'À terme échu';
+    const partialPolicyLabel = (value: string) => value === 'coverage_start' ? 'Début de période' : value === 'coverage_end' ? 'Fin de période' : 'Jour habituel limité à la période';
+
+    const requestSchedulePreview = async () => {
+        const payload = buildLeasePayload();
+        if (!payload || !previewThroughDate) {
+            setPreviewError('Sélectionnez l’unité et la date jusqu’à laquelle afficher l’aperçu.');
+            return;
+        }
+        setPreviewLoading(true);
+        setPreviewError(null);
+        try {
+            const data = await simulateLeaseSchedule(payload, previewThroughDate);
+            setPreviewState({ signature: JSON.stringify([payload, previewThroughDate]), data });
+        } catch (cause) {
+            setPreviewError(cause instanceof Error ? cause.message : 'Le serveur n’a pas pu calculer cet aperçu.');
+            setPreviewState(null);
+        } finally {
+            setPreviewLoading(false);
+        }
+    };
+
+    const submitLease = async (event: FormEvent<HTMLFormElement>) => {
+        event.preventDefault();
+        if (submittingLease || !leaseTarget) return;
+        setSubmittingLease(true);
+        setLeaseFormErrors({});
+
+        const payload = buildLeasePayload();
+        if (!payload) return;
 
         try {
             await createLease(payload);
@@ -335,6 +391,12 @@ export function LocatairesPage({ readOnly = false }: { readOnly?: boolean } = {}
         >
             <form id="lease-form" className="organization-management-form" onSubmit={submitLease}>
                 <p className="organization-management-form__hint">Création d'un bail à l'état <strong>Brouillon (DRAFT)</strong>. Il devra être activé pour générer les échéances.</p>
+                <aside className="locataires-lease-rule-note" aria-label="Règle locative du bail">
+                    <strong>Règles locatives du bail</strong>
+                    <p>Chaque champ choisit explicitement l’héritage des règles publiées de l’organisation ou une exception structurée à ce bail. Les notes et clauses libres ne sont jamais interprétées automatiquement.</p>
+                    <p>Un aperçu est calculé par le serveur et ne crée ni bail, ni échéance, ni paiement. Les échéances déjà émises ne sont pas recalculées.</p>
+                    {leaseForm.currency === 'CDF' && <p>Le prorata partiel en CDF reste bloqué tant que ses règles financières ne sont pas validées.</p>}
+                </aside>
                 <FormField label="Unité" htmlFor="lease-unit" required error={leaseFormErrors.unitUuid}>
                     <Select id="lease-unit" value={leaseForm.unitUuid} onChange={(event) => setLeaseForm((current) => ({ ...current, unitUuid: event.target.value, additionalUnitUuids: [] }))} options={leaseUnitsInScope.map((unit) => ({ value: unit.id, label: `${data?.buildings.find((building) => building.id === unit.buildingId)?.name ?? 'Bâtiment'} · ${unit.reference} · ${unit.monthlyRent} ${unit.currency}` }))} placeholder="Sélectionner une unité" required />
                 </FormField>
@@ -397,6 +459,41 @@ export function LocatairesPage({ readOnly = false }: { readOnly?: boolean } = {}
                 <FormField label="Devise" htmlFor="lease-currency" required error={leaseFormErrors.currency}>
                     <Select id="lease-currency" value={leaseForm.currency} onChange={(event) => setLeaseForm((current) => ({ ...current, currency: event.target.value as 'USD' | 'CDF' }))} options={[{ value: 'USD', label: 'USD' }, { value: 'CDF', label: 'CDF' }]} />
                 </FormField>
+                <fieldset className="locataires-lease-rule-overrides">
+                    <legend>Règles applicables à ce bail</legend>
+                    <p>Choisissez « Hériter » pour suivre les versions de l’organisation, ou « Règle particulière » pour enregistrer une exception explicite.</p>
+                    <FormField label="Échéance : mode de paiement" htmlFor="lease-rule-due-mode">
+                        <div className="locataires-lease-rule-overrides__control"><Select id="lease-rule-due-mode" value={leaseForm.dueModeOverrideMode} onChange={(event) => setLeaseForm((current) => ({ ...current, dueModeOverrideMode: event.target.value as 'inherit' | 'override' }))} options={[{ value: 'inherit', label: 'Règle héritée de l’organisation' }, { value: 'override', label: 'Règle particulière de ce bail' }]} />{leaseForm.dueModeOverrideMode === 'override' && <Select aria-label="Mode de paiement particulier" value={leaseForm.dueModeOverrideValue} onChange={(event) => setLeaseForm((current) => ({ ...current, dueModeOverrideValue: event.target.value as 'in_advance' | 'in_arrears' }))} options={[{ value: 'in_advance', label: 'Payable d’avance' }, { value: 'in_arrears', label: 'À terme échu' }]} />}</div>
+                    </FormField>
+                    <FormField label="Échéance : jour habituel" htmlFor="lease-rule-due-day">
+                        <div className="locataires-lease-rule-overrides__control"><Select id="lease-rule-due-day" value={leaseForm.dueDayOverrideMode} onChange={(event) => setLeaseForm((current) => ({ ...current, dueDayOverrideMode: event.target.value as 'inherit' | 'override' }))} options={[{ value: 'inherit', label: 'Règle héritée de l’organisation' }, { value: 'override', label: 'Règle particulière de ce bail' }]} />{leaseForm.dueDayOverrideMode === 'override' && <Input aria-label="Jour d’exigibilité particulier" type="number" min="1" max="31" step="1" value={leaseForm.dueDayOverrideValue} onChange={(event) => setLeaseForm((current) => ({ ...current, dueDayOverrideValue: Number(event.target.value) }))} fullWidth />}</div>
+                    </FormField>
+                    <FormField label="Premier mois partiel" htmlFor="lease-rule-first-partial">
+                        <div className="locataires-lease-rule-overrides__control"><Select id="lease-rule-first-partial" value={leaseForm.firstPartialOverrideMode} onChange={(event) => setLeaseForm((current) => ({ ...current, firstPartialOverrideMode: event.target.value as 'inherit' | 'override' }))} options={[{ value: 'inherit', label: 'Règle héritée de l’organisation' }, { value: 'override', label: 'Règle particulière de ce bail' }]} />{leaseForm.firstPartialOverrideMode === 'override' && <Select aria-label="Politique particulière du premier mois" value={leaseForm.firstPartialOverrideValue} onChange={(event) => setLeaseForm((current) => ({ ...current, firstPartialOverrideValue: event.target.value as typeof current.firstPartialOverrideValue }))} options={[{ value: 'clamp_regular_due_day', label: 'Jour habituel limité à la période' }, { value: 'coverage_start', label: 'Début de la période couverte' }, { value: 'coverage_end', label: 'Fin de la période couverte' }]} />}</div>
+                    </FormField>
+                    <FormField label="Dernier mois partiel" htmlFor="lease-rule-last-partial">
+                        <div className="locataires-lease-rule-overrides__control"><Select id="lease-rule-last-partial" value={leaseForm.lastPartialOverrideMode} onChange={(event) => setLeaseForm((current) => ({ ...current, lastPartialOverrideMode: event.target.value as 'inherit' | 'override' }))} options={[{ value: 'inherit', label: 'Règle héritée de l’organisation' }, { value: 'override', label: 'Règle particulière de ce bail' }]} />{leaseForm.lastPartialOverrideMode === 'override' && <Select aria-label="Politique particulière du dernier mois" value={leaseForm.lastPartialOverrideValue} onChange={(event) => setLeaseForm((current) => ({ ...current, lastPartialOverrideValue: event.target.value as typeof current.lastPartialOverrideValue }))} options={[{ value: 'clamp_regular_due_day', label: 'Jour habituel limité à la période' }, { value: 'coverage_start', label: 'Début de la période couverte' }, { value: 'coverage_end', label: 'Fin de la période couverte' }]} />}</div>
+                    </FormField>
+                    <FormField label="Calcul du prorata" htmlFor="lease-rule-proration">
+                        <div className="locataires-lease-rule-overrides__control"><Select id="lease-rule-proration" value={leaseForm.prorationOverrideMode} onChange={(event) => setLeaseForm((current) => ({ ...current, prorationOverrideMode: event.target.value as 'inherit' | 'override' }))} options={[{ value: 'inherit', label: 'Règle héritée de l’organisation' }, { value: 'override', label: 'Règle particulière de ce bail' }]} />{leaseForm.prorationOverrideMode === 'override' && <Select aria-label="Méthode de prorata particulière" value={leaseForm.prorationOverrideValue} onChange={() => undefined} options={[{ value: 'actual_calendar_days', label: 'Jours calendaires réels' }]} disabled />}</div>
+                    </FormField>
+                    <FormField label="Règle d’arrondi" htmlFor="lease-rule-rounding">
+                        <div className="locataires-lease-rule-overrides__control"><Select id="lease-rule-rounding" value={leaseForm.roundingOverrideMode} onChange={(event) => setLeaseForm((current) => ({ ...current, roundingOverrideMode: event.target.value as 'inherit' | 'override' }))} options={[{ value: 'inherit', label: 'Règle héritée de l’organisation' }, { value: 'override', label: 'Règle particulière de ce bail' }]} />{leaseForm.roundingOverrideMode === 'override' && <Select aria-label="Arrondi particulier" value={leaseForm.roundingOverrideValue} onChange={() => undefined} options={[{ value: 'usd_half_up_cent', label: 'USD : au centime, demi au supérieur' }]} disabled />}</div>
+                    </FormField>
+                </fieldset>
+                <section className="locataires-lease-preview" aria-labelledby="lease-preview-title">
+                    <h3 id="lease-preview-title">Aperçu des échéances</h3>
+                    <p>Demandez au serveur un aperçu jusqu’à la date choisie. Les changements du formulaire rendent l’aperçu précédent obsolète.</p>
+                    <FormField label="Afficher jusqu’au" htmlFor="lease-preview-through" error={leaseFormErrors.throughDate}>
+                        <Input id="lease-preview-through" type="date" value={previewThroughDate} min={leaseForm.startDate || undefined} onChange={(event) => { setPreviewThroughDate(event.target.value); setPreviewState(null); }} fullWidth />
+                    </FormField>
+                    <Button type="button" variant="secondary" disabled={previewLoading || !leaseForm.unitUuid || !leaseForm.startDate || !leaseForm.monthlyRent || !previewThroughDate} onClick={() => void requestSchedulePreview()}>{previewLoading ? 'Calcul en cours…' : 'Calculer l’aperçu'}</Button>
+                    {previewError && <p className="locataires-lease-preview__error" role="alert">{previewError}</p>}
+                    {previewState?.signature === currentPreviewSignature() && <div className="locataires-lease-preview__result" aria-live="polite">
+                        <p>Moteur serveur : {previewState.data.calculatorVersion}. Ces chiffres sont un aperçu et n’ont pas été enregistrés.</p>
+                        {previewState.data.items.length === 0 ? <p>Aucune période à afficher.</p> : <div className="locataires-lease-preview__table-wrap"><table><thead><tr><th>Période couverte</th><th>Montant</th><th>Exigible le</th><th>Règles résolues et provenance</th></tr></thead><tbody>{previewState.data.items.map((item) => <tr key={item.periodStart}><td>{item.coveredStart} au {item.coveredEnd}</td><td>{item.amount} {item.currency}</td><td>{item.dueDate}</td><td>{dueModeLabel(item.rules.dueMode.value)} · {ruleOrigin(item.rules.dueMode.source)}<br />Jour {item.rules.dueDay.value} · {ruleOrigin(item.rules.dueDay.source)}<br />Premier partiel : {partialPolicyLabel(item.rules.firstPartialPolicy.value)} · {ruleOrigin(item.rules.firstPartialPolicy.source)}<br />Dernier partiel : {partialPolicyLabel(item.rules.lastPartialPolicy.value)} · {ruleOrigin(item.rules.lastPartialPolicy.source)}<br />Prorata : jours calendaires réels · {ruleOrigin(item.rules.prorationMethod.source)}<br />Arrondi : USD au centime · {ruleOrigin(item.rules.roundingRule.source)}{item.rules.organizationVersion !== null && <><br />Version organisation {item.rules.organizationVersion}</>}</td></tr>)}</tbody></table></div>}
+                    </div>}
+                </section>
                 <FormField label="Notes" htmlFor="lease-notes" error={leaseFormErrors.notes}>
                     <Textarea id="lease-notes" value={leaseForm.notes} onChange={(event) => setLeaseForm((current) => ({ ...current, notes: event.target.value }))} placeholder="Ex. : Le dépôt de garantie a été reçu à la signature." rows={3} fullWidth maxLength={1000} />
                 </FormField>

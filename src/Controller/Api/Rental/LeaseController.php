@@ -7,6 +7,7 @@ namespace App\Controller\Api\Rental;
 use App\Dto\Feedback;
 use App\Dto\Request\Rental\LeaseFilterDto;
 use App\Dto\Request\Rental\LeaseRequest;
+use App\Dto\Request\Rental\LeaseSimulationRequest;
 use App\Dto\Request\Rental\LeaseOccupantRequest;
 use App\Dto\Request\Rental\LeaseOccupantDepartureRequest;
 use App\Dto\Request\Rental\LeaseTransitionRequest;
@@ -70,6 +71,20 @@ final class LeaseController extends AbstractController
         #[MapRequestPayload(validationGroups: ['create'])] LeaseRequest $request
     ): JsonResponse {
         $feedback = $this->leaseService->createLease($request, $this->getUser());
+
+        return $this->json($feedback, $feedback->getStatus());
+    }
+
+    #[Route('/simulate', name: 'simulate', methods: ['POST'])]
+    #[OA\Post(
+        path: '/api/v1/leases/simulate',
+        summary: 'Prévisualiser un échéancier sans enregistrer le bail',
+        requestBody: new OA\RequestBody(content: new OA\JsonContent(ref: new Model(type: LeaseSimulationRequest::class))),
+        responses: [new OA\Response(response: 200, description: 'Aperçu calculé'), new OA\Response(response: 403, description: 'Accès refusé'), new OA\Response(response: 422, description: 'Données ou règles non prises en charge')]
+    )]
+    public function simulate(#[MapRequestPayload] LeaseSimulationRequest $request): JsonResponse
+    {
+        $feedback = $this->leaseService->simulateLeaseSchedule($request, $this->getUser());
 
         return $this->json($feedback, $feedback->getStatus());
     }

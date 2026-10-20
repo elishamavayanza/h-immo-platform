@@ -154,11 +154,57 @@ export interface CreateLeasePayload {
     depositAmount?: string;
     currency: 'USD' | 'CDF';
     notes?: string;
+    dueModeOverrideMode: 'inherit' | 'override';
+    dueModeOverrideValue?: 'in_advance' | 'in_arrears' | null;
+    dueDayOverrideMode: 'inherit' | 'override';
+    dueDayOverrideValue?: number | null;
+    firstPartialOverrideMode: 'inherit' | 'override';
+    firstPartialOverrideValue?: 'clamp_regular_due_day' | 'coverage_start' | 'coverage_end' | null;
+    lastPartialOverrideMode: 'inherit' | 'override';
+    lastPartialOverrideValue?: 'clamp_regular_due_day' | 'coverage_start' | 'coverage_end' | null;
+    prorationOverrideMode: 'inherit' | 'override';
+    prorationOverrideValue?: 'actual_calendar_days' | null;
+    roundingOverrideMode: 'inherit' | 'override';
+    roundingOverrideValue?: 'usd_half_up_cent' | null;
+}
+
+export interface LeaseSchedulePreviewItem {
+    periodStart: string;
+    coveredStart: string;
+    coveredEnd: string;
+    amount: string;
+    currency: string;
+    dueDate: string;
+    coveredDays: number;
+    daysInMonth: number;
+    rules: {
+        dueMode: { value: string; source: RentalRuleSourceLabel };
+        dueDay: { value: number; source: RentalRuleSourceLabel };
+        firstPartialPolicy: { value: string; source: RentalRuleSourceLabel };
+        lastPartialPolicy: { value: string; source: RentalRuleSourceLabel };
+        prorationMethod: { value: string; source: RentalRuleSourceLabel };
+        roundingRule: { value: string; source: RentalRuleSourceLabel };
+        organizationVersion: number | null;
+        candidateApplied: boolean;
+    };
+}
+
+type RentalRuleSourceLabel = 'lease_override' | 'organization_version' | 'organization_candidate' | 'soft_immo_default';
+
+export interface LeaseSchedulePreview {
+    calculatorVersion: string;
+    items: LeaseSchedulePreviewItem[];
 }
 
 /** `POST /api/v1/leases` — créer un bail (état DRAFT). */
 export async function createLease(payload: CreateLeasePayload): Promise<unknown> {
     const { data } = await apiClient.post<Feedback<unknown>>('/v1/leases', payload);
+    return data.data;
+}
+
+/** `POST /api/v1/leases/simulate` — aperçu sans création de bail ni d’échéance. */
+export async function simulateLeaseSchedule(payload: CreateLeasePayload, throughDate: string): Promise<LeaseSchedulePreview> {
+    const { data } = await apiClient.post<Feedback<LeaseSchedulePreview>>('/v1/leases/simulate', { lease: payload, throughDate });
     return data.data;
 }
 

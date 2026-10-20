@@ -55,6 +55,25 @@ final class LeaseMapper
             $lease->setNotes($dto->notes);
         }
 
+        if ($dto->dueModeOverrideMode !== null) {
+            $lease->setDueModeOverrideMode($dto->dueModeOverrideMode)->setDueModeOverrideValue($dto->dueModeOverrideValue);
+        }
+        if ($dto->dueDayOverrideMode !== null) {
+            $lease->setDueDayOverrideMode($dto->dueDayOverrideMode)->setDueDayOverrideValue($dto->dueDayOverrideValue);
+        }
+        if ($dto->firstPartialOverrideMode !== null) {
+            $lease->setFirstPartialOverrideMode($dto->firstPartialOverrideMode)->setFirstPartialOverrideValue($dto->firstPartialOverrideValue);
+        }
+        if ($dto->lastPartialOverrideMode !== null) {
+            $lease->setLastPartialOverrideMode($dto->lastPartialOverrideMode)->setLastPartialOverrideValue($dto->lastPartialOverrideValue);
+        }
+        if ($dto->prorationOverrideMode !== null) {
+            $lease->setProrationOverrideMode($dto->prorationOverrideMode)->setProrationOverrideValue($dto->prorationOverrideValue);
+        }
+        if ($dto->roundingOverrideMode !== null) {
+            $lease->setRoundingOverrideMode($dto->roundingOverrideMode)->setRoundingOverrideValue($dto->roundingOverrideValue);
+        }
+
         // Ni le statut ni la date de résiliation ne sont copiés. Le
         // statut d'un bail ne se saisit pas : il résulte d'une transition
         // (activer, résilier, annuler) qui en contrôle l'accès et ses

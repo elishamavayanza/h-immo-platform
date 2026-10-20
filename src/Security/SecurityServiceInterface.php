@@ -127,6 +127,11 @@ interface SecurityServiceInterface
      */
     public function checkOrganizationActive(Organization $organization): void;
 
+    /** Autorisation contextualisée pour la politique locative globale. */
+    public function checkRentalRuleAccess(Organization $organization, SecurityAction $action): void;
+
+    public function isEligibleRentalRuleDelegate(Organization $organization, User $user): bool;
+
     /**
      * @throws AccessDeniedException
      */

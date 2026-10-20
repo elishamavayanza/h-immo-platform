@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Entity\Rental;
 
+use App\Entity\Identity\Organization;
+use App\Entity\Identity\OrganizationRentalRuleVersion;
 use App\Entity\Shared\TimestampedEntity;
 use App\Enum\Currency;
 use App\Enum\RentStatus;
@@ -23,14 +25,30 @@ use Doctrine\ORM\Mapping as ORM;
 #[ORM\Entity]
 #[ORM\Table(name: 'rent')]
 #[ORM\UniqueConstraint(name: 'uniq_rent_lease_period', columns: ['lease_id', 'period'])]
+#[ORM\UniqueConstraint(name: 'uniq_rent_id_org', columns: ['id', 'organization_id'])]
+#[ORM\UniqueConstraint(name: 'uniq_rent_id_org_rule_version', columns: ['id', 'organization_id', 'rule_version_id'])]
 class Rent extends TimestampedEntity
 {
+    /** Portée dénormalisée afin que MariaDB puisse garantir les clés composites de tenant. */
+    #[ORM\ManyToOne(targetEntity: Organization::class)]
+    #[ORM\JoinColumn(name: 'organization_id', referencedColumnName: 'id', nullable: false, onDelete: 'RESTRICT')]
+    private Organization $organization;
+
     /**
      * Contrat de bail auquel l'échéance est rattachée.
      */
     #[ORM\ManyToOne(targetEntity: Lease::class)]
     #[ORM\JoinColumn(name: 'lease_id', referencedColumnName: 'id', nullable: false)]
     private Lease $lease;
+
+    /** Version utilisée pour calculer cette échéance; null pour l'historique et le défaut applicatif. */
+    #[ORM\ManyToOne(targetEntity: OrganizationRentalRuleVersion::class)]
+    #[ORM\JoinColumn(name: 'rule_version_id', referencedColumnName: 'id', nullable: true, onDelete: 'RESTRICT')]
+    private ?OrganizationRentalRuleVersion $ruleVersion = null;
+
+    /** Instantané explicatif optionnel; aucun producteur n'est activé dans le lot 1. */
+    #[ORM\OneToOne(mappedBy: 'rent', targetEntity: RentRuleSnapshot::class)]
+    private ?RentRuleSnapshot $ruleSnapshot = null;
 
     /**
      * Période de l'échéance de loyer.
@@ -88,9 +106,29 @@ class Rent extends TimestampedEntity
         return $this->lease;
     }
 
+    public function getOrganization(): Organization { return $this->organization; }
+    public function setOrganization(Organization $organization): static
+    {
+        if (isset($this->lease) && $this->lease->getOrganization() !== $organization) {
+            throw new \InvalidArgumentException('Une échéance doit appartenir à la même organisation que son bail.');
+        }
+
+        $this->organization = $organization;
+
+        return $this;
+    }
+    public function getRuleVersion(): ?OrganizationRentalRuleVersion { return $this->ruleVersion; }
+    public function setRuleVersion(?OrganizationRentalRuleVersion $version): static { $this->ruleVersion = $version; return $this; }
+    public function getRuleSnapshot(): ?RentRuleSnapshot { return $this->ruleSnapshot; }
+
     public function setLease(Lease $lease): static
     {
+        if (isset($this->organization) && $this->organization !== $lease->getOrganization()) {
+            throw new \InvalidArgumentException('Une échéance doit appartenir à la même organisation que son bail.');
+        }
+
         $this->lease = $lease;
+        $this->organization = $lease->getOrganization();
 
         return $this;
     }

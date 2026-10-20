@@ -32,7 +32,9 @@ services:
     # this creates a service per class whose id is the fully-qualified class name
     App\:
         resource: '../src/'
-        exclude: '../src/Dto/Response/Report/'
+        exclude:
+            - '../src/Dto/Response/Report/'
+            - '../src/Service/Rental/CalculatedRentInstallment.php'
 
     # add more service definitions when explicit configuration is needed
     # please note that last definitions always *replace* previous ones

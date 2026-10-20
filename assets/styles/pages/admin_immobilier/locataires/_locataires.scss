@@ -36,6 +36,48 @@
   small { color: var(--text-muted, #687b83); }
 }
 
+.locataires-lease-rule-note {
+  display: grid;
+  gap: 0.4rem;
+  padding: 0.8rem 0.9rem;
+  border: 1px solid var(--color-border, #d5dfe2);
+  border-radius: 0.65rem;
+  color: var(--color-text-secondary, #687b83);
+  background: var(--color-bg-card-hover, rgba(100, 120, 130, 0.06));
+  font-size: 0.84rem;
+  line-height: 1.5;
+
+  strong { color: var(--color-text-primary); }
+  p { margin: 0; }
+}
+
+.locataires-lease-rule-overrides,
+.locataires-lease-preview {
+  min-width: 0;
+  margin: 0;
+  padding: 1rem;
+  border: 1px solid var(--color-border, #d5dfe2);
+  border-radius: 0.7rem;
+}
+
+.locataires-lease-rule-overrides legend { padding: 0 0.35rem; font-weight: 650; }
+.locataires-lease-rule-overrides > p,
+.locataires-lease-preview > p { color: var(--color-text-secondary, #687b83); font-size: 0.88rem; line-height: 1.5; }
+.locataires-lease-rule-overrides__control { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.55rem; }
+.locataires-lease-preview h3 { margin: 0; font-size: 1rem; }
+.locataires-lease-preview__error { color: var(--color-danger, #a94452); }
+.locataires-lease-preview__result { margin-top: 1rem; }
+.locataires-lease-preview__table-wrap { max-width: 100%; overflow-x: auto; }
+.locataires-lease-preview table { width: 100%; border-collapse: collapse; font-size: 0.84rem; }
+.locataires-lease-preview th,
+.locataires-lease-preview td { padding: 0.6rem; border-bottom: 1px solid var(--color-border, #d5dfe2); text-align: left; white-space: nowrap; }
+
+@media (max-width: 700px) {
+  .locataires-lease-rule-overrides__control { grid-template-columns: minmax(0, 1fr); }
+  .locataires-lease-rule-overrides,
+  .locataires-lease-preview { padding: 0.75rem; }
+}
+
 @media (max-width: 700px) {
   .locataires-lease-options .locataires-occupant-fields { width: 100%; grid-template-columns: minmax(0, 1fr); }
 }

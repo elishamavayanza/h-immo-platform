@@ -5,10 +5,10 @@ declare(strict_types=1);
 namespace App\Command\Rental;
 
 use App\Entity\Rental\Lease;
-use App\Entity\Rental\Rent;
 use App\Enum\LeaseStatus;
 use App\Repository\Rental\LeaseRepository;
 use App\Repository\Rental\RentRepository;
+use App\Service\Rental\CalculatedRentInstallment;
 use App\Service\Rental\RentScheduleCalculator;
 use App\Service\System\DateTimeService;
 use Doctrine\ORM\EntityManagerInterface;
@@ -155,21 +155,24 @@ HELP);
             $io->warning('Mode DRY-RUN : aucune écriture en base.');
         }
 
-        // Valider tous les calendriers avant le premier flush. Une période
-        // partielle CDF non spécifiée ne doit pas laisser une génération
-        // globale partiellement persistée.
+        // Calculer toutes les nouvelles échéances avant le premier flush. Les
+        // périodes déjà émises sont exclues avant le calcul afin qu’une règle
+        // publiée ultérieurement ne les recalcule jamais.
         $schedules = [];
         try {
             foreach ($leases as $lease) {
-                $schedules[spl_object_id($lease)] = $this->scheduleCalculator->calculate(
-                    $lease->getStartDate(),
-                    $lease->getEndDate(),
-                    $endDate,
-                    $lease->getMonthlyRent(),
-                    $lease->getCurrency(),
-                );
+                $installments = [];
+                $skipped = 0;
+                foreach ($this->scheduleCalculator->periodsForLease($lease, $endDate) as $period) {
+                    if ($this->rentRepository->findOneByLeaseAndPeriod($lease, $period) !== null) {
+                        ++$skipped;
+                        continue;
+                    }
+                    $installments[] = $this->scheduleCalculator->calculatePeriod($lease, $period);
+                }
+                $schedules[spl_object_id($lease)] = ['installments' => $installments, 'skipped' => $skipped];
             }
-        } catch (\DomainException $exception) {
+        } catch (\Throwable $exception) {
             $io->error($exception->getMessage());
             $io->warning('Aucune échéance n’a été écrite : le calendrier complet doit être validé avant la génération.');
             return Command::FAILURE;
@@ -179,7 +182,8 @@ HELP);
         $totalSkipped = 0;
 
         foreach ($leases as $lease) {
-            $created = $this->generateForLease($lease, $schedules[spl_object_id($lease)], $dryRun, $io);
+            $schedule = $schedules[spl_object_id($lease)];
+            $created = $this->generateForLease($lease, $schedule['installments'], $schedule['skipped'], $dryRun, $io);
             $totalCreated += $created['created'];
             $totalSkipped += $created['skipped'];
         }
@@ -197,26 +201,26 @@ HELP);
     /**
      * Génère les échéances pour un bail donné.
      *
-     * @param list<array{period: \DateTimeImmutable, coveredStart: \DateTimeImmutable, coveredEnd: \DateTimeImmutable, coveredDays: int, daysInMonth: int, amount: string, dueDate: \DateTimeImmutable}> $schedule
+     * @param list<CalculatedRentInstallment> $schedule
      * @return array{created: int, skipped: int}
      */
-    private function generateForLease(Lease $lease, array $schedule, bool $dryRun, SymfonyStyle $io): array
+    private function generateForLease(Lease $lease, array $schedule, int $alreadySkipped, bool $dryRun, SymfonyStyle $io): array
     {
         if ($schedule === []) {
             $io->comment(sprintf('  Bail %s : aucune période ne tombe dans la plage demandée, ignoré.', $lease->getReference()));
-            return ['created' => 0, 'skipped' => 0];
+            return ['created' => 0, 'skipped' => $alreadySkipped];
         }
 
-        $firstPeriod = $schedule[0]['period'];
-        $lastPeriod = $schedule[array_key_last($schedule)]['period'];
+        $firstPeriod = $schedule[0]->period->periodStart;
+        $lastPeriod = $schedule[array_key_last($schedule)]->period->periodStart;
         $io->text(sprintf('  Bail %s (%s) : %s → %s', $lease->getReference(), $lease->getUuid()->toRfc4122(), $firstPeriod->format('Y-m'), $lastPeriod->format('Y-m')));
 
         $created = 0;
-        $skipped = 0;
+        $skipped = $alreadySkipped;
 
         foreach ($schedule as $period) {
-            // Vérifier si l'échéance existe déjà
-            $existing = $this->rentRepository->findOneByLeaseAndPeriod($lease, $period['period']);
+            // Défense en profondeur contre une création concurrente depuis le pré-calcul.
+            $existing = $this->rentRepository->findOneByLeaseAndPeriod($lease, $period->period->periodStart);
 
             if ($existing !== null) {
                 ++$skipped;
@@ -226,28 +230,24 @@ HELP);
             if ($dryRun) {
                 $io->comment(sprintf(
                     '    Prévision %s : %s–%s (%d/%d jours), %s %s, exigible le %s',
-                    $period['period']->format('Y-m'),
-                    $period['coveredStart']->format('Y-m-d'),
-                    $period['coveredEnd']->format('Y-m-d'),
-                    $period['coveredDays'],
-                    $period['daysInMonth'],
-                    $period['amount'],
-                    $lease->getCurrency()->value,
-                    $period['dueDate']->format('Y-m-d'),
+                    $period->period->periodStart->format('Y-m'),
+                    $period->period->coveredStart->format('Y-m-d'),
+                    $period->period->coveredEnd->format('Y-m-d'),
+                    $period->coveredDays,
+                    $period->daysInMonth,
+                    $period->amount,
+                    $period->currency->value,
+                    $period->dueDate->format('Y-m-d'),
                 ));
             }
 
             // Créer l'échéance
-            $rent = new Rent();
-            $rent->setLease($lease);
-            $rent->setPeriod($period['period']);
-            $rent->setDueDate($period['dueDate']);
-            $rent->setAmount($period['amount']);
-            $rent->setCurrency($lease->getCurrency());
-            // status = PENDING par défaut (entité)
+            $rent = $period->createRent();
+            $snapshot = $period->createSnapshot($rent);
 
             if (!$dryRun) {
                 $this->em->persist($rent);
+                $this->em->persist($snapshot);
             }
             ++$created;
         }

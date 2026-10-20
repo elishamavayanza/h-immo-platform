@@ -554,7 +554,14 @@ const iconExpectations: Array<[string, string]> = [
     ['administration', 'id-badge'],
 ];
 for (const [id, expected] of iconExpectations) {
-    const menusWithEntry = ALL_MENUS.filter(menu => menu.some(item => item.id === id));
+    // La vitrine est volontairement absente des menus par défaut et ne doit
+    // être vérifiée que dans les contextes où l'organisation l'a activée.
+    const menusWithEntry = id === 'vitrine'
+        ? [
+            resolveSidebar(null, 'patron' as OrganizationRole, true),
+            resolveSidebar(null, 'admin_immobilier' as OrganizationRole, true),
+        ]
+        : ALL_MENUS.filter(menu => menu.some(item => item.id === id));
     check(
         `${id} utilise l’icône adaptée (${expected})`,
         menusWithEntry.length > 0 && menusWithEntry.every(menu => menu.find(item => item.id === id)?.icon === expected),

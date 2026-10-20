@@ -78,6 +78,9 @@ final readonly class LeaseResponse
         #[OA\Property(description: 'Clauses contractuelles et conditions particulières du bail', nullable: true)]
         public ?string $terms,
 
+        #[OA\Property(description: 'Modes et valeurs structurés de résolution des règles du bail', type: 'object')]
+        public array $rentalRuleOverrides,
+
         #[OA\Property(description: 'Horodatage de création', format: 'date-time', example: '2026-01-01T09:00:00Z')]
         public \DateTimeImmutable $createdAt,
 
@@ -114,6 +117,14 @@ final readonly class LeaseResponse
             terminationReason: $lease->getTerminationReason(),
             notes: $lease->getNotes(),
             terms: $lease->getTerms(),
+            rentalRuleOverrides: [
+                'dueMode' => ['mode' => $lease->getDueModeOverrideMode()->value, 'value' => $lease->getDueModeOverrideValue()?->value],
+                'dueDay' => ['mode' => $lease->getDueDayOverrideMode()->value, 'value' => $lease->getDueDayOverrideValue()],
+                'firstPartial' => ['mode' => $lease->getFirstPartialOverrideMode()->value, 'value' => $lease->getFirstPartialOverrideValue()?->value],
+                'lastPartial' => ['mode' => $lease->getLastPartialOverrideMode()->value, 'value' => $lease->getLastPartialOverrideValue()?->value],
+                'proration' => ['mode' => $lease->getProrationOverrideMode()->value, 'value' => $lease->getProrationOverrideValue()?->value],
+                'rounding' => ['mode' => $lease->getRoundingOverrideMode()->value, 'value' => $lease->getRoundingOverrideValue()?->value],
+            ],
             createdAt: $lease->getCreatedAt(),
             updatedAt: $lease->getUpdatedAt(),
         );

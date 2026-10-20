@@ -5,6 +5,11 @@ declare(strict_types=1);
 namespace App\Dto\Request\Rental;
 
 use App\Enum\Currency;
+use App\Enum\PartialRentPolicy;
+use App\Enum\RentalPaymentMode;
+use App\Enum\RentalRuleOverrideMode;
+use App\Enum\RentProrationMethod;
+use App\Enum\RentRoundingRule;
 use OpenApi\Attributes as OA;
 use Symfony\Component\Validator\Constraints as Assert;
 
@@ -115,6 +120,32 @@ final readonly class LeaseRequest
         )]
         #[Assert\Length(max: 5000, groups: ['create', 'update'])]
         public ?string $notes = null,
+
+        #[OA\Property(description: 'Mode explicite de résolution du paiement : héritage ou exception du bail.', enum: RentalRuleOverrideMode::class)]
+        public ?RentalRuleOverrideMode $dueModeOverrideMode = null,
+        #[OA\Property(description: 'Valeur du mode de paiement si le mode est override.', enum: RentalPaymentMode::class, nullable: true)]
+        public ?RentalPaymentMode $dueModeOverrideValue = null,
+        #[OA\Property(description: 'Mode explicite de résolution du jour d’exigibilité.', enum: RentalRuleOverrideMode::class)]
+        public ?RentalRuleOverrideMode $dueDayOverrideMode = null,
+        #[OA\Property(description: 'Jour d’exigibilité (1 à 31) si le mode est override.', minimum: 1, maximum: 31, nullable: true)]
+        #[Assert\Range(min: 1, max: 31, groups: ['create', 'update'])]
+        public ?int $dueDayOverrideValue = null,
+        #[OA\Property(description: 'Mode explicite de résolution du premier mois partiel.', enum: RentalRuleOverrideMode::class)]
+        public ?RentalRuleOverrideMode $firstPartialOverrideMode = null,
+        #[OA\Property(description: 'Politique du premier mois partiel si le mode est override.', enum: PartialRentPolicy::class, nullable: true)]
+        public ?PartialRentPolicy $firstPartialOverrideValue = null,
+        #[OA\Property(description: 'Mode explicite de résolution du dernier mois partiel.', enum: RentalRuleOverrideMode::class)]
+        public ?RentalRuleOverrideMode $lastPartialOverrideMode = null,
+        #[OA\Property(description: 'Politique du dernier mois partiel si le mode est override.', enum: PartialRentPolicy::class, nullable: true)]
+        public ?PartialRentPolicy $lastPartialOverrideValue = null,
+        #[OA\Property(description: 'Mode explicite de résolution du prorata.', enum: RentalRuleOverrideMode::class)]
+        public ?RentalRuleOverrideMode $prorationOverrideMode = null,
+        #[OA\Property(description: 'Méthode de prorata si le mode est override.', enum: RentProrationMethod::class, nullable: true)]
+        public ?RentProrationMethod $prorationOverrideValue = null,
+        #[OA\Property(description: 'Mode explicite de résolution de l’arrondi.', enum: RentalRuleOverrideMode::class)]
+        public ?RentalRuleOverrideMode $roundingOverrideMode = null,
+        #[OA\Property(description: 'Règle d’arrondi si le mode est override.', enum: RentRoundingRule::class, nullable: true)]
+        public ?RentRoundingRule $roundingOverrideValue = null,
     ) {
     }
 }
