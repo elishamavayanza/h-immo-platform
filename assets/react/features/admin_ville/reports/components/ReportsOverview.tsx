@@ -12,6 +12,7 @@ import type {
 } from '../types';
 import { absoluteCents, amountBarPercent } from '../../../shared/reports/utils/amountChart';
 import { OccupancyDonut } from '../../../../components/Data/OccupancyDonut';
+import { ChartDisplayToggle } from '../../../../components/Data/ChartDisplayToggle';
 
 /** Ligne d'occupation : taux en pourcentage et compteurs occupés/vacants. */
 function OccupancyRow({ item }: { item: OccupancyItem }) {
@@ -93,6 +94,7 @@ export function ReportsOverview({ data }: { data: AdminVilleReportsData }) {
                 <Card className="reports-panel reports-breakdown reports-breakdown--occupancy" padding="medium">
                     <div className="reports-panel__heading">
                         <div><h2>Occupation par immeuble</h2><p>Taux d’occupation du patrimoine de {data.cityName}.</p></div>
+                        <ChartDisplayToggle />
                     </div>
                     <div className="reports-breakdown__list" role="region" aria-label="Taux d’occupation par immeuble" tabIndex={0}>
                         {data.buildings.length > 0

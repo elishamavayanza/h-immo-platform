@@ -6,6 +6,7 @@ import { formatInteger, formatMoney } from '../../../../../utils/format.utils';
 import { absoluteCents, amountBarPercent } from '../../../shared/reports/utils/amountChart';
 import type { ArrearsItem, ExpenseSummaryItem, FinancialSummaryItem, OccupancyItem, PatronReportsData } from '../types';
 import { OccupancyDonut } from '../../../../components/Data/OccupancyDonut';
+import { ChartDisplayToggle } from '../../../../components/Data/ChartDisplayToggle';
 
 /** Libellé court d'un mois `YYYY-MM` fourni par le backend. */
 function periodLabel(period: string): string {
@@ -124,6 +125,7 @@ export function ReportsOverview({ data }: { data: PatronReportsData }) {
                 <Card className="reports-panel reports-breakdown reports-breakdown--occupancy" padding="medium">
                     <div className="reports-panel__heading">
                         <div><h2>Occupation par ville</h2><p>Taux d’occupation du patrimoine par ville.</p></div>
+                        <ChartDisplayToggle />
                     </div>
                     <div className="reports-breakdown__list" role="region" aria-label="Taux d’occupation par ville" tabIndex={0}>
                         {data.cities.length > 0

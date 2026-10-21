@@ -5,6 +5,7 @@ import { UpcomingLeaseExpirations } from '../../../shared/components/UpcomingLea
 import { DashboardStatChart } from '../../../shared/components/DashboardStatChart';
 import { absoluteCents, amountBarPercent } from '../../../shared/reports/utils/amountChart';
 import { OccupancyDonut } from '../../../../components/Data/OccupancyDonut';
+import { ChartDisplayToggle } from '../../../../components/Data/ChartDisplayToggle';
 
 /** Vue d'ensemble : indicateurs + occupation du patrimoine + impayés à traiter. */
 export function AdminImmobilierOverview({ data }: { data: AdminImmobilierDashboardData }) {
@@ -36,7 +37,7 @@ export function AdminImmobilierOverview({ data }: { data: AdminImmobilierDashboa
                 <Card
                     className="organization-panel"
                     padding="medium"
-                    header={<div><h2>Occupation du patrimoine</h2><p>{formatInteger(occupied)} unités occupées sur {formatInteger(data.totalUnits)}</p></div>}
+                    header={<div className="organization-panel__chart-heading"><div><h2>Occupation du patrimoine</h2><p>{formatInteger(occupied)} unités occupées sur {formatInteger(data.totalUnits)}</p></div><ChartDisplayToggle /></div>}
                 >
                     <div className="organization-collection">
                         <OccupancyDonut occupied={occupied} total={data.totalUnits} label="Patrimoine immobilier" />

@@ -5,6 +5,7 @@ import { UpcomingLeaseExpirations } from '../../../shared/components/UpcomingLea
 import { formatInteger, formatMoney, formatPercent } from '../../../../../utils/format.utils';
 import type { AdminImmobilierReportsData, ArrearsItem, ExpenseSummaryItem, OccupancyItem } from '../types';
 import { OccupancyDonut } from '../../../../components/Data/OccupancyDonut';
+import { ChartDisplayToggle } from '../../../../components/Data/ChartDisplayToggle';
 
 /** Libellé court d'un mois en français : le backend fournit `YYYY-MM`. */
 function monthLabel(point: OccupancyItem): string {
@@ -73,6 +74,7 @@ export function ReportsOverview({ data }: { data: AdminImmobilierReportsData }) 
                 <Card className="reports-panel reports-breakdown reports-breakdown--occupancy" padding="medium">
                     <div className="reports-panel__heading">
                         <div><h2>Occupation par immeuble</h2><p>Taux d’occupation actuel du patrimoine.</p></div>
+                        <ChartDisplayToggle />
                     </div>
                     <div className="reports-breakdown__list" role="region" aria-label="Taux d’occupation par immeuble" tabIndex={0}>
                         {data.buildings.length > 0

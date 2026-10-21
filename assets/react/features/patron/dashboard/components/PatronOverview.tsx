@@ -5,6 +5,7 @@ import { UpcomingLeaseExpirations } from '../../../shared/components/UpcomingLea
 import { DashboardStatChart } from '../../../shared/components/DashboardStatChart';
 import { absoluteCents, amountBarPercent } from '../../../shared/reports/utils/amountChart';
 import { OccupancyDonut } from '../../../../components/Data/OccupancyDonut';
+import { ChartDisplayToggle } from '../../../../components/Data/ChartDisplayToggle';
 
 /** Vue d'ensemble du Patron : indicateurs + occupation par ville + impayés + dépenses. */
 export function PatronOverview({ data }: { data: PatronDashboardData }) {
@@ -36,7 +37,7 @@ export function PatronOverview({ data }: { data: PatronDashboardData }) {
                 <Card
                     className="organization-panel"
                     padding="medium"
-                    header={<div><h2>Occupation du patrimoine</h2><p>{formatInteger(data.totalUnits)} unités sur le périmètre</p></div>}
+                    header={<div className="organization-panel__chart-heading"><div><h2>Occupation du patrimoine</h2><p>{formatInteger(data.totalUnits)} unités sur le périmètre</p></div><ChartDisplayToggle /></div>}
                 >
                     <div className="organization-collection">
                         <OccupancyDonut occupied={occupied} total={data.totalUnits} label="Patrimoine de l’organisation" />

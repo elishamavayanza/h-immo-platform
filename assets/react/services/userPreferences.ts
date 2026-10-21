@@ -2,9 +2,45 @@ import type { UserSettings } from '../features/shared/account/settings/types/set
 
 const STORAGE_KEY = 'h-immo:user-settings';
 const PENDING_LOGIN_THEME_KEY = 'h-immo:pending-login-theme';
+const CHART_DISPLAY_MODE_KEY = 'h-immo:chart-display-mode';
+const CHART_DISPLAY_MODE_EVENT = 'h-immo:chart-display-mode-updated';
+let fallbackChartDisplayMode: ChartDisplayMode = 'donut';
 
 export type ThemePreference = 'system' | 'light' | 'dark';
 export type AccentPalette = 'ocean' | 'violet' | 'sage' | 'amber' | 'coral' | 'slate';
+export type ChartDisplayMode = 'donut' | 'bar';
+
+export function readChartDisplayMode(): ChartDisplayMode {
+    if (typeof window === 'undefined') return 'donut';
+    try {
+        const stored = window.localStorage.getItem(CHART_DISPLAY_MODE_KEY);
+        if (stored === 'bar' || stored === 'donut') fallbackChartDisplayMode = stored;
+        return fallbackChartDisplayMode;
+    } catch {
+        return fallbackChartDisplayMode;
+    }
+}
+
+export function saveChartDisplayMode(mode: ChartDisplayMode): void {
+    if (typeof window === 'undefined') return;
+    fallbackChartDisplayMode = mode;
+    try {
+        window.localStorage.setItem(CHART_DISPLAY_MODE_KEY, mode);
+    } catch {
+        // Le mode reste valable pour les composants déjà montés même si le stockage est indisponible.
+    }
+    window.dispatchEvent(new Event(CHART_DISPLAY_MODE_EVENT));
+}
+
+export function subscribeChartDisplayMode(listener: () => void): () => void {
+    if (typeof window === 'undefined') return () => undefined;
+    window.addEventListener(CHART_DISPLAY_MODE_EVENT, listener);
+    window.addEventListener('storage', listener);
+    return () => {
+        window.removeEventListener(CHART_DISPLAY_MODE_EVENT, listener);
+        window.removeEventListener('storage', listener);
+    };
+}
 
 /** Enregistre et applique un choix de thème local avant l'authentification. */
 export function setThemePreference(theme: Exclude<ThemePreference, 'system'>): void {

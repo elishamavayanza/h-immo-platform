@@ -1,4 +1,5 @@
 import { Card } from '../../../components/UI/Card';
+import { ChartDisplayToggle } from '../../../components/Data/ChartDisplayToggle';
 import { OccupancyDonut } from '../../../components/Data/OccupancyDonut';
 
 export interface DashboardStatChartItem {
@@ -29,6 +30,7 @@ export function DashboardStatChart({ title, description, items, emptyMessage }: 
             <Card className={`organization-panel organization-stat-chart${isOccupancy ? ' organization-stat-chart--occupancy' : ''}${isScrollable ? ' organization-stat-chart--scrollable' : ''}`} padding="medium">
             <div className="organization-stat-chart__heading">
                 <div><h2>{title}</h2><p>{description}</p></div>
+                {isOccupancy && <ChartDisplayToggle />}
             </div>
             {items.length > 0 ? (
                 <ul className="organization-stat-chart__list" aria-label={title} tabIndex={0}>
