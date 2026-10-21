@@ -24,7 +24,7 @@ import { VillesTab } from '../components/VillesTab';
 import { ParcellesTab } from '../components/ParcellesTab';
 import { BatimentsTab } from '../components/BatimentsTab';
 import { UnitesTab } from '../components/UnitesTab';
-import { PatrimoineNav, buildPatrimoinePath, resolvePatrimoineSelection, type PatrimoineLevel } from '../components/PatrimoineNav';
+import { PatrimoineNav, buildPatrimoinePath, resolvePatrimoineSelection, type PatrimoineLevel, type PatrimoineNavAction, type PatrimoineNavActionRequest, type PatrimoineNavNode } from '../components/PatrimoineNav';
 import { PatrimoineSummaryCard } from '../components/PatrimoineSummaryCard';
 import { PatrimoineChildList, type PatrimoineChildItem } from '../components/PatrimoineChildList';
 import { PatrimoineCalendarRail } from '../components/PatrimoineCalendarRail';
@@ -94,6 +94,8 @@ export function PatrimoinePage({ readOnly = false }: { readOnly?: boolean } = {}
         && typeof location.state === 'object'
         && 'restorePatrimoineTab' in location.state
         && location.state.restorePatrimoineTab === 'manage';
+    const [patrimoineActionRequest, setPatrimoineActionRequest] = useState<PatrimoineNavActionRequest | null>(null);
+    const navActionSequence = useRef(0);
     const selection = resolvePatrimoineSelection(location.pathname, isCityAdmin);
     const { level: activeLevel, cityId: selectedCityId, parcelId: selectedParcelId, buildingId: selectedBuildingId, unitId: selectedUnitId } = selection;
 
@@ -314,6 +316,82 @@ export function PatrimoinePage({ readOnly = false }: { readOnly?: boolean } = {}
         const building = buildings.find((item) => item.id === id);
         const parcel = parcels.find((item) => item.id === building?.parcelId);
         goToLevel('unites', parcel?.cityId ?? selectedCityId, parcel?.id ?? selectedParcelId, id);
+    };
+
+    const handlePatrimoineNavAction = (node: PatrimoineNavNode, action: PatrimoineNavAction) => {
+        if (action === 'open') {
+            navigate(node.to);
+            return;
+        }
+        const resourceId = node.id.slice(node.id.indexOf(':') + 1);
+        if (action === 'toggle-status' && node.level === 'villes') {
+            const city = cityBy.get(resourceId);
+            if (city && canDo(organizationRole, city.status === 'inactive' ? 'activate_city' : 'deactivate_city')) {
+                void setCityStatus(city, city.status === 'inactive' ? 'active' : 'inactive');
+            }
+            return;
+        }
+        let level: PatrimoineLevel;
+        let context: { cityId: string | null; parcelId: string | null; buildingId: string | null };
+        let request: Omit<PatrimoineNavActionRequest, 'id'>;
+        if (action === 'create-city-admin' && node.level === 'villes') {
+            level = 'villes';
+            context = { cityId: null, parcelId: null, buildingId: null };
+            request = { level: 'villes', action: 'create-city-admin', targetId: resourceId };
+        } else if (action === 'create-child') {
+            if (node.level === 'villes') {
+                level = 'parcelles';
+                context = { cityId: resourceId, parcelId: null, buildingId: null };
+                request = { level: 'parcelles', action: 'create' };
+            } else if (node.level === 'parcelles') {
+                const parcel = parcelBy.get(resourceId);
+                if (!parcel) return;
+                level = 'batiments';
+                context = { cityId: parcel.cityId, parcelId: resourceId, buildingId: null };
+                request = { level: 'batiments', action: 'create' };
+            } else if (node.level === 'batiments') {
+                const building = buildingBy.get(resourceId);
+                const parcel = building ? parcelBy.get(building.parcelId) : undefined;
+                if (!building || !parcel) return;
+                level = 'unites';
+                context = { cityId: parcel.cityId, parcelId: parcel.id, buildingId: resourceId };
+                request = { level: 'unites', action: 'create' };
+            } else if (node.level === 'unites') {
+                const unit = units.find((candidate) => candidate.id === resourceId);
+                const building = unit ? buildingBy.get(unit.buildingId) : undefined;
+                const parcel = building ? parcelBy.get(building.parcelId) : undefined;
+                if (!unit || !building || !parcel) return;
+                level = 'unites';
+                context = { cityId: parcel.cityId, parcelId: parcel.id, buildingId: building.id };
+                request = { level: 'unites', action: 'create', targetId: resourceId };
+            } else return;
+        } else {
+            level = node.level;
+            if (node.level === 'villes') context = { cityId: null, parcelId: null, buildingId: null };
+            else if (node.level === 'parcelles') {
+                const parcel = parcelBy.get(resourceId);
+                if (!parcel) return;
+                context = { cityId: parcel.cityId, parcelId: null, buildingId: null };
+            } else if (node.level === 'batiments') {
+                const building = buildingBy.get(resourceId);
+                const parcel = building ? parcelBy.get(building.parcelId) : undefined;
+                if (!building || !parcel) return;
+                context = { cityId: parcel.cityId, parcelId: parcel.id, buildingId: null };
+            } else {
+                const unit = units.find((candidate) => candidate.id === resourceId);
+                const building = unit ? buildingBy.get(unit.buildingId) : undefined;
+                const parcel = building ? parcelBy.get(building.parcelId) : undefined;
+                if (!unit || !building || !parcel) return;
+                context = { cityId: parcel.cityId, parcelId: parcel.id, buildingId: building.id };
+            }
+            request = { level: level as PatrimoineNavActionRequest['level'], action: action as 'edit' | 'delete', targetId: resourceId };
+        }
+        setPatrimoineActionRequest({ ...request, id: ++navActionSequence.current });
+        navigate(buildPatrimoinePath(level, context), { state: { restorePatrimoineTab: 'manage' } });
+    };
+
+    const markPatrimoineActionHandled = (id: number) => {
+        setPatrimoineActionRequest((current) => current?.id === id ? null : current);
     };
 
     /**
@@ -640,18 +718,18 @@ export function PatrimoinePage({ readOnly = false }: { readOnly?: boolean } = {}
 
     const renderTab = (level: PatrimoineLevel) => {
         if (level === 'villes') {
-            return <VillesTab cities={cities} role={organizationRole} isLoading={isLoading} error={error} note={note} onReload={() => void reload()} onCreate={createCity} onCreateAdmin={createCityAdmin} onUpdate={updateCity} onSetStatus={setCityStatus} onDelete={deleteCity} onOpen={(id) => goToLevel('parcelles', id, null, null)} readOnly={readOnly} />;
+            return <VillesTab cities={cities} role={organizationRole} isLoading={isLoading} error={error} note={note} onReload={() => void reload()} onCreate={createCity} onCreateAdmin={createCityAdmin} onUpdate={updateCity} onSetStatus={setCityStatus} onDelete={deleteCity} onOpen={(id) => goToLevel('parcelles', id, null, null)} readOnly={readOnly} actionRequest={patrimoineActionRequest?.level === 'villes' ? patrimoineActionRequest : null} onActionRequestHandled={markPatrimoineActionHandled} />;
         }
         if (level === 'parcelles') {
-            return <ParcellesTab parcels={parcels} cities={cities} role={organizationRole} isLoading={isLoading} error={error} note={note} onReload={() => void reload()} onCreate={createParcel} onUpdate={updateParcel} onDelete={deleteParcel} selectedCityId={isCityAdmin ? (selectedCityId ?? (activeCityUuid || null)) : selectedCityId} onCityFilter={(id) => {
+            return <ParcellesTab parcels={parcels} cities={cities} role={organizationRole} isLoading={isLoading} error={error} note={note} onReload={() => void reload()} onCreate={createParcel} onUpdate={updateParcel} onDelete={deleteParcel} selectedCityId={isCityAdmin ? (selectedCityId ?? (activeCityUuid || null)) : selectedCityId} actionRequest={patrimoineActionRequest?.level === 'parcelles' ? patrimoineActionRequest : null} onActionRequestHandled={markPatrimoineActionHandled} onCityFilter={(id) => {
                 if (isCityAdmin && id) selectCity(id);
                 goToLevel('parcelles', id ?? (isCityAdmin ? activeCityUuid || null : null), null, null);
             }} onOpen={(id) => openParcel(id)} onOpenMap={(parcelIds, initialParcelId) => navigate('/app/patrimoine/carte', { state: { parcelIds, initialParcelId, returnTo: `${location.pathname}${location.search}${location.hash}` } })} readOnly={readOnly} />;
         }
         if (level === 'batiments') {
-            return <BatimentsTab buildings={buildings} parcels={parcels} cities={cities} role={organizationRole} isLoading={isLoading} error={error} note={note} onReload={() => void reload()} onCreate={createBuilding} onUpdate={updateBuilding} onDelete={deleteBuilding} selectedParcelId={selectedParcelId} onParcelFilter={openParcel} onOpen={(id) => openBuilding(id)} readOnly={readOnly} />;
+            return <BatimentsTab buildings={buildings} parcels={parcels} cities={cities} role={organizationRole} isLoading={isLoading} error={error} note={note} onReload={() => void reload()} onCreate={createBuilding} onUpdate={updateBuilding} onDelete={deleteBuilding} selectedParcelId={selectedParcelId} onParcelFilter={openParcel} onOpen={(id) => openBuilding(id)} readOnly={readOnly} actionRequest={patrimoineActionRequest?.level === 'batiments' ? patrimoineActionRequest : null} onActionRequestHandled={markPatrimoineActionHandled} />;
         }
-        return <UnitesTab units={units} buildings={buildings} role={organizationRole} isLoading={isLoading} error={error} note={note} onReload={() => void reload()} onCreate={createUnit} onUpdate={updateUnit} onDelete={deleteUnit} onPublish={publishUnit} selectedBuildingId={selectedBuildingId} onBuildingFilter={openBuilding} readOnly={readOnly} showcaseEnabled={currentOrganization?.showcaseEnabled === true} />;
+        return <UnitesTab units={units} buildings={buildings} role={organizationRole} isLoading={isLoading} error={error} note={note} onReload={() => void reload()} onCreate={createUnit} onUpdate={updateUnit} onDelete={deleteUnit} onPublish={publishUnit} selectedBuildingId={selectedBuildingId} onBuildingFilter={openBuilding} readOnly={readOnly} showcaseEnabled={currentOrganization?.showcaseEnabled === true} actionRequest={patrimoineActionRequest?.level === 'unites' ? patrimoineActionRequest : null} onActionRequestHandled={markPatrimoineActionHandled} />;
     };
 
     const overviewCities = isLoading ? (
@@ -734,7 +812,7 @@ export function PatrimoinePage({ readOnly = false }: { readOnly?: boolean } = {}
                     : <EmptyState title="Bien introuvable" description="Ce bien n’existe pas ou n’appartient pas au périmètre de votre organisation." />);
         levelContent = (
             <Tabs
-                key={`${activeLevel}:${selectedCityId ?? ''}:${selectedParcelId ?? ''}:${selectedBuildingId ?? ''}:${selectedUnitId ?? ''}`}
+                key={`${activeLevel}:${selectedCityId ?? ''}:${selectedParcelId ?? ''}:${selectedBuildingId ?? ''}:${selectedUnitId ?? ''}:${restoreManagementTab ? 'manage' : 'overview'}`}
                 variant="underline"
                 tabs={[{ id: 'overview', label: 'Aperçu' }, { id: 'manage', label: managementLabel }]}
                 defaultActiveTabId={restoreManagementTab ? 'manage' : 'overview'}
@@ -766,7 +844,7 @@ export function PatrimoinePage({ readOnly = false }: { readOnly?: boolean } = {}
                 className="patrimoine-layout__nav"
                 collapsedContent={(
                     <div className="patrimoine-nav-rail">
-                        <PatrimoineNav isCityAdmin={isCityAdmin} selection={selection} cities={cities} parcels={parcels} buildings={buildings} units={units} collapsed />
+                        <PatrimoineNav isCityAdmin={isCityAdmin} role={organizationRole} readOnly={readOnly} onAction={handlePatrimoineNavAction} selection={selection} cities={cities} parcels={parcels} buildings={buildings} units={units} collapsed />
                         <PatrimoineCalendarRail
                             events={activityEvents}
                             selectedDate={activityDate}
@@ -787,7 +865,7 @@ export function PatrimoinePage({ readOnly = false }: { readOnly?: boolean } = {}
                             >
                                 {panel === 'tree' ? <>
                                     <h2 id="patrimoine-tree-title">Arbre du patrimoine</h2>
-                                    <PatrimoineNav isCityAdmin={isCityAdmin} selection={selection} cities={cities} parcels={parcels} buildings={buildings} units={units} />
+                                    <PatrimoineNav isCityAdmin={isCityAdmin} role={organizationRole} readOnly={readOnly} onAction={handlePatrimoineNavAction} selection={selection} cities={cities} parcels={parcels} buildings={buildings} units={units} />
                                 </> : <>
                                     <h2 id="patrimoine-activity-title">Activité</h2>
                                     <ActivityCalendar

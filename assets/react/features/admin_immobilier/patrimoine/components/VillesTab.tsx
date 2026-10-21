@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from 'react';
+import { useEffect, useRef, useState, type FormEvent } from 'react';
 
 import { Card } from '../../../../components/UI/Card';
 import { Button } from '../../../../components/UI/Button';
@@ -55,6 +55,8 @@ interface VillesTabProps {
     onOpen: (uuid: string) => void;
     /** Lecture seule (espace PATRON) : masque toute action d'écriture. */
     readOnly?: boolean;
+    actionRequest?: { id: number; action: 'create' | 'edit' | 'delete' | 'create-city-admin'; targetId?: string } | null;
+    onActionRequestHandled?: (id: number) => void;
 }
 
 /**
@@ -65,7 +67,7 @@ interface VillesTabProps {
  * parent. Les boutons sont gatés par `canDo` (miroir de `SecurityService`) ;
  * l'API demeure l'autorité. `readOnly` masque les écritures (Patron).
  */
-export function VillesTab({ cities, role, isLoading, error, note, onReload, onCreate, onCreateAdmin, onUpdate, onSetStatus, onDelete, onOpen, readOnly = false }: VillesTabProps) {
+export function VillesTab({ cities, role, isLoading, error, note, onReload, onCreate, onCreateAdmin, onUpdate, onSetStatus, onDelete, onOpen, readOnly = false, actionRequest = null, onActionRequestHandled }: VillesTabProps) {
     const [search, setSearch] = useState('');
     const [modalOpen, setModalOpen] = useState(false);
     const [editTarget, setEditTarget] = useState<CityItem | null>(null);
@@ -77,6 +79,7 @@ export function VillesTab({ cities, role, isLoading, error, note, onReload, onCr
     const [adminForm, setAdminForm] = useState({ fullName: '', email: '', phone: '' });
     const [adminErrors, setAdminErrors] = useState<Record<string, string>>({});
     const [creatingAdmin, setCreatingAdmin] = useState(false);
+    const handledAction = useRef<number | null>(null);
 
     const filtered = cities.filter((entry) => {
         const query = search.trim().toLocaleLowerCase('fr');
@@ -94,6 +97,29 @@ export function VillesTab({ cities, role, isLoading, error, note, onReload, onCr
         setFormErrors({});
         setEditTarget(target);
     };
+
+    useEffect(() => {
+        if (!actionRequest || handledAction.current === actionRequest.id || readOnly || isLoading) return;
+        handledAction.current = actionRequest.id;
+        if (actionRequest.action === 'create' && canDo(role, 'create_city')) openCreate();
+        if (actionRequest.action === 'edit' && canDo(role, 'update_city')) {
+            const target = cities.find((city) => city.id === actionRequest.targetId);
+            if (target) openEdit(target);
+        }
+        if (actionRequest.action === 'delete' && canDo(role, 'delete_city')) {
+            const target = cities.find((city) => city.id === actionRequest.targetId);
+            if (target) setDeleteTarget(target);
+        }
+        if (actionRequest.action === 'create-city-admin' && canDo(role, 'create_city_admin')) {
+            const target = cities.find((city) => city.id === actionRequest.targetId);
+            if (target) {
+                setAdminCity(target);
+                setAdminForm({ fullName: '', email: '', phone: '' });
+                setAdminErrors({});
+            }
+        }
+        onActionRequestHandled?.(actionRequest.id);
+    }, [actionRequest, cities, isLoading, onActionRequestHandled, readOnly, role]);
 
     const closeModal = () => {
         setModalOpen(false);

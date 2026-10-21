@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from 'react';
+import { useEffect, useRef, useState, type FormEvent } from 'react';
 
 import { Card } from '../../../../components/UI/Card';
 import { Button } from '../../../../components/UI/Button';
@@ -66,6 +66,8 @@ interface BatimentsTabProps {
     onOpen: (uuid: string) => void;
     /** Lecture seule (espace PATRON) : masque toute action d'écriture. */
     readOnly?: boolean;
+    actionRequest?: { id: number; action: 'create' | 'edit' | 'delete' | 'create-city-admin'; targetId?: string } | null;
+    onActionRequestHandled?: (id: number) => void;
 }
 
 /**
@@ -73,7 +75,7 @@ interface BatimentsTabProps {
  * La parcelle est choisie à la création puis figée (rattachement non
  * modifiable côté backend). `readOnly` masque les écritures (Patron).
  */
-export function BatimentsTab({ buildings, parcels, cities, role, isLoading, error, note, onReload, onCreate, onUpdate, onDelete, selectedParcelId, onParcelFilter, onOpen, readOnly = false }: BatimentsTabProps) {
+export function BatimentsTab({ buildings, parcels, cities, role, isLoading, error, note, onReload, onCreate, onUpdate, onDelete, selectedParcelId, onParcelFilter, onOpen, readOnly = false, actionRequest = null, onActionRequestHandled }: BatimentsTabProps) {
     const [search, setSearch] = useState('');
     const [modalOpen, setModalOpen] = useState(false);
     const [editTarget, setEditTarget] = useState<BuildingItem | null>(null);
@@ -86,6 +88,7 @@ export function BatimentsTab({ buildings, parcels, cities, role, isLoading, erro
     const [photoTarget, setPhotoTarget] = useState<BuildingItem | null>(null);
     const [viewTarget, setViewTarget] = useState<BuildingItem | null>(null);
     const [accessParcelId, setAccessParcelId] = useState<string | null>(null);
+    const handledAction = useRef<number | null>(null);
 
     const parcelById = new Map(parcels.map((parcel) => [parcel.id, parcel]));
     const cityById = new Map(cities.map((city) => [city.id, city]));
@@ -107,6 +110,21 @@ export function BatimentsTab({ buildings, parcels, cities, role, isLoading, erro
         setFormErrors({});
         setEditTarget(target);
     };
+
+    useEffect(() => {
+        if (!actionRequest || handledAction.current === actionRequest.id || readOnly || isLoading) return;
+        handledAction.current = actionRequest.id;
+        if (actionRequest.action === 'create' && canDo(role, 'create_building')) openCreate();
+        if (actionRequest.action === 'edit' && canDo(role, 'update_building')) {
+            const target = buildings.find((building) => building.id === actionRequest.targetId);
+            if (target) openEdit(target);
+        }
+        if (actionRequest.action === 'delete' && canDo(role, 'delete_building')) {
+            const target = buildings.find((building) => building.id === actionRequest.targetId);
+            if (target) setDeleteTarget(target);
+        }
+        onActionRequestHandled?.(actionRequest.id);
+    }, [actionRequest, buildings, isLoading, onActionRequestHandled, readOnly, role]);
 
     const openPhotos = (target: BuildingItem) => {
         setPhotoTarget(target);

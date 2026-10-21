@@ -1,9 +1,12 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { Fragment, useCallback, useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Link } from 'react-router-dom';
+import { Icon, type IconName } from '../../../../components/UI/Icon/Icon';
 import { useFloatingPosition } from '../../../../hook-components/UI/PopoverMenu';
 import { SidebarItemTooltip } from '../../../../components/Navigation/Sidebar';
 import type { BuildingItem, CityItem, ParcelItem, UnitItem } from '../../shared/types/reference.types';
+import { canDo } from '../../../shared/permissions';
+import type { OrganizationRole } from '../../../../../services/api/api.types';
 import { buildPatrimoinePath, resolvePatrimoineSelection } from './patrimoineRouting';
 import type { PatrimoineLevel, PatrimoineSelection } from './patrimoineRouting';
 
@@ -17,11 +20,23 @@ export interface PatrimoineNavNode {
     label: string;
     level: PatrimoineLevel;
     to: string;
+    status?: string;
     children?: PatrimoineNavNode[];
+}
+
+export type PatrimoineNavAction = 'open' | 'create-child' | 'edit' | 'delete' | 'toggle-status' | 'create-city-admin';
+export interface PatrimoineNavActionRequest {
+    id: number;
+    level: Exclude<PatrimoineLevel, 'overview'>;
+    action: 'create' | 'edit' | 'delete' | 'create-city-admin';
+    targetId?: string;
 }
 
 interface PatrimoineNavProps {
     isCityAdmin: boolean;
+    role: OrganizationRole | null;
+    readOnly?: boolean;
+    onAction?: (node: PatrimoineNavNode, action: PatrimoineNavAction) => void;
     selection: PatrimoineSelection;
     cities: CityItem[];
     parcels: ParcelItem[];
@@ -54,6 +69,7 @@ function buildTree({ isCityAdmin, selection, cities, parcels, buildings, units }
             id: `city:${city.id}`,
             label: city.name,
             level: 'villes' as const,
+            status: city.status,
             to: buildPatrimoinePath('parcelles', { cityId: city.id, parcelId: null, buildingId: null }),
             children: cityParcels.map((parcel) => {
                 const parcelBuildings = buildings.filter((building) => building.parcelId === parcel.id);
@@ -85,6 +101,10 @@ export function PatrimoineNav(props: PatrimoineNavProps) {
     const [isPopoverOpen, setPopoverOpen] = useState(false);
     const [userExpanded, setUserExpanded] = useState<Set<string>>(new Set());
     const [userCollapsed, setUserCollapsed] = useState<Set<string>>(new Set());
+    const [contextMenu, setContextMenu] = useState<{ node: PatrimoineNavNode; left: number; top: number } | null>(null);
+    const menuRef = useRef<HTMLDivElement>(null);
+    const menuButtonRefs = useRef<HTMLButtonElement[]>([]);
+    const rowActionRefs = useRef(new Map<string, HTMLButtonElement>());
     const anchorRef = useRef<HTMLButtonElement>(null);
     const getAnchorEl = useCallback(() => anchorRef.current, []);
     const { floatingRef, coords, isPositioned } = useFloatingPosition<HTMLDivElement>({
@@ -112,6 +132,117 @@ export function PatrimoineNav(props: PatrimoineNavProps) {
         railTooltipTimer.current = setTimeout(() => setRailTooltip({ anchor, label }), 250);
     }, [cancelRailTooltip]);
     useEffect(() => cancelRailTooltip, [cancelRailTooltip]);
+
+    const openContextMenu = useCallback((node: PatrimoineNavNode, left: number, top: number) => {
+        const width = Math.min(240, window.innerWidth - 24);
+        const groups = [
+            actionsFor(node).filter(({ action }) => action === 'open'),
+            actionsFor(node).filter(({ action }) => action === 'create-child' || action === 'create-city-admin'),
+            actionsFor(node).filter(({ action }) => action === 'edit' || action === 'delete'),
+            actionsFor(node).filter(({ action }) => action === 'toggle-status'),
+        ].filter((group) => group.length > 0);
+        const height = Math.min(window.innerHeight - 16, 74 + actionsFor(node).length * 42 + Math.max(0, groups.length - 1) * 10);
+        setContextMenu({ node, left: Math.max(8, Math.min(left, window.innerWidth - width - 8)), top: Math.max(8, Math.min(top, window.innerHeight - height - 8)) });
+    }, [props.role, props.readOnly]);
+    const closeContextMenu = useCallback((restoreFocus = false) => {
+        const nodeId = contextMenu?.node.id;
+        setContextMenu(null);
+        if (restoreFocus && nodeId) requestAnimationFrame(() => rowActionRefs.current.get(nodeId)?.focus());
+    }, [contextMenu?.node.id]);
+
+    useEffect(() => {
+        if (!contextMenu) return;
+        const firstAction = menuRef.current?.querySelector<HTMLButtonElement>('[role="menuitem"]');
+        firstAction?.focus();
+        const onKeyDown = (event: KeyboardEvent) => {
+            if (event.key === 'Escape') {
+                event.preventDefault();
+                closeContextMenu(true);
+                return;
+            }
+            if (event.key === 'Tab') {
+                event.preventDefault();
+                closeContextMenu(true);
+                return;
+            }
+            if (!['ArrowDown', 'ArrowUp', 'Home', 'End'].includes(event.key)) return;
+            const items = menuButtonRefs.current.filter((item) => item?.isConnected);
+            if (items.length === 0) return;
+            event.preventDefault();
+            const current = items.indexOf(document.activeElement as HTMLButtonElement);
+            const next = event.key === 'Home' ? 0 : event.key === 'End' ? items.length - 1
+                : current < 0 ? (event.key === 'ArrowDown' ? 0 : items.length - 1)
+                    : (current + (event.key === 'ArrowDown' ? 1 : -1) + items.length) % items.length;
+            items[next]?.focus();
+        };
+        const onPointerDown = (event: MouseEvent) => {
+            if (!menuRef.current?.contains(event.target as Node)) closeContextMenu();
+        };
+        document.addEventListener('keydown', onKeyDown);
+        document.addEventListener('mousedown', onPointerDown);
+        return () => {
+            document.removeEventListener('keydown', onKeyDown);
+            document.removeEventListener('mousedown', onPointerDown);
+        };
+    }, [contextMenu, closeContextMenu]);
+
+    const actionsFor = (node: PatrimoineNavNode): Array<{ action: PatrimoineNavAction; label: string }> => {
+        if (node.level === 'overview') return [{ action: 'open', label: 'Ouvrir la vue d’ensemble' }];
+        const actions: Array<{ action: PatrimoineNavAction; label: string }> = [{ action: 'open', label: 'Ouvrir' }];
+        const childAction = node.level === 'villes' ? ['create_parcel', 'Ajouter une parcelle']
+            : node.level === 'parcelles' ? ['create_building', 'Ajouter un bâtiment']
+                : node.level === 'batiments' ? ['create_unit', 'Ajouter une unité']
+                    : node.level === 'unites' ? ['create_unit', 'Ajouter une sous-unité'] : null;
+        if (!props.readOnly && childAction && canDo(props.role, childAction[0] as 'create_parcel' | 'create_building' | 'create_unit')) actions.push({ action: 'create-child', label: childAction[1] });
+        const updateAction = node.level === 'villes' ? 'update_city' : node.level === 'parcelles' ? 'update_parcel' : node.level === 'batiments' ? 'update_building' : 'update_unit';
+        const deleteAction = node.level === 'villes' ? 'delete_city' : node.level === 'parcelles' ? 'delete_parcel' : node.level === 'batiments' ? 'delete_building' : 'delete_unit';
+        if (!props.readOnly && canDo(props.role, updateAction)) actions.push({ action: 'edit', label: 'Modifier' });
+        if (!props.readOnly && canDo(props.role, deleteAction)) actions.push({ action: 'delete', label: 'Supprimer' });
+        if (node.level === 'villes' && !props.readOnly && canDo(props.role, 'create_city_admin')) actions.push({ action: 'create-city-admin', label: 'Ajouter un ADMIN_VILLE' });
+        if (node.level === 'villes' && !props.readOnly && canDo(props.role, node.status === 'inactive' ? 'activate_city' : 'deactivate_city')) {
+            actions.push({ action: 'toggle-status', label: node.status === 'inactive' ? 'Activer la ville' : 'Désactiver la ville' });
+        }
+        return actions;
+    };
+    const actionGroupsFor = (node: PatrimoineNavNode) => {
+        const actions = actionsFor(node);
+        return [
+            actions.filter(({ action }) => action === 'open'),
+            actions.filter(({ action }) => action === 'create-child' || action === 'create-city-admin'),
+            actions.filter(({ action }) => action === 'edit' || action === 'delete'),
+            actions.filter(({ action }) => action === 'toggle-status'),
+        ].filter((group) => group.length > 0);
+    };
+    const contextMenuLayer = contextMenu && typeof document !== 'undefined' ? createPortal(
+        <div ref={menuRef} className="patrimoine-nav__context-menu" role="menu" aria-label={`Actions pour ${contextMenu.node.label}`} style={{ position: 'fixed', left: contextMenu.left, top: contextMenu.top }}>
+            <div className="patrimoine-nav__context-menu-heading">
+                <span>{contextMenu.node.level === 'villes' ? 'Ville' : contextMenu.node.level === 'parcelles' ? 'Parcelle' : contextMenu.node.level === 'batiments' ? 'Bâtiment' : 'Unité'}</span>
+                <strong title={contextMenu.node.label}>{contextMenu.node.label}</strong>
+            </div>
+            {(() => {
+                let menuItemIndex = 0;
+                return actionGroupsFor(contextMenu.node).map((group, groupIndex) => <Fragment key={`group-${groupIndex}`}>
+                {groupIndex > 0 && <div className="patrimoine-nav__context-menu-separator" role="separator" />}
+                {group.map(({ action, label }) => {
+                    const icon: IconName = action === 'open' ? 'mapPin' : action === 'create-child' ? 'plus' : action === 'edit' ? 'edit' : action === 'delete' ? 'trash' : action === 'toggle-status' ? 'power' : 'globe';
+                    const itemIndex = menuItemIndex++;
+                    return <button
+                        key={action}
+                        ref={(element) => { if (element) menuButtonRefs.current[itemIndex] = element; }}
+                        type="button"
+                        role="menuitem"
+                        className={`patrimoine-nav__context-menu-item${action === 'delete' ? ' patrimoine-nav__context-menu-item--danger' : ''}`}
+                        onClick={() => {
+                            props.onAction?.(contextMenu.node, action);
+                            closeContextMenu();
+                        }}
+                    ><Icon name={icon} size={16} /><span>{label}</span></button>;
+                })}
+            </Fragment>);
+            })()}
+        </div>,
+        document.body,
+    ) : null;
     const activeChain = new Set([
         ...(selection.cityId ? [`city:${selection.cityId}`] : []),
         ...(selection.parcelId ? [`parcel:${selection.parcelId}`] : []),
@@ -132,7 +263,10 @@ export function PatrimoineNav(props: PatrimoineNavProps) {
                 const expanded = hasChildren && (userExpanded.has(node.id) || (activeChain.has(node.id) && !userCollapsed.has(node.id)));
                 return (
                     <li className="patrimoine-nav__node" key={node.id}>
-                        <div className={`patrimoine-nav__row patrimoine-nav__row--${node.level}${isActive ? ' patrimoine-nav__row--active' : ''}`}>
+                        <div className={`patrimoine-nav__row patrimoine-nav__row--${node.level}${isActive ? ' patrimoine-nav__row--active' : ''}`} onContextMenu={(event) => {
+                            event.preventDefault();
+                            openContextMenu(node, event.clientX, event.clientY);
+                        }}>
                             {hasChildren ? (
                                 <button type="button" className="patrimoine-nav__disclosure" aria-label={`${expanded ? 'Replier' : 'Déplier'} ${node.label}`} aria-expanded={expanded} onClick={() => {
                                     if (expanded) {
@@ -147,6 +281,7 @@ export function PatrimoineNav(props: PatrimoineNavProps) {
                                 </button>
                             ) : <span className="patrimoine-nav__disclosure-placeholder" aria-hidden="true" />}
                             <Link to={node.to} className="patrimoine-nav__item" aria-current={isActive ? 'page' : undefined} onClick={() => {
+                                setContextMenu(null);
                                 if (!props.collapsed) return;
                                 setPopoverOpen(false);
                                 anchorRef.current?.focus();
@@ -154,6 +289,19 @@ export function PatrimoineNav(props: PatrimoineNavProps) {
                                 <span className="patrimoine-nav__icon" aria-hidden="true">{levelIcon(node.level)}</span>
                                 <span className="patrimoine-nav__label">{node.label}</span>
                             </Link>
+                            {node.level !== 'overview' && actionsFor(node).length > 1 && <button
+                                ref={(element) => { if (element) rowActionRefs.current.set(node.id, element); else rowActionRefs.current.delete(node.id); }}
+                                type="button"
+                                className="patrimoine-nav__actions-trigger"
+                                aria-label={`Actions pour ${node.label}`}
+                                aria-haspopup="menu"
+                                aria-expanded={contextMenu?.node.id === node.id}
+                                onClick={(event) => {
+                                    const bounds = event.currentTarget.getBoundingClientRect();
+                                    openContextMenu(node, bounds.right - Math.min(240, window.innerWidth - 24), bounds.bottom + 4);
+                                }}
+                                onContextMenu={(event) => { event.preventDefault(); openContextMenu(node, event.clientX, event.clientY); }}
+                            >⋯</button>}
                         </div>
                         {expanded && node.children && renderNodes(node.children, depth + 1)}
                     </li>
@@ -191,7 +339,7 @@ export function PatrimoineNav(props: PatrimoineNavProps) {
             </div>,
             document.body,
         ) : null;
-        return <div className="patrimoine-nav-rail">
+        return <><div className="patrimoine-nav-rail">
             {!props.isCityAdmin && <Link className={`patrimoine-nav-rail__button${selection.level === 'overview' ? ' is-active' : ''}`} to="/app/patrimoine" aria-label="Vue d’ensemble"
                     onMouseEnter={(event) => scheduleRailTooltip(event.currentTarget, 'Vue d’ensemble')}
                     onMouseLeave={cancelRailTooltip}
@@ -210,9 +358,9 @@ export function PatrimoineNav(props: PatrimoineNavProps) {
             </button>
             {railTooltip !== null && <SidebarItemTooltip anchorEl={railTooltip.anchor} label={railTooltip.label} placement="left" />}
             {popover}
-        </div>;
+        </div>{contextMenuLayer}</>;
     }
-    return <nav className="patrimoine-nav" aria-label="Arborescence du patrimoine">{renderNodes(tree)}</nav>;
+    return <><nav className="patrimoine-nav" aria-label="Arborescence du patrimoine">{renderNodes(tree)}</nav>{contextMenuLayer}</>;
 }
 
 function levelIcon(level: PatrimoineLevel) {

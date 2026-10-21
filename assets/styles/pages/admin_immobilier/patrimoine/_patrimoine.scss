@@ -267,7 +267,7 @@ a.patrimoine-child:focus-visible { position: relative; z-index: 1; outline: 2px 
 /* Garder les libellés sur la grille de pixels : les translations sub-pixel
    pendant l’ouverture des branches rendaient le texte flou dans le panneau. */
 .patrimoine-nav__node { min-width: 0; }
-.patrimoine-nav__row { display: flex; align-items: center; min-width: 0; gap: 2px; }
+.patrimoine-nav__row { position: relative; display: flex; align-items: center; min-width: 0; gap: 2px; }
 .patrimoine-nav__disclosure,
 .patrimoine-nav__disclosure-placeholder { display: grid; flex: 0 0 20px; width: 20px; height: 34px; place-items: center; padding: 0; border: 0; border-radius: $radius-sm; color: $color-text-muted; background: transparent; font-size: $font-size-lg; cursor: pointer; }
 .patrimoine-nav__disclosure:hover { color: $color-text-primary; background: $color-bg-card-hover; }
@@ -278,6 +278,44 @@ a.patrimoine-child:focus-visible { position: relative; z-index: 1; outline: 2px 
 .patrimoine-nav__icon { display: inline-flex; flex: 0 0 18px; align-items: center; justify-content: center; color: $color-text-muted; }
 .patrimoine-nav__icon svg { width: 17px; height: 17px; }
 .patrimoine-nav__label { min-width: 0; overflow-wrap: anywhere; }
+.patrimoine-nav__actions-trigger { position: absolute; z-index: 1; top: 50%; right: 4px; display: grid; width: 28px; height: 28px; place-items: center; padding: 0; transform: translateY(-50%); border: 1px solid transparent; border-radius: $radius-sm; color: $color-text-muted; background: $color-bg-sidebar; font-size: 20px; line-height: 1; cursor: pointer; opacity: 0; }
+.patrimoine-nav__row:hover .patrimoine-nav__actions-trigger,
+.patrimoine-nav__row:focus-within .patrimoine-nav__actions-trigger,
+.patrimoine-nav__actions-trigger[aria-expanded="true"] { opacity: 1; }
+.patrimoine-nav__actions-trigger:hover { color: $color-text-primary; background: $color-bg-card-hover; }
+.patrimoine-nav__actions-trigger:focus-visible { outline: 2px solid $color-primary; outline-offset: 1px; }
+.patrimoine-nav__context-menu { z-index: $z-modal; display: grid; width: 240px; max-width: calc(100vw - 16px); max-height: min(70vh, 360px); gap: 3px; padding: $spacing-2; overflow-y: auto; border: 1px solid $color-border-strong; border-radius: $radius-lg; background: color-mix(in srgb, #{$color-bg-card} 86%, #{$color-bg-sidebar}); box-shadow: $shadow-lg; }
+.patrimoine-nav__context-menu-heading { display: grid; min-width: 0; gap: 3px; margin: 0 0 $spacing-1; padding: $spacing-1 $spacing-2 $spacing-2; border-bottom: 1px solid $color-border; }
+.patrimoine-nav__context-menu-heading span { color: $color-text-muted; font-size: $font-size-xs; font-weight: $font-weight-medium; letter-spacing: .04em; text-transform: uppercase; }
+.patrimoine-nav__context-menu-heading strong { overflow: hidden; color: $color-text-primary; font-size: $font-size-sm; font-weight: $font-weight-semibold; text-overflow: ellipsis; white-space: nowrap; }
+.patrimoine-nav__context-menu-separator { height: 1px; margin: $spacing-1 $spacing-2; background: $color-border-strong; }
+.patrimoine-nav__context-menu-item { display: flex; align-items: center; min-height: 40px; gap: $spacing-3; padding: $spacing-2 $spacing-3; border: 1px solid transparent; border-radius: $radius-md; color: $color-text-primary; background: transparent; text-align: left; font: inherit; cursor: pointer; transition: color $transition-fast, background-color $transition-fast, border-color $transition-fast; }
+.patrimoine-nav__context-menu-item svg { flex: 0 0 16px; color: $color-text-muted; transition: color $transition-fast, transform $transition-fast; }
+.patrimoine-nav__context-menu-item span { min-width: 0; }
+.patrimoine-nav__context-menu-item:hover,
+.patrimoine-nav__context-menu-item:focus-visible { color: $color-primary; background: $color-primary-light; border-color: color-mix(in srgb, #{$color-primary} 26%, transparent); outline: none; }
+.patrimoine-nav__context-menu-item:hover { color: $color-primary; background: $color-primary-light; border-color: color-mix(in srgb, #{$color-primary} 22%, transparent); }
+.patrimoine-nav__context-menu-item:hover svg,
+.patrimoine-nav__context-menu-item:focus-visible svg { color: $color-primary; transform: translateX(1px); }
+.patrimoine-nav__context-menu-item--danger { color: $color-danger; }
+.patrimoine-nav__context-menu-item--danger svg { color: $color-danger; }
+.patrimoine-nav__context-menu-item--danger:hover,
+.patrimoine-nav__context-menu-item--danger:focus-visible { color: $color-danger; background: color-mix(in srgb, #{$color-danger} 12%, transparent); border-color: color-mix(in srgb, #{$color-danger} 28%, transparent); }
+.patrimoine-nav__context-menu-item--danger:hover { color: $color-danger; background: color-mix(in srgb, #{$color-danger} 12%, transparent); border-color: color-mix(in srgb, #{$color-danger} 28%, transparent); }
+@media (prefers-reduced-motion: reduce) {
+  .patrimoine-nav__context-menu-item,
+  .patrimoine-nav__context-menu-item svg { transition: none; }
+}
+@media (max-width: 600px) {
+  .patrimoine-nav__context-menu { width: 216px; max-width: calc(100vw - 16px); max-height: min(62dvh, 420px); gap: 2px; padding: $spacing-1; border-radius: $radius-md; }
+  .patrimoine-nav__context-menu-heading { gap: 2px; padding: $spacing-1 $spacing-2 $spacing-2; }
+  .patrimoine-nav__context-menu-item { min-height: 44px; gap: $spacing-2; padding: $spacing-2 $spacing-2; border-radius: $radius-sm; font-size: $font-size-sm; }
+  .patrimoine-nav__context-menu-separator { margin: 2px $spacing-2; }
+}
+@media (hover: none), (pointer: coarse) {
+  .patrimoine-nav__actions-trigger { opacity: 1; }
+  .patrimoine-nav__item { padding-right: 38px; }
+}
 .patrimoine-nav__row--active .patrimoine-nav__item,
 .patrimoine-nav__row--active .patrimoine-nav__item:hover { color: $color-primary; background: $color-primary-light; border-color: color-mix(in srgb, #{$color-primary} 38%, transparent); font-weight: $font-weight-semibold; }
 .patrimoine-nav__row--active .patrimoine-nav__icon { color: currentColor; }

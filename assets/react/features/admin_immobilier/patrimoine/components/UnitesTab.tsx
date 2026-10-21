@@ -1,4 +1,4 @@
-import { useEffect, useState, type FormEvent } from 'react';
+import { useEffect, useRef, useState, type FormEvent } from 'react';
 
 import { Card } from '../../../../components/UI/Card';
 import { Button } from '../../../../components/UI/Button';
@@ -89,6 +89,8 @@ interface UnitesTabProps {
     showcaseEnabled?: boolean;
     /** Lecture seule (espace PATRON) : masque toute action d'écriture. */
     readOnly?: boolean;
+    actionRequest?: { id: number; action: 'create' | 'edit' | 'delete' | 'create-city-admin'; targetId?: string } | null;
+    onActionRequestHandled?: (id: number) => void;
 }
 
 /**
@@ -97,7 +99,7 @@ interface UnitesTabProps {
  * courant (`isPublished`) ; une unité occupée est refusée par le backend (422).
  * `readOnly` masque les écritures (Patron).
  */
-export function UnitesTab({ units, buildings, role, isLoading, error, note, onReload, onCreate, onUpdate, onDelete, onPublish, selectedBuildingId, onBuildingFilter, showcaseEnabled = false, readOnly = false }: UnitesTabProps) {
+export function UnitesTab({ units, buildings, role, isLoading, error, note, onReload, onCreate, onUpdate, onDelete, onPublish, selectedBuildingId, onBuildingFilter, showcaseEnabled = false, readOnly = false, actionRequest = null, onActionRequestHandled }: UnitesTabProps) {
     const [search, setSearch] = useState('');
     const [modalOpen, setModalOpen] = useState(false);
     const [editTarget, setEditTarget] = useState<UnitItem | null>(null);
@@ -114,6 +116,7 @@ export function UnitesTab({ units, buildings, role, isLoading, error, note, onRe
     const [levelErrors, setLevelErrors] = useState<Record<string, string>>({});
     const [savingLevel, setSavingLevel] = useState(false);
     const levelsBuildingId = levelBuildingId || form.buildingUuid || selectedBuildingId || '';
+    const handledAction = useRef<number | null>(null);
 
     useEffect(() => {
         let active = true;
@@ -139,8 +142,9 @@ export function UnitesTab({ units, buildings, role, isLoading, error, note, onRe
         return (selectedBuildingId === null || unit.buildingId === selectedBuildingId) && (!query || [unit.reference, buildingById.get(unit.buildingId)?.name ?? ''].some((value) => value.toLocaleLowerCase('fr').includes(query)));
     });
 
-    const openCreate = () => {
-        setForm({ ...EMPTY_UNIT_FORM, buildingUuid: selectedBuildingId ?? buildings[0]?.id ?? '' });
+    const openCreate = (parentUnitUuid = '') => {
+        const parent = units.find((unit) => unit.id === parentUnitUuid);
+        setForm({ ...EMPTY_UNIT_FORM, buildingUuid: parent?.buildingId ?? selectedBuildingId ?? buildings[0]?.id ?? '', parentUnitUuid });
         setFormErrors({});
         setModalOpen(true);
     };
@@ -150,6 +154,21 @@ export function UnitesTab({ units, buildings, role, isLoading, error, note, onRe
         setFormErrors({});
         setEditTarget(target);
     };
+
+    useEffect(() => {
+        if (!actionRequest || handledAction.current === actionRequest.id || readOnly || isLoading) return;
+        handledAction.current = actionRequest.id;
+        if (actionRequest.action === 'create' && canDo(role, 'create_unit')) openCreate(actionRequest.targetId ?? '');
+        if (actionRequest.action === 'edit' && canDo(role, 'update_unit')) {
+            const target = units.find((unit) => unit.id === actionRequest.targetId);
+            if (target) openEdit(target);
+        }
+        if (actionRequest.action === 'delete' && canDo(role, 'delete_unit')) {
+            const target = units.find((unit) => unit.id === actionRequest.targetId);
+            if (target) setDeleteTarget(target);
+        }
+        onActionRequestHandled?.(actionRequest.id);
+    }, [actionRequest, isLoading, onActionRequestHandled, readOnly, role, units]);
 
     const closeModal = () => {
         setModalOpen(false);
@@ -315,7 +334,7 @@ export function UnitesTab({ units, buildings, role, isLoading, error, note, onRe
                 <div className="organization-filters patrimoine-unit-filters">
                     <SearchInput value={search} onSearch={setSearch} placeholder="Rechercher une unité…" fullWidth />
                     <Select aria-label="Filtrer par bâtiment" value={selectedBuildingId ?? 'all'} onChange={(event) => onBuildingFilter(event.target.value === 'all' ? null : event.target.value)} options={[{ value: 'all', label: 'Tous les bâtiments' }, ...buildingOptions]} />
-                    {!readOnly && canDo(role, 'create_unit') && <Button onClick={openCreate} disabled={buildings.length === 0}>＋ Ajouter une unité</Button>}
+                    {!readOnly && canDo(role, 'create_unit') && <Button onClick={() => openCreate()} disabled={buildings.length === 0}>＋ Ajouter une unité</Button>}
                 </div>
             </div>
             {selectedBuildingId && <div className="patrimoine-context"><span>Bâtiment sélectionné : <strong>{buildingById.get(selectedBuildingId)?.name ?? 'Bâtiment'}</strong></span><div className="patrimoine-context__actions">{!readOnly && canDo(role, 'update_unit') && <><Button variant="outline" onClick={() => setLevelBuildingId(selectedBuildingId)}>Gérer les niveaux</Button><Button variant="outline" onClick={() => setAccessBuildingId(selectedBuildingId)}>Gérer les accès</Button></>}<Button variant="outline" onClick={() => onBuildingFilter(null)}>Effacer le filtre</Button></div></div>}

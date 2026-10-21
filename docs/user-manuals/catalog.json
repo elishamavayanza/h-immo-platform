@@ -1,6 +1,6 @@
 {
-  "version": "1.5.1",
-  "updatedAt": "2026-10-20",
+  "version": "1.5.2",
+  "updatedAt": "2026-10-21",
   "roles": {
     "super_admin": {
       "title": "Manuel d’utilisation — Administration de la plateforme",
@@ -169,7 +169,7 @@
           "goal": "Décrire le patrimoine réel de la parcelle au bâtiment, au niveau et aux espaces locatifs, puis gérer les accès physiques.",
           "steps": [
             "Dans « Gestion immobilière → Patrimoine », vérifiez l’organisation active. La vue d’ensemble propose les onglets « Villes » et « Tous les biens ».",
-            "Sélectionnez une ville pour ouvrir son patrimoine, puis suivez les éléments parents jusqu’à la parcelle, au bâtiment et aux unités.",
+            "Sélectionnez une ville pour ouvrir son patrimoine, puis suivez les éléments parents jusqu’à la parcelle, au bâtiment et aux unités. Dans l’arbre à droite, ouvrez un élément avec le bouton d’actions (trois points) ou un clic droit sur ordinateur ; le PATRON dispose uniquement de l’ouverture et de la consultation.",
             "Dans une fiche de ville ou de bien, utilisez « Aperçu » pour consulter les informations et « Gérer les parcelles », « Gérer les bâtiments » ou « Gérer les unités » pour parcourir le niveau correspondant.",
             "Pour vérifier une unité, contrôlez son bâtiment, son niveau, son type et son occupation, puis ouvrez « Locataires » pour consulter les informations locatives accessibles.",
             "Si une donnée est incorrecte, transmettez à l’ADMIN_IMMOBILIER l’identifiant ou le nom de la ville et du bien ainsi que la correction attendue."
@@ -364,6 +364,7 @@
           "goal": "Gérer les villes et tous les niveaux du patrimoine de l’organisation : parcelles, bâtiments et unités.",
           "steps": [
             "Ouvrez Patrimoine puis choisissez « Gérer les villes » dans la vue d’ensemble.",
+            "Dans l’arbre à droite, utilisez le bouton d’actions (trois points) d’un élément ou le clic droit sur ordinateur pour afficher ses actions rapides. Sur mobile et au clavier, le bouton d’actions (trois points) reste disponible ; choisissez l’action adaptée au niveau et vérifiez le parent avant de confirmer.",
             "Sélectionnez « Ajouter une ville », renseignez son nom, son code unique et les informations de localisation, puis enregistrez.",
             "Pour corriger le nom, le code ou la localisation, ouvrez Actions sur la ligne de la ville puis « Modifier » ; vérifiez les informations avant d’enregistrer.",
             "Depuis Actions, activez, désactivez ou supprimez logiquement une ville lorsque cela est nécessaire ; vérifiez les baux et l’historique avant de la retirer du patrimoine actif.",
@@ -540,7 +541,7 @@
           "id": "profil-et-parametres"
         }
       ],
-      "pageCount": 27
+      "pageCount": 28
     },
     "admin_ville": {
       "title": "Manuel d’utilisation — Administration de ville",
@@ -583,7 +584,7 @@
           "menu": "Gestion immobilière → Patrimoine",
           "goal": "Décrire le patrimoine réel de la parcelle au bâtiment, au niveau et aux espaces locatifs, puis gérer les accès physiques.",
           "steps": [
-            "Ouvrez « Gestion immobilière → Patrimoine ». Dans la vue d’ensemble, utilisez « Villes » pour retrouver vos villes attribuées ; ouvrez la ville concernée.",
+            "Ouvrez « Gestion immobilière → Patrimoine ». Dans la vue d’ensemble, utilisez « Villes » pour retrouver vos villes attribuées ; ouvrez la ville concernée. Dans l’arbre à droite, utilisez le bouton d’actions (trois points) ou le clic droit sur ordinateur pour les actions rapides ; sur mobile et au clavier, utilisez le bouton d’actions (trois points).",
             "Dans le parcours de la ville, consultez « Aperçu » ou ouvrez « Gérer les parcelles » pour créer, corriger ou consulter une parcelle selon les actions affichées.",
             "Ouvrez une parcelle puis « Gérer les bâtiments » pour ajouter ou modifier un bâtiment ; ouvrez ensuite le bâtiment et « Gérer les unités » pour gérer ses unités.",
             "À la création ou modification d’un bâtiment, le nombre demandé correspond aux étages au-dessus du RDC : 0 = plain-pied, 1 = jusqu’au 1er, 2 = jusqu’au 2e. Dans Gérer les unités → Gérer les niveaux, utilisez 0 pour le RDC, 1…N pour les étages supérieurs et −1, −2… pour les sous-sols. Les unités et les niveaux ne peuvent pas dépasser cette limite.",

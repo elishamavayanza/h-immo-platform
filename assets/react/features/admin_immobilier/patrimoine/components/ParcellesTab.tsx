@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from 'react';
+import { useEffect, useRef, useState, type FormEvent } from 'react';
 
 import { Card } from '../../../../components/UI/Card';
 import { Button } from '../../../../components/UI/Button';
@@ -75,6 +75,8 @@ interface ParcellesTabProps {
     onOpenMap: (parcelIds: string[], initialParcelId: string | null) => void;
     /** Lecture seule (espace PATRON) : masque toute action d'écriture. */
     readOnly?: boolean;
+    actionRequest?: { id: number; action: 'create' | 'edit' | 'delete' | 'create-city-admin'; targetId?: string } | null;
+    onActionRequestHandled?: (id: number) => void;
 }
 
 /**
@@ -86,7 +88,7 @@ interface ParcellesTabProps {
  * `ParcelRequest`. Latitude/longitude forment une paire indivisible,
  * contrôlée côté client avant l'envoi. `readOnly` masque les écritures (Patron).
  */
-export function ParcellesTab({ parcels, cities, role, isLoading, error, note, onReload, onCreate, onUpdate, onDelete, selectedCityId, onCityFilter, onOpen, onOpenMap, readOnly = false }: ParcellesTabProps) {
+export function ParcellesTab({ parcels, cities, role, isLoading, error, note, onReload, onCreate, onUpdate, onDelete, selectedCityId, onCityFilter, onOpen, onOpenMap, readOnly = false, actionRequest = null, onActionRequestHandled }: ParcellesTabProps) {
     const [search, setSearch] = useState('');
     const [modalOpen, setModalOpen] = useState(false);
     const [editTarget, setEditTarget] = useState<ParcelItem | null>(null);
@@ -98,6 +100,7 @@ export function ParcellesTab({ parcels, cities, role, isLoading, error, note, on
     const [photoModalOpen, setPhotoModalOpen] = useState(false);
     const [photoTarget, setPhotoTarget] = useState<ParcelItem | null>(null);
     const [viewTarget, setViewTarget] = useState<ParcelItem | null>(null);
+    const handledAction = useRef<number | null>(null);
 
     const cityById = new Map(cities.map((city) => [city.id, city]));
     const cityOptions = cities.map((city) => ({ value: city.id, label: city.name }));
@@ -122,6 +125,21 @@ export function ParcellesTab({ parcels, cities, role, isLoading, error, note, on
         setFormErrors({});
         setEditTarget(target);
     };
+
+    useEffect(() => {
+        if (!actionRequest || handledAction.current === actionRequest.id || readOnly || isLoading) return;
+        handledAction.current = actionRequest.id;
+        if (actionRequest.action === 'create' && canDo(role, 'create_parcel')) openCreate();
+        if (actionRequest.action === 'edit' && canDo(role, 'update_parcel')) {
+            const target = parcels.find((parcel) => parcel.id === actionRequest.targetId);
+            if (target) openEdit(target);
+        }
+        if (actionRequest.action === 'delete' && canDo(role, 'delete_parcel')) {
+            const target = parcels.find((parcel) => parcel.id === actionRequest.targetId);
+            if (target) setDeleteTarget(target);
+        }
+        onActionRequestHandled?.(actionRequest.id);
+    }, [actionRequest, isLoading, onActionRequestHandled, parcels, readOnly, role]);
 
     const openPhotos = (target: ParcelItem) => {
         setPhotoTarget(target);
