@@ -17,7 +17,7 @@ export interface TeamMember {
     phone: string | null;
     role: OrganizationRole;
     status: TeamMemberStatus;
-    isSelf: boolean;
+    cityNames?: string[];
 }
 
 /** Rattachement organisationnel renvoyé par `UserResponse.memberships`. */

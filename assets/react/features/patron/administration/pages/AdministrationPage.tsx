@@ -7,7 +7,6 @@ import { SearchInput } from '../../../../components/Forms/SearchInput';
 import { Select } from '../../../../components/Forms/Select';
 import { Input } from '../../../../components/Forms/Input';
 import { FormField } from '../../../../components/Forms/FormField';
-import { Textarea } from '../../../../components/Forms/Textarea';
 import { Checkbox } from '../../../../components/Forms/Checkbox';
 import { Button } from '../../../../components/UI/Button';
 import { Modal } from '../../../../components/UI/Modal';
@@ -18,10 +17,7 @@ import { useOrganization } from '../../../../app/providers/OrganizationProvider'
 import { useAdministration } from '../hooks/useAdministration';
 import { TeamTable } from '../components/TeamTable';
 import { OrganizationProfileCard } from '../components/OrganizationProfileCard';
-import { RoleAssignmentsPanel } from '../components/RoleAssignmentsPanel';
-import { CityAssignmentModal } from '../components/CityAssignmentModal';
 import { fieldErrorMap } from '../../../shared/utils/actionErrors';
-import type { TeamMember } from '../types/administration.types';
 import '../../../../../styles/pages/patron/administration/_administration.scss';
 
 const ROLE_OPTIONS = [
@@ -39,15 +35,12 @@ const INVITE_ROLE_OPTIONS = [
 /**
  * Administration : entrée unique du PATRON, branchée sur l'API.
  *
- * - Organisation : coordonnées du tenant (`PUT /v1/identity/organizations/{uuid}`).
- * - Équipe : membres de l'organization active (`GET /v1/identity/users` filtré
- *   côté service sur `organizationUuid`).
+ * - Organisation : coordonnées consultées via `GET /v1/identity/organizations/{uuid}`.
+ * - Équipe : affectations consultées via l’endpoint dédié autorisé à VIEW_USER.
  * - « Inviter un membre » crée un ADMIN_IMMOBILIER ou un ADMIN_VILLE (ce
  *   dernier avec au moins une ville) via `/organization-users/create-admin`.
- * - Actions : Modifier (fiche), Gérer les villes (ADMIN_VILLE,
- *   `/identity/user-cities`), Suspendre (désactivation + email) et Réactiver
- *   (`PUT /users/{uuid}` `isActive: true`).
- *   Pas de suppression : les comptes et leurs traces sont conservés.
+ * - Les champs d’organisation et les membres sont en lecture seule ; le
+ *   PATRON ne reçoit pas MANAGE_USERS ni MANAGE_ORGANIZATION.
  */
 export function AdministrationPage() {
     const { currentOrganization } = useOrganization();
@@ -63,26 +56,12 @@ export function AdministrationPage() {
         role,
         setRole,
         createMember,
-        updateMember,
-        suspendMember,
-        reactivateMember,
     } = useAdministration();
 
     const [inviteOpen, setInviteOpen] = useState(false);
     const [inviteForm, setInviteForm] = useState<{ fullName: string; email: string; phone: string; role: 'admin_immobilier' | 'admin_ville'; cityUuids: string[] }>({ fullName: '', email: '', phone: '', role: 'admin_immobilier', cityUuids: [] });
     const [inviteErrors, setInviteErrors] = useState<Record<string, string>>({});
     const [creating, setCreating] = useState(false);
-
-    const [editTarget, setEditTarget] = useState<TeamMember | null>(null);
-    const [editForm, setEditForm] = useState({ name: '', phone: '' });
-    const [editing, setEditing] = useState(false);
-
-    const [suspendTarget, setSuspendTarget] = useState<TeamMember | null>(null);
-    const [suspendReason, setSuspendReason] = useState('');
-    const [suspending, setSuspending] = useState(false);
-
-    const [citiesTarget, setCitiesTarget] = useState<TeamMember | null>(null);
-    const [reactivating, setReactivating] = useState<string | null>(null);
 
     const closeInvite = () => {
         setInviteOpen(false);
@@ -121,63 +100,13 @@ export function AdministrationPage() {
         }
     };
 
-    const openEdit = (member: TeamMember) => {
-        setEditTarget(member);
-        setEditForm({ name: member.name, phone: member.phone ?? '' });
-    };
-
-    const submitEdit = async (event: FormEvent<HTMLFormElement>) => {
-        event.preventDefault();
-        if (!editTarget || editing) return;
-        setEditing(true);
-        try {
-            await updateMember(editTarget.id, { fullName: editForm.name.trim(), phone: editForm.phone.trim() });
-            setEditTarget(null);
-        } catch {
-            // Le toast d'échec est déjà émis par le hook.
-        } finally {
-            setEditing(false);
-        }
-    };
-
-    const openSuspend = (member: TeamMember) => {
-        setSuspendTarget(member);
-        setSuspendReason('');
-    };
-
-    const submitSuspend = async (event: FormEvent<HTMLFormElement>) => {
-        event.preventDefault();
-        if (!suspendTarget || suspending) return;
-        setSuspending(true);
-        try {
-            await suspendMember(suspendTarget.id, suspendReason.trim() || undefined);
-            setSuspendTarget(null);
-        } catch {
-            // Le toast d'échec est déjà émis par le hook.
-        } finally {
-            setSuspending(false);
-        }
-    };
-
-    const handleReactivate = async (member: TeamMember) => {
-        if (reactivating) return;
-        setReactivating(member.id);
-        try {
-            await reactivateMember(member.id);
-        } catch {
-            // Le toast d'échec est déjà émis par le hook.
-        } finally {
-            setReactivating(null);
-        }
-    };
-
     return (
         <main className="organization-page organization-operational-page">
             <header className="organization-page__header">
                 <div>
                     <span className="organization-page__eyebrow">ACCÈS ET ÉQUIPE</span>
                     <h1>Administration</h1>
-                    <p>Gérez l’organisation de {currentOrganization?.name ?? 'votre entreprise'} : coordonnées, invitation d’administrateurs, périmètres de villes et accès.</p>
+                    <p>Consultez l’organisation de {currentOrganization?.name ?? 'votre entreprise'} et l’équipe. Vous pouvez inviter les rôles qui vous sont autorisés.</p>
                 </div>
             </header>
 
@@ -192,7 +121,6 @@ export function AdministrationPage() {
                     <OrganizationProfileCard />
                 ) : (
                     <>
-                        <RoleAssignmentsPanel />
                         <OrganizationSummary items={[
                             { label: 'Membres de l’équipe', value: <>{members.length}</> },
                             { label: 'Administrateurs ville', value: <>{members.filter((member) => member.role === 'admin_ville').length}</> },
@@ -203,7 +131,7 @@ export function AdministrationPage() {
                 <div className="organization-table-toolbar">
                     <div>
                         <h2>Équipe de l’organisation</h2>
-                        <p>Invitez des administrateurs immobilier ou ville (avec leurs villes), puis modifiez, suspendez ou réactivez les accès.</p>
+                        <p>Consultez les membres et leurs périmètres. Vous pouvez inviter un nouvel administrateur ; la modification des accès est réservée aux rôles autorisés.</p>
                     </div>
                     <div className="organization-filters organization-filters--tenant">
                         <SearchInput value={search} onSearch={setSearch} placeholder="Rechercher un membre…" fullWidth />
@@ -217,13 +145,7 @@ export function AdministrationPage() {
                 ) : error && members.length === 0 ? (
                     <ErrorState title="Impossible de charger l’équipe" message={error} onRetry={() => void reload()} />
                 ) : rows.length > 0 ? (
-                    <TeamTable
-                        rows={rows}
-                        onEdit={openEdit}
-                        onSuspend={openSuspend}
-                        onReactivate={(member) => void handleReactivate(member)}
-                        onManageCities={setCitiesTarget}
-                    />
+                    <TeamTable rows={rows} />
                 ) : (
                     <EmptyState title="Aucun membre" description="Aucun membre ne correspond à cette recherche ou à ces filtres." />
                 )}
@@ -267,28 +189,6 @@ export function AdministrationPage() {
                 </form>
             </Modal>
 
-            <Modal isOpen={editTarget !== null} onClose={() => setEditTarget(null)} title={editTarget ? `Modifier « ${editTarget.name} »` : 'Modifier le membre'} size="medium" footer={<><Button variant="outline" onClick={() => setEditTarget(null)}>Annuler</Button><Button type="submit" form="edit-member-form" isLoading={editing}>{editing ? 'Enregistrement…' : 'Enregistrer'}</Button></>}>
-                <form id="edit-member-form" className="organization-management-form" onSubmit={submitEdit}>
-                    <p className="organization-management-form__hint">Seuls le nom et le téléphone sont modifiables ici ; le rôle et l’accès d’organisation ne changent pas.</p>
-                    <FormField label="Nom complet" htmlFor="edit-full-name" required>
-                        <Input id="edit-full-name" value={editForm.name} onChange={(event) => setEditForm((current) => ({ ...current, name: event.target.value }))} placeholder="Ex. : Jean Dupont" required fullWidth maxLength={200} />
-                    </FormField>
-                    <FormField label="Téléphone" htmlFor="edit-phone" required>
-                        <Input id="edit-phone" value={editForm.phone} onChange={(event) => setEditForm((current) => ({ ...current, phone: event.target.value }))} placeholder="+243 99 00 00 000" required fullWidth maxLength={30} />
-                    </FormField>
-                </form>
-            </Modal>
-
-            <Modal isOpen={suspendTarget !== null} onClose={() => setSuspendTarget(null)} title={suspendTarget ? `Suspendre « ${suspendTarget.name} »` : 'Suspendre le membre'} size="medium" footer={<><Button variant="outline" onClick={() => setSuspendTarget(null)}>Annuler</Button><Button type="submit" form="suspend-member-form" variant="danger" isLoading={suspending}>{suspending ? 'Suspension…' : 'Suspendre le compte'}</Button></>}>
-                <form id="suspend-member-form" className="organization-management-form" onSubmit={submitSuspend}>
-                    <p className="organization-management-form__hint">Le compte est désactivé immédiatement et {suspendTarget ? ` ${suspendTarget.email} ` : 'le membre '}reçoit un email de notification. Le motif est facultatif et archivé dans le journal d’audit.</p>
-                    <FormField label="Motif de la suspension" htmlFor="suspend-reason" helpText="Facultatif. Visible par l’utilisateur dans l’email de notification.">
-                        <Textarea id="suspend-reason" rows={4} maxLength={1000} placeholder="Ex. : Compte dormant depuis plusieurs mois." value={suspendReason} onChange={(event) => setSuspendReason(event.target.value)} fullWidth />
-                    </FormField>
-                </form>
-            </Modal>
-
-            <CityAssignmentModal member={citiesTarget} onClose={() => setCitiesTarget(null)} />
         </main>
     );
 }

@@ -6,20 +6,25 @@ contraire à ces lignes doit être soumise avant d'altérer le comportement.
 Principe produit : **le Patron consulte et pilote, il n'opère pas.** Les écrans
 opérationnels (créer un bien, un locataire, un bail, un paiement, une dépense)
 appartiennent à l'ADMIN_IMMOBILIER et à l'ADMIN_VILLE. Le Patron dispose donc
-de pages **en lecture seule**, plus trois zones d'écriture qui lui sont propres :
-l'équipe (Administration), la vitrine publique (réglages) et le paramétrage de
-l'organisation.
+de pages **en lecture seule**. Ses écritures sont limitées aux actions
+explicitement accordées par `SecurityService::checkPatronAction()`, notamment
+l'invitation de certains administrateurs et la gestion de la vitrine/logo.
+Les coordonnées générales de l'organisation et les membres existants sont en
+consultation seule dans Administration.
 
-## D-P1 — Lecture seule : règle d'interface uniquement
+## D-P1 — Lecture seule : interface alignée sur les permissions serveur
 
-**Constat.** Côté backend, `SecurityService::checkPatronAction()` est vide : un
-Patron peut, par API, tout faire sur son organisation (il en est le
-propriétaire). La lecture seule des pages opérationnelles est donc une règle
-d'**interface**, pas une règle de sécurité.
+**Constat actuel.** `SecurityService::checkPatronAction()` applique une liste
+d'actions autorisées. Elle inclut notamment `VIEW_ORGANIZATION`, `VIEW_USER`,
+`CREATE_CITY_ADMIN` et `CREATE_ORGANIZATION_ADMIN`, mais pas `UPDATE`,
+`MANAGE_ORGANIZATION` ni `MANAGE_USERS`. Le backend reste l'autorité ;
+l'interface masque également les commandes refusées pour éviter des erreurs
+prévisibles.
 
-**Décision :** ne pas durcir le backend et ne pas ajouter de bouton d'écriture
-opérationnel dans les pages Patron « lecture ». La restriction est portée par
-la prop `readOnly` des composants réutilisés (D-P2), jamais par `canDo()`.
+**Décision :** ne pas ajouter de bouton d'écriture opérationnel dans les pages
+Patron « lecture ». Pour les composants réutilisés, la restriction est portée
+par `readOnly` (D-P2) ; pour les pages dédiées, les commandes visibles doivent
+correspondre aux actions accordées par le backend.
 
 ## D-P2 — Réutilisation des écrans ADMIN_IMMOBILIER (`readOnly`)
 
@@ -55,12 +60,17 @@ Patron (aucune destination routable ne lui correspond dans son espace).
 
 ## D-P4 — Changer le rôle d'un membre
 
-Le backend autorise `PUT /v1/identity/organization-users/{uuid}` (changement de
-rôle). L'exposer multiplie les erreurs de périmètre ville (un ADMIN_VILLE sans
-ville, un ADMIN_IMMOBILIER promu sans contrôle).
+L'endpoint `PUT /v1/identity/organization-users/{uuid}` existe, mais il exige
+une permission de gestion des membres que le PATRON ne reçoit pas dans
+`checkPatronAction()`. L'exposer à ce rôle multiplierait aussi les erreurs de
+périmètre ville (un ADMIN_VILLE sans ville, un ADMIN_IMMOBILIER promu sans
+contrôle).
 
-**Décision :** ne pas l'exposer. Suspendre puis inviter avec le bon rôle suffit.
-L'écran Administration ne propose ni « Supprimer » ni « Changer le rôle ».
+**Décision actuelle :** l'écran Administration n'expose ni « Supprimer », ni
+« Changer le rôle », ni suspendre/réactiver, ni modifier les périmètres de villes.
+Le PATRON peut consulter les affectations et inviter les rôles autorisés. La
+modification, la suspension et les changements de périmètre sont réservés aux
+rôles disposant des actions correspondantes côté serveur.
 
 ## D-P5 — Vitrine : réglages publics + logo, annonces en lecture
 
@@ -69,13 +79,15 @@ zones de paramétrage. L'endpoint `PATCH
 /api/v1/identity/organizations/{uuid}/showcase` (`OrganizationShowcaseRequest`,
 réservé au PATRON) gère slug / description / visibilité ; le logo passe par
 `POST|DELETE /api/v1/media/organizations/{uuid}/logo` ; le paramétrage général
-(nom, contacts) par `PUT /api/v1/identity/organizations/{uuid}`.
+(nom, contacts) dispose d'un endpoint `PUT /api/v1/identity/organizations/{uuid}`,
+mais l'action `UPDATE` n'est pas accordée au PATRON par la matrice actuelle.
 
 **Décision (appliquée) :**
 - La page **Vitrine** du Patron porte les *réglages publics* (slug, description,
   visibilité) **et** le logo — ce sont les éléments de présence publique.
-- Le *paramétrage général* de l'organisation (nom, contacts) reste sur la page
-  **Administration**, aux côtés de l'équipe (P5).
+- Les coordonnées générales (nom, contacts) restent consultables sur la page
+  **Administration** ; le PATRON ne peut pas les modifier avec les permissions
+  actuellement attribuées.
 - Les **annonces** (Unit `isPublished`) sont affichées en lecture seule via
   `VitrineTable` + le hook Vitrine de l'ADMIN_IMMOBILIER (`readOnly`) : la
   publication reste une opération d'ADMIN_IMMOBILIER.
