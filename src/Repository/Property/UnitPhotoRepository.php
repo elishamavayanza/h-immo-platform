@@ -88,6 +88,19 @@ class UnitPhotoRepository extends ServiceEntityRepository
             ->getResult();
     }
 
+    /** @return list<UnitPhoto> */
+    public function findDeletedForUnit(Unit $unit): array
+    {
+        return $this->createQueryBuilder('p')
+            ->andWhere('p.unit = :unit')
+            ->andWhere('p.deletedAt IS NOT NULL')
+            ->setParameter('unit', $unit)
+            ->orderBy('p.deletedAt', 'DESC')
+            ->addOrderBy('p.id', 'DESC')
+            ->getQuery()
+            ->getResult();
+    }
+
     /**
      * Une photo appartient-elle bien à cette unité ?
      *

@@ -49,7 +49,7 @@ export function LoyersPage({ readOnly = false }: { readOnly?: boolean } = {}) {
     const {
         data, rows: allRows, isLoading, error, reload, loadPeriod,
         search, setSearch, status, setStatus,
-        recordPayment, markOverdue, updateRent,
+        recordPayment, updateRent,
     } = useLoyers();
     const [calendarData, setCalendarData] = useState<Awaited<ReturnType<typeof loadPeriod>>>(null);
     const [selectedDate, setSelectedDate] = useState<string | null>(null);
@@ -205,12 +205,7 @@ export function LoyersPage({ readOnly = false }: { readOnly?: boolean } = {}) {
         }
     };
 
-    const confirmMarkOverdue = async (target: LoyerRow) => {
-        if (!confirm(`Marquer l'échéance « ${target.tenant} - ${target.periodLabel} » comme impayée ?`)) return;
-        await markOverdue(target.id);
-    };
-
-    let body = <LoyersTable rows={selectedRows} role={organizationRole} onRecordPayment={openPayment} onMarkOverdue={confirmMarkOverdue} onUpdate={openUpdate} readOnly={readOnly} />;
+    let body = <LoyersTable rows={selectedRows} role={organizationRole} onRecordPayment={openPayment} onUpdate={openUpdate} readOnly={readOnly} />;
     if (isLoading) {
         body = <EmptyState icon={<Spinner size="large" />} title="Chargement des échéances…" description="Récupération des loyers de l’organisation." />;
     } else if (error) {

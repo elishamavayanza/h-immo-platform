@@ -131,12 +131,6 @@ export async function fetchLoyerPaymentActivities(
     return data.data;
 }
 
-/** `PATCH /api/v1/rents/{uuid}/overdue` — marquer une échéance comme impayée. */
-export async function markRentOverdue(rentUuid: string): Promise<string> {
-    const { data } = await apiClient.patch<Feedback<unknown>>(`/v1/rents/${rentUuid}/overdue`);
-    return data.flushDescription ?? 'L\'échéance a été marquée comme impayée.';
-}
-
 /** Payload pour modifier une échéance. */
 export interface UpdateRentPayload {
     dueDate?: string;

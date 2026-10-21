@@ -25,7 +25,7 @@ use Symfony\Component\Security\Http\Attribute\IsGranted;
  *
  * Package : Rental Management
  *
- * Gestion des échéances de loyer (génération, lecture, mise à jour, marquage impayé).
+ * Gestion des échéances de loyer (génération, lecture et mise à jour).
  * Une échéance est générée à partir d'un Bail pour une période donnée (mois/année).
  * L'accès est restreint au périmètre Organization → City de l'utilisateur.
  *
@@ -34,7 +34,6 @@ use Symfony\Component\Security\Http\Attribute\IsGranted;
  * - GET    /api/v1/rents          : lister les échéances (pagination)
  * - GET    /api/v1/rents/{uuid}   : détails d'une échéance
  * - PUT    /api/v1/rents/{uuid}   : modifier une échéance
- * - PATCH  /api/v1/rents/{uuid}/overdue : marquer comme impayée
  * - DELETE /api/v1/rents/{uuid}   : supprimer (soft delete)
  */
 #[Route('/api/v1/rents', name: 'api_rents_')]

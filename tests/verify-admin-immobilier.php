@@ -510,12 +510,15 @@ if ($status === 200 && is_string($unitPhotosPayload['data'][0]['uuid'] ?? null))
     $unitPhotoFile = is_string($unitPhotoPath) ? dirname(__DIR__) . '/public' . $unitPhotoPath : '';
     [$removePhotoStatus] = $request('DELETE', '/api/v1/units/' . $uuidUnitA . '/photos/' . $unitPhotoUuid, null, $token);
     [$visiblePhotosStatus, $visiblePhotos] = $request('GET', '/api/v1/units/' . $uuidUnitA . '/photos', null, $token);
+    [$removedPhotosStatus, $removedPhotos] = $request('GET', '/api/v1/units/' . $uuidUnitA . '/photos/deleted', null, $token);
     $unitPhotoRow = $connection->fetchAssociative(
         'SELECT id, deleted_at FROM unit_photo WHERE uuid = ?',
         [\Symfony\Component\Uid\Uuid::fromString($unitPhotoUuid)->toBinary()]
     );
     check('retirer une photo la masque sans supprimer son fichier', $removePhotoStatus === 200 && $visiblePhotosStatus === 200 && ($visiblePhotos['data'] ?? []) === [] && is_array($unitPhotoRow) && $unitPhotoRow['deleted_at'] !== null && is_file($unitPhotoFile));
+    check('la galerie fournit l’UUID des photos retirées à restaurer', $removedPhotosStatus === 200 && ($removedPhotos['data'][0]['uuid'] ?? null) === $unitPhotoUuid, 'obtenu ' . $removedPhotosStatus);
     [$restorePhotoStatus, $restoredPhotos] = $request('POST', '/api/v1/units/' . $uuidUnitA . '/photos/' . $unitPhotoUuid . '/restore', null, $token);
+    [$deletedAfterRestoreStatus, $deletedAfterRestore] = $request('GET', '/api/v1/units/' . $uuidUnitA . '/photos/deleted', null, $token);
     $restoredPhotoRow = $connection->fetchAssociative(
         'SELECT id, deleted_at FROM unit_photo WHERE uuid = ?',
         [\Symfony\Component\Uid\Uuid::fromString($unitPhotoUuid)->toBinary()]
@@ -527,10 +530,13 @@ if ($status === 200 && is_string($unitPhotosPayload['data'][0]['uuid'] ?? null))
         )
         : 0;
     check('restaurer une photo la réaffiche et conserve sa ligne', $restorePhotoStatus === 200 && count($restoredPhotos['data'] ?? []) === 1 && is_array($restoredPhotoRow) && $restoredPhotoRow['deleted_at'] === null && is_file($unitPhotoFile));
+    check('une photo restaurée quitte la liste récupérable', $deletedAfterRestoreStatus === 200 && ($deletedAfterRestore['data'] ?? []) === []);
     check('les événements de retrait et restauration restent dans l’audit', $photoAuditCount === 2, 'événements trouvés : ' . $photoAuditCount);
 }
 [$status] = $request('GET', '/api/v1/units/' . $uuidUnitB . '/photos', null, $token);
 check('ADMIN_IMMOBILIER ne lit pas une galerie hors organisation', in_array($status, [403, 404], true), 'obtenu ' . $status);
+[$status] = $request('GET', '/api/v1/units/' . $uuidUnitB . '/photos/deleted', null, $token);
+check('ADMIN_IMMOBILIER ne lit pas les photos retirées hors organisation', in_array($status, [403, 404], true), 'obtenu ' . $status);
 
 /** @return list<string> */
 $payloadIds = static function (array $payload): array {

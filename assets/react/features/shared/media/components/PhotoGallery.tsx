@@ -36,9 +36,11 @@ export function PhotoGallery({ entityUuid, entityType, photos: initialPhotos, mo
     const [editing, setEditing] = useState<EditingPhoto | null>(null);
     const [isUploading, setIsUploading] = useState(false);
     const [isDeleting, setIsDeleting] = useState<string | null>(null);
+    const [isRestoring, setIsRestoring] = useState<string | null>(null);
     const [isLoading, setIsLoading] = useState(false);
     const [pendingDelete, setPendingDelete] = useState<PhotoItem | null>(null);
     const [photos, setPhotos] = useState<PhotoItem[]>((initialPhotos ?? []).map((url) => ({ url, deleteId: url.split('/').pop() ?? url })));
+    const [removedUnitPhotos, setRemovedUnitPhotos] = useState<PhotoItem[]>([]);
 
     // Charger les photos au montage si non fournies
     useEffect(() => {
@@ -52,10 +54,17 @@ export function PhotoGallery({ entityUuid, entityType, photos: initialPhotos, mo
         try {
             let fetchedPhotos: PhotoItem[] = [];
             if (entityType === 'parcel') {
+                setRemovedUnitPhotos([]);
                 fetchedPhotos = (await mediaService.fetchParcelPhotos(entityUuid)).map((path) => ({ url: path, deleteId: path.split('/').pop() ?? path }));
             } else if (entityType === 'unit') {
-                fetchedPhotos = (await mediaService.fetchUnitPhotos(entityUuid)).map((photo) => ({ url: photo.url, deleteId: photo.uuid }));
+                const [active, removed] = await Promise.all([
+                    mediaService.fetchUnitPhotos(entityUuid),
+                    mediaService.fetchDeletedUnitPhotos(entityUuid),
+                ]);
+                fetchedPhotos = active.map((photo) => ({ url: photo.url, deleteId: photo.uuid }));
+                setRemovedUnitPhotos(removed.map((photo) => ({ url: photo.url, deleteId: photo.uuid })));
             } else {
+                setRemovedUnitPhotos([]);
                 fetchedPhotos = (await mediaService.fetchBuildingPhotos(entityUuid)).map((path) => ({ url: path, deleteId: path.split('/').pop() ?? path }));
             }
             setPhotos(fetchedPhotos.map((photo) => ({ ...photo, url: photo.url.startsWith('http') || photo.url.startsWith('/') ? photo.url : `/uploads/${photo.url}` })));
@@ -63,6 +72,21 @@ export function PhotoGallery({ entityUuid, entityType, photos: initialPhotos, mo
             // Silencieux : on affiche juste la grille vide
         } finally {
             setIsLoading(false);
+        }
+    };
+
+    const restorePhoto = async (photo: PhotoItem) => {
+        if (entityType !== 'unit') return;
+        setIsRestoring(photo.deleteId);
+        try {
+            await mediaService.restoreUnitPhoto(entityUuid, photo.deleteId);
+            push('success', 'La photo a été restaurée dans la galerie de l’unité.');
+            await loadPhotos();
+            onChange?.();
+        } catch (cause) {
+            push('error', cause instanceof Error ? cause.message : 'La photo n’a pas pu être restaurée.');
+        } finally {
+            setIsRestoring(null);
         }
     };
 
@@ -301,6 +325,16 @@ export function PhotoGallery({ entityUuid, entityType, photos: initialPhotos, mo
                     </div>
                 )}
             </div>
+            {entityType === 'unit' && removedUnitPhotos.length > 0 && <section className="photo-gallery__removed" aria-label="Photos retirées de la galerie">
+                <h3>Photos retirées</h3>
+                <p className="photo-gallery__hint">Ces photos restent récupérables. La restauration est refusée si la galerie a atteint sa limite.</p>
+                <div className="photo-gallery__grid">
+                    {removedUnitPhotos.map((photo, index) => <div key={photo.deleteId} className="photo-gallery__item">
+                        <div className="photo-gallery__preview"><img src={photo.url.startsWith('http') || photo.url.startsWith('/') ? photo.url : `/uploads/${photo.url}`} alt={`Photo retirée ${index + 1}`} loading="lazy" /></div>
+                        <div className="photo-gallery__item-actions"><Button type="button" variant="outline" size="small" onClick={() => void restorePhoto(photo)} disabled={disabled || isUploading || isDeleting !== null || isRestoring !== null} isLoading={isRestoring === photo.deleteId}>Restaurer</Button></div>
+                    </div>)}
+                </div>
+            </section>}
             <p className="photo-gallery__hint">
                 {isSingleMode
                     ? 'Une seule photo. Cliquez pour la remplacer.'
@@ -315,7 +349,7 @@ export function PhotoGallery({ entityUuid, entityType, photos: initialPhotos, mo
                     setPendingDelete(null);
                 }}
                 title="Retirer cette photo ?"
-                message="Cette photo sera supprimée définitivement."
+                message={entityType === 'unit' ? 'Cette photo sera retirée de la galerie. Vous pourrez la restaurer depuis la section « Photos retirées ».' : 'Cette photo sera retirée de la galerie.'}
                 confirmLabel="Retirer"
             />
         </div>

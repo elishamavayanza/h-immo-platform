@@ -8,7 +8,6 @@ import { canDo } from '../../../shared/permissions';
 import {
     fetchLoyerPaymentActivities,
     fetchLoyers,
-    markRentOverdue,
     recordPayment,
     updateRent,
     type RecordPaymentPayload,
@@ -105,11 +104,6 @@ export function useLoyers() {
         await reload();
     }, [push, reload]);
 
-    const markOverdueAction = useCallback(async (rentUuid: string): Promise<void> => {
-        await runAction(push, 'L’échéance de loyer a été marquée comme impayée.', () => markRentOverdue(rentUuid));
-        await reload();
-    }, [push, reload]);
-
     const updateRentAction = useCallback(async (rentUuid: string, payload: UpdateRentPayload): Promise<void> => {
         await runAction(push, 'Les informations de l’échéance de loyer ont été modifiées.', () => updateRent(rentUuid, payload));
         await reload();
@@ -135,7 +129,6 @@ export function useLoyers() {
         status,
         setStatus,
         recordPayment: recordPaymentAction,
-        markOverdue: markOverdueAction,
         updateRent: updateRentAction,
     };
 }

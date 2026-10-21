@@ -117,6 +117,22 @@ final readonly class UnitPhotoService
         return $out;
     }
 
+    /** Galerie des photos retirées, récupérables tant que le fichier existe. */
+    public function listDeletedForManagement(Unit $unit): array
+    {
+        $out = [];
+
+        foreach ($this->unitPhotoRepository->findDeletedForUnit($unit) as $photo) {
+            $out[] = [
+                'uuid' => $photo->getUuid()->toRfc4122(),
+                'url' => $this->fileUploadService->getPublicUrl($photo->getPath()),
+                'position' => $photo->getPosition(),
+            ];
+        }
+
+        return $out;
+    }
+
     public function countForUnit(Unit $unit): int
     {
         return $this->unitPhotoRepository->countForUnit($unit);

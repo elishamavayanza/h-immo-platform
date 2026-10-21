@@ -284,6 +284,20 @@ final class UnitController extends AbstractController
         return $this->json($feedback, $feedback->getStatus());
     }
 
+    #[Route('/{uuid}/photos/deleted', name: 'list_deleted_photos', methods: ['GET'])]
+    #[OA\Get(summary: 'Lister les photos retirées récupérables d’une unité')]
+    #[OA\Response(response: 200, description: 'Photos retirées récupérées', content: new OA\JsonContent(ref: new Model(type: Feedback::class)))]
+    #[OA\Response(response: 403, description: 'Accès refusé')]
+    #[OA\Response(response: 404, description: 'Unité introuvable')]
+    public function listDeletedPhotos(string $uuid): JsonResponse
+    {
+        $feedback = $this->publicShowcaseManagementService->listDeletedPhotos(
+            $this->unitService->findByUuidOrFail($uuid)
+        );
+
+        return $this->json($feedback, $feedback->getStatus());
+    }
+
     #[Route('/{uuid}/photos/{photoUuid}', name: 'remove_photo', methods: ['DELETE'])]
     #[OA\Delete(
         summary: 'Retirer une photo de la galerie d\'une unité',

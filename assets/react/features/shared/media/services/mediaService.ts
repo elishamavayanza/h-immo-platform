@@ -104,6 +104,17 @@ export const mediaService = {
         return data.data ?? [];
     },
 
+    /** `GET /api/v1/units/{uuid}/photos/deleted` — photos d’unité récupérables. */
+    async fetchDeletedUnitPhotos(uuid: string): Promise<Array<{ uuid: string; url: string; position: number }>> {
+        const { data } = await apiClient.get<Feedback<Array<{ uuid: string; url: string; position: number }>>>(`/v1/units/${uuid}/photos/deleted`);
+        return data.data ?? [];
+    },
+
+    /** `POST /api/v1/units/{uuid}/photos/{photoUuid}/restore` — restaurer une photo. */
+    async restoreUnitPhoto(uuid: string, photoUuid: string): Promise<void> {
+        await apiClient.post<Feedback<unknown>>(`/v1/units/${uuid}/photos/${photoUuid}/restore`);
+    },
+
     /**
      * `POST /api/v1/media/buildings/{uuid}/photos` — upload building photos (multiple).
      * Returns message in `data.flushDescription`.

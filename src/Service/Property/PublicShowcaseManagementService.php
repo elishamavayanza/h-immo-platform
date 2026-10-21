@@ -145,6 +145,18 @@ final readonly class PublicShowcaseManagementService
             ->autoInitFlush();
     }
 
+    /** Liste les photos retirées que l'utilisateur autorisé peut restaurer. */
+    public function listDeletedPhotos(Unit $unit): Feedback
+    {
+        $this->security->checkUnitPublishAccess($unit, SecurityAction::PUBLISH_LISTING);
+
+        return (new Feedback())
+            ->setData($this->unitPhotoService->listDeletedForManagement($unit))
+            ->setFlushDescription('Photos retirées récupérables de l’unité récupérées.')
+            ->setStatus(200)
+            ->autoInitFlush();
+    }
+
     /**
      * Retire une photo de la galerie d'une unité.
      *

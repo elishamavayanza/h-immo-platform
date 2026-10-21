@@ -27,19 +27,18 @@ interface LoyersTableProps {
     rows: LoyerRow[];
     role: OrganizationRole | null;
     onRecordPayment: (row: LoyerRow) => void;
-    onMarkOverdue: (row: LoyerRow) => void;
     onUpdate: (row: LoyerRow) => void;
     /** Lecture seule (espace PATRON) : masque toute action d'écriture. */
     readOnly?: boolean;
 }
 
 /**
- * Table des échéances : actions Enregistrer un paiement, Marquer en retard, Modifier.
+ * Table des échéances : actions Enregistrer un paiement et Modifier.
  * « Enregistrer un paiement » masqué si la ligne est PAID.
- * « Marquer en retard » masqué si déjà OVERDUE ou PAID.
+ * « En retard » est un état calculé par le serveur depuis la date et les paiements.
  * `readOnly` masque la colonne d'actions (le Patron consulte sans opérer).
  */
-export function LoyersTable({ rows, role, onRecordPayment, onMarkOverdue, onUpdate, readOnly = false }: LoyersTableProps) {
+export function LoyersTable({ rows, role, onRecordPayment, onUpdate, readOnly = false }: LoyersTableProps) {
     const columns: DataTableColumn<LoyerRow>[] = [
         { key: 'tenant', title: 'Locataire', sortable: true },
         { key: 'unitLabel', title: 'Bien / unité', sortable: true, render: (row) => row.unitLabel },
@@ -54,13 +53,9 @@ export function LoyersTable({ rows, role, onRecordPayment, onMarkOverdue, onUpda
                 if (readOnly) return '—';
 
                 const isPaid = row.status === 'paid';
-                const isOverdue = row.status === 'overdue';
                 const items: PopoverMenuItem[] = [
                     ...(!isPaid && canDo(role, 'create_payment')
                         ? [{ id: 'payment', label: 'Enregistrer un paiement', icon: <Icon name="money" />, onClick: () => onRecordPayment(row) }]
-                        : []),
-                    ...(!isOverdue && !isPaid && canDo(role, 'mark_rent_overdue')
-                        ? [{ id: 'overdue', label: 'Marquer en retard', icon: <Icon name="alert" />, onClick: () => onMarkOverdue(row) }]
                         : []),
                     ...(canDo(role, 'update_rent')
                         ? [{ id: 'edit', label: 'Modifier', icon: <Icon name="edit" />, onClick: () => onUpdate(row) }]
