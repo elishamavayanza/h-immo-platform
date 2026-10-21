@@ -187,6 +187,14 @@ export function PatrimoinePage({ readOnly = false }: { readOnly?: boolean } = {}
         publishUnit,
     } = usePatrimoine();
 
+    // Le calendrier suit la ville ouverte dans l’arbre. Pour ADMIN_VILLE,
+    // la ville active constitue le périmètre par défaut, même à la racine.
+    const activityCityUuid = selectedCityId ?? (isCityAdmin ? activeCityUuid : null);
+
+    useEffect(() => {
+        setActivityDate(null);
+    }, [activityCityUuid]);
+
     const loadAuditMonth = useCallback(async (month: number, year: number) => {
         if (!currentOrganization?.uuid) {
             setActivityEvents([]);
@@ -195,11 +203,14 @@ export function PatrimoinePage({ readOnly = false }: { readOnly?: boolean } = {}
         const requestId = ++auditRequest.current;
         setActivityEvents([]);
         setActivityNote(null);
-        if (organizationRole === 'admin_ville' && !activeCityUuid) return;
+        if (isCityAdmin && !activityCityUuid) return;
         const from = new Date(year, month, 1);
         const to = new Date(year, month + 1, 1);
         try {
-            if (canViewAudit) {
+            // L’audit n’est disponible qu’à l’échelle organisationnelle.
+            // Dès qu’une ville est ouverte, afficher les opérations de son
+            // périmètre évite de mélanger l’activité des villes voisines.
+            if (canViewAudit && !activityCityUuid) {
                 const result = await auditService.list({ organizationUuid: currentOrganization.uuid, from, to, page: 1, itemsPerPage: 100 });
                 if (requestId === auditRequest.current) {
                     setActivityEvents(result.items.map((entry: AuditEntry) => ({
@@ -216,19 +227,17 @@ export function PatrimoinePage({ readOnly = false }: { readOnly?: boolean } = {}
             const fromKey = `${year}-${String(month + 1).padStart(2, '0')}-01`;
             const lastDay = new Date(year, month + 1, 0).getDate();
             const toKey = `${year}-${String(month + 1).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`;
-            const activityCityUuid = organizationRole === 'admin_ville' ? activeCityUuid : undefined;
-            const activityCityIds = organizationRole === 'admin_ville'
-                ? [activeCityUuid]
-                : cities.map((city) => city.id);
+            const scopedCityUuid = activityCityUuid ?? undefined;
+            const activityCityIds = scopedCityUuid ? [scopedCityUuid] : cities.map((city) => city.id);
             const [expenses, rents, payments] = await Promise.allSettled([
                 canDo(organizationRole, 'view_expense')
                     ? fetchExpenses(fromKey, toKey, activityCityIds)
                     : Promise.resolve(null),
                 canDo(organizationRole, 'view_rent')
-                    ? fetchRents(currentOrganization.uuid, undefined, fromKey, toKey, activityCityUuid)
+                    ? fetchRents(currentOrganization.uuid, undefined, fromKey, toKey, scopedCityUuid)
                     : Promise.resolve(null),
                 canDo(organizationRole, 'view_payment')
-                    ? fetchLoyerPaymentActivities(currentOrganization.uuid, from.toISOString(), new Date(to.getTime() - 1).toISOString(), activityCityUuid)
+                    ? fetchLoyerPaymentActivities(currentOrganization.uuid, from.toISOString(), new Date(to.getTime() - 1).toISOString(), scopedCityUuid)
                     : Promise.resolve(null),
             ]);
             const events: ActivityCalendarEvent[] = [];
@@ -257,7 +266,10 @@ export function PatrimoinePage({ readOnly = false }: { readOnly?: boolean } = {}
                     rents.status === 'fulfilled' && rents.value ? rents.value.total > rents.value.items.length : false,
                     payments.status === 'fulfilled' && payments.value ? payments.value.total > payments.value.items.length : false,
                 ].some(Boolean);
-                setActivityNote(truncated ? 'Certaines listes dépassent la limite de 100 résultats par source pour ce mois.' : null);
+                const scopeNote = scopedCityUuid ? 'Activités limitées à la ville sélectionnée.' : null;
+                setActivityNote(truncated
+                    ? [scopeNote, 'Certaines listes dépassent la limite de 100 résultats par source pour ce mois.'].filter(Boolean).join(' ')
+                    : scopeNote);
             }
         } catch {
             if (requestId === auditRequest.current) {
@@ -265,7 +277,7 @@ export function PatrimoinePage({ readOnly = false }: { readOnly?: boolean } = {}
                 setActivityNote('Impossible de charger les activités de cette période.');
             }
         }
-    }, [activeCityUuid, canViewAudit, currentOrganization?.uuid, cities, organizationRole]);
+    }, [activityCityUuid, canViewAudit, currentOrganization?.uuid, cities, isCityAdmin, organizationRole]);
 
     useEffect(() => {
         void loadAuditMonth(activityMonth.getMonth(), activityMonth.getFullYear());
@@ -273,6 +285,7 @@ export function PatrimoinePage({ readOnly = false }: { readOnly?: boolean } = {}
     }, [loadAuditMonth, activityMonth]);
 
     const handleActivityMonthChange = useCallback((month: number, year: number) => {
+        setActivityDate(null);
         setActivityMonth(new Date(year, month, 1));
     }, []);
 
@@ -284,6 +297,12 @@ export function PatrimoinePage({ readOnly = false }: { readOnly?: boolean } = {}
     const selectedParcel = selectedParcelId ? parcelBy.get(selectedParcelId) : undefined;
     const selectedBuilding = selectedBuildingId ? buildingBy.get(selectedBuildingId) : undefined;
     const selectedUnit = selectedUnitId ? units.find((unit) => unit.id === selectedUnitId) : undefined;
+    const activityCityName = activityCityUuid ? cityBy.get(activityCityUuid)?.name : undefined;
+    const activityDescription = canViewAudit && !activityCityUuid
+        ? 'Historique des actions sur l’ensemble de l’organisation.'
+        : activityCityUuid
+            ? `Activité opérationnelle${activityCityName ? ` de ${activityCityName}` : ' de la ville sélectionnée'} : dépenses, échéances et paiements accessibles à votre rôle.`
+            : 'Choisissez une ville dans l’arbre du patrimoine pour consulter son activité.';
     const unitContext = useUnitContext(selectedUnit ? selectedUnitId : null);
     const contextParcel = selectedParcel ?? parcelBy.get(selectedBuilding?.parcelId ?? '');
     const contextCity = contextParcel ? cityBy.get(contextParcel.cityId) : selectedCity;
@@ -754,7 +773,7 @@ export function PatrimoinePage({ readOnly = false }: { readOnly?: boolean } = {}
                             onSelectDate={setActivityDate}
                             onClearDate={() => setActivityDate(null)}
                             onMonthChange={handleActivityMonthChange}
-                            description={`${canViewAudit ? 'Historique des actions sur le patrimoine de cette organisation.' : 'Opérations de votre périmètre : dépenses, échéances et paiements selon vos droits.'}${activityNote ? ` ${activityNote}` : ''}`}
+                            description={`${activityDescription}${activityNote ? ` ${activityNote}` : ''}`}
                         />
                     </div>
                 )}
@@ -778,7 +797,7 @@ export function PatrimoinePage({ readOnly = false }: { readOnly?: boolean } = {}
                                         onSelectDate={setActivityDate}
                                         onClearDate={() => setActivityDate(null)}
                                         onMonthChange={handleActivityMonthChange}
-                                        description={`${canViewAudit ? 'Historique des actions sur le patrimoine de cette organisation.' : 'Opérations de votre périmètre : dépenses, échéances et paiements selon vos droits.'}${activityNote ? ` ${activityNote}` : ''}`}
+                                        description={`${activityDescription}${activityNote ? ` ${activityNote}` : ''}`}
                                         emptyMessage="Aucune activité autorisée enregistrée pour cette journée."
                                     />
                                 </>}
