@@ -1,4 +1,5 @@
 @use '../../baseVariables/variables' as *;
+@use '../../baseVariables/mixins' as *;
 
 .photo-gallery {
   display: grid;
@@ -12,8 +13,14 @@
   grid-template-columns: repeat(auto-fill, minmax(min(100%, 220px), 1fr));
   align-items: start;
   gap: $spacing-3;
+  max-height: min(34rem, 60vh);
+  overflow: auto;
+  overscroll-behavior: contain;
   min-width: 0;
+  padding: 0 $spacing-2 $spacing-2 0;
+  @include scrollbar(5px);
 }
+.photo-gallery__grid:focus-visible { outline: 2px solid $color-primary; outline-offset: 2px; }
 
 .photo-gallery__item {
   display: grid;

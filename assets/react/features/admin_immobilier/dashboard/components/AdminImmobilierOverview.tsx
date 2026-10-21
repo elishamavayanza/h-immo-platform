@@ -49,7 +49,7 @@ export function AdminImmobilierOverview({ data }: { data: AdminImmobilierDashboa
                     padding="medium"
                     header={<div><h2>Impayés à traiter</h2><p>Échéances en retard par bail</p></div>}
                 >
-                    <ul className="organization-activity">
+                    <ul className="organization-activity" aria-label="Impayés à traiter : liste déroulante" tabIndex={0}>
                         {data.arrears.length > 0 ? data.arrears.map((item) => (
                             <li key={item.leaseUuid} className="organization-activity__item organization-activity__item--warning">
                                 <span className="organization-activity__dot" />

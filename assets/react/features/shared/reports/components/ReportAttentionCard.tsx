@@ -6,7 +6,7 @@ export function ReportAttentionCard({ title, items }: { title: string; items: Re
     return (
         <Card className="reports-panel reports-attention" padding="medium">
             <div className="reports-panel__heading"><div><h2>{title}</h2><p>Éléments à consulter dans votre espace.</p></div></div>
-            <ul className="reports-attention__list">
+            <ul className="reports-attention__list" aria-label={`${title} : liste déroulante`} tabIndex={0}>
                 {items.map((item) => (
                     <li key={item.id}>
                         <div><strong>{item.label}</strong><small>{item.detail}</small></div>

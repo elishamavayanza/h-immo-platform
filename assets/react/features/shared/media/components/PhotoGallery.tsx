@@ -266,7 +266,7 @@ export function PhotoGallery({ entityUuid, entityType, photos: initialPhotos, mo
 
     return (
         <div className="photo-gallery">
-            <div className="photo-gallery__grid">
+            <div className="photo-gallery__grid" role="region" aria-label="Galerie de photos : zone défilante" tabIndex={0}>
                 {photos.map((photo, index) => (
                     <div key={`${photo.deleteId}-${index}`} className="photo-gallery__item">
                         <div className="photo-gallery__preview">
@@ -328,7 +328,7 @@ export function PhotoGallery({ entityUuid, entityType, photos: initialPhotos, mo
             {entityType === 'unit' && removedUnitPhotos.length > 0 && <section className="photo-gallery__removed" aria-label="Photos retirées de la galerie">
                 <h3>Photos retirées</h3>
                 <p className="photo-gallery__hint">Ces photos restent récupérables. La restauration est refusée si la galerie a atteint sa limite.</p>
-                <div className="photo-gallery__grid">
+                <div className="photo-gallery__grid" role="region" aria-label="Photos retirées : zone défilante" tabIndex={0}>
                     {removedUnitPhotos.map((photo, index) => <div key={photo.deleteId} className="photo-gallery__item">
                         <div className="photo-gallery__preview"><img src={photo.url.startsWith('http') || photo.url.startsWith('/') ? photo.url : `/uploads/${photo.url}`} alt={`Photo retirée ${index + 1}`} loading="lazy" /></div>
                         <div className="photo-gallery__item-actions"><Button type="button" variant="outline" size="small" onClick={() => void restorePhoto(photo)} disabled={disabled || isUploading || isDeleting !== null || isRestoring !== null} isLoading={isRestoring === photo.deleteId}>Restaurer</Button></div>

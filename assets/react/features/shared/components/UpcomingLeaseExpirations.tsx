@@ -15,7 +15,7 @@ export function UpcomingLeaseExpirations({ items }: { items: LeaseExpiryItem[] }
     return (
         <Card className="organization-panel" padding="medium" header={<div><h2>Contrats à échéance</h2><p>Baux actifs se terminant dans les 30 prochains jours</p></div>}>
             {items.length > 0 ? (
-                <ul className="organization-activity">
+                <ul className="organization-activity" aria-label="Baux arrivant à échéance : liste déroulante" tabIndex={0}>
                     {items.map((item) => (
                         <li key={item.leaseUuid} className="organization-activity__item organization-activity__item--warning">
                             <span className="organization-activity__dot" />

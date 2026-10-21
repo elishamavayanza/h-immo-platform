@@ -5,7 +5,7 @@ export function ReportBreakdownCard({ title, items }: { title: string; items: Re
     return (
         <Card className="reports-panel reports-breakdown" padding="medium">
             <div className="reports-panel__heading"><div><h2>{title}</h2><p>Répartition des indicateurs sur le périmètre sélectionné.</p></div></div>
-            <div className="reports-breakdown__list">
+            <div className="reports-breakdown__list" role="region" aria-label={`${title} : liste déroulante`} tabIndex={0}>
                 {items.map((item) => (
                     <div className="reports-breakdown__item" key={item.id}>
                         <div className="reports-breakdown__copy"><strong>{item.label}</strong><small>{item.detail}</small></div>
