@@ -52,26 +52,26 @@
 
 .footer--colored {
     background-color: $color-primary;
-    color: rgba(255, 255, 255, 0.85);
+    color: color-mix(in srgb, var(--color-button-primary-text, #f5f8f8) 86%, transparent);
     border-top-color: $color-primary-hover;
 
     .footer__section-title,
     .footer__brand {
-        color: #ffffff;
+        color: var(--color-button-primary-text, #f5f8f8);
     }
 
     .footer__link {
-        color: rgba(255, 255, 255, 0.85);
+        color: color-mix(in srgb, var(--color-button-primary-text, #f5f8f8) 86%, transparent);
 
         &:hover {
-            color: #ffffff;
+            color: var(--color-button-primary-text, #f5f8f8);
             background-color: rgba(255, 255, 255, 0.12);
         }
     }
 
     .footer__bottom {
         border-top-color: rgba(255, 255, 255, 0.20);
-        color: rgba(255, 255, 255, 0.75);
+        color: color-mix(in srgb, var(--color-button-primary-text, #f5f8f8) 76%, transparent);
     }
 }
 

@@ -61,21 +61,21 @@
     border-bottom-color: $color-primary-hover;
 
     .header__nav-link {
-        color: rgba(255, 255, 255, 0.85);
+        color: color-mix(in srgb, var(--color-button-primary-text, #f5f8f8) 86%, transparent);
 
         &:hover {
-            color: #ffffff;
+            color: var(--color-button-primary-text, #f5f8f8);
             background-color: rgba(255, 255, 255, 0.12);
         }
     }
 
     .header__nav-link--active {
-        color: #ffffff;
+        color: var(--color-button-primary-text, #f5f8f8);
         background-color: rgba(255, 255, 255, 0.20);
     }
 
     .header__toggle {
-        color: #ffffff;
+        color: var(--color-button-primary-text, #f5f8f8);
 
         &:hover {
             background-color: rgba(255, 255, 255, 0.12);

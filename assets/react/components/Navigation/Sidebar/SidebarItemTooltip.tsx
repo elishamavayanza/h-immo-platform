@@ -3,22 +3,21 @@ import { createPortal } from 'react-dom';
 import { useFloatingPosition } from '../../../hook-components/UI/PopoverMenu';
 
 export interface SidebarItemTooltipProps {
-    /** Élément-hôte dont la bulle sort, aligné sur son axe vertical. */
+    /** Élément-hôte auquel la bulle est attachée. */
     anchorEl: HTMLElement;
     /** Nom du menu à afficher (chaîne déjà résolue par `toTextLabel`). */
     label: string;
     /**
-     * Côté d'ouverture de la bulle. `right` (défaut) pour le rail gauche du
-     * sidebar, `left` pour un rail ancré à droite (right sidebar) : la flèche
-     * et l'animation s'inversent en conséquence.
+     * Position souhaitée. Le moteur peut choisir le côté opposé si le
+     * viewport manque de place ; la flèche suit alors le côté retenu.
      */
-    placement?: 'right' | 'left';
+    placement?: 'right' | 'left' | 'top' | 'bottom';
 }
 
 /**
- * Bulle du nom de menu affichée au survol quand le sidebar est réduit au
- * rail (desktop / tablette). Remplace l'infobulle native (`title`), dont le
- * rendu est imposé par le navigateur et ne suit pas la charte du projet.
+ * Bulle de libellé partagée par les menus latéraux compacts et les tabs.
+ * Remplace l'infobulle native (`title`), dont le rendu est imposé par le
+ * navigateur et ne suit pas la charte du projet.
  *
  * Portalé sur `document.body` comme le flyout : le `<aside>` du sidebar est
  * en `overflow: hidden`, un nœud resté dans le flux y serait rogné. La
@@ -31,7 +30,7 @@ export function SidebarItemTooltip({ anchorEl, label, placement = 'right' }: Sid
     // blanche), exactement comme pour le flyout.
     const getAnchorEl = useCallback(() => anchorEl, [anchorEl]);
 
-    const { floatingRef, coords, isPositioned } = useFloatingPosition<HTMLDivElement>({
+    const { floatingRef, coords, isPositioned, resolvedPlacement } = useFloatingPosition<HTMLDivElement>({
         getAnchorEl,
         placement,
         offset: 8,
@@ -51,7 +50,7 @@ export function SidebarItemTooltip({ anchorEl, label, placement = 'right' }: Sid
     return createPortal(
         <div
             ref={floatingRef}
-            className={`sidebar-item-tooltip${placement === 'left' ? ' sidebar-item-tooltip--left' : ''}`}
+            className={`sidebar-item-tooltip sidebar-item-tooltip--${resolvedPlacement}`}
             style={style}
             role="tooltip"
             aria-hidden="true"

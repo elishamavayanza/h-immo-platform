@@ -18,9 +18,11 @@ html[data-theme='dark'] {
     --color-bg-card-hover: #292929;
     --color-bg-elevated: #303030;
     --color-bg-input: #1C1C1C;
-    --color-text-primary: #F0F0F0;
-    --color-text-secondary: #C4C4C4;
-    --color-text-muted: #A1A1A1;
+    // Les blancs cassés réduisent l'éblouissement sur les surfaces sombres
+    // sans sacrifier le contraste nécessaire aux textes d'interface.
+    --color-text-primary: #DFDFDF;
+    --color-text-secondary: #B8B8B8;
+    --color-text-muted: #969696;
     --color-text-disabled: #808080;
     --color-text-inverse: #171717;
     --color-border: #333333;
@@ -34,7 +36,7 @@ html[data-theme='dark'] {
     --color-button-primary: color-mix(in srgb, var(--color-primary) 48%, #000);
     --color-button-primary-hover: color-mix(in srgb, var(--color-primary-hover) 56%, #000);
     --color-button-primary-active: color-mix(in srgb, var(--color-primary-active) 42%, #000);
-    --color-button-primary-text: #F5F8F8;
+    --color-button-primary-text: #DDE4E5;
     --color-primary-light: rgba(102, 181, 201, .14);
     --color-primary-soft: rgba(102, 181, 201, .22);
     --color-sidebar-hover: rgba(102, 181, 201, .13);

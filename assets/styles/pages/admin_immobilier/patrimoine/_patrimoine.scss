@@ -36,11 +36,11 @@
 .parcel-map__canvas:focus-visible { outline: 3px solid $color-primary; outline-offset: 2px; }
 .parcel-map__canvas:active { cursor: grabbing; }
 .parcel-map__tile { position: absolute; width: 256px; height: 256px; max-width: none; user-select: none; pointer-events: none; }
-.parcel-map__marker { position: absolute; z-index: 2; display: grid; width: 30px; height: 30px; place-items: center; transform: translate(-50%, -50%); border: 2px solid #fff; border-radius: 50%; color: #fff; background: #d54836; box-shadow: 0 2px 7px #15212b70; font-size: .72rem; font-weight: 750; cursor: pointer; }
+.parcel-map__marker { position: absolute; z-index: 2; display: grid; width: 30px; height: 30px; place-items: center; transform: translate(-50%, -50%); border: 2px solid #fff; border-radius: 50%; color: var(--color-button-primary-text, #f5f8f8); background: #d54836; box-shadow: 0 2px 7px #15212b70; font-size: .72rem; font-weight: 750; cursor: pointer; }
 .parcel-map__marker.is-numbered { border-radius: 50%; }
-.parcel-map__marker.is-cluster { width: 42px; height: 42px; color: #fff; background: #146b83; font-size: .85rem; }
+.parcel-map__marker.is-cluster { width: 42px; height: 42px; color: var(--color-button-primary-text, #f5f8f8); background: #146b83; font-size: .85rem; }
 .parcel-map__marker.is-selected { outline: 3px solid #f1b544; outline-offset: 2px; }
-.parcel-map__tooltip { position: absolute; bottom: calc(100% + 8px); left: 50%; width: max-content; max-width: 220px; padding: .35rem .5rem; transform: translateX(-50%); border-radius: .35rem; color: #fff; background: #17212b; font-size: .75rem; font-weight: 500; opacity: 0; pointer-events: none; }
+.parcel-map__tooltip { position: absolute; bottom: calc(100% + 8px); left: 50%; width: max-content; max-width: 220px; padding: .35rem .5rem; transform: translateX(-50%); border-radius: .35rem; color: var(--color-button-primary-text, #f5f8f8); background: #17212b; font-size: .75rem; font-weight: 500; opacity: 0; pointer-events: none; }
 .parcel-map__marker:hover .parcel-map__tooltip, .parcel-map__marker:focus-visible .parcel-map__tooltip { opacity: 1; }
 .parcel-map__attribution { position: absolute; z-index: 3; right: .35rem; bottom: .35rem; padding: .15rem .3rem; border-radius: .2rem; background: #fffD; color: #333; font-size: .68rem; }
 .parcel-map__attribution a { color: #17648a; }
@@ -48,7 +48,7 @@
 .parcel-map__list { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr)); align-content: start; gap: .35rem; max-height: 190px; overflow: auto; }
 .parcel-map__list button { display: flex; align-items: center; gap: .55rem; min-width: 0; padding: .5rem; border: 1px solid transparent; border-radius: .5rem; color: $color-text-primary; background: transparent; text-align: left; cursor: pointer; }
 .parcel-map__list button:hover, .parcel-map__list button.is-active { border-color: $color-border; background: $color-bg-card-hover; }
-.parcel-map__index { display: grid; width: 1.6rem; height: 1.6rem; flex: 0 0 auto; place-items: center; border-radius: 50%; color: #fff; background: #d54836; font-size: .72rem; }
+.parcel-map__index { display: grid; width: 1.6rem; height: 1.6rem; flex: 0 0 auto; place-items: center; border-radius: 50%; color: var(--color-button-primary-text, #f5f8f8); background: #d54836; font-size: .72rem; }
 .parcel-map__list button > span:last-child { display: grid; min-width: 0; }
 .parcel-map__list strong, .parcel-map__list small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .parcel-map__list small, .parcel-map__selected span { color: $color-text-muted; font-size: .75rem; }
