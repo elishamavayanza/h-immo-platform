@@ -38,10 +38,11 @@ function amountsLabel(amounts: Map<string, string>): string {
 export function TreasuryPage() {
     const { currentOrganization } = useOrganization();
     const assigned = useAssignedCities();
+    const [movementCityUuid, setMovementCityUuid] = useState('');
     const {
         organizationRole, cities, activeCity, cityLoading, cityUuid, selectCity,
         from, setFrom, to, setTo, data, movements, totals, loading, error, reload,
-    } = useTreasury();
+    } = useTreasury(movementCityUuid);
     const [search, setSearch] = useState('');
     const [direction, setDirection] = useState<'all' | FinancialMovementKind>('all');
     const [method, setMethod] = useState('all');
@@ -59,6 +60,8 @@ export function TreasuryPage() {
     const [cashError, setCashError] = useState<string | null>(null);
     const [cashConfirmationOpen, setCashConfirmationOpen] = useState(false);
     const cashCities = organizationRole === 'admin_ville' ? cities : assigned.cities.map(({ id, name }) => ({ id, name }));
+    const canFilterMovementCity = organizationRole === 'patron' || organizationRole === 'admin_immobilier';
+    const movementCities = canFilterMovementCity ? assigned.cities : [];
     const selectedCashCityName = cashCities.find((city) => city.id === cashCityUuid)?.name ?? 'Ville indisponible';
     const cashContextKey = `${currentOrganization?.uuid ?? ''}:${cashCityUuid}:${cashCurrency}`;
     const cashContextKeyRef = useRef(cashContextKey);
@@ -67,11 +70,32 @@ export function TreasuryPage() {
     const canManageCashBalance = canDo(organizationRole, 'manage_treasury_balance');
     const canUploadDocuments = canDo(organizationRole, 'create_document');
     const canDeleteDocuments = canDo(organizationRole, 'delete_document');
+    const cashBalanceLabel = cashLoading
+        ? 'Chargement…'
+        : cashError
+            ? 'Solde indisponible'
+            : !cashCityUuid
+                ? 'Aucune ville disponible'
+                : cashSnapshot?.balance !== null && cashSnapshot?.balance !== undefined
+                    ? formatMoney(cashSnapshot.balance, cashCurrency)
+                    : canManageCashBalance
+                        ? 'Solde à initialiser'
+                        : 'Solde d’ouverture non configuré';
 
     useEffect(() => {
         const nextCityUuid = resolveCashCityUuid(organizationRole, cashCityUuid, cashCities, cityUuid);
         if (cashCityUuid !== nextCityUuid) setCashCityUuid(nextCityUuid);
     }, [cashCityUuid, cashCities, cityUuid, organizationRole]);
+
+    useEffect(() => {
+        setMovementCityUuid('');
+    }, [currentOrganization?.uuid]);
+
+    useEffect(() => {
+        if (movementCityUuid && !movementCities.some((city) => city.id === movementCityUuid)) {
+            setMovementCityUuid('');
+        }
+    }, [movementCityUuid, movementCities]);
 
     useEffect(() => {
         setCashConfirmationOpen(false);
@@ -149,9 +173,10 @@ export function TreasuryPage() {
     const canManagePayments = canDo(organizationRole, 'create_payment');
     const canManageExpenses = canDo(organizationRole, 'create_expense');
     const noCity = organizationRole === 'admin_ville' && !cityLoading && !cityUuid;
+    const selectedMovementCityName = movementCities.find((city) => city.id === movementCityUuid)?.name;
     const scopeLabel = organizationRole === 'admin_ville'
         ? activeCity?.name ?? 'Ville autorisée'
-        : 'Toutes les villes accessibles de l’organisation';
+        : selectedMovementCityName ?? 'Toutes les villes accessibles de l’organisation';
     const openDocuments = (movement: FinancialMovement) => setDocumentsMovement(movement);
 
     return <main className="organization-page organization-operational-page treasury-page">
@@ -205,8 +230,13 @@ export function TreasuryPage() {
                 <Select aria-label="Ville pour le solde de caisse" value={cashCityUuid} onChange={(event) => setCashCityUuid(event.target.value)} options={cashCities.map((city) => ({ value: city.id, label: city.name }))} />
                 <Select aria-label="Devise du solde de caisse" value={cashCurrency} onChange={(event) => setCashCurrency(event.target.value)} options={[{ value: 'USD', label: 'USD' }, { value: 'CDF', label: 'CDF' }]} />
             </div>
-            <strong className="treasury-cash-note__balance">{cashLoading ? 'Chargement…' : cashSnapshot?.balance !== null && cashSnapshot?.balance !== undefined ? formatMoney(cashSnapshot.balance, cashCurrency) : 'Solde à initialiser'}</strong>
+            <strong className="treasury-cash-note__balance">{cashBalanceLabel}</strong>
             {cashError && <p role="alert">{cashError}</p>}
+            {!cashLoading && !cashError && cashCityUuid && cashSnapshot?.balance === null && <p className="treasury-cash-note__status">
+                {canManageCashBalance
+                    ? 'Définissez le solde d’ouverture pour calculer la caisse à partir de cette date.'
+                    : 'Aucun solde d’ouverture n’est défini pour cette ville et cette devise. Demandez à un ADMIN_VILLE autorisé de l’initialiser.'}
+            </p>}
             {canManageCashBalance && <form className="treasury-cash-note__form" onSubmit={submitOpening}>
                 <label>Solde au démarrage<input aria-label="Montant du solde d’ouverture" inputMode="decimal" required pattern="\d{1,10}(\.\d{1,2})?" value={openingAmount} onChange={(event) => setOpeningAmount(event.target.value)} placeholder="Ex. : 250.00" /></label>
                 <label>Date du solde d’ouverture<DatePicker aria-label="Date du solde d’ouverture" required max={localDateInputValue()} value={openingDate} onChange={(event) => setOpeningDate(event.target.value)} fullWidth /></label>
@@ -222,6 +252,7 @@ export function TreasuryPage() {
                     <label>Date de début <DatePicker value={from} max={to} onChange={(event) => setFrom(event.target.value)} fullWidth /></label>
                     <label>Date de fin <DatePicker value={to} min={from} onChange={(event) => setTo(event.target.value)} fullWidth /></label>
                     {organizationRole === 'admin_ville' && cities.length > 1 && <Select aria-label="Ville" value={cityUuid ?? ''} onChange={(event) => selectCity(event.target.value)} options={cities.map((city) => ({ value: city.id, label: city.name }))} />}
+                    {canFilterMovementCity && movementCities.length > 1 && <Select aria-label="Filtrer les mouvements par ville" value={movementCityUuid} onChange={(event) => setMovementCityUuid(event.target.value)} options={[{ value: '', label: 'Toutes les villes' }, ...movementCities.map((city) => ({ value: city.id, label: city.name }))]} />}
                     <SearchInput value={search} onSearch={setSearch} placeholder="Rechercher un mouvement…" fullWidth />
                     <Select aria-label="Type de flux" value={direction} onChange={(event) => setDirection(event.target.value as 'all' | FinancialMovementKind)} options={[{ value: 'all', label: 'Entrées et sorties' }, { value: 'income', label: 'Entrées' }, { value: 'expense', label: 'Sorties' }]} />
                     <Select aria-label="Mode de règlement" value={method} onChange={(event) => setMethod(event.target.value)} options={[{ value: 'all', label: 'Tous les modes' }, ...METHOD_OPTIONS]} />

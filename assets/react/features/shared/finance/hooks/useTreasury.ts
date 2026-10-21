@@ -12,11 +12,11 @@ function localDate(date: Date): string {
 
 export { sumMovements } from '../utils/financeAmounts';
 
-export function useTreasury() {
+export function useTreasury(selectedCityUuid?: string) {
     const { currentOrganization, organizationRole } = useOrganization();
     const { cities, activeCity, activeCityUuid, isLoading: cityLoading, selectCity } = useAdminCity();
     const organizationUuid = currentOrganization?.uuid ?? null;
-    const cityUuid = organizationRole === 'admin_ville' ? activeCityUuid || null : undefined;
+    const cityUuid = organizationRole === 'admin_ville' ? activeCityUuid || null : selectedCityUuid || undefined;
     const [from, setFrom] = useState(() => {
         const today = new Date();
         return localDate(new Date(today.getFullYear(), today.getMonth(), 1));
