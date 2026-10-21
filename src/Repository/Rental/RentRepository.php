@@ -8,11 +8,11 @@ use App\Entity\Identity\Organization;
 use App\Entity\Rental\Lease;
 use App\Entity\Rental\Payment;
 use App\Entity\Rental\Rent;
+use App\Enum\LeaseStatus;
+use App\Enum\RentStatus;
 use App\Repository\PaginatedResultTrait;
 use App\Repository\UuidParameterTrait;
 use App\Service\System\DateTimeService;
-use App\Enum\RentStatus;
-use App\Enum\LeaseStatus;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\Persistence\ManagerRegistry;
 use Symfony\Component\Uid\Uuid;
@@ -117,12 +117,10 @@ class RentRepository extends ServiceEntityRepository
         $sortOrder = strtoupper($sortOrder) === 'ASC' ? 'ASC' : 'DESC';
 
         $today = $this->dateTime->today();
-        $paidAmount = $this->paidAmountExpression();
-
         $qb = $this->createQueryBuilder('r')
             ->innerJoin('r.lease', 'l')
             ->andWhere('r.dueDate < :today')
-            ->andWhere('r.amount > ' . $paidAmount)
+            ->andWhere('r.id NOT IN (' . $this->rentIdsByPaymentTotal('paid') . ')')
             ->setParameter('today', $today)
             ->orderBy("r.$sortBy", $sortOrder);
 
@@ -175,8 +173,6 @@ class RentRepository extends ServiceEntityRepository
         $sortOrder = strtoupper($sortOrder) === 'ASC' ? 'ASC' : 'DESC';
 
         $today = $this->dateTime->today();
-        $paidAmount = $this->paidAmountExpression();
-
         $qb = $this->createQueryBuilder('r')
             ->innerJoin('r.lease', 'l')
             ->andWhere('l.deletedAt IS NULL')
@@ -214,16 +210,16 @@ class RentRepository extends ServiceEntityRepository
         if ($status !== null && $status !== '') {
             if ($status === 'overdue') {
                 $qb->andWhere('r.dueDate < :today')
-                    ->andWhere('r.amount > ' . $paidAmount)
+                    ->andWhere('r.id NOT IN (' . $this->rentIdsByPaymentTotal('paid') . ')')
                     ->setParameter('today', $today);
             } elseif ($status === RentStatus::PAID->value) {
-                $qb->andWhere('r.amount <= ' . $paidAmount);
+                $qb->andWhere('r.id IN (' . $this->rentIdsByPaymentTotal('paid') . ')');
             } elseif ($status === RentStatus::PARTIALLY_PAID->value) {
-                $qb->andWhere($paidAmount . ' > 0 AND ' . $paidAmount . ' < r.amount')
+                $qb->andWhere('r.id IN (' . $this->rentIdsByPaymentTotal('partial') . ')')
                     ->andWhere('r.dueDate >= :today')
                     ->setParameter('today', $today);
             } else {
-                $qb->andWhere($paidAmount . ' <= 0')
+                $qb->andWhere('r.id NOT IN (' . $this->rentIdsByPaymentTotal('positive') . ')')
                     ->andWhere('r.dueDate >= :today')
                     ->setParameter('today', $today);
             }
@@ -240,13 +236,11 @@ class RentRepository extends ServiceEntityRepository
      */
     public function findOverdueByOrganization(Organization $organization): array
     {
-        $paidAmount = $this->paidAmountExpression();
-
         return $this->createQueryBuilder('r')
             ->innerJoin('r.lease', 'l')
             ->andWhere('l.organization = :organization')
             ->andWhere('r.dueDate < :today')
-            ->andWhere('r.amount > ' . $paidAmount)
+            ->andWhere('r.id NOT IN (' . $this->rentIdsByPaymentTotal('paid') . ')')
             ->setParameter('organization', $organization)
             ->setParameter('today', $this->dateTime->today())
             ->orderBy('r.dueDate', 'ASC')
@@ -351,12 +345,30 @@ class RentRepository extends ServiceEntityRepository
         return $qb->getQuery()->getResult();
     }
 
-    /** Expression DQL pour sommer les montants dans la devise de l'échéance. */
-    private function paidAmountExpression(): string
+    /**
+     * Sous-requête DQL groupée pour les échéances correspondant à leur total payé.
+     *
+     * DQL n’accepte pas de sous-requête scalaire à l’intérieur de COALESCE ;
+     * le groupe permet de comparer les paiements aux échéances sans convertir
+     * ces montants en flottants ni perdre les contre-écritures négatives.
+     */
+    private function rentIdsByPaymentTotal(string $condition): string
     {
-        return sprintf(
-            'COALESCE((SELECT SUM(CASE WHEN payment.originalAmount IS NOT NULL THEN payment.originalAmount ELSE payment.amount END) FROM %s payment WHERE payment.rent = r), 0)',
-            Payment::class,
-        );
+        $paidTotal = 'SUM(CASE WHEN payment.originalAmount IS NOT NULL THEN payment.originalAmount ELSE payment.amount END)';
+        $having = match ($condition) {
+            'paid' => $paidTotal . ' >= paidRent.amount',
+            'partial' => $paidTotal . ' > 0 AND ' . $paidTotal . ' < paidRent.amount',
+            'positive' => $paidTotal . ' > 0',
+            default => throw new \LogicException('Condition de paiement inconnue.'),
+        };
+
+        return $this->getEntityManager()->createQueryBuilder()
+            ->select('paidRent.id')
+            ->from(Payment::class, 'payment')
+            ->innerJoin('payment.rent', 'paidRent')
+            ->groupBy('paidRent.id')
+            ->addGroupBy('paidRent.amount')
+            ->having($having)
+            ->getDQL();
     }
 }

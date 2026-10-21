@@ -350,6 +350,32 @@ $futureRentA = (new Rent())
     ->setCurrency(Currency::USD)
     ->setStatus(RentStatus::PENDING);
 $em->persist($futureRentA);
+$today = (new App\Service\System\DateTimeService())->today();
+$futurePendingRentA = (new Rent())
+    ->setLease($rentA->getLease())
+    ->setPeriod($today->modify('first day of next month'))
+    ->setDueDate($today->modify('+2 days'))
+    ->setAmount('500.00')
+    ->setCurrency(Currency::USD)
+    ->setStatus(RentStatus::PENDING);
+$em->persist($futurePendingRentA);
+$todayPartialRentA = (new Rent())
+    ->setLease($rentA->getLease())
+    ->setPeriod($today->modify('first day of this month'))
+    ->setDueDate($today)
+    ->setAmount('500.00')
+    ->setCurrency(Currency::USD)
+    ->setStatus(RentStatus::PARTIALLY_PAID);
+$em->persist($todayPartialRentA);
+$todayPartialPaymentA = (new Payment())
+    ->setRent($todayPartialRentA)
+    ->setAmount('100.00')
+    ->setCurrency(Currency::USD)
+    ->setPaymentDate($today)
+    ->setCreatedBy($patronA)
+    ->setMethod(PaymentMethod::CASH)
+    ->setReference('PAY-PARTIAL-FILTER');
+$em->persist($todayPartialPaymentA);
 
 // Un paiement sur le bail de B, pour éprouver l'isolation multi-organisation.
 $paymentB = (new Payment())
@@ -390,6 +416,8 @@ $em->flush();
 
 // Captures avant détachement.
 $rentAId = $rentA->getId();
+$futurePendingRentAUuid = $futurePendingRentA->getUuid()->toRfc4122();
+$todayPartialRentAUuid = $todayPartialRentA->getUuid()->toRfc4122();
 $patronAId = $patronA->getId();
 $rentAUuid = $rentA->getUuid()->toRfc4122();
 $closedLeaseUuid = $closedLease->getUuid()->toRfc4122();
@@ -430,6 +458,13 @@ if (!is_string($patronAToken) || !is_string($villeAToken)) {
 // Accès base pour vérifier les effets réels (et non la seule réponse HTTP).
 // ---------------------------------------------------------------------
 $rentStatus = static fn (int $id): string => (string) $connection->fetchOne('SELECT status FROM rent WHERE id = ?', [$id]);
+$listedRentIdsForStatus = static function (string $status) use ($request, $patronAToken): array {
+    [$httpStatus, $payload] = $request('GET', '/api/v1/rents?status=' . rawurlencode($status), null, $patronAToken);
+
+    return $httpStatus === 200 && is_array($payload)
+        ? array_column($payload['data']['items'] ?? [], 'id')
+        : [];
+};
 $sumPayments = static fn (int $rentId): string => (string) $connection->fetchOne(
     'SELECT COALESCE(SUM(amount), 0) FROM payment WHERE rent_id = ?',
     [$rentId]
@@ -478,6 +513,9 @@ $recordCrossCurrencyPayment = static function (string $ref) use ($request, $rent
 // ---------------------------------------------------------------------
 section('1. Annulation simple : contre-écriture négative reliée à l\'origine');
 
+check('filtre GET /rents?status=overdue accepte une échéance échue et impayée', in_array($rentAUuid, $listedRentIdsForStatus('overdue'), true));
+check('filtre GET /rents?status=partially_paid accepte une échéance partiellement réglée', in_array($todayPartialRentAUuid, $listedRentIdsForStatus('partially_paid'), true));
+
 [$status, $payload, $raw] = $recordPayment('PAY-1', '500.00');
 $pay1 = is_array($payload) ? ($payload['data']['id'] ?? null) : null;
 // D14 (connu, hors périmètre) : `Feedback::autoInitFlush()` écrase le 201 en
@@ -485,6 +523,7 @@ $pay1 = is_array($payload) ? ($payload['data']['id'] ?? null) : null;
 check('POST /api/v1/payments (500) -> 2xx', in_array($status, [200, 201], true), "obtenu {$status} : " . substr($raw, 0, 160));
 check('la réponse expose l\'identifiant de l\'écriture', is_string($pay1), $raw);
 check('échéance A soldée après enregistrement', $rentStatus($rentAId) === 'paid', 'statut=' . $rentStatus($rentAId));
+check('filtre GET /rents?status=paid accepte le montant payé agrégé', in_array($rentAUuid, $listedRentIdsForStatus('paid'), true));
 
 $pay1Id = $paymentIdByRef('PAY-1');
 
@@ -501,6 +540,7 @@ check('reversalOfUuid = écriture d\'origine', ($cancellation['reversalOfUuid'] 
 check('une seule contre-écriture pour l\'origine', $reversalCount($pay1Id) === 1, 'n=' . $reversalCount($pay1Id));
 check('somme payée retombe à 0 (soustraction, pas addition)', bccomp($sumPayments($rentAId), '0.00', 2) === 0, 'somme=' . $sumPayments($rentAId));
 check('statut de l\'échéance redescend à pending', $rentStatus($rentAId) === 'pending', 'statut=' . $rentStatus($rentAId));
+check('filtre GET /rents?status=pending accepte une échéance future sans paiement', in_array($futurePendingRentAUuid, $listedRentIdsForStatus('pending'), true));
 
 [$status, $payload] = $request('GET', '/api/v1/payments/' . $pay1, null, $patronAToken);
 check(
