@@ -39,7 +39,7 @@ export function ReportsPageView({
             )}
             <ReportMetricGrid metrics={data.metrics} />
             <ReportTrendCard data={data} period={period} />
-            <section className="reports-lower-grid">
+            <section className="reports-lower-grid reports-lower-grid--occupancy">
                 <ReportBreakdownCard title={data.breakdownTitle} items={data.breakdown} />
                 <ReportAttentionCard title={data.attentionTitle} items={data.attention} />
             </section>

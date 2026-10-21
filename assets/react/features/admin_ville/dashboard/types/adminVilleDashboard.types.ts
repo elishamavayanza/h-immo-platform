@@ -26,7 +26,7 @@ export interface AdminVilleDashboardData {
     occupancyRate: number;
     /** 4 indicateurs synthétiques (unités, occupation, impayés, dépenses). */
     metrics: AdminVilleMetric[];
-    /** Occupation par immeuble (barres de progression). */
+    /** Occupation par immeuble (taux et compteurs d’unités). */
     buildings: OccupancyItem[];
     /** Impayés à traiter, triés par retard côté backend. */
     arrears: ArrearsItem[];

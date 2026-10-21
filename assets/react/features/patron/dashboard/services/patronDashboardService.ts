@@ -49,9 +49,9 @@ function buildMetrics(
         {
             id: 'occupancy',
             label: 'Occupation globale',
-            value: formatPercent(occupancyRate),
+            value: totalUnits > 0 ? formatPercent(occupancyRate) : '—',
             detail: totalUnits > 0 ? `${formatInteger(occupiedUnits)} unités occupées sur ${formatInteger(totalUnits)}` : 'Aucune unité',
-            tone: 'primary',
+            tone: totalUnits > 0 ? 'primary' : 'info',
         },
     ];
 }

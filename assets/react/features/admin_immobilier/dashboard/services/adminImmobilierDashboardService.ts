@@ -32,9 +32,9 @@ function buildMetrics(
         {
             id: 'occupancy',
             label: 'Occupation globale',
-            value: formatPercent(globalOccupancyRate),
-            detail: 'unités occupées / total',
-            tone: globalOccupancyRate >= 70 ? 'success' : 'warning',
+            value: totalUnits > 0 ? formatPercent(globalOccupancyRate) : '—',
+            detail: totalUnits > 0 ? 'unités occupées / total' : 'Aucune unité dans ce périmètre',
+            tone: totalUnits === 0 ? 'info' : globalOccupancyRate >= 70 ? 'success' : 'warning',
         },
         {
             id: 'arrears',

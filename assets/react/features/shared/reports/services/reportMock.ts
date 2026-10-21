@@ -22,10 +22,10 @@ export const REPORT_MOCKS: Record<'super_admin' | 'patron' | 'admin_immobilier' 
         ],
         breakdownTitle: 'Organisations par activité',
         breakdown: [
-            { id: 'kin', label: 'Kinshasa Immo Group', detail: 'Kinshasa · 186 unités', amount: '98,4 %', share: 98 },
-            { id: 'lubu', label: 'Lubumbashi Résidences', detail: 'Lubumbashi · 74 unités', amount: '91,2 %', share: 91 },
-            { id: 'goma', label: 'Goma Patrimoine', detail: 'Goma · 31 unités', amount: '84,6 %', share: 85 },
-            { id: 'matadi', label: 'Matadi Logements', detail: 'Matadi · 12 unités', amount: '78,1 %', share: 78 },
+            { id: 'kin', label: 'Kinshasa Immo Group', detail: 'Kinshasa · 186 unités', amount: '98,4 %', share: 98.4 },
+            { id: 'lubu', label: 'Lubumbashi Résidences', detail: 'Lubumbashi · 74 unités', amount: '91,2 %', share: 91.2 },
+            { id: 'goma', label: 'Goma Patrimoine', detail: 'Goma · 31 unités', amount: '84,6 %', share: 84.6 },
+            { id: 'matadi', label: 'Matadi Logements', detail: 'Matadi · 12 unités', amount: '78,1 %', share: 78.1 },
         ],
         attentionTitle: 'Organisations à surveiller',
         attention: [
@@ -46,9 +46,9 @@ export const REPORT_MOCKS: Record<'super_admin' | 'patron' | 'admin_immobilier' 
         ],
         breakdownTitle: 'Occupation par ville',
         breakdown: [
-            { id: 'kin', label: 'Kinshasa', detail: '342 / 365 unités occupées', amount: '93,7 %', share: 94 },
-            { id: 'lubu', label: 'Lubumbashi', detail: '128 / 146 unités occupées', amount: '87,7 %', share: 88 },
-            { id: 'goma', label: 'Goma', detail: '74 / 82 unités occupées', amount: '90,2 %', share: 90 },
+            { id: 'kin', label: 'Kinshasa', detail: '342 / 365 unités occupées', amount: '93,7 %', share: 93.7 },
+            { id: 'lubu', label: 'Lubumbashi', detail: '128 / 146 unités occupées', amount: '87,7 %', share: 87.7 },
+            { id: 'goma', label: 'Goma', detail: '74 / 82 unités occupées', amount: '90,2 %', share: 90.2 },
         ],
         attentionTitle: 'Suivi financier',
         attention: [
@@ -69,10 +69,10 @@ export const REPORT_MOCKS: Record<'super_admin' | 'patron' | 'admin_immobilier' 
         ],
         breakdownTitle: 'Occupation par immeuble',
         breakdown: [
-            { id: 'palmiers', label: 'Résidence Les Palmiers', detail: '96 / 102 unités occupées', amount: '94,1 %', share: 94 },
-            { id: 'lac', label: 'Résidence du Lac', detail: '74 / 82 unités occupées', amount: '90,2 %', share: 90 },
-            { id: 'horizon', label: 'Immeuble Horizon', detail: '62 / 68 unités occupées', amount: '91,2 %', share: 91 },
-            { id: 'virunga', label: 'Résidence Virunga', detail: '48 / 55 unités occupées', amount: '87,3 %', share: 87 },
+            { id: 'palmiers', label: 'Résidence Les Palmiers', detail: '96 / 102 unités occupées', amount: '94,1 %', share: 94.1 },
+            { id: 'lac', label: 'Résidence du Lac', detail: '74 / 82 unités occupées', amount: '90,2 %', share: 90.2 },
+            { id: 'horizon', label: 'Immeuble Horizon', detail: '62 / 68 unités occupées', amount: '91,2 %', share: 91.2 },
+            { id: 'virunga', label: 'Résidence Virunga', detail: '48 / 55 unités occupées', amount: '87,3 %', share: 87.3 },
         ],
         attentionTitle: 'Points opérationnels',
         attention: [
@@ -93,9 +93,9 @@ export const REPORT_MOCKS: Record<'super_admin' | 'patron' | 'admin_immobilier' 
         ],
         breakdownTitle: 'Occupation par zone',
         breakdown: [
-            { id: 'gombe', label: 'Gombe', detail: '128 / 132 unités occupées', amount: '97,0 %', share: 97 },
-            { id: 'limete', label: 'Limete', detail: '104 / 113 unités occupées', amount: '92,0 %', share: 92 },
-            { id: 'ngaliema', label: 'Ngaliema', detail: '110 / 120 unités occupées', amount: '91,7 %', share: 92 },
+            { id: 'gombe', label: 'Gombe', detail: '128 / 132 unités occupées', amount: '97,0 %', share: 97.0 },
+            { id: 'limete', label: 'Limete', detail: '104 / 113 unités occupées', amount: '92,0 %', share: 92.0 },
+            { id: 'ngaliema', label: 'Ngaliema', detail: '110 / 120 unités occupées', amount: '91,7 %', share: 91.7 },
         ],
         attentionTitle: 'À suivre dans la ville',
         attention: [

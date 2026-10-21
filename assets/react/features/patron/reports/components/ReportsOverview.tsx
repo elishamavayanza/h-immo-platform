@@ -2,9 +2,10 @@ import { Card } from '../../../../components/UI/Card';
 import { Badge } from '../../../../components/UI/Badge';
 import { InlineSummary } from '../../../shared/components/InlineSummary';
 import { UpcomingLeaseExpirations } from '../../../shared/components/UpcomingLeaseExpirations';
-import { formatInteger, formatMoney, formatPercent } from '../../../../../utils/format.utils';
+import { formatInteger, formatMoney } from '../../../../../utils/format.utils';
 import { absoluteCents, amountBarPercent } from '../../../shared/reports/utils/amountChart';
 import type { ArrearsItem, ExpenseSummaryItem, FinancialSummaryItem, OccupancyItem, PatronReportsData } from '../types';
+import { OccupancyDonut } from '../../../../components/Data/OccupancyDonut';
 
 /** Libellé court d'un mois `YYYY-MM` fourni par le backend. */
 function periodLabel(period: string): string {
@@ -16,7 +17,7 @@ function periodLabel(period: string): string {
     return period;
 }
 
-/** Ligne d'occupation d'une ville : taux + barre de progression. */
+/** Ligne d'occupation d'une ville : taux et compteurs occupés/vacants. */
 function OccupancyRow({ item }: { item: OccupancyItem }) {
     return (
         <div className="reports-breakdown__item">
@@ -24,8 +25,7 @@ function OccupancyRow({ item }: { item: OccupancyItem }) {
                 <strong>{item.label}</strong>
                 <small>{item.occupiedUnits} / {item.totalUnits} unités occupées</small>
             </div>
-            <span className="reports-breakdown__amount">{formatPercent(item.occupancyRate)}</span>
-            <progress value={item.occupancyRate} max={100} aria-label={`${item.label} : ${formatPercent(item.occupancyRate)}`} />
+            <OccupancyDonut size="small" occupied={item.occupiedUnits} total={item.totalUnits} label={item.label} />
         </div>
     );
 }
@@ -119,31 +119,18 @@ export function ReportsOverview({ data }: { data: PatronReportsData }) {
             <InlineSummary items={data.metrics.map((metric) => ({ label: metric.label, value: metric.value, detail: metric.helper }))} />
             <UpcomingLeaseExpirations items={data.upcomingLeaseExpirations} />
 
-            <section className="reports-lower-grid">
-                <Card className="reports-panel reports-breakdown" padding="medium">
+            <div className="reports-insights-grid">
+                <div className="reports-insights-column">
+                <Card className="reports-panel reports-breakdown reports-breakdown--occupancy" padding="medium">
                     <div className="reports-panel__heading">
                         <div><h2>Occupation par ville</h2><p>Taux d’occupation du patrimoine par ville.</p></div>
                     </div>
-                    <div className="reports-breakdown__list">
+                    <div className="reports-breakdown__list" role="region" aria-label="Taux d’occupation par ville" tabIndex={0}>
                         {data.cities.length > 0
                             ? data.cities.map((item) => <OccupancyRow key={item.levelUuid ?? item.label} item={item} />)
                             : <p className="reports-empty">Aucune ville à afficher.</p>}
                     </div>
                 </Card>
-
-                <Card className="reports-panel reports-attention" padding="medium">
-                    <div className="reports-panel__heading">
-                        <div><h2>Impayés à recouvrer</h2><p>Échéances en retard par bail.</p></div>
-                    </div>
-                    <ul className="reports-attention__list">
-                        {data.arrears.length > 0
-                            ? data.arrears.map((item) => <ArrearsRow key={item.leaseUuid} item={item} />)
-                            : <li className="reports-empty">Aucun impayé à signaler.</li>}
-                    </ul>
-                </Card>
-            </section>
-
-            <section className="reports-lower-grid">
                 <Card className="reports-panel reports-breakdown" padding="medium">
                     <div className="reports-panel__heading">
                         <div><h2>Résultat net par période</h2><p>Revenus encaissés moins dépenses · {data.currency}</p></div>
@@ -151,6 +138,29 @@ export function ReportsOverview({ data }: { data: PatronReportsData }) {
                     <FinancialTrend items={data.financialSummary} currency={data.currency} />
                 </Card>
 
+                <Card className="reports-panel reports-breakdown" padding="medium">
+                    <div className="reports-panel__heading">
+                        <div><h2>Dépenses par ville</h2><p>Répartition géographique des dépenses.</p></div>
+                    </div>
+                    <div className="reports-breakdown__list">
+                        {data.expensesByCity.length > 0
+                            ? data.expensesByCity.map((item) => <ExpenseRow key={`${item.levelUuid ?? item.levelLabel}-${item.category}-${item.currency}`} item={item} />)
+                            : <p className="reports-empty">Aucune dépense par ville sur la période.</p>}
+                    </div>
+                </Card>
+                </div>
+
+                <div className="reports-insights-column">
+                <Card className="reports-panel reports-attention" padding="medium">
+                    <div className="reports-panel__heading">
+                        <div><h2>Impayés à recouvrer</h2><p>Échéances en retard par bail.</p></div>
+                    </div>
+                    <ul className="reports-attention__list">
+                        {data.arrears.length > 0
+                            ? data.arrears.map((item, index) => <ArrearsRow key={`${item.leaseUuid}-${index}`} item={item} />)
+                            : <li className="reports-empty">Aucun impayé à signaler.</li>}
+                    </ul>
+                </Card>
                 <Card className="reports-panel reports-breakdown" padding="medium">
                     <div className="reports-panel__heading">
                         <div><h2>Dépenses par catégorie</h2><p>Répartition des dépenses de l’organisation.</p></div>
@@ -161,20 +171,8 @@ export function ReportsOverview({ data }: { data: PatronReportsData }) {
                             : <p className="reports-empty">Aucune dépense enregistrée sur la période.</p>}
                     </div>
                 </Card>
-            </section>
-
-            <section className="reports-lower-grid">
-                <Card className="reports-panel reports-breakdown" padding="medium">
-                    <div className="reports-panel__heading">
-                        <div><h2>Dépenses par ville</h2><p>Répartition géographique des dépenses.</p></div>
-                    </div>
-                    <div className="reports-breakdown__list">
-                        {data.expensesByCity.length > 0
-                            ? data.expensesByCity.map((item) => <ExpenseRow key={`${item.levelUuid ?? item.levelLabel}`} item={item} />)
-                            : <p className="reports-empty">Aucune dépense par ville sur la période.</p>}
-                    </div>
-                </Card>
-            </section>
+                </div>
+            </div>
         </div>
     );
 }

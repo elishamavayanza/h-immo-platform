@@ -47,7 +47,7 @@ export function useReports() {
         }
         fetchCities(organizationUuid)
             .then((page) => {
-                if (active) setCities(page.items.map((city) => ({ value: city.id, label: city.name })));
+                if (active) setCities([...new Map(page.items.map((city) => [city.id, city])).values()].map((city) => ({ value: city.id, label: city.name })));
             })
             .catch(() => {
                 if (active) setCities([]);

@@ -26,7 +26,7 @@ export interface PatronDashboardData {
     globalOccupancyRate: number;
     /** 4 indicateurs synthétiques (revenus, dépenses, impayés, occupation). */
     metrics: PatronDashboardMetric[];
-    /** Occupation par ville (barres de progression). */
+    /** Occupation par ville (taux et compteurs d’unités). */
     cities: OccupancyItem[];
     /** Impayés à recouvrer, triés par retard côté backend. */
     arrears: ArrearsItem[];

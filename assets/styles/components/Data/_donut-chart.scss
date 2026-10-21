@@ -1,0 +1,74 @@
+@use '../../baseVariables/variables' as *;
+@use '../../baseVariables/mixins' as *;
+
+.donut-chart {
+    --donut-size: 112px;
+    display: grid;
+    grid-template-columns: var(--donut-size) minmax(0, 1fr);
+    align-items: center;
+    gap: $spacing-3;
+    min-width: 0;
+    margin: 0;
+}
+
+.donut-chart--small { --donut-size: 80px; gap: $spacing-2; }
+.donut-chart--large { --donut-size: 152px; gap: $spacing-4; }
+.donut-chart__visual { position: relative; width: var(--donut-size); aspect-ratio: 1; }
+.donut-chart__svg { display: block; width: 100%; height: 100%; overflow: visible; transform: rotate(-90deg); }
+.donut-chart__track,
+.donut-chart__arc { fill: none; stroke-width: 12; }
+.donut-chart__track { stroke: $color-border-strong; }
+.donut-chart__arc { stroke-linecap: butt; transition: stroke-dasharray 260ms ease, stroke-dashoffset 260ms ease; }
+.donut-chart__arc--primary, .donut-chart__swatch--primary { stroke: $color-primary; background: $color-primary; }
+.donut-chart__arc--neutral, .donut-chart__swatch--neutral { stroke: $color-border-strong; background: $color-border-strong; }
+.donut-chart__arc--success, .donut-chart__swatch--success { stroke: $color-success; background: $color-success; }
+.donut-chart__arc--warning, .donut-chart__swatch--warning { stroke: $color-warning; background: $color-warning; }
+.donut-chart__arc--info, .donut-chart__swatch--info { stroke: $color-info; background: $color-info; }
+.donut-chart__arc--mint, .donut-chart__swatch--mint { stroke: $color-mint; background: $color-mint; }
+.donut-chart__arc--purple, .donut-chart__swatch--purple { stroke: $color-purple; background: $color-purple; }
+.donut-chart__center { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px; padding: 0.25rem; text-align: center; }
+.donut-chart__center strong { max-width: 100%; overflow: hidden; color: $color-text-primary; font-size: clamp(.85rem, 1.5vw, 1.15rem); font-variant-numeric: tabular-nums; line-height: 1.15; text-overflow: ellipsis; white-space: nowrap; }
+.donut-chart__center small { max-width: 100%; overflow: hidden; color: $color-text-secondary; font-size: .68rem; line-height: 1.15; text-overflow: ellipsis; white-space: nowrap; }
+.donut-chart__details { display: grid; gap: $spacing-2; min-width: 0; }
+.donut-chart__legend { display: grid; gap: $spacing-2; min-width: 0; margin: 0; padding: 0; list-style: none; }
+.donut-chart__legend li { display: grid; grid-template-columns: 9px minmax(0, 1fr) auto; align-items: center; gap: $spacing-2; min-width: 0; color: $color-text-secondary; font-size: $font-size-xs; }
+.donut-chart__swatch { width: 8px; height: 8px; border-radius: 50%; }
+.donut-chart__legend-label { min-width: 0; overflow-wrap: anywhere; }
+.donut-chart__legend strong { color: $color-text-primary; font-size: inherit; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.donut-chart .donut-chart__center strong,
+.organization-collection .donut-chart__center strong { font-size: clamp(.78rem, 1.2vw, 1.1rem); line-height: 1.1; }
+.donut-chart .donut-chart__center small { font-size: .58rem; }
+.donut-chart .donut-chart__legend strong { font-size: $font-size-xs; font-weight: $font-weight-semibold; }
+.donut-chart .donut-chart__legend-label,
+.organization-collection .donut-chart__legend-label { color: $color-text-secondary; font-size: $font-size-xs; }
+.organization-collection .donut-chart__total { color: $color-text-muted; font-size: $font-size-xs; }
+.donut-chart__total { color: $color-text-muted; font-size: $font-size-xs; }
+.donut-chart--empty .donut-chart__track { stroke: $color-border-strong; }
+.donut-chart--empty .donut-chart__center strong { color: $color-text-secondary; }
+.donut-chart--empty .donut-chart__center small { color: $color-text-secondary; font-weight: $font-weight-semibold; }
+.donut-chart--empty .donut-chart__total { display: inline-flex; width: fit-content; padding: .18rem .5rem; border: 1px solid color-mix(in srgb, #{$color-primary} 26%, transparent); border-radius: 999px; color: $color-text-secondary; background: $color-primary-light; line-height: 1.35; }
+.donut-chart__invalid { margin: 0; color: $color-warning; font-size: $font-size-sm; }
+.organization-stat-chart__item > .donut-chart { margin: 0; }
+.reports-breakdown__item > .donut-chart { grid-column: 1 / -1; }
+.reports-breakdown--occupancy { align-self: start; }
+.organization-stat-chart { align-self: start; container: organization-stat-chart / inline-size; }
+.organization-stat-chart--scrollable .organization-stat-chart__list { max-height: min(24rem, 55vh); overflow-y: auto; overscroll-behavior: contain; padding-right: $spacing-2; @include scrollbar(5px); }
+.organization-stat-chart--occupancy .organization-stat-chart__list { display: flex; flex-direction: column; align-content: start; max-height: min(28rem, 60vh); overflow-y: auto; overscroll-behavior: contain; padding-right: $spacing-2; }
+.organization-stat-chart--occupancy .organization-stat-chart__item { display: grid; grid-template-columns: minmax(0, 1fr) max-content; align-items: center; gap: $spacing-2 $spacing-3; padding: $spacing-2 0; border-bottom: 1px solid $color-border; }
+.organization-stat-chart--occupancy .organization-stat-chart__item:last-child { border-bottom: 0; }
+.organization-stat-chart--occupancy .organization-stat-chart__labels { margin: 0; }
+
+@media (prefers-reduced-motion: reduce) {
+    .donut-chart__arc { transition: none; }
+}
+
+@media (max-width: 480px) {
+    .donut-chart { --donut-size: 92px; grid-template-columns: var(--donut-size) minmax(0, 1fr); gap: $spacing-2; }
+    .donut-chart--small { --donut-size: 76px; }
+    .donut-chart--large { --donut-size: 128px; }
+}
+
+@container organization-stat-chart (max-width: 480px) {
+    .organization-stat-chart--occupancy .organization-stat-chart__item { grid-template-columns: minmax(0, 1fr); justify-items: start; }
+    .organization-stat-chart--occupancy .organization-stat-chart__item > .donut-chart { margin-top: $spacing-1; }
+}

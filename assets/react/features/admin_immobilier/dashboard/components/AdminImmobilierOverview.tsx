@@ -4,6 +4,7 @@ import type { AdminImmobilierDashboardData } from '../types/adminImmobilierDashb
 import { UpcomingLeaseExpirations } from '../../../shared/components/UpcomingLeaseExpirations';
 import { DashboardStatChart } from '../../../shared/components/DashboardStatChart';
 import { absoluteCents, amountBarPercent } from '../../../shared/reports/utils/amountChart';
+import { OccupancyDonut } from '../../../../components/Data/OccupancyDonut';
 
 /** Vue d'ensemble : indicateurs + occupation du patrimoine + impayés à traiter. */
 export function AdminImmobilierOverview({ data }: { data: AdminImmobilierDashboardData }) {
@@ -26,32 +27,48 @@ export function AdminImmobilierOverview({ data }: { data: AdminImmobilierDashboa
                 ))}
             </section>
 
-            <section className="organization-dashboard-grid">
+            <section className="organization-dashboard-grid organization-dashboard-grid--single">
                 <UpcomingLeaseExpirations items={data.upcomingLeaseExpirations} />
             </section>
 
-            <section className="organization-dashboard-grid">
+            <section className="organization-dashboard-insights-grid">
+                <div className="organization-dashboard-insights-column">
                 <Card
                     className="organization-panel"
                     padding="medium"
                     header={<div><h2>Occupation du patrimoine</h2><p>{formatInteger(occupied)} unités occupées sur {formatInteger(data.totalUnits)}</p></div>}
                 >
                     <div className="organization-collection">
-                        <strong>{formatPercent(data.globalOccupancyRate)}</strong>
-                        <span>des unités sont occupées</span>
-                        <div className="organization-progress"><span style={{ width: `${Math.min(Math.max(data.globalOccupancyRate, 0), 100)}%` }} /></div>
+                        <OccupancyDonut occupied={occupied} total={data.totalUnits} label="Patrimoine immobilier" />
                         <small>Devise de référence : {data.currency} · {data.periodCovered.replace(' to ', ' → ')}</small>
                     </div>
                 </Card>
 
+                <DashboardStatChart
+                    title="Occupation par immeuble"
+                    description="Part des unités occupées sur le périmètre immobilier."
+                    emptyMessage="Aucun immeuble à afficher."
+                    items={data.buildings.map((item) => ({
+                        id: item.levelUuid ?? item.label,
+                        label: item.label,
+                        detail: `${formatInteger(item.occupiedUnits)} / ${formatInteger(item.totalUnits)} unités occupées`,
+                        value: formatPercent(item.occupancyRate),
+                        share: item.occupancyRate,
+                        occupied: item.occupiedUnits,
+                        total: item.totalUnits,
+                    }))}
+                />
+                </div>
+
+                <div className="organization-dashboard-insights-column">
                 <Card
                     className="organization-panel"
                     padding="medium"
                     header={<div><h2>Impayés à traiter</h2><p>Échéances en retard par bail</p></div>}
                 >
                     <ul className="organization-activity" aria-label="Impayés à traiter : liste déroulante" tabIndex={0}>
-                        {data.arrears.length > 0 ? data.arrears.map((item) => (
-                            <li key={item.leaseUuid} className="organization-activity__item organization-activity__item--warning">
+                        {data.arrears.length > 0 ? data.arrears.map((item, index) => (
+                            <li key={`${item.leaseUuid}-${index}`} className="organization-activity__item organization-activity__item--warning">
                                 <span className="organization-activity__dot" />
                                 <div>
                                     <strong>{item.tenantName}</strong>
@@ -71,34 +88,20 @@ export function AdminImmobilierOverview({ data }: { data: AdminImmobilierDashboa
                         )}
                     </ul>
                 </Card>
-            </section>
-
-            <section className="organization-dashboard-grid">
-                <DashboardStatChart
-                    title="Occupation par immeuble"
-                    description="Part des unités occupées sur le périmètre immobilier."
-                    emptyMessage="Aucun immeuble à afficher."
-                    items={data.buildings.map((item) => ({
-                        id: item.levelUuid ?? item.label,
-                        label: item.label,
-                        detail: `${formatInteger(item.occupiedUnits)} / ${formatInteger(item.totalUnits)} unités occupées`,
-                        value: formatPercent(item.occupancyRate),
-                        share: item.occupancyRate,
-                    }))}
-                />
 
                 <DashboardStatChart
                     title="Dépenses liées aux biens"
                     description={`Répartition par niveau · ${data.currency}`}
                     emptyMessage="Aucune dépense dans la devise de référence sur cette période."
                     items={expenses.map((item) => ({
-                        id: item.levelUuid ?? `${item.level}-${item.levelLabel}-${item.category}`,
+                        id: `${item.levelUuid ?? item.levelLabel}-${item.category}`,
                         label: item.levelLabel,
                         detail: item.category === 'ALL' ? 'Toutes catégories' : item.category,
                         value: formatMoney(item.totalAmount, item.currency),
                         share: amountBarPercent(item.totalAmount, maximumExpense),
                     }))}
                 />
+                </div>
             </section>
         </>
     );

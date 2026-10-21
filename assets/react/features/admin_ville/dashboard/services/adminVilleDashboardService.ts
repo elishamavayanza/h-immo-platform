@@ -32,9 +32,9 @@ function buildMetrics(
         {
             id: 'occupancy',
             label: 'Taux d’occupation',
-            value: formatPercent(occupancyRate),
-            detail: 'unités occupées / total',
-            tone: occupancyRate >= 70 ? 'success' : 'warning',
+            value: totalUnits > 0 ? formatPercent(occupancyRate) : '—',
+            detail: totalUnits > 0 ? 'unités occupées / total' : 'Aucune unité dans ce périmètre',
+            tone: totalUnits === 0 ? 'info' : occupancyRate >= 70 ? 'success' : 'warning',
         },
         {
             id: 'arrears',

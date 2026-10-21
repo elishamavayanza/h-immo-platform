@@ -17,6 +17,8 @@
     gap: $spacing-4;
     min-width: 0;
 }
+.reports-insights-grid { display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(0, .85fr); align-items: start; gap: $spacing-3; min-width: 0; }
+.reports-insights-column { display: grid; align-content: start; gap: $spacing-3; min-width: 0; }
 
 /* La barre d’actions est commune aux rapports de chaque espace. Le rapport
    SUPER_ADMIN n’a pas de filtre métier supplémentaire : ses deux zones
@@ -84,6 +86,7 @@
 .report-period-filter__preset:disabled { opacity: .6; cursor: not-allowed; }
 
 .reports-lower-grid { display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(0, .85fr); gap: $spacing-3; min-width: 0; }
+.reports-lower-grid--occupancy { align-items: start; }
 .reports-lower-grid > * { min-width: 0; }
 .reports-panel .card__body { min-width: 0; padding: $spacing-4; }
 .reports-panel__heading { display: flex; align-items: flex-start; justify-content: space-between; gap: $spacing-3; margin-bottom: $spacing-4; }
@@ -104,16 +107,18 @@
 .reports-chart__footnote { display: flex; justify-content: space-between; gap: $spacing-3; margin-top: $spacing-3; color: $color-text-muted; font-size: $font-size-xs; }
 
 .reports-breakdown__list { display: flex; flex-direction: column; gap: $spacing-3; max-height: min(24rem, 55vh); overflow: auto; overscroll-behavior: contain; min-width: 0; padding-right: $spacing-2; @include scrollbar(5px); }
+.reports-breakdown--occupancy { container: reports-occupancy / inline-size; align-self: start; }
+.reports-breakdown--occupancy .reports-breakdown__list { display: flex; flex-direction: column; align-content: start; }
+.reports-breakdown--occupancy .reports-breakdown__item { grid-template-columns: minmax(0, 1fr) max-content; align-content: center; gap: $spacing-2 $spacing-3; padding: $spacing-2 0; border-bottom: 1px solid $color-border; background: transparent; }
+.reports-breakdown--occupancy .reports-breakdown__item:last-child { border-bottom: 0; }
+.reports-breakdown--occupancy .reports-breakdown__copy { width: auto; }
+.reports-breakdown--occupancy .reports-breakdown__item > .donut-chart { grid-column: auto; width: fit-content; max-width: 100%; grid-template-columns: var(--donut-size) max-content; }
 .reports-breakdown__list:focus-visible, .reports-attention__list:focus-visible { outline: 2px solid $color-primary; outline-offset: 2px; }
 .reports-breakdown__item { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: $spacing-1 $spacing-3; align-items: center; }
 .reports-breakdown__copy { display: flex; flex-direction: column; min-width: 0; gap: 2px; }
 .reports-breakdown__copy strong { overflow: hidden; color: $color-text-primary; font-size: $font-size-sm; text-overflow: ellipsis; white-space: nowrap; }
 .reports-breakdown__copy small { overflow: hidden; color: $color-text-muted; font-size: $font-size-xs; text-overflow: ellipsis; white-space: nowrap; }
 .reports-breakdown__amount { color: $color-text-secondary; font-size: $font-size-sm; font-weight: $font-weight-semibold; }
-.reports-breakdown__item progress { grid-column: 1 / -1; width: 100%; height: 5px; overflow: hidden; appearance: none; border: 0; border-radius: $radius-full; background: $color-bg-input; }
-.reports-breakdown__item progress::-webkit-progress-bar { border-radius: $radius-full; background: $color-bg-input; }
-.reports-breakdown__item progress::-webkit-progress-value { border-radius: $radius-full; background: $color-primary; }
-.reports-breakdown__item progress::-moz-progress-bar { border-radius: $radius-full; background: $color-primary; }
 
 .reports-attention__list { display: flex; flex-direction: column; gap: $spacing-2; max-height: min(24rem, 55vh); overflow: auto; overscroll-behavior: contain; min-width: 0; margin: 0; padding: 0 $spacing-2 0 0; list-style: none; @include scrollbar(5px); }
 .reports-attention__list li { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: $spacing-2 $spacing-3; align-items: center; padding: $spacing-3; border: 1px solid $color-border; border-radius: $radius-md; background: $color-bg-input; }
@@ -130,6 +135,10 @@
 
 @media (max-width: 1100px) {
     .reports-lower-grid { grid-template-columns: minmax(0, 1fr); }
+}
+@container reports-occupancy (max-width: 480px) {
+    .reports-breakdown--occupancy .reports-breakdown__item { grid-template-columns: minmax(0, 1fr); justify-items: start; }
+    .reports-breakdown--occupancy .reports-breakdown__item > .donut-chart { width: 100%; grid-template-columns: var(--donut-size) minmax(0, 1fr); }
 }
 @media (max-width: 700px) {
     .reports-page { gap: $spacing-3; padding: $spacing-3 0 $spacing-5; }
@@ -171,10 +180,40 @@
     .reports-page .reports-page__city-filter { width: 100%; min-width: 0; }
 }
 
+@container reports-page (max-width: 760px) {
+    .reports-insights-grid { grid-template-columns: minmax(0, 1fr); }
+}
+
+/* Le formulaire de rapport s’adapte à la largeur réellement disponible dans
+   le contenu, qui peut être réduite par la barre latérale même sur grand écran. */
+@container reports-page (max-width: 1100px) {
+    .reports-page .reports-page__toolbar {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) minmax(180px, .55fr);
+        align-items: end;
+        gap: $spacing-3;
+    }
+    .reports-page .reports-page__date-filter { grid-column: 1 / -1; width: 100%; }
+    .reports-page .reports-page__city-filter { grid-column: 1; width: 100%; min-width: 0; }
+    .reports-page .reports-page__toolbar-actions {
+        grid-column: 2;
+        align-items: center;
+        flex-direction: row;
+        justify-content: flex-end;
+        margin-left: 0;
+    }
+    .reports-page .reports-page__period-label { white-space: normal; }
+}
+
 /* Les rapports peuvent être rendus dans une colonne avec sidebar ou panneau
    latéral : leurs points de rupture suivent donc aussi la largeur disponible,
    et pas seulement la largeur physique de la fenêtre. */
-@container reports-page (max-width: 440px) {
+@container reports-page (max-width: 760px) {
+    .reports-page .reports-page__toolbar { grid-template-columns: minmax(0, 1fr); }
+    .reports-page .reports-page__city-filter,
+    .reports-page .reports-page__toolbar-actions { grid-column: 1; }
+    .reports-page .reports-page__toolbar-actions { align-items: stretch; flex-direction: column; }
+    .reports-page .reports-page__toolbar-actions .btn { width: 100%; }
     .reports-page .reports-page__date-filter .daterange {
         flex-direction: column;
         align-items: stretch;
