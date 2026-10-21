@@ -57,24 +57,25 @@
         }
     }
 
-    // État loading : curseur d’attente
-    // Le spinner est sorti du flux (positionné dans la marge gauche) au lieu
-    // d'être ajouté avant le libellé : sinon le bouton change de largeur et
-    // le texte glisse de quelques pixels à l'envoi, ce qui fait « clignoter »
-    // l'action en cours. Le libellé reste donc centré sur toute la durée.
+    // État loading : le spinner est centré au-dessus du contenu. Il est sorti
+    // du flux pour garder la largeur du bouton stable pendant l’action.
     &.btn--loading {
         cursor: progress;
         pointer-events: none;
         opacity: 1;
 
-        .btn__spinner {
+        .action-spinner {
             position: absolute;
-            left: $spacing-3;
-            // Centrage vertical par marges auto et non `translateY` :
-            // l'animation `btn-spin` pilote déjà `transform` (rotation),
+            inset-inline: 0;
+            // Centrage par marges et non `translate` :
+            // l'animation `action-spinner-rotate` pilote déjà la rotation,
             // une valeur de transform ici écraserait la rotation.
             inset-block: 0;
-            margin-block: auto;
+            margin: auto;
+        }
+
+        .btn__label {
+            opacity: 0;
         }
     }
 }
@@ -105,19 +106,21 @@
 // Petit cercle animé en rotation.
 // ============================================================
 
-.btn__spinner {
-    display: inline-block;
-    flex-shrink: 0;
-    width: 14px;
-    height: 14px;
-    border: 2px solid currentColor;
-    border-top-color: transparent;
-    border-radius: $radius-full;
-    animation: btn-spin 0.65s linear infinite;
+.action-spinner {
+    display: block;
+    flex: 0 0 1.15em;
+    width: 1.15em;
+    height: 1.15em;
+    color: currentColor;
+    animation: action-spinner-rotate 0.9s linear infinite;
 }
 
-@keyframes btn-spin {
+@keyframes action-spinner-rotate {
     to { transform: rotate(360deg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .action-spinner { animation-duration: 2.4s; }
 }
 
 
@@ -136,10 +139,6 @@
         height: 14px;
     }
 
-    .btn__spinner {
-        width: 12px;
-        height: 12px;
-    }
 }
 
 .btn--medium {
@@ -152,10 +151,6 @@
         height: 16px;
     }
 
-    .btn__spinner {
-        width: 14px;
-        height: 14px;
-    }
 }
 
 .btn--large {
@@ -169,10 +164,7 @@
         height: 18px;
     }
 
-    .btn__spinner {
-        width: 16px;
-        height: 16px;
-    }
+    .action-spinner { width: 30px; height: 30px; flex-basis: 30px; }
 }
 
 
@@ -368,7 +360,4 @@
         transform: none;
     }
 
-    .btn__spinner {
-        animation-duration: 1.5s;
-    }
 }

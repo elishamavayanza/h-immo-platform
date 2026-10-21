@@ -1,5 +1,6 @@
 import React, { forwardRef } from 'react';
 import {useIconButton, UseIconButtonProps} from "../../../hook-components/UI/IconButton";
+import { ActionSpinner } from '../ActionSpinner';
 
 
 export interface IconButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement>, UseIconButtonProps {
@@ -39,7 +40,7 @@ export const IconButton = forwardRef<HTMLButtonElement, IconButtonProps>(
                 {...ariaProps}
                 {...rest}
             >
-                {isLoading ? <span className="icon-btn__spinner" aria-hidden="true" /> : icon}
+                {isLoading ? <ActionSpinner /> : icon}
             </button>
         );
     }

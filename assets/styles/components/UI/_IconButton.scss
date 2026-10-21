@@ -65,20 +65,6 @@
 // SPINNER (loading)
 // ============================================================
 
-.icon-btn__spinner {
-    display: inline-block;
-    width: 16px;
-    height: 16px;
-    border: 2px solid currentColor;
-    border-top-color: transparent;
-    border-radius: $radius-full;
-    animation: icon-btn-spin 0.65s linear infinite;
-}
-
-@keyframes icon-btn-spin {
-    to { transform: rotate(360deg); }
-}
-
 
 // ============================================================
 // TAILLES
@@ -94,10 +80,6 @@
         height: 14px;
     }
 
-    .icon-btn__spinner {
-        width: 12px;
-        height: 12px;
-    }
 }
 
 .icon-btn--medium {
@@ -120,9 +102,10 @@
         height: 22px;
     }
 
-    .icon-btn__spinner {
+    .action-spinner {
         width: 18px;
         height: 18px;
+        flex-basis: 18px;
     }
 }
 
@@ -207,7 +190,4 @@
         transform: none;
     }
 
-    .icon-btn__spinner {
-        animation-duration: 1.5s;
-    }
 }

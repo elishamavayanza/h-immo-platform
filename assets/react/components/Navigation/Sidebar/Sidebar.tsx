@@ -5,14 +5,18 @@ import { SidebarItemTooltip } from './SidebarItemTooltip.tsx';
 import { isBranchActive } from '../../../hook-components/Navigation/Sidebar/sidebar.state.ts';
 
 const CollapseIcon = () => (
-    <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2">
-        <polyline points="15 18 9 12 15 6" />
+    <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+        <rect x="3" y="3" width="18" height="18" rx="3" />
+        <path d="M9 3v18" />
+        <path d="m16 9-3 3 3 3" />
     </svg>
 );
 
 const ExpandIcon = () => (
-    <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2">
-        <polyline points="9 18 15 12 9 6" />
+    <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+        <rect x="3" y="3" width="18" height="18" rx="3" />
+        <path d="M9 3v18" />
+        <path d="m14 9 3 3-3 3" />
     </svg>
 );
 

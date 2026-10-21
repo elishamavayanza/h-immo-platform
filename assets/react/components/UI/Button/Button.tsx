@@ -1,16 +1,12 @@
 import React, { forwardRef } from 'react';
 import { useButton, UseButtonProps } from '../../../hook-components/UI/Button';
+import { ActionSpinner } from '../ActionSpinner';
 
 export interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement>, UseButtonProps {
     as?: 'button' | 'a';
     href?: string;
     download?: string;
-    spinner?: React.ReactNode;
 }
-
-const defaultSpinner = (
-    <span className="btn__spinner" aria-hidden="true" />
-);
 
 export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
     (
@@ -24,7 +20,6 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
             iconPosition = 'left',
             className,
             children,
-            spinner = defaultSpinner,
             as = 'button',
             href,
             download,
@@ -47,7 +42,7 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
 
         const content = (
             <>
-                {isLoading && spinner}
+                {isLoading && <ActionSpinner />}
                 {icon && !isLoading && (
                     <span className={`btn__icon btn__icon--${iconPosition}`} aria-hidden="true">
             {icon}
