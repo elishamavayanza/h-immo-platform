@@ -37,9 +37,9 @@
             {% for item in report.financialSummary %}
             <tr>
                 <td>{{ item.period }}</td>
-                <td class="text-right">{{ item.revenues }} {{ item.currency }}</td>
-                <td class="text-right">{{ item.expenses }} {{ item.currency }}</td>
-                <td class="text-right">{{ item.netResult }} {{ item.currency }}</td>
+                <td class="text-right">{{ item.revenues }} {{ item.currency.value }}</td>
+                <td class="text-right">{{ item.expenses }} {{ item.currency.value }}</td>
+                <td class="text-right">{{ item.netResult }} {{ item.currency.value }}</td>
             </tr>
             {% endfor %}
         </tbody>
@@ -147,7 +147,7 @@
             {% for item in report.expensesByCategory %}
             <tr>
                 <td>{{ item.category }}</td>
-                <td class="text-right">{{ item.totalAmount }} {{ item.currency }}</td>
+                <td class="text-right">{{ item.totalAmount }} {{ item.currency.value }}</td>
             </tr>
             {% endfor %}
         </tbody>
@@ -167,7 +167,7 @@
             {% for item in report.expensesByCity %}
             <tr>
                 <td>{{ item.levelLabel }}</td>
-                <td class="text-right">{{ item.totalAmount }} {{ item.currency }}</td>
+                <td class="text-right">{{ item.totalAmount }} {{ item.currency.value }}</td>
             </tr>
             {% endfor %}
         </tbody>
