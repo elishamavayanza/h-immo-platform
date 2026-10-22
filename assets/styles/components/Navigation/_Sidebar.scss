@@ -46,7 +46,7 @@
 }
 
 .sidebar--dark {
-    background-color: $color-bg-sidebar;
+    background-color: var(--color-bg-sidebar-tinted, $color-bg-sidebar);
 }
 
 .sidebar--light {

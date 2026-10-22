@@ -12,7 +12,8 @@ html[data-theme='dark'] {
     --color-bg-primary: #181818;
     --color-bg-content: #181818;
     --color-bg-app: #1A1A1A;
-    --color-bg-sidebar: color-mix(in srgb, #151515 94%, var(--color-primary) 6%);
+    --color-bg-sidebar: #151515;
+    --color-bg-sidebar-tinted: color-mix(in srgb, #151515 94%, var(--color-primary) 6%);
     --color-bg-topbar: #1D1D1D;
     --color-bg-card: #222222;
     --color-bg-card-hover: #292929;
@@ -81,7 +82,8 @@ html[data-theme='light'] {
     --color-bg-primary: #E4E8E5;
     --color-bg-content: #E4E8E5;
     --color-bg-app: #E7EBE8;
-    --color-bg-sidebar: color-mix(in srgb, #E9EDEA 94%, var(--color-primary) 6%);
+    --color-bg-sidebar: #E9EDEA;
+    --color-bg-sidebar-tinted: color-mix(in srgb, #E9EDEA 94%, var(--color-primary) 6%);
     --color-bg-topbar: #E2E7E5;
     --color-bg-card: #ECEFEC;
     --color-bg-card-hover: #E3E8E4;
