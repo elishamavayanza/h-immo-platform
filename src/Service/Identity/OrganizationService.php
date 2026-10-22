@@ -310,6 +310,14 @@ final readonly class OrganizationService
 
         $this->authorizeOrganizationOperation($organization, SecurityAction::UPDATE);
 
+        if ($request->status !== null) {
+            return $feedback
+                ->addError('status', 'Le statut doit être modifié par le parcours dédié.')
+                ->setErrorFlushDescription('Le statut de l’organisation ne peut pas être modifié par le formulaire général.')
+                ->setStatus(422)
+                ->autoInitFlush();
+        }
+
         if ($request->showcaseEnabled !== null) {
             // L'activation commerciale d'une fonctionnalité appartient à la
             // plateforme, même si le PATRON peut modifier les autres champs.

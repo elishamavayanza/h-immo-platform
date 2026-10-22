@@ -1180,8 +1180,11 @@ final class SecurityService implements SecurityServiceInterface
     {
         $allowed = [
             SecurityAction::VIEW,
+            SecurityAction::UPDATE,
             SecurityAction::VIEW_ORGANIZATION,
             SecurityAction::VIEW_USER,
+            SecurityAction::UPDATE_USER,
+            SecurityAction::SUSPEND_USER,
             SecurityAction::CREATE_CITY_ADMIN,
             SecurityAction::CREATE_ORGANIZATION_ADMIN,
             SecurityAction::MANAGE_ORGANIZATION_LOGO,
@@ -1197,6 +1200,7 @@ final class SecurityService implements SecurityServiceInterface
             SecurityAction::VIEW_WORKER,
             SecurityAction::VIEW_WORKER_ASSIGNMENT,
             SecurityAction::VIEW_EXPENSE,
+            SecurityAction::CANCEL_EXPENSE,
             SecurityAction::VIEW_MAINTENANCE,
             SecurityAction::VIEW_DOCUMENT,
             SecurityAction::VIEW_REPORT,

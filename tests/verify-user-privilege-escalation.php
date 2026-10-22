@@ -309,10 +309,22 @@ check('le téléphone a bien été enregistré', $phone === '+243990000001', (st
 section('Non-régression : le PATRON gère les membres de son Organization');
 
 $membreUuid = $membre->getUuid()->toRfc4122();
+$memberPasswordHashBeforePatronUpdate = $membre->getPassword();
 [$status, , $raw] = $request('PUT', '/api/v1/identity/users/' . $membreUuid, $payload([
     'phone' => '+243990000002',
 ]), $patronBearer);
 check('le PATRON peut modifier un membre', $status === 200, "obtenu {$status} : " . substr($raw, 0, 200));
+
+[$status] = $request('PUT', '/api/v1/identity/users/' . $membreUuid, $payload([
+    'password' => 'MotDePasseRemplace!456',
+]), $patronBearer);
+$em->clear();
+$memberPasswordHashAfterPatronUpdate = $em->getRepository(User::class)->find($membre->getId())?->getPassword();
+check(
+    'le PATRON ne peut pas remplacer le mot de passe d’un membre',
+    $status === 403 && $memberPasswordHashAfterPatronUpdate === $memberPasswordHashBeforePatronUpdate,
+    "statut={$status}"
+);
 
 // ---------------------------------------------------------------------
 // 7. Non-régression : le SUPER_ADMIN administre toujours la plateforme

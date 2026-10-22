@@ -43,6 +43,8 @@ class Feedback implements \JsonSerializable
     )]
     private int $status = 200;
 
+    private bool $statusWasSetExplicitly = false;
+
     #[OA\Property(
         description: 'Dictionnaire des erreurs de validation ou de traitement associées aux champs (clé = nom du champ, valeur = message)',
         type: 'object',
@@ -120,6 +122,7 @@ class Feedback implements \JsonSerializable
     public function setStatus(int $status): self
     {
         $this->status =$status;
+        $this->statusWasSetExplicitly = true;
         return $this;
     }
 
@@ -175,18 +178,17 @@ class Feedback implements \JsonSerializable
     }
 
     /**
-     * Génère automatiquement le titre du message (`flush`) et le code HTTP approprié
-     * en fonction de la présence ou non d'erreurs.
-     *
-     * ATTENTION : cette méthode écrase le statut HTTP. Un
-     * `->setStatus(201)->autoInitFlush()` renvoie 200, pas 201. Pour un code
-     * de création, l'ordre correct est `->autoInitFlush()->setStatus(201)`.
+     * Génère le titre du message (`flush`) et déduit un statut par défaut.
+     * Un code HTTP choisi explicitement par le service (par exemple 201 ou
+     * 409) doit rester prioritaire sur ce statut de repli.
      */
     public function autoInitFlush(): self
     {
         $hasErrors =$this->hasErrors();
         $this->setFlush($hasErrors ? "Échec d'exécution de l'opération" : "Succès d'exécution de l'opération");
-        $this->setStatus($this->isOk() ? 200 : 422);
+        if (!$this->statusWasSetExplicitly) {
+            $this->status = $hasErrors ? 422 : 200;
+        }
 
         return $this;
     }

@@ -432,7 +432,7 @@ final readonly class ExpenseService
             return $feedback->autoInitFlush()->setStatus($status);
         }
 
-        $this->securityService->checkExpenseAccess($expense, SecurityAction::DELETE_EXPENSE);
+        $this->securityService->checkExpenseAccess($expense, SecurityAction::CANCEL_EXPENSE);
 
         // Mutation comptable atomique et verrouillée : deux annulations
         // simultanées de la même dépense ne créent qu'une contre-écriture.

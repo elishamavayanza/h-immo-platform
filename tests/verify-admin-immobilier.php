@@ -737,7 +737,7 @@ check(
 $uuidCreatedWorker = is_array($payload) ? ($payload['data']['id'] ?? null) : null;
 check(
     'POST /api/v1/workers : l’ADMIN_IMMOBILIER crée un collaborateur organisationnel',
-    $status === 200 && is_string($uuidCreatedWorker),
+    $status === 201 && is_string($uuidCreatedWorker),
     "obtenu {$status} : " . substr($rawCreatedWorker, 0, 250)
 );
 
@@ -752,7 +752,7 @@ check(
 ], $token);
 check(
     'POST /api/v1/worker-assignments : rattachement au même tenant accepté',
-    $status === 200,
+    $status === 201,
     "obtenu {$status} : " . substr($rawCreatedAssignment, 0, 250)
 );
 

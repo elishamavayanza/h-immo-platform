@@ -158,7 +158,7 @@ echo "  Base : {$database} (transaction annulée en fin de script)\n";
 $suffix = 'coord' . bin2hex(random_bytes(3));
 
 // ---------------------------------------------------------------------
-// Jeu de données : organisation, ville, patron habilité
+// Jeu de données : organisation, ville, ADMIN_IMMOBILIER habilité
 // ---------------------------------------------------------------------
 section('Construction du jeu de données');
 
@@ -170,15 +170,15 @@ $org = (new Organization())
     ->setStatus(OrganizationStatus::ACTIVE);
 $em->persist($org);
 
-$patron = (new User())
-    ->setEmail('patron.coord.' . $suffix . '@test.local')
-    ->setFullName('Patron Coordonnées')
+$adminImmobilier = (new User())
+    ->setEmail('admin.immobilier.coord.' . $suffix . '@test.local')
+    ->setFullName('Admin Immobilier Coordonnées')
     ->setPassword(password_hash('MotDePasse!123', PASSWORD_BCRYPT))
     ->setIsActive(true);
-$em->persist($patron);
+$em->persist($adminImmobilier);
 
 $em->persist(
-    (new OrganizationUser())->setUser($patron)->setOrganization($org)->setRole(OrganizationRole::PATRON)
+    (new OrganizationUser())->setUser($adminImmobilier)->setOrganization($org)->setRole(OrganizationRole::ADMIN_IMMOBILIER)
 );
 
 $city = (new City())
@@ -195,12 +195,12 @@ $em->clear();
 echo "  Jeu de données créé.\n";
 
 [$status, $payload] = $request('POST', '/api/auth/login', [
-    'email' => $patron->getEmail(),
+    'email' => $adminImmobilier->getEmail(),
     'password' => 'MotDePasse!123',
 ]);
 $token = is_array($payload) ? ($payload['accessToken'] ?? null) : null;
 if ($status !== 200 || !is_string($token)) {
-    fwrite(STDERR, "[erreur] login patron -> {$status}\n");
+    fwrite(STDERR, "[erreur] login ADMIN_IMMOBILIER -> {$status}\n");
     exit(1);
 }
 

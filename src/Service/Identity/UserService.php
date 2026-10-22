@@ -189,6 +189,11 @@ final readonly class UserService
             $this->security->requirePlatformRole();
         }
 
+        if ($request->password !== null && $request->password !== ''
+            && $user->getId() !== $this->security->getCurrentUser()->getId()) {
+            $this->security->requirePlatformRole();
+        }
+
         // Même raison pour l'activation : un PATRON peut suspendre un compte de
         // sa société, mais un membre ne doit ni réactiver le sien (contournement
         // d'une suspension) ni en suspendre un autre. La matrice de rôle refuse

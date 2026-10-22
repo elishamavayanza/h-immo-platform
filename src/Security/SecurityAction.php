@@ -110,6 +110,8 @@ enum SecurityAction: string
     case CREATE_EXPENSE = 'create_expense';
     case UPDATE_EXPENSE = 'update_expense';
     case DELETE_EXPENSE = 'delete_expense';
+    // Une annulation est une contre-écriture comptable, pas une suppression.
+    case CANCEL_EXPENSE = 'cancel_expense';
 
     // Interventions de maintenance, bornées à l'organisation et à la ville.
     case VIEW_MAINTENANCE = 'view_maintenance';

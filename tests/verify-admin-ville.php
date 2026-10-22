@@ -598,7 +598,7 @@ check('ADMIN_VILLE ne peut pas s’accorder lui-même le droit d’ajout de pers
 $createdAssignmentUuid = $createdAssignment['data']['id'] ?? null;
 check(
     'ADMIN_VILLE crée une affectation pour un employé déjà autorisé dans sa ville',
-    $status === 200 && is_string($createdAssignmentUuid),
+    $status === 201 && is_string($createdAssignmentUuid),
     "obtenu {$status} : " . substr($rawCreatedAssignment, 0, 250)
 );
 
@@ -866,7 +866,7 @@ check(
     'reason' => 'Tentative admin ville',
 ], $token);
 check(
-    'POST /api/v1/expenses/{A1}/cancel : 403 (D-V2 — DELETE_EXPENSE refusé à ADMIN_VILLE)',
+    'POST /api/v1/expenses/{A1}/cancel : 403 (D-V2 — CANCEL_EXPENSE refusé à ADMIN_VILLE)',
     $status === 403,
     "obtenu {$status} | raw=" . substr($raw, 0, 250)
 );
