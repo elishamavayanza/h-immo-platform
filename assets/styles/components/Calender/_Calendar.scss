@@ -198,12 +198,17 @@
     transform $transition-fast;
 
     &:hover:not(.calendar__day--disabled):not(.calendar__day--selected) {
-        background-color: $color-bg-elevated;
-        border-color: $color-border-light;
+        background-color: color-mix(in srgb, #{$color-primary} 7%, #{$color-bg-elevated});
+        border-color: color-mix(in srgb, #{$color-primary} 30%, #{$color-border-light});
     }
 
     &:active:not(.calendar__day--disabled) {
         transform: scale(0.94);
+    }
+
+    &:focus-visible {
+        box-shadow: 0 0 0 2px color-mix(in srgb, #{$color-primary} 42%, transparent);
+        border-color: color-mix(in srgb, #{$color-primary} 58%, #{$color-border});
     }
 }
 
@@ -246,14 +251,14 @@
 // ============================================================
 
 .calendar__day--selected {
-    color: $color-text-inverse;
-    background-color: $color-primary;
-    border-color: $color-primary;
+    color: $color-primary;
+    background-color: color-mix(in srgb, #{$color-primary} 24%, #{$color-bg-card});
+    border-color: color-mix(in srgb, #{$color-primary} 58%, #{$color-border});
     font-weight: $font-weight-semibold;
 
     &:hover {
-        background-color: $color-primary-hover;
-        border-color: $color-primary-hover;
+        background-color: color-mix(in srgb, #{$color-primary} 31%, #{$color-bg-card});
+        border-color: color-mix(in srgb, #{$color-primary} 68%, #{$color-border});
     }
 }
 
@@ -272,8 +277,9 @@
 }
 
 .calendar__day--range-start {
-    background-color: $color-primary;
-    color: $color-text-inverse;
+    background-color: color-mix(in srgb, #{$color-primary} 24%, #{$color-bg-card});
+    color: $color-primary;
+    border-color: color-mix(in srgb, #{$color-primary} 58%, #{$color-border});
     border-top-left-radius: $radius-md;
     border-bottom-left-radius: $radius-md;
     border-top-right-radius: 0;
@@ -281,8 +287,9 @@
 }
 
 .calendar__day--range-end {
-    background-color: $color-primary;
-    color: $color-text-inverse;
+    background-color: color-mix(in srgb, #{$color-primary} 24%, #{$color-bg-card});
+    color: $color-primary;
+    border-color: color-mix(in srgb, #{$color-primary} 58%, #{$color-border});
     border-top-right-radius: $radius-md;
     border-bottom-right-radius: $radius-md;
     border-top-left-radius: 0;

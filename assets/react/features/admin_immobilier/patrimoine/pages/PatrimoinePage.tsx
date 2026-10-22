@@ -741,7 +741,7 @@ export function PatrimoinePage({ readOnly = false }: { readOnly?: boolean } = {}
             title="Villes du portefeuille"
             description="Choisissez une ville pour parcourir son patrimoine."
             action={!readOnly && canDo(organizationRole, 'create_city')
-                ? <Button variant="secondary" onClick={() => goToLevel('villes', null, null, null)}>Gérer les villes</Button>
+                ? <Button className="patrimoine-manage-cities-button" variant="secondary" onClick={() => goToLevel('villes', null, null, null)}>Gérer les villes</Button>
                 : undefined}
             items={cities.map((entry) => {
                 const occupancy = cityOccupancy(data, entry.id);

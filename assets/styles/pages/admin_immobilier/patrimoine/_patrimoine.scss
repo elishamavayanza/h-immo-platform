@@ -21,6 +21,29 @@
 .patrimoine-context { display: flex; justify-content: space-between; align-items: center; gap: 1rem; margin: 0 0 1rem; padding: .75rem 1rem; border: 1px solid $color-border; border-radius: .75rem; color: $color-text-primary; background: $color-bg-card-hover; }
 .patrimoine-context__actions { display: flex; flex: 0 1 auto; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: .5rem; min-width: 0; }
 .patrimoine-context__actions > * { min-width: 0; }
+.patrimoine-manage-cities-button {
+  border-color: color-mix(in srgb, #{$color-primary} 48%, #{$color-border});
+  transition: color $transition-fast, background-color $transition-fast, border-color $transition-fast, box-shadow $transition-fast, transform $transition-fast;
+}
+.patrimoine-manage-cities-button:hover:not(:disabled) {
+  color: $color-primary;
+  border-color: color-mix(in srgb, #{$color-primary} 76%, #{$color-border});
+  background: color-mix(in srgb, #{$color-primary} 10%, #{$color-bg-card});
+  box-shadow: 0 0 0 2px color-mix(in srgb, #{$color-primary} 12%, transparent);
+  transform: translateY(-1px);
+}
+.patrimoine-manage-cities-button:active:not(:disabled) {
+  color: $color-primary;
+  border-color: $color-primary;
+  background: color-mix(in srgb, #{$color-primary} 18%, #{$color-bg-card});
+  box-shadow: inset 0 1px 2px color-mix(in srgb, #{$color-primary} 18%, transparent);
+  transform: translateY(0);
+}
+.patrimoine-manage-cities-button:focus-visible {
+  outline: 2px solid $color-primary;
+  outline-offset: 2px;
+}
+.patrimoine-manage-cities-button:disabled { transform: none; }
 .patrimoine-map-action { display: flex; justify-content: space-between; align-items: center; gap: 1rem; margin: 0 0 1rem; padding: .8rem 1rem; border: 1px solid $color-border; border-radius: .75rem; background: $color-bg-card; }
 .patrimoine-map-action > div { display: grid; gap: .2rem; }
 .patrimoine-map-action span { color: $color-text-muted; font-size: .85rem; }
@@ -328,13 +351,14 @@ a.patrimoine-child:focus-visible { position: relative; z-index: 1; outline: 2px 
 .patrimoine-nav__popover { z-index: $z-modal; width: min(320px, calc(100vw - 24px)); max-height: min(75vh, 680px); overflow: hidden; border: 1px solid $color-border; border-radius: $radius-lg; background: $color-bg-sidebar; box-shadow: $shadow-lg; }
 .patrimoine-nav__popover-title { padding: $spacing-3 $spacing-4; border-bottom: 1px solid $color-border; color: $color-text-primary; font-weight: $font-weight-semibold; }
 .patrimoine-nav__popover-content { max-height: calc(min(75vh, 680px) - 48px); padding: $spacing-2; overflow: auto; }
-.patrimoine-layout__nav .right-sidebar__content { display: flex; flex-direction: column; overflow: hidden; }
+.patrimoine-layout__nav .right-sidebar__title { padding: $spacing-2 $spacing-3; }
+.patrimoine-layout__nav .right-sidebar__content { display: flex; flex-direction: column; overflow: hidden; padding: $spacing-2 $spacing-3; }
 .patrimoine-rightbar-split { display: flex; flex: 1 1 auto; flex-direction: column; min-width: 0; min-height: 0; }
-.patrimoine-rightbar-split__panel { min-width: 0; min-height: 0; overflow-x: hidden; overflow-y: auto; @include scrollbar; }
+.patrimoine-rightbar-split__panel { min-width: 0; min-height: 0; overflow-x: hidden; overflow-y: auto; @include scrollbar(5px); }
 .patrimoine-rightbar-section { min-width: 0; }
 .patrimoine-rightbar-section > h2 { margin: 0 0 $spacing-2; color: $color-text-primary; font-size: $font-size-sm; font-weight: $font-weight-semibold; }
 .patrimoine-rightbar-section--activity { margin-top: 0; padding-top: 0; border-top: 0; }
-.patrimoine-rightbar-split__controls { position: relative; display: flex; flex: 0 0 22px; align-items: center; justify-content: center; min-height: 22px; margin: 0 calc(-1 * #{$spacing-1}); }
+.patrimoine-rightbar-split__controls { position: relative; display: flex; flex: 0 0 16px; align-items: center; justify-content: center; min-height: 16px; margin: 0 calc(-1 * #{$spacing-1}); }
 .patrimoine-rightbar-split__handle { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; width: 100%; border: 0; cursor: row-resize; touch-action: none; }
 .patrimoine-rightbar-split__handle::before { position: absolute; right: 0; left: 0; height: 1px; background: $color-border; content: ''; }
 .patrimoine-rightbar-split__handle span { z-index: 1; width: 36px; height: 4px; border-radius: 999px; background: $color-border-strong; transition: background-color $transition-fast, width $transition-fast; }
