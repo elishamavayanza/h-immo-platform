@@ -523,7 +523,7 @@ try {
 }
 
 try {
-    $r = $unitRepo->findAvailableByBuilding($buildingA1);
+    $r = $unitRepo->findAvailableByBuilding($buildingA1, $leaseA->getStartDate());
     check('UnitRepository::findAvailableByBuilding exclut l\'unité louée', count($r) === 0, 'count=' . count($r));
 } catch (\Throwable $e) {
     check('UnitRepository::findAvailableByBuilding exclut l\'unité louée', false, $e->getMessage());
@@ -1058,6 +1058,8 @@ try {
     /** @var \App\Service\Rental\LeaseService $leaseService */
     $leaseService = $container->get(\App\Service\Rental\LeaseService::class);
     $today = $container->get(\App\Service\System\DateTimeService::class)->today();
+    $unitA3 = $makeUnit('UA-3', $buildingA1);
+    $em->flush();
     $invalidLeasePeriod = $leaseService->createLease(
         new \App\Dto\Request\Rental\LeaseRequest(
             tenantUuid: (string) $tenantA->getUuid(),
@@ -1213,8 +1215,6 @@ try {
     );
     check('Un transfert réalisé est verrouillé contre les corrections rétroactives', $completedTransferCorrection->getStatus() === 409, 'status=' . $completedTransferCorrection->getStatus());
 
-    $unitA3 = $makeUnit('UA-3', $buildingA1);
-    $em->flush();
     $departureLease = (new Lease())->setOrganization($orgA)->setTenant($tenantA)->setUnit($unitA3)
         ->setReference('BAIL-DEPART')->setStartDate(new \DateTimeImmutable('2026-01-01'))
         ->setMonthlyRent('250.00')->setCurrency(Currency::USD)->setStatus(LeaseStatus::ACTIVE);
