@@ -34,7 +34,13 @@ services:
         resource: '../src/'
         exclude:
             - '../src/Dto/Response/Report/'
+            # Ces classes sont des valeurs/résultats construits par le calcul
+            # locatif ; leurs arguments sont des données métier, pas des services.
             - '../src/Service/Rental/CalculatedRentInstallment.php'
+            - '../src/Service/Rental/RentalBillingPeriod.php'
+            - '../src/Service/Rental/RentalRuleCandidate.php'
+            - '../src/Service/Rental/RentalRuleSet.php'
+            - '../src/Service/Rental/ResolvedRentalRules.php'
 
     # add more service definitions when explicit configuration is needed
     # please note that last definitions always *replace* previous ones
