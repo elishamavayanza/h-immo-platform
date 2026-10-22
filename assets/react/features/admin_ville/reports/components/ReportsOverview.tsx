@@ -1,49 +1,16 @@
 import { Card } from '../../../../components/UI/Card';
-import { Badge } from '../../../../components/UI/Badge';
 import { InlineSummary } from '../../../shared/components/InlineSummary';
 import { UpcomingLeaseExpirations } from '../../../shared/components/UpcomingLeaseExpirations';
 import { formatInteger, formatMoney } from '../../../../../utils/format.utils';
 import type {
     AdminVilleReportsData,
-    ArrearsItem,
     ExpenseSummaryItem,
-    OccupancyItem,
     WorkerActivityItem,
 } from '../types';
 import { absoluteCents, amountBarPercent } from '../../../shared/reports/utils/amountChart';
-import { OccupancyDonut } from '../../../../components/Data/OccupancyDonut';
 import { ChartDisplayToggle } from '../../../../components/Data/ChartDisplayToggle';
-
-/** Ligne d'occupation : taux en pourcentage et compteurs occupés/vacants. */
-function OccupancyRow({ item }: { item: OccupancyItem }) {
-    return (
-        <div className="reports-breakdown__item">
-            <div className="reports-breakdown__copy">
-                <strong>{item.label}</strong>
-                <small>{item.occupiedUnits} / {item.totalUnits} unités occupées</small>
-            </div>
-            <OccupancyDonut size="small" occupied={item.occupiedUnits} total={item.totalUnits} label={item.label} />
-        </div>
-    );
-}
-
-/** Ligne d'impayé : locataire, unité, montant et jours de retard. */
-function ArrearsRow({ item }: { item: ArrearsItem }) {
-    const overdue = item.daysOverdue > 0;
-
-    return (
-        <li>
-            <div>
-                <strong>{item.tenantName}</strong>
-                <small>{item.unitLabel} · {item.leaseReference} · dû {formatMoney(item.amountDue, item.currency)}</small>
-            </div>
-            <span className="reports-attention__amount">{formatMoney(item.arrears, item.currency)}</span>
-            <Badge variant={overdue ? 'warning' : 'info'} size="small">
-                {overdue ? `${formatInteger(item.daysOverdue)} j de retard` : 'À recouvrer'}
-            </Badge>
-        </li>
-    );
-}
+import { ReportArrearsRow } from '../../../shared/reports/components/ReportArrearsRow';
+import { ReportOccupancyRow } from '../../../shared/reports/components/ReportOccupancyRow';
 
 /** Ligne de dépense agrégée par niveau (ville), montant déjà formaté. */
 function ExpenseRow({ item, maximum }: { item: ExpenseSummaryItem; maximum: bigint }) {
@@ -98,7 +65,7 @@ export function ReportsOverview({ data }: { data: AdminVilleReportsData }) {
                     </div>
                     <div className="reports-breakdown__list" role="region" aria-label="Taux d’occupation par immeuble" tabIndex={0}>
                         {data.buildings.length > 0
-                            ? data.buildings.map((item) => <OccupancyRow key={item.levelUuid ?? item.label} item={item} />)
+                            ? data.buildings.map((item) => <ReportOccupancyRow key={item.levelUuid ?? item.label} item={item} />)
                             : <p className="reports-empty">Aucun immeuble à afficher.</p>}
                     </div>
                 </Card>
@@ -121,7 +88,7 @@ export function ReportsOverview({ data }: { data: AdminVilleReportsData }) {
                     </div>
                     <ul className="reports-attention__list">
                         {data.arrears.length > 0
-                            ? data.arrears.map((item, index) => <ArrearsRow key={`${item.leaseUuid}-${index}`} item={item} />)
+                            ? data.arrears.map((item, index) => <ReportArrearsRow key={`${item.leaseUuid}-${index}`} item={item} />)
                             : <li className="reports-empty">Aucun impayé à signaler.</li>}
                     </ul>
                 </Card>

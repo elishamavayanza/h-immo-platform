@@ -1,11 +1,11 @@
 import { Card } from '../../../../components/UI/Card';
-import { Badge } from '../../../../components/UI/Badge';
 import { InlineSummary } from '../../../shared/components/InlineSummary';
 import { UpcomingLeaseExpirations } from '../../../shared/components/UpcomingLeaseExpirations';
-import { formatInteger, formatMoney, formatPercent } from '../../../../../utils/format.utils';
-import type { AdminImmobilierReportsData, ArrearsItem, ExpenseSummaryItem, OccupancyItem } from '../types';
+import { formatMoney, formatPercent } from '../../../../../utils/format.utils';
+import type { AdminImmobilierReportsData, ExpenseSummaryItem, OccupancyItem } from '../types';
 import { OccupancyDonut } from '../../../../components/Data/OccupancyDonut';
 import { ChartDisplayToggle } from '../../../../components/Data/ChartDisplayToggle';
+import { ReportArrearsRow } from '../../../shared/reports/components/ReportArrearsRow';
 
 /** Libellé court d'un mois en français : le backend fournit `YYYY-MM`. */
 function monthLabel(point: OccupancyItem): string {
@@ -28,24 +28,6 @@ function BuildingRow({ item }: { item: OccupancyItem }) {
             </div>
             <OccupancyDonut size="small" occupied={item.occupiedUnits} total={item.totalUnits} label={item.label} />
         </div>
-    );
-}
-
-/** Ligne d'impayé : locataire, unité, montant et jours de retard. */
-function ArrearsRow({ item }: { item: ArrearsItem }) {
-    const overdue = item.daysOverdue > 0;
-
-    return (
-        <li>
-            <div>
-                <strong>{item.tenantName}</strong>
-                <small>{item.unitLabel} · {item.leaseReference} · dû {formatMoney(item.amountDue, item.currency)}</small>
-            </div>
-            <span className="reports-attention__amount">{formatMoney(item.arrears, item.currency)}</span>
-            <Badge variant={overdue ? 'warning' : 'info'} size="small">
-                {overdue ? `${formatInteger(item.daysOverdue)} j de retard` : 'À recouvrer'}
-            </Badge>
-        </li>
     );
 }
 
@@ -114,7 +96,7 @@ export function ReportsOverview({ data }: { data: AdminImmobilierReportsData }) 
                     </div>
                     <ul className="reports-attention__list">
                         {data.arrears.length > 0
-                            ? data.arrears.map((item, index) => <ArrearsRow key={`${item.leaseUuid}-${index}`} item={item} />)
+                            ? data.arrears.map((item, index) => <ReportArrearsRow key={`${item.leaseUuid}-${index}`} item={item} />)
                             : <li className="reports-empty">Aucun impayé à signaler.</li>}
                     </ul>
                 </Card>
