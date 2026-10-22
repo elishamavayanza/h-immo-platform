@@ -178,7 +178,7 @@
         color $transition-fast;
 
     &:hover {
-        background-color: $color-bg-card-hover;
+        background-color: color-mix(in srgb, #{$color-primary-light} 55%, transparent);
         color: $color-text-primary;
     }
 
@@ -195,6 +195,7 @@
 
     &:hover {
         background-color: $color-primary-soft;
+        color: $color-primary;
     }
 }
 

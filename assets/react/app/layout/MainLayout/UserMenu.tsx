@@ -111,6 +111,7 @@ export function UserMenu({
             <PopoverMenu
                 placement="top"
                 offset={8}
+                className="user-menu__popover"
                 items={items}
                 trigger={
                     // Pas de `role`/`tabIndex` ici : <PopoverMenu /> pose

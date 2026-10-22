@@ -647,6 +647,19 @@
     min-width: 0;
 }
 
+// PopoverMenu est rendu dans document.body : sa classe dédiée garde les
+// couleurs du compte tout en suivant les accents et thèmes de l'application.
+.popover-menu.user-menu__popover {
+    background-color: color-mix(in srgb, #{$color-primary} 12%, #{$color-bg-card});
+    border-color: color-mix(in srgb, #{$color-primary} 34%, #{$color-border-light});
+}
+
+.popover-menu.user-menu__popover .popover-menu__item:not(.popover-menu__item--danger):hover:not(:disabled):not(.popover-menu__item--disabled),
+.popover-menu.user-menu__popover .popover-menu__item:not(.popover-menu__item--danger):focus-visible {
+    color: $color-primary;
+    background-color: $color-primary-light;
+}
+
 // <PopoverMenu /> emballe son déclencheur dans un conteneur
 // `display: inline-block` : on l'étire pour que le déclencheur occupe
 // toute la largeur du footer au lieu d'être réduit à son contenu.

@@ -160,7 +160,8 @@
         color $transition-fast;
 
     &:hover:not(.dropdown__item--disabled) {
-        background-color: $color-bg-card-hover;
+        background-color: color-mix(in srgb, #{$color-primary-light} 55%, transparent);
+        color: $color-text-primary;
     }
 
     &:active:not(.dropdown__item--disabled) {
@@ -170,7 +171,7 @@
     // Item sélectionné (via aria-selected)
     &[aria-selected='true'] {
         background-color: $color-primary-light;
-        color: $color-primary-hover;
+        color: $color-primary;
         font-weight: $font-weight-semibold;
     }
 }

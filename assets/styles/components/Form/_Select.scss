@@ -127,9 +127,14 @@
     cursor: pointer;
     transition: background-color $transition-fast, color $transition-fast;
 
-    &:hover,
+    &:hover:not(:disabled) {
+        color: $color-text-primary;
+        background: color-mix(in srgb, #{$color-primary-light} 55%, transparent);
+    }
+
     &--selected {
-        background: $color-bg-card-hover;
+        color: $color-primary;
+        background: $color-primary-light;
     }
 
     &:disabled {
@@ -171,6 +176,16 @@
     option {
         background-color: $color-bg-elevated;
         color: $color-text-primary;
+
+        &:hover {
+            color: $color-text-primary;
+            background-color: color-mix(in srgb, #{$color-primary-light} 55%, transparent);
+        }
+
+        &:checked {
+            color: $color-primary;
+            background-color: $color-primary-light;
+        }
 
         &:disabled {
             color: $color-text-disabled;
