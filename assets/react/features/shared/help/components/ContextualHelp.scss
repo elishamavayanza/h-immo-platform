@@ -32,6 +32,27 @@
     &__trigger--positioned:active, &__trigger--dragging { transform: translate(-50%, -50%); }
     &__trigger--dragging { z-index: 1045; opacity: .96; cursor: grabbing; transition: none; }
 
+    &__trigger-tooltip {
+        position: fixed;
+        z-index: 1201;
+        box-sizing: border-box;
+        width: max-content;
+        max-width: min(18.75rem, calc(100vw - 1.5rem));
+        padding: .55rem .75rem;
+        color: var(--color-text-primary);
+        background: var(--color-bg-elevated, var(--color-bg-card));
+        border: 1px solid color-mix(in srgb, var(--color-primary) 28%, var(--color-border));
+        border-radius: .6rem;
+        box-shadow: 0 6px 20px color-mix(in srgb, var(--color-bg-base) 42%, transparent);
+        font-size: .8rem;
+        font-weight: 500;
+        line-height: 1.4;
+        white-space: normal;
+        overflow-wrap: anywhere;
+        pointer-events: none;
+        animation: contextual-help-tooltip-in 120ms ease-out both;
+    }
+
     &__layer { position: fixed; z-index: 1200; inset: 0; display: flex; justify-content: flex-end; background: var(--color-overlay); }
     &__panel { display: flex; flex-direction: column; width: min(28rem, 100%); height: 100%; max-height: 100dvh; padding: 1.25rem; overflow: hidden; color: var(--color-text-primary); background: var(--color-bg-card); border-inline-start: 1px solid var(--color-border); box-shadow: -12px 0 40px color-mix(in srgb, var(--color-bg-base) 30%, transparent); }
     &__header { display: flex; align-items: center; gap: .8rem; padding-block-end: 1rem; border-block-end: 1px solid var(--color-border); }
@@ -51,6 +72,11 @@
     &__guide-procedure ol { display: grid; gap: .45rem; margin: .4rem 0 0; padding-inline-start: 1.35rem; color: var(--color-text-secondary); }
     &__empty { display: grid; place-items: center; flex: 1; align-content: center; gap: .65rem; color: var(--color-text-secondary); text-align: center; button { padding: .5rem .7rem; color: var(--color-primary); background: transparent; border: 1px solid var(--color-border); border-radius: .5rem; cursor: pointer; } }
     &__footer { margin-block-start: auto; padding-block-start: .9rem; color: var(--color-text-muted); border-block-start: 1px solid var(--color-border); font-size: .78rem; line-height: 1.45; }
+}
+
+@keyframes contextual-help-tooltip-in {
+    from { opacity: 0; transform: translateY(3px); }
+    to { opacity: 1; transform: translateY(0); }
 }
 
 // Le panneau reprend les surfaces des cartes du thème clair, avec un mélange

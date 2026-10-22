@@ -30,6 +30,7 @@ export function ContextualHelp() {
     const suppressClickRef = useRef(false);
     const [position, setPosition] = useState<HelpButtonPosition | null>(null);
     const [isDragging, setIsDragging] = useState(false);
+    const [triggerHintPosition, setTriggerHintPosition] = useState<{ left: number; top: number } | null>(null);
     const storageKey = `${HELP_POSITION_KEY}:${user?.uuid ?? 'guest'}`;
     const filteredQuestions = help ? filterHelpQuestions(help.questions, search) : [];
 
@@ -78,6 +79,21 @@ export function ContextualHelp() {
             ? helpButtonPositionToPixels(position, window.innerWidth, window.innerHeight)
             : { x: (rect?.left ?? window.innerWidth - 36) + (rect?.width ?? 48) / 2, y: (rect?.top ?? window.innerHeight - 36) + (rect?.height ?? 48) / 2 };
         storePosition(normalizeHelpButtonPosition(current.x + delta[0], current.y + delta[1], window.innerWidth, window.innerHeight));
+    };
+
+    const showTriggerHint = () => {
+        const rect = triggerRef.current?.getBoundingClientRect();
+        if (!rect) return;
+        const hintWidth = Math.min(300, window.innerWidth - 24);
+        const hintHeight = 48;
+        const gap = 9;
+        const top = rect.top >= hintHeight + gap + 12
+            ? rect.top - hintHeight - gap
+            : rect.bottom + gap;
+        setTriggerHintPosition({
+            left: Math.max(12, Math.min(rect.left + (rect.width - hintWidth) / 2, window.innerWidth - hintWidth - 12)),
+            top: Math.max(12, Math.min(top, window.innerHeight - hintHeight - 12)),
+        });
     };
 
     const beginDrag = (event: ReactPointerEvent<HTMLButtonElement>) => {
@@ -156,8 +172,11 @@ export function ContextualHelp() {
             aria-expanded={open}
             aria-controls={`${id}-panel`}
             aria-keyshortcuts="ArrowUp ArrowDown ArrowLeft ArrowRight"
-            title="Glissez pour déplacer · Flèches pour ajuster"
-            onPointerDown={beginDrag}
+            onPointerEnter={showTriggerHint}
+            onPointerLeave={() => setTriggerHintPosition(null)}
+            onFocus={showTriggerHint}
+            onBlur={() => setTriggerHintPosition(null)}
+            onPointerDown={(event) => { setTriggerHintPosition(null); beginDrag(event); }}
             onPointerMove={moveDrag}
             onPointerUp={endDrag}
             onPointerCancel={endDrag}
@@ -166,7 +185,10 @@ export function ContextualHelp() {
         ><HelpMark /></button>;
 
     return <>
-        {createPortal(trigger, document.body)}
+        {createPortal(<>
+            {trigger}
+            {triggerHintPosition && <span className="contextual-help__trigger-tooltip" role="tooltip" style={{ left: triggerHintPosition.left, top: triggerHintPosition.top }}>Glissez pour déplacer · Flèches pour ajuster</span>}
+        </>, document.body)}
         {open && createPortal(
             <div className="contextual-help__layer" onMouseDown={(event) => { if (event.target === event.currentTarget) setOpen(false); }}>
                 <aside ref={panelRef} id={`${id}-panel`} className="contextual-help__panel" role="dialog" aria-modal="true" aria-labelledby={`${id}-title`} aria-describedby={`${id}-description`}>
