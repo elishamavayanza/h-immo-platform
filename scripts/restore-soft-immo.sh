@@ -4,6 +4,7 @@ set -Eeuo pipefail
 usage() {
     echo "Usage : $0 <répertoire-sauvegarde> --confirm"
     echo "Définir RESTORE_DB_NAME, RESTORE_DB_USER, RESTORE_DB_PASSWORD et RESTORE_MEDIA_DIR."
+    echo "RESTORE_REMOVE_DEFINERS=1 attribue les objets SQL au compte de restauration."
 }
 
 if [[ $# -ne 2 || "$2" != "--confirm" ]]; then
@@ -79,9 +80,18 @@ fi
 rm -f "${restore_work_dir}/table-count.txt"
 
 echo "Restauration confirmée vers la base vide '$RESTORE_DB_NAME' et les médias '$RESTORE_MEDIA_DIR'."
-gzip -dc "${restore_source_dir}/database.sql.gz" | mariadb \
-    --defaults-file="$restore_client_file" \
-    --database="$RESTORE_DB_NAME"
+if [[ "${RESTORE_REMOVE_DEFINERS:-0}" == "1" ]]; then
+    # Un compte de restauration limité à sa base ne peut pas définir un autre
+    # propriétaire SQL sans SET USER. Sans la clause, MariaDB prend le compte
+    # courant comme définisseur, ce qui rend la sauvegarde portable.
+    gzip -dc "${restore_source_dir}/database.sql.gz" \
+        | sed -E 's#(/\*![0-9]+[[:space:]]+)DEFINER=`(``|[^`])*`@`(``|[^`])*`[[:space:]]*#\1#g' \
+        | mariadb --defaults-file="$restore_client_file" --database="$RESTORE_DB_NAME"
+else
+    gzip -dc "${restore_source_dir}/database.sql.gz" | mariadb \
+        --defaults-file="$restore_client_file" \
+        --database="$RESTORE_DB_NAME"
+fi
 
 mkdir -p "$(dirname "$RESTORE_MEDIA_DIR")"
 if [[ -d "$RESTORE_MEDIA_DIR" ]]; then
