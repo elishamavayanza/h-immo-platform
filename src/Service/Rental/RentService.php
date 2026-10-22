@@ -195,8 +195,8 @@ final readonly class RentService
             return $feedback
                 ->addError('period', 'Une autre échéance existe déjà pour ce mois et ce bail.')
                 ->setFlushDescriptionWithError('La période est déjà utilisée par une autre échéance.')
-                ->setStatus(409)
-                ->autoInitFlush();
+                ->autoInitFlush()
+                ->setStatus(409);
         }
 
         $hasPaymentHistory = $this->paymentRepository->hasPaymentsForRent($rent);
@@ -208,8 +208,8 @@ final readonly class RentService
             return $feedback
                 ->addError('rent', 'Une échéance ayant un historique de paiement ne peut pas être modifiée. Enregistrez une correction traçable.')
                 ->setFlushDescriptionWithError('Modification refusée afin de préserver les paiements déjà enregistrés.')
-                ->setStatus(409)
-                ->autoInitFlush();
+                ->autoInitFlush()
+                ->setStatus(409);
         }
 
         $oldValues = $this->rentAuditValues($rent);

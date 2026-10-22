@@ -372,6 +372,7 @@ $em->persist(
         ->setMethod(PaymentMethod::CASH)
         ->setReference('PAY-1-' . $suffix)
 );
+$rentA->syncStatus('200.00');
 
 $em->flush();
 $em->clear();
@@ -760,13 +761,9 @@ $rentUuidA = $rentA->getUuid()->toRfc4122();
 
 // Un client tente d'imposer un statut. Le DTO ne contient plus le champ :
 // la valeur envoyée doit être ignorée, pas appliquée.
-// Changement de date d'un loyer soldé : le statut ne doit surtout pas
-// revenir à « pending » sous l'effet d'une valeur par défaut du DTO.
-// Le groupe « update » exige la charge utile complète : un PATCH n'est pas
-// partiel dans cette API, il faut donc renvoyer aussi le montant et la
-// devise. C'est précisément ce qui rend le test réaliste : la valeur par
-// défaut du DTO qui écrasait le statut était renvoyée par un PATCH «
-// juste la date », que la validation aurait dû laisser passer.
+// Une échéance avec historique de paiement ne peut pas changer de date,
+// montant ou devise : la requête doit être refusée comme conflit et son
+// statut calculé à partir des paiements doit rester inchangé.
 [$status, $payload] = $request(
     'PATCH',
     "/api/v1/rents/{$rentUuidA}",
@@ -774,8 +771,8 @@ $rentUuidA = $rentA->getUuid()->toRfc4122();
     $tokenVilleA
 );
 check(
-    "le PATCH d'une échéance est accepté (200)",
-    $status === 200,
+    "le PATCH financier d'une échéance avec paiements est refusé (409)",
+    $status === 409,
     "obtenu {$status} | " . substr((string) ($payload['message'] ?? ''), 0, 120)
 );
 
@@ -786,7 +783,7 @@ $rentApresPatch = $container->get('doctrine')->getManager()
 
 $statutApresPatch = $rentApresPatch?->getStatus();
 check(
-    "un PATCH de date ne remet pas l'échéance en attente",
+    "un PATCH refusé conserve le statut partiellement payé",
     $statutApresPatch === RentStatus::PARTIALLY_PAID,
     'statut=' . ($statutApresPatch?->value ?? 'null')
 );
