@@ -27,6 +27,10 @@
 !.env.example
 !.env.test
 
+# Outils locaux non publiés
+.github/workflows/
+.yarn/releases/
+
 # Local secrets
 *.key
 *.pem
