@@ -251,7 +251,7 @@ final readonly class OrganizationUserService
         $actor = $this->security->getCurrentUser();
         if ($actor->getUuid()->equals($target->getUuid())) {
             return $feedback->addError('userUuid', 'Vous ne pouvez pas vous attribuer un autre rôle.')
-                ->setErrorFlushDescription('Auto-attribution interdite.')->setStatus(403)->autoInitFlush();
+                ->setErrorFlushDescription('Auto-attribution interdite.')->autoInitFlush()->setStatus(403);
         }
 
         $actorRole = $this->security->getOrganizationRole($actor, $organization);
@@ -262,7 +262,7 @@ final readonly class OrganizationUserService
         };
         if (!$allowed) {
             return $feedback->setErrorFlushDescription('Votre rôle actif ne permet pas cette attribution.')
-                ->setStatus(403)->autoInitFlush();
+                ->autoInitFlush()->setStatus(403);
         }
         $action = match ($request->role) {
             OrganizationRole::ADMIN_IMMOBILIER => SecurityAction::CREATE_ORGANIZATION_ADMIN,
@@ -337,7 +337,7 @@ final readonly class OrganizationUserService
 
         return $feedback->setData($this->mapper->toResponse($assignment))
             ->setFlushDescription('Le nouvel espace a été attribué au membre.')
-            ->setStatus(201)->autoInitFlush();
+            ->autoInitFlush()->setStatus(201);
     }
 
     /**

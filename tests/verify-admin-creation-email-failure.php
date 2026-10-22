@@ -448,6 +448,15 @@ section('Création d\'organisation : le mailer échoue aussi');
     'patronEmail' => 'patron2.' . $suffix . '@test.local',
     'patronFullName' => 'Patron Deux',
     'patronPhone' => '+000',
+    // MapRequestPayload valide ce marqueur avant d'entrer dans le service;
+    // le PATRON doit donc envoyer une demande structurellement complète pour
+    // que le scénario vérifie bien l'autorisation (et non une 422 de DTO).
+    'capacitySettingsProvided' => true,
+    'maxCities' => null,
+    'maxParcels' => null,
+    'maxBuildings' => null,
+    'maxUnits' => null,
+    'maxMembers' => null,
 ], $bearer);
 
 // Le PATRON n'est pas SUPER_ADMIN : la création d'organisation doit être
