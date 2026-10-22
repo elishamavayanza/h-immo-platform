@@ -183,6 +183,9 @@ $makeOrg = static function (string $name, string $code) use ($em, $suffix): Orga
         ->setCode($code . '-' . $suffix)
         ->setEmail(strtolower($code) . $suffix . '@orga.test')
         ->setPhone('+000')
+        // Les tests de galerie portent sur des organisations ayant activé
+        // l’option vitrine, qui est désactivée par défaut.
+        ->setShowcaseEnabled(true)
         ->setStatus(OrganizationStatus::ACTIVE);
     $em->persist($org);
 

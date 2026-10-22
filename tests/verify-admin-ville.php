@@ -188,6 +188,9 @@ $makeOrg = static function (string $name, string $code) use ($em, $suffix): Orga
         ->setCode($code . '-' . $suffix)
         ->setEmail(strtolower($code) . $suffix . '@orga.test')
         ->setPhone('+000')
+        // Active la vitrine pour que les contrôles photo testent bien le
+        // périmètre de ville, et non le droit d’accès à la fonctionnalité.
+        ->setShowcaseEnabled(true)
         ->setStatus(OrganizationStatus::ACTIVE);
     $em->persist($org);
 
