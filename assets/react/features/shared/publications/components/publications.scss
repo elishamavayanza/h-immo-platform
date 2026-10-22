@@ -42,7 +42,7 @@
 .publication-admin__file-input { position: absolute !important; width: 1px !important; height: 1px !important; padding: 0 !important; overflow: hidden !important; clip: rect(0, 0, 0, 0) !important; clip-path: inset(50%) !important; white-space: nowrap !important; }
 .publication-admin__upload-button { display: inline-flex; align-items: center; justify-content: center; gap: 9px; min-height: 42px !important; padding: 9px 15px !important; font-weight: 600 !important; transition: background-color .18s ease, border-color .18s ease, transform .18s ease; }
 .publication-admin__upload-button svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
-.publication-admin__upload-button:hover:not(:disabled) { background: color-mix(in srgb, $color-primary 10%, transparent) !important; transform: translateY(-1px); }
+.publication-admin__upload-button:hover:not(:disabled) { transform: translateY(-1px); }
 .publication-admin__upload-button:focus-visible { outline: 3px solid color-mix(in srgb, $color-primary 36%, transparent); outline-offset: 2px; }
 .publication-admin__file-input:focus-visible + .publication-admin__upload-button { outline: 3px solid color-mix(in srgb, $color-primary 36%, transparent); outline-offset: 2px; }
 .publication-admin__history-filter { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 10px; color: $color-text-muted; font-size: .9rem; }
@@ -53,8 +53,11 @@
 .publication-admin__roles { display: flex; flex-wrap: wrap; gap: 10px 18px; border: 1px solid $color-border; border-radius: 10px; }
 .publication-admin__roles label { display: inline-flex; align-items: center; gap: 6px; font-weight: 400; }
 .publication-admin__actions, .publication-admin__item-actions { display: flex; flex-wrap: wrap; gap: 8px; }
-.publication-admin button:not(.select-field__trigger):not(.datepicker-field__trigger):not(.datepicker-field__clear):not(.calendar__nav):not(.calendar__day):not(.calendar__today) { min-height: 40px; padding: 8px 14px; border: 1px solid $color-primary; border-radius: 9px; background: $color-primary; color: var(--color-button-primary-text, #f5f8f8); font: inherit; cursor: pointer; }
-.publication-admin button.is-secondary { background: transparent; color: $color-primary; }
+.publication-admin button:where(:not(.select-field__trigger):not(.datepicker-field__trigger):not(.datepicker-field__clear):not(.calendar__nav):not(.calendar__day):not(.calendar__today)) { min-height: 40px; padding: 8px 14px; border: 1px solid var(--color-button-primary, #{$color-primary}); border-radius: 9px; background: var(--color-button-primary, #{$color-primary}); color: var(--color-button-primary-text, #f5f8f8); font: inherit; cursor: pointer; transition: background-color .18s ease, border-color .18s ease, color .18s ease, transform .18s ease; }
+.publication-admin button:where(:not(.select-field__trigger):not(.datepicker-field__trigger):not(.datepicker-field__clear):not(.calendar__nav):not(.calendar__day):not(.calendar__today)):hover:not(:disabled):not(.is-secondary) { border-color: var(--color-button-primary-hover, #{$color-primary-hover}); background: var(--color-button-primary-hover, #{$color-primary-hover}); }
+.publication-admin button.is-secondary { border-color: $color-border-light; background: $color-bg-card; color: $color-text-primary; }
+.publication-admin button.is-secondary:hover:not(:disabled) { border-color: $color-border-strong; background: $color-bg-card-hover; }
+.publication-admin button.is-secondary:active:not(:disabled) { background: $color-bg-elevated; }
 .publication-admin button:disabled { opacity: .6; cursor: wait; }
 .publication-admin__preview { position: sticky; top: 12px; }
 .publication-admin__preview > p { color: $color-text-muted; }
