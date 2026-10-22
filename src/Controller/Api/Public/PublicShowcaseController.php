@@ -90,7 +90,7 @@ final class PublicShowcaseController extends AbstractController
     )]
     #[OA\Parameter(name: 'slug', description: 'Slug de la vitrine', in: 'path', required: true)]
     #[OA\Parameter(name: 'city', description: 'Filtrer par code ville (ex: KIN)', in: 'query')]
-    #[OA\Parameter(name: 'type', description: 'Type d\'unité (apartment, office, commercial)', in: 'query', schema: new OA\Schema(type: 'string', enum: ['apartment', 'office', 'commercial']))]
+    #[OA\Parameter(name: 'type', description: 'Type d\'unité', in: 'query', schema: new OA\Schema(type: 'string', enum: ['apartment', 'house', 'shop', 'office', 'restaurant', 'room', 'warehouse', 'workshop', 'storage', 'parking', 'other']))]
     #[OA\Parameter(name: 'bedrooms', description: 'Nombre minimum de chambres', in: 'query', schema: new OA\Schema(type: 'integer', minimum: 0))]
     #[OA\Parameter(name: 'minRent', description: 'Loyer minimum', in: 'query', schema: new OA\Schema(type: 'string', format: 'decimal'))]
     #[OA\Parameter(name: 'maxRent', description: 'Loyer maximum', in: 'query', schema: new OA\Schema(type: 'string', format: 'decimal'))]
