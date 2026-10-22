@@ -46,7 +46,7 @@
 }
 
 .sidebar--dark {
-    background-color: $color-bg-primary;
+    background-color: $color-bg-sidebar;
 }
 
 .sidebar--light {
@@ -285,13 +285,17 @@ html[data-theme='dark'] .sidebar__header {
 .sidebar__group-section {
     margin-bottom: $spacing-4;
     padding-bottom: $spacing-1;
-    border-bottom: 1px solid color-mix(in srgb, $color-border 72%, transparent);
+    border-bottom: 1px solid color-mix(in srgb, $color-border 90%, transparent);
 
     &:last-child {
         margin-bottom: 0;
         padding-bottom: 0;
         border-bottom: 0;
     }
+}
+
+html[data-theme='light'] .sidebar__group-section:not(:last-child) {
+    border-bottom-color: color-mix(in srgb, $color-border-strong 72%, transparent);
 }
 
 .sidebar__group-label {
