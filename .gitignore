@@ -29,7 +29,7 @@
 
 # Outils locaux non publiés
 .github/workflows/
-.yarn/releases/
+/.yarn/releases/**
 
 # Local secrets
 *.key
