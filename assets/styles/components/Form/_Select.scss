@@ -338,6 +338,12 @@
     display: block;
 }
 
+// Le déclencheur personnalisé reste flex même si `fullWidth` est demandé :
+// sans cette précision, le libellé ne peut pas se réduire avant le chevron.
+.select-field__trigger.select-field--full-width {
+    display: flex;
+}
+
 
 // ============================================================
 // RESPONSIVE

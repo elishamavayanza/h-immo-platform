@@ -22,6 +22,7 @@ export function useAuditLog() {
 
     const [organizationOptions, setOrganizationOptions] = useState<OrganizationRow[]>([]);
     const [orgLoading, setOrgLoading] = useState(true);
+    const [orgError, setOrgError] = useState<string | null>(null);
 
     const [filters, setFilters] = useState<AuditListParams>({
         page: 1,
@@ -52,11 +53,12 @@ export function useAuditLog() {
 
     const loadOrganizations = useCallback(async () => {
         setOrgLoading(true);
+        setOrgError(null);
         try {
-            const orgs = await organizationsService.list({ limit: 1000 });
+            const orgs = await organizationsService.listAll();
             setOrganizationOptions(orgs);
-        } catch {
-            // Ignore, just won't have org names
+        } catch (cause) {
+            setOrgError(errorMessage(cause));
         } finally {
             setOrgLoading(false);
         }
@@ -111,6 +113,8 @@ export function useAuditLog() {
         actionOptions,
         orgOptions,
         orgLoading,
+        orgError,
+        loadOrganizations,
         reload,
         handleFilterChange,
         handlePageChange,

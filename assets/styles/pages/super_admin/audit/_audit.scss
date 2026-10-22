@@ -3,7 +3,13 @@
 
 .sa-audit-layout { display:flex; align-items:stretch; min-height:100%; }
 .sa-audit-page { flex:1; min-width:0; }
-.sa-audit-filters { grid-template-columns: minmax(220px, 300px) minmax(160px, 190px); }
+.sa-audit-filters {
+    grid-template-columns: minmax(0, 300px) minmax(0, 190px);
+    min-width: 0;
+    max-width: 100%;
+}
+.sa-audit-filters > * { min-width: 0; }
+.sa-audit-filters .select-field__trigger { min-width: 0; }
 .audit-uuid { display:inline-block; max-width:170px; overflow:hidden; text-overflow:ellipsis; vertical-align:middle; font-family:monospace; font-size:$font-size-xs; }
 .audit-detail { display:flex; flex-direction:column; gap:$spacing-3; }
 .audit-detail__header { display:flex; align-items:flex-start; justify-content:space-between; flex-wrap:wrap; gap:$spacing-2; }
@@ -44,4 +50,15 @@
     .audit-detail__values .card__body { padding:$spacing-2; }
     .audit-detail__metadata > div,
     .audit-detail__changes > div { grid-template-columns:minmax(64px, .55fr) minmax(0, 1.45fr); gap:$spacing-2; }
+}
+
+/* Le panneau peut être étroit à cause des barres latérales même sur grand écran. */
+@container management-card (max-width: 680px) {
+    .sa-audit-filters { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .sa-audit-filters > :first-child { grid-column: 1 / -1; }
+}
+
+@container management-card (max-width: 420px) {
+    .sa-audit-filters { grid-template-columns: minmax(0, 1fr); }
+    .sa-audit-filters > :first-child { grid-column: auto; }
 }

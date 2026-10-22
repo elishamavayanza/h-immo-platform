@@ -57,6 +57,8 @@ export function AuditLogPage() {
         actionOptions,
         orgOptions,
         orgLoading,
+        orgError,
+        loadOrganizations,
         reload,
         handleFilterChange,
         handlePageChange,
@@ -116,6 +118,12 @@ export function AuditLogPage() {
                             />
                         </div>
                     </div>
+                    {orgError && (
+                        <div className="sa-audit-error" role="alert">
+                            <span>Impossible de charger la liste des organisations : {orgError}</span>
+                            <button type="button" className="button button--ghost button--small" onClick={() => void loadOrganizations()}>Réessayer</button>
+                        </div>
+                    )}
                     {error && (
                         <div className="sa-audit-error" role="alert">
                             <span>Erreur de chargement : {error}</span>

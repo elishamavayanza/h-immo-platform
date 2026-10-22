@@ -32,13 +32,19 @@ export const organizationsService = {
 
     /** `GET /api/v1/identity/organizations` — liste paginée (SUPER_ADMIN : toutes). */
     async list(params?: { page?: number; limit?: number; search?: string }): Promise<OrganizationRow[]> {
-        const query: Record<string, string | number> = {
-            page: params?.page ?? 1,
-            limit: params?.limit ?? 100,
-            ...(params?.search ? { search: params.search } : {}),
-        };
-        const { data } = await apiClient.get<Feedback<OrganizationListData>>('/v1/identity/organizations', { params: query });
-        return data.data.items.map(toRow);
+        return (await listPage(params)).items;
+    },
+
+    /** Charge toutes les pages avec la limite maximale acceptée par l'API. */
+    async listAll(): Promise<OrganizationRow[]> {
+        const firstPage = await listPage({ page: 1, limit: 100 });
+        const pageCount = Math.ceil(firstPage.total / firstPage.limit);
+        if (pageCount <= 1) return firstPage.items;
+
+        const remainingPages = await Promise.all(
+            Array.from({ length: pageCount - 1 }, (_, index) => listPage({ page: index + 2, limit: 100 })),
+        );
+        return [...firstPage.items, ...remainingPages.flatMap((page) => page.items)];
     },
 
     /**
@@ -117,6 +123,20 @@ export const organizationsService = {
         };
     },
 };
+
+async function listPage(params?: { page?: number; limit?: number; search?: string }): Promise<{ items: OrganizationRow[]; total: number; limit: number }> {
+    const query: Record<string, string | number> = {
+        page: params?.page ?? 1,
+        limit: params?.limit ?? 100,
+        ...(params?.search ? { search: params.search } : {}),
+    };
+    const { data } = await apiClient.get<Feedback<OrganizationListData>>('/v1/identity/organizations', { params: query });
+    return {
+        items: data.data.items.map(toRow),
+        total: data.data.total,
+        limit: data.data.limit,
+    };
+}
 
 /**
  * Projette le DTO backend `OrganizationResponse` vers la ligne du tableau.
