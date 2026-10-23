@@ -38,6 +38,7 @@ export function VitrinePage() {
     const [isListed, setIsListed] = useState(true);
     const [formErrors, setFormErrors] = useState<Record<string, string>>({});
     const [submitting, setSubmitting] = useState(false);
+    const [editingSettings, setEditingSettings] = useState(false);
 
     const [logoChange, setLogoChange] = useState<OrganizationLogoChange>(null);
     const [savingLogo, setSavingLogo] = useState(false);
@@ -47,11 +48,12 @@ export function VitrinePage() {
         setSlug(settings.slug ?? '');
         setDescription(settings.publicDescription ?? '');
         setIsListed(settings.isPubliclyListed);
+        setEditingSettings(false);
     }, [settings]);
 
     const submit = async (event: FormEvent<HTMLFormElement>) => {
         event.preventDefault();
-        if (submitting) return;
+        if (!editingSettings || submitting) return;
         setSubmitting(true);
         setFormErrors({});
         try {
@@ -62,11 +64,21 @@ export function VitrinePage() {
                 publicDescription: description.trim(),
                 isPubliclyListed: isListed,
             });
+            setEditingSettings(false);
         } catch (cause) {
             setFormErrors(fieldErrorMap(cause));
         } finally {
             setSubmitting(false);
         }
+    };
+
+    const cancelSettingsEdit = () => {
+        if (!settings) return;
+        setSlug(settings.slug ?? '');
+        setDescription(settings.publicDescription ?? '');
+        setIsListed(settings.isPubliclyListed);
+        setFormErrors({});
+        setEditingSettings(false);
     };
 
     const persistLogo = async () => {
@@ -113,8 +125,13 @@ export function VitrinePage() {
                         <div className="organization-table-toolbar">
                             <div>
                                 <h2>Réglages publics</h2>
-                                <p>Ces informations apparaissent sur votre page publique.</p>
+                                <p>Ces informations apparaissent sur votre page publique. Elles restent protégées jusqu’à ce que vous choisissiez de les modifier.</p>
                             </div>
+                            {!editingSettings && (
+                                <Button type="button" variant="outline" onClick={() => setEditingSettings(true)}>
+                                    Modifier les réglages
+                                </Button>
+                            )}
                         </div>
                         <form className="organization-management-form" onSubmit={submit}>
                             <FormField label="Nom de la page publique (slug)" htmlFor="vitrine-slug" error={formErrors.slug}>
@@ -125,6 +142,7 @@ export function VitrinePage() {
                                     placeholder="ex : immo-plus"
                                     maxLength={60}
                                     fullWidth
+                                    readOnly={!editingSettings}
                                 />
                             </FormField>
                             <p className="organization-management-form__hint">
@@ -139,21 +157,28 @@ export function VitrinePage() {
                                     rows={4}
                                     maxLength={2000}
                                     fullWidth
+                                    readOnly={!editingSettings}
                                 />
                             </FormField>
                             <FormField label="Visibilité" htmlFor="vitrine-listed">
                                 <Switch
                                     id="vitrine-listed"
                                     checked={isListed}
+                                    disabled={!editingSettings}
                                     onChange={(event) => setIsListed(event.target.checked)}
                                     label="Afficher la vitrine sur le site public"
                                 />
                             </FormField>
-                            <div className="organization-table-toolbar__actions">
-                                <Button type="submit" disabled={submitting} aria-busy={submitting}>
-                                    {submitting ? 'Enregistrement…' : 'Enregistrer les réglages'}
-                                </Button>
-                            </div>
+                            {editingSettings && (
+                                <div className="organization-table-toolbar__actions">
+                                    <Button type="button" variant="outline" disabled={submitting} onClick={cancelSettingsEdit}>
+                                        Annuler
+                                    </Button>
+                                    <Button type="submit" disabled={submitting} aria-busy={submitting}>
+                                        {submitting ? 'Enregistrement…' : 'Enregistrer les réglages'}
+                                    </Button>
+                                </div>
+                            )}
                         </form>
                     </Card>
 
