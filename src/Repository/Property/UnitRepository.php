@@ -571,6 +571,76 @@ class UnitRepository extends ServiceEntityRepository
     }
 
     /**
+     * Catalogue public commun, filtré en SQL avant pagination.
+     * Aucune organisation ni unité non publiable n'est chargée côté application.
+     *
+     * @return array{items: list<Unit>, total: int}
+     */
+    public function findAllPubliclyPublishedAndVacant(
+        int $page = 1,
+        int $limit = 12,
+        ?UnitType $type = null,
+        ?int $minBedrooms = null,
+        ?ListingOfferType $offerType = null,
+        ?string $minPrice = null,
+        ?string $maxPrice = null,
+        ?Currency $currency = null,
+    ): array {
+        $qb = $this->createQueryBuilder('u')
+            ->innerJoin('u.building', 'b')
+            ->innerJoin('b.parcel', 'p')
+            ->innerJoin('p.city', 'c')
+            ->innerJoin('c.organization', 'o')
+            ->innerJoin('u.listing', 'listing')
+            ->addSelect('b', 'p', 'c', 'o', 'listing')
+            ->andWhere('u.deletedAt IS NULL')
+            ->andWhere('b.deletedAt IS NULL')
+            ->andWhere('p.deletedAt IS NULL')
+            ->andWhere('c.deletedAt IS NULL')
+            ->andWhere('c.status = :cityActive')
+            ->andWhere('o.deletedAt IS NULL')
+            ->andWhere('o.status = :organizationActive')
+            ->andWhere('o.isPubliclyListed = true')
+            ->andWhere('o.showcaseEnabled = true')
+            ->andWhere('o.slug IS NOT NULL')
+            ->andWhere('o.slug <> :emptySlug')->setParameter('emptySlug', '')
+            ->andWhere('listing.status = :listingPublished')
+            ->andWhere('listing.publicSnapshot IS NOT NULL')
+            ->andWhere('u.operationalStatus = :operationalAvailable')
+            ->andWhere('NOT EXISTS (
+                SELECT 1 FROM App\\Entity\\Rental\\Lease l
+                WHERE (l.unit = u OR u MEMBER OF l.additionalUnits)
+                  AND l.status = :activeStatus AND l.deletedAt IS NULL
+            )')
+            ->setParameter('cityActive', CityStatus::ACTIVE)
+            ->setParameter('organizationActive', OrganizationStatus::ACTIVE)
+            ->setParameter('listingPublished', ListingStatus::PUBLISHED)
+            ->setParameter('operationalAvailable', UnitOperationalStatus::AVAILABLE)
+            ->setParameter('activeStatus', LeaseStatus::ACTIVE);
+
+        if ($type !== null) {
+            $qb->andWhere('u.type = :type')->setParameter('type', $type);
+        }
+        if ($minBedrooms !== null) {
+            $qb->andWhere('u.bedrooms >= :minBedrooms')->setParameter('minBedrooms', $minBedrooms);
+        }
+        if ($offerType !== null) {
+            $qb->andWhere('listing.offerType = :offerType')->setParameter('offerType', $offerType);
+        }
+        if ($minPrice !== null) {
+            $qb->andWhere('listing.price >= :minPrice')->setParameter('minPrice', $minPrice);
+        }
+        if ($maxPrice !== null) {
+            $qb->andWhere('listing.price <= :maxPrice')->setParameter('maxPrice', $maxPrice);
+        }
+        if ($currency !== null) {
+            $qb->andWhere('listing.currency = :currency')->setParameter('currency', $currency);
+        }
+
+        return $this->fetchPaginated($qb->orderBy('listing.publishedAt', 'DESC')->addOrderBy('u.id', 'DESC'), $page, $limit);
+    }
+
+    /**
      * Une unité publiée, et toujours libre, vue par son UUID public.
      *
      * Même couple de conditions que `findPublishedAndVacant()`, et pour la

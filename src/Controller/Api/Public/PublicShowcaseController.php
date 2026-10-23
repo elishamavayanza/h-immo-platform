@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Controller\Api\Public;
 
 use App\Dto\Feedback;
+use App\Dto\Request\Property\PublicGlobalListingFilterQuery;
 use App\Dto\Request\Property\PublicListingFilterQuery;
 use App\Dto\Response\Property\PublicListingResponse;
 use App\Dto\Response\System\PublicShowcaseResponse;
@@ -43,6 +44,42 @@ final class PublicShowcaseController extends AbstractController
     public function __construct(
         private readonly PublicShowcaseService $publicShowcaseService,
     ) {
+    }
+
+    #[Route('/listings', name: 'global_listings', methods: ['GET'])]
+    #[OA\Get(
+        summary: 'Lister les annonces publiques toutes agences confondues',
+        description: 'Catalogue global borné aux organisations actives et visibles, aux annonces publiées, aux villes actives et aux unités encore disponibles sans bail actif.'
+    )]
+    #[OA\Parameter(name: 'type', description: 'Type d’unité', in: 'query', schema: new OA\Schema(type: 'string', enum: ['apartment', 'house', 'shop', 'office', 'restaurant', 'room', 'warehouse', 'workshop', 'storage', 'parking', 'other']))]
+    #[OA\Parameter(name: 'offerType', description: 'Type d’offre', in: 'query', schema: new OA\Schema(type: 'string', enum: ['rent', 'sale']))]
+    #[OA\Parameter(name: 'bedrooms', description: 'Nombre minimum de chambres', in: 'query', schema: new OA\Schema(type: 'integer', minimum: 0))]
+    #[OA\Parameter(name: 'minPrice', description: 'Prix minimum ; requiert currency', in: 'query', schema: new OA\Schema(type: 'string', format: 'decimal'))]
+    #[OA\Parameter(name: 'maxPrice', description: 'Prix maximum ; requiert currency', in: 'query', schema: new OA\Schema(type: 'string', format: 'decimal'))]
+    #[OA\Parameter(name: 'currency', description: 'Devise nécessaire pour filtrer les prix', in: 'query', schema: new OA\Schema(type: 'string', enum: ['USD', 'CDF']))]
+    #[OA\Parameter(name: 'page', description: 'Numéro de page (1-indexé)', in: 'query', schema: new OA\Schema(type: 'integer', minimum: 1, default: 1))]
+    #[OA\Parameter(name: 'limit', description: 'Éléments par page (max 100)', in: 'query', schema: new OA\Schema(type: 'integer', minimum: 1, maximum: 100, default: 12))]
+    #[OA\Response(response: 200, description: 'Annonces publiques globales paginées', content: new OA\JsonContent(ref: new Model(type: Feedback::class)))]
+    #[OA\Response(response: 400, description: 'Filtres invalides', content: new OA\JsonContent(ref: new Model(type: Feedback::class)))]
+    public function globalListings(
+        #[MapQueryString(validationFailedStatusCode: 400)] ?PublicGlobalListingFilterQuery $query = null,
+    ): JsonResponse {
+        $query ??= new PublicGlobalListingFilterQuery();
+        $result = $this->publicShowcaseService->listGlobalListings(
+            page: $query->page,
+            limit: min($query->limit, 100),
+            type: $query->type !== null ? UnitType::from($query->type) : null,
+            minBedrooms: $query->bedrooms,
+            offerType: $query->offerType !== null ? ListingOfferType::from($query->offerType) : null,
+            minPrice: $query->minPrice,
+            maxPrice: $query->maxPrice,
+            currency: $query->currency !== null ? Currency::from($query->currency) : null,
+        );
+
+        return $this->json(
+            (new Feedback())->setData($result)->setStatus(200)->autoInitFlush(),
+            200
+        );
     }
 
     #[Route('/organizations/{slug}/showcase', name: 'showcase', methods: ['GET'])]

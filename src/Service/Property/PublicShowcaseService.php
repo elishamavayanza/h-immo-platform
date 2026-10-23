@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Service\Property;
 
 use App\Dto\Response\Property\PublicListingResponse;
+use App\Dto\Response\Property\PublicOrganizationListingResponse;
 use App\Dto\Response\System\PublicShowcaseResponse;
 use App\Entity\Identity\Organization;
 use App\Entity\Property\Listing;
@@ -135,6 +136,56 @@ final readonly class PublicShowcaseService
                 $unit,
                 $this->unitPhotoService->listForUnit($unit),
                 $unit->getListing() ?? throw new \LogicException('Une annonce publique doit être associée à son workflow publié.')
+            );
+        }
+
+        return [
+            'items' => $items,
+            'total' => $result['total'],
+            'page' => $page,
+            'pages' => max(1, (int) ceil($result['total'] / max(1, $limit))),
+        ];
+    }
+
+    /**
+     * Annonces publiques de toutes les vitrines actives, limitées et filtrées en base.
+     * Les organisations masquées, les biens occupés et les brouillons ne sont jamais sérialisés.
+     *
+     * @return array{items: list<PublicOrganizationListingResponse>, total: int, page: int, pages: int}
+     */
+    public function listGlobalListings(
+        int $page = 1,
+        int $limit = 12,
+        ?UnitType $type = null,
+        ?int $minBedrooms = null,
+        ?ListingOfferType $offerType = null,
+        ?string $minPrice = null,
+        ?string $maxPrice = null,
+        ?Currency $currency = null,
+    ): array {
+        $result = $this->unitRepository->findAllPubliclyPublishedAndVacant(
+            $page,
+            $limit,
+            $type,
+            $minBedrooms,
+            $offerType,
+            $minPrice,
+            $maxPrice,
+            $currency,
+        );
+        $items = [];
+
+        foreach ($result['items'] as $unit) {
+            $organization = $unit->getBuilding()->getParcel()->getCity()->getOrganization();
+            $listing = $unit->getListing();
+            if ($listing === null || $organization->getSlug() === null) {
+                continue;
+            }
+
+            $items[] = new PublicOrganizationListingResponse(
+                organizationSlug: $organization->getSlug(),
+                organizationName: $organization->getName(),
+                listing: $this->unitMapper->toPublicListing($unit, $this->unitPhotoService->listForUnit($unit), $listing),
             );
         }
 
