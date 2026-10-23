@@ -211,6 +211,14 @@ interface SecurityServiceInterface
      */
     public function getScopedCities(): array;
 
+    /**
+     * Villes visibles dans une organisation précise, selon le rôle et les
+     * affectations UserCity de l'utilisateur courant.
+     *
+     * @return list<City>
+     */
+    public function getAccessibleCitiesForOrganization(Organization $organization): array;
+
     /*
      * ============================================================
      * PATRIMOINE (PARCELLE / BÂTIMENT / UNITÉ)

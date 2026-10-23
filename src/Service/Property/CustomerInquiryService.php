@@ -12,6 +12,7 @@ use App\Dto\Response\Property\PublicInquiryReceiptResponse;
 use App\Entity\Identity\Organization;
 use App\Entity\Property\CustomerInquiry;
 use App\Entity\Property\CustomerInquiryHistory;
+use App\Entity\Property\CustomerInquiryNotification;
 use App\Entity\Property\CustomerVisit;
 use App\Entity\Rental\Lease;
 use App\Enum\CustomerInquiryStatus;
@@ -19,9 +20,11 @@ use App\Enum\CustomerInquiryType;
 use App\Enum\CustomerVisitStatus;
 use App\Enum\LeaseStatus;
 use App\Enum\ListingOfferType;
+use App\Enum\OrganizationRole;
 use App\Mapper\Property\CustomerInquiryMapper;
 use App\Repository\Identity\OrganizationRepository;
 use App\Repository\Property\CustomerInquiryRepository;
+use App\Repository\Property\CustomerInquiryNotificationRepository;
 use App\Repository\Property\CustomerVisitRepository;
 use App\Repository\Rental\LeaseRepository;
 use App\Security\SecurityAction;
@@ -45,6 +48,7 @@ final readonly class CustomerInquiryService
 {
     public function __construct(
         private CustomerInquiryRepository $inquiries,
+        private CustomerInquiryNotificationRepository $notifications,
         private CustomerVisitRepository $visits,
         private LeaseRepository $leases,
         private OrganizationRepository $organizations,
@@ -121,9 +125,14 @@ final readonly class CustomerInquiryService
             ->setNewStatus(CustomerInquiryStatus::NEW);
 
         try {
-            $this->entityManager->wrapInTransaction(function (EntityManagerInterface $entityManager) use ($inquiry, $history, $organization): void {
+            $city = $listing->getUnit()->getBuilding()->getParcel()->getCity();
+            $recipients = $this->notifications->findActiveCityAdmins($organization, $city);
+            $this->entityManager->wrapInTransaction(function (EntityManagerInterface $entityManager) use ($inquiry, $history, $organization, $recipients): void {
                 $entityManager->persist($inquiry);
                 $entityManager->persist($history);
+                foreach ($recipients as $recipient) {
+                    $entityManager->persist((new CustomerInquiryNotification())->setInquiry($inquiry)->setRecipient($recipient));
+                }
                 $entityManager->flush();
                 $this->auditLog->log('CREATE_PUBLIC_CUSTOMER_INQUIRY', CustomerInquiry::class, $inquiry->getId(), $organization,
                     oldValues: null, newValues: ['listingUuid' => (string) $inquiry->getListing()->getUuid(), 'type' => $inquiry->getType()->value], flush: false);
@@ -137,14 +146,59 @@ final readonly class CustomerInquiryService
         return ['receipt' => $this->receipt($inquiry), 'created' => true];
     }
 
+    /** @return array{items: list<array{uuid: string, inquiryUuid: string, listingTitle: string, city: string, createdAt: string, readAt: ?string}>, unread: int} */
+    public function notificationsForCurrentUser(string $organizationUuid): array
+    {
+        $organization = $this->findOrganization($organizationUuid);
+        $this->security->checkOrganizationAccess($organization, SecurityAction::VIEW_CUSTOMER_INQUIRY);
+        $user = $this->security->getCurrentUser();
+        $this->assertCityNotificationRole($organization, $user);
+        $cities = $this->security->getAccessibleCitiesForOrganization($organization);
+        $result = $this->notifications->findInbox($user, $organization, $cities);
+        return [
+            'unread' => $result['unread'],
+            'items' => array_map(static function (CustomerInquiryNotification $notification): array {
+                $inquiry = $notification->getInquiry();
+                $city = $inquiry->getListing()->getUnit()->getBuilding()->getParcel()->getCity();
+                return [
+                    'uuid' => $notification->getUuid()->toRfc4122(),
+                    'inquiryUuid' => $inquiry->getUuid()->toRfc4122(),
+                    'listingTitle' => $inquiry->getListing()->getTitle(),
+                    'city' => $city->getName(),
+                    'createdAt' => $notification->getCreatedAt()->format(DATE_ATOM),
+                    'readAt' => $notification->getReadAt()?->format(DATE_ATOM),
+                ];
+            }, $result['items']),
+        ];
+    }
+
+    public function markNotificationRead(string $organizationUuid, string $notificationUuid): void
+    {
+        $organization = $this->findOrganization($organizationUuid);
+        $this->security->checkOrganizationAccess($organization, SecurityAction::VIEW_CUSTOMER_INQUIRY);
+        $user = $this->security->getCurrentUser();
+        $this->assertCityNotificationRole($organization, $user);
+        $notification = $this->notifications->findOneForRecipient(
+            $organization,
+            $user,
+            $this->parseUuid($notificationUuid, 'Notification introuvable.'),
+        ) ?? throw new NotFoundHttpException('Notification introuvable.');
+        $this->checkInquiryCityAccess($notification->getInquiry(), SecurityAction::VIEW_CUSTOMER_INQUIRY);
+        if ($notification->getReadAt() === null) {
+            $notification->setReadAt($this->dateTime->now());
+            $this->entityManager->flush();
+        }
+    }
+
     /** @return array{items: list<\App\Dto\Response\Property\CustomerInquiryResponse>, total: int, page: int, pages: int} */
     public function listForOrganization(string $organizationUuid, CustomerInquiryFilterRequest $filter): array
     {
         $organization = $this->findOrganization($organizationUuid);
         $this->security->checkOrganizationAccess($organization, SecurityAction::VIEW_CUSTOMER_INQUIRY);
+        $cities = $this->security->getAccessibleCitiesForOrganization($organization);
         $status = $filter->status === null ? null : CustomerInquiryStatus::from($filter->status);
         $type = $filter->type === null ? null : CustomerInquiryType::from($filter->type);
-        $result = $this->inquiries->findForOrganization($organization, $status, $type, $filter->page, $filter->limit);
+        $result = $this->inquiries->findForOrganization($organization, $cities, $status, $type, $filter->page, $filter->limit);
 
         return [
             'items' => array_map($this->mapper->toResponse(...), $result['items']),
@@ -158,7 +212,9 @@ final readonly class CustomerInquiryService
     {
         $organization = $this->findOrganization($organizationUuid);
         $this->security->checkOrganizationAccess($organization, SecurityAction::VIEW_CUSTOMER_INQUIRY);
-        return $this->mapper->toResponse($this->findInquiry($organization, $inquiryUuid));
+        $inquiry = $this->findInquiry($organization, $inquiryUuid);
+        $this->checkInquiryCityAccess($inquiry, SecurityAction::VIEW_CUSTOMER_INQUIRY);
+        return $this->mapper->toResponse($inquiry);
     }
 
     /** @return list<object> */
@@ -167,6 +223,7 @@ final readonly class CustomerInquiryService
         $organization = $this->findOrganization($organizationUuid);
         $this->security->checkOrganizationAccess($organization, SecurityAction::VIEW_CUSTOMER_INQUIRY);
         $inquiry = $this->findInquiry($organization, $inquiryUuid);
+        $this->checkInquiryCityAccess($inquiry, SecurityAction::VIEW_CUSTOMER_INQUIRY);
 
         return array_map($this->mapper->toHistoryResponse(...), $this->inquiries->findHistory($inquiry));
     }
@@ -267,6 +324,7 @@ final readonly class CustomerInquiryService
         $organization = $this->findOrganization($organizationUuid);
         $this->security->checkOrganizationAccess($organization, SecurityAction::VIEW_CUSTOMER_INQUIRY);
         $inquiry = $this->findInquiry($organization, $inquiryUuid);
+        $this->checkInquiryCityAccess($inquiry, SecurityAction::VIEW_CUSTOMER_INQUIRY);
 
         return array_map($this->mapper->toVisitResponse(...), $this->visits->findForInquiry($organization, $inquiry));
     }
@@ -274,10 +332,11 @@ final readonly class CustomerInquiryService
     public function proposeVisit(string $organizationUuid, string $inquiryUuid, CustomerVisitRequest $request): object
     {
         $organization = $this->findOrganization($organizationUuid);
-        $this->security->checkOrganizationAccess($organization, SecurityAction::MANAGE_CUSTOMER_INQUIRY);
+        $this->security->checkOrganizationAccess($organization, SecurityAction::MANAGE_CUSTOMER_VISIT);
         $scheduledAt = $this->parseFutureVisitDate($request->scheduledAt);
         $actor = $this->security->getCurrentUser();
         $inquiry = $this->findInquiry($organization, $inquiryUuid);
+        $this->checkInquiryCityAccess($inquiry, SecurityAction::MANAGE_CUSTOMER_VISIT);
 
         return $this->entityManager->wrapInTransaction(function (EntityManagerInterface $entityManager) use ($organization, $inquiry, $scheduledAt, $actor): object {
             $inquiry = $this->inquiries->lock($inquiry);
@@ -305,10 +364,11 @@ final readonly class CustomerInquiryService
     public function rescheduleVisit(string $organizationUuid, string $inquiryUuid, string $visitUuid, CustomerVisitRequest $request): object
     {
         $organization = $this->findOrganization($organizationUuid);
-        $this->security->checkOrganizationAccess($organization, SecurityAction::MANAGE_CUSTOMER_INQUIRY);
+        $this->security->checkOrganizationAccess($organization, SecurityAction::MANAGE_CUSTOMER_VISIT);
         $scheduledAt = $this->parseFutureVisitDate($request->scheduledAt);
         $actor = $this->security->getCurrentUser();
         $inquiry = $this->findInquiry($organization, $inquiryUuid);
+        $this->checkInquiryCityAccess($inquiry, SecurityAction::MANAGE_CUSTOMER_VISIT);
         $uuid = $this->parseUuid($visitUuid, 'Rendez-vous introuvable.');
 
         return $this->entityManager->wrapInTransaction(function (EntityManagerInterface $entityManager) use ($organization, $inquiry, $uuid, $scheduledAt, $actor): object {
@@ -334,7 +394,7 @@ final readonly class CustomerInquiryService
     public function transitionVisit(string $organizationUuid, string $inquiryUuid, string $visitUuid, CustomerVisitTransitionRequest $request): object
     {
         $organization = $this->findOrganization($organizationUuid);
-        $this->security->checkOrganizationAccess($organization, SecurityAction::MANAGE_CUSTOMER_INQUIRY);
+        $this->security->checkOrganizationAccess($organization, SecurityAction::MANAGE_CUSTOMER_VISIT);
         $target = CustomerVisitStatus::from($request->status);
         $reason = $request->reason === null ? null : trim($request->reason);
         if (in_array($target, [CustomerVisitStatus::COMPLETED, CustomerVisitStatus::CANCELLED], true) && ($reason === null || $reason === '')) {
@@ -342,6 +402,7 @@ final readonly class CustomerInquiryService
         }
         $actor = $this->security->getCurrentUser();
         $inquiry = $this->findInquiry($organization, $inquiryUuid);
+        $this->checkInquiryCityAccess($inquiry, SecurityAction::MANAGE_CUSTOMER_VISIT);
         $uuid = $this->parseUuid($visitUuid, 'Rendez-vous introuvable.');
 
         return $this->entityManager->wrapInTransaction(function (EntityManagerInterface $entityManager) use ($organization, $inquiry, $uuid, $target, $reason, $actor): object {
@@ -485,6 +546,19 @@ final readonly class CustomerInquiryService
         }
         return $this->inquiries->findOneByOrganizationAndUuid($organization, $parsed)
             ?? throw new NotFoundHttpException('Demande introuvable.');
+    }
+
+    private function checkInquiryCityAccess(CustomerInquiry $inquiry, SecurityAction $action): void
+    {
+        $city = $inquiry->getListing()->getUnit()->getBuilding()->getParcel()->getCity();
+        $this->security->checkCityAccess($city, $action);
+    }
+
+    private function assertCityNotificationRole(Organization $organization, \App\Entity\Identity\User $user): void
+    {
+        if ($this->security->getOrganizationRole($user, $organization) !== OrganizationRole::ADMIN_VILLE) {
+            throw new \Symfony\Component\HttpKernel\Exception\AccessDeniedHttpException('Cette boîte est réservée aux administrateurs des villes attribuées.');
+        }
     }
 
     private function parseUuid(string $value, string $message): Uuid

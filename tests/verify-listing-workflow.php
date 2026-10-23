@@ -19,6 +19,7 @@ use App\Entity\Property\Listing;
 use App\Entity\Property\Parcel;
 use App\Entity\Property\Unit;
 use App\Entity\Property\UnitPhoto;
+use App\Entity\Property\CustomerInquiryNotification;
 use App\Enum\BuildingType;
 use App\Enum\CityStatus;
 use App\Enum\Currency;
@@ -90,6 +91,7 @@ $organization = (new Organization())
     ->setShowcaseEnabled(true)
     ->setStatus(OrganizationStatus::ACTIVE);
 $adminVille = (new User())->setEmail('ville-' . $suffix . '@test.local')->setFullName('Admin Ville test')->setPassword(password_hash($password, PASSWORD_BCRYPT))->setIsActive(true);
+$otherCityAdmin = (new User())->setEmail('ville-autre-' . $suffix . '@test.local')->setFullName('Admin Ville autre test')->setPassword(password_hash($password, PASSWORD_BCRYPT))->setIsActive(true);
 $adminImmobilier = (new User())->setEmail('immo-' . $suffix . '@test.local')->setFullName('Admin Immobilier test')->setPassword(password_hash($password, PASSWORD_BCRYPT))->setIsActive(true);
 $patron = (new User())->setEmail('patron-' . $suffix . '@test.local')->setFullName('Patron test')->setPassword(password_hash($password, PASSWORD_BCRYPT))->setIsActive(true);
 $city = (new City())->setName('Ville test annonces')->setCode('V-' . strtoupper($suffix))->setCountry('CD')->setStatus(CityStatus::ACTIVE)->setOrganization($organization);
@@ -108,12 +110,14 @@ $secondCity = (new City())->setName('Ville secondaire test')->setCode('V2-' . st
 $secondParcel = (new Parcel())->setReference('P2-' . $suffix)->setName('Parcelle secondaire')->setAddress('Adresse secondaire')->setArea('80.00')->setCity($secondCity);
 $secondBuilding = (new Building())->setReference('B2-' . $suffix)->setName('Bâtiment secondaire')->setType(BuildingType::MIXED)->setParcel($secondParcel);
 $secondUnit = (new Unit())->setReference('U2-' . $suffix)->setBuilding($secondBuilding)->setType(UnitType::APARTMENT)->setOperationalStatus(UnitOperationalStatus::AVAILABLE)->setFloor(1)->setSurface('45.00')->setMonthlyRent('400.00')->setCurrency(Currency::USD);
-foreach ([$organization, $adminVille, $adminImmobilier, $patron, $city, $parcel, $building, $unit, $secondCity, $secondParcel, $secondBuilding, $secondUnit, $inactiveCity, $otherOrganization, $otherCity, $otherParcel, $otherBuilding, $otherUnit, $otherListing] as $entity) $em->persist($entity);
+foreach ([$organization, $adminVille, $otherCityAdmin, $adminImmobilier, $patron, $city, $parcel, $building, $unit, $secondCity, $secondParcel, $secondBuilding, $secondUnit, $inactiveCity, $otherOrganization, $otherCity, $otherParcel, $otherBuilding, $otherUnit, $otherListing] as $entity) $em->persist($entity);
 $em->persist((new OrganizationUser())->setUser($adminVille)->setOrganization($organization)->setRole(OrganizationRole::ADMIN_VILLE));
+$em->persist((new OrganizationUser())->setUser($otherCityAdmin)->setOrganization($organization)->setRole(OrganizationRole::ADMIN_VILLE));
 $em->persist((new OrganizationUser())->setUser($adminImmobilier)->setOrganization($organization)->setRole(OrganizationRole::ADMIN_IMMOBILIER));
 $em->persist((new OrganizationUser())->setUser($patron)->setOrganization($organization)->setRole(OrganizationRole::PATRON));
 $em->persist((new UserCity())->setUser($adminVille)->setCity($city));
 $em->persist((new UserCity())->setUser($adminVille)->setCity($secondCity));
+$em->persist((new UserCity())->setUser($otherCityAdmin)->setCity($secondCity));
 $em->flush();
 
 $request = static function (string $method, string $uri, ?array $body = null, ?string $token = null, ?string $idempotencyKey = null) use ($kernel): array {
@@ -134,6 +138,7 @@ $login = static function (string $email) use ($request, $password): ?string {
     return $status === 200 && is_string($payload['accessToken'] ?? null) ? $payload['accessToken'] : null;
 };
 $cityToken = $login($adminVille->getEmail());
+$otherCityToken = $login($otherCityAdmin->getEmail());
 $immoToken = $login($adminImmobilier->getEmail());
 $patronToken = $login($patron->getEmail());
 $check('connexion du compte ADMIN_VILLE de test', is_string($cityToken));
@@ -190,6 +195,16 @@ if (is_string($listingUuid) && is_string($cityToken) && is_string($immoToken)) {
     $check('une demande publique valide est enregistrée sans exposer les données de contact', $inquiryStatus === 201 && is_string($inquiryReference) && isset($inquiryPayload['data']['receivedAt']) && !isset($inquiryPayload['data']['name'], $inquiryPayload['data']['email']), 'HTTP ' . $inquiryStatus);
     [$repeatStatus, $repeatPayload] = $request('POST', $inquiryUri, $inquiryBody, null, $inquiryKey);
     $check('une reprise avec la même clé ne crée pas une seconde demande', $repeatStatus === 200 && ($repeatPayload['data']['reference'] ?? null) === $inquiryReference, 'HTTP ' . $repeatStatus);
+    $inquiryRoot = '/api/v1/organizations/' . $organization->getUuid()->toRfc4122() . '/inquiries';
+    [$cityAlertsStatus, $cityAlerts] = $request('GET', $inquiryRoot . '/notifications', null, $cityToken);
+    [$otherCityAlertsStatus, $otherCityAlerts] = $request('GET', $inquiryRoot . '/notifications', null, $otherCityToken);
+    [$patronAlertsStatus, $patronAlerts] = $request('GET', $inquiryRoot . '/notifications', null, $patronToken);
+    $notificationUuid = $cityAlerts['data']['items'][0]['uuid'] ?? '';
+    $check('la demande crée une alerte uniquement pour l’ADMIN_VILLE affecté à sa ville', $cityAlertsStatus === 200 && ($cityAlerts['data']['unread'] ?? 0) === 1 && count($cityAlerts['data']['items'] ?? []) === 1 && $otherCityAlertsStatus === 200 && ($otherCityAlerts['data']['items'] ?? []) === [] && $patronAlertsStatus === 403, 'ADMIN_VILLE concerné ' . $cityAlertsStatus . ', autre ville ' . $otherCityAlertsStatus . ', PATRON ' . $patronAlertsStatus);
+    [$readNotificationStatus] = $request('POST', $inquiryRoot . '/notifications/' . $notificationUuid . '/read', [], $cityToken);
+    [$readOtherNotificationStatus] = $request('POST', $inquiryRoot . '/notifications/' . $notificationUuid . '/read', [], $otherCityToken);
+    [$readCityAlertsStatus, $readCityAlerts] = $request('GET', $inquiryRoot . '/notifications', null, $cityToken);
+    $check('l’alerte reste personnelle, et son indicateur non lu disparaît après consultation', $readNotificationStatus === 200 && $readOtherNotificationStatus === 404 && $readCityAlertsStatus === 200 && ($readCityAlerts['data']['unread'] ?? -1) === 0 && ($readCityAlerts['data']['items'][0]['readAt'] ?? null) !== null, 'lecture destinataire ' . $readNotificationStatus . ', autre compte ' . $readOtherNotificationStatus);
     [$keyConflictStatus] = $request('POST', $inquiryUri, [...$inquiryBody, 'message' => 'Un autre contenu'], null, $inquiryKey);
     $check('une clé de soumission ne peut pas être réutilisée avec un autre contenu', $keyConflictStatus === 409, 'HTTP ' . $keyConflictStatus);
     [$invalidInquiryStatus] = $request('POST', $inquiryUri, [...$inquiryBody, 'email' => 'adresse invalide'], null, \Symfony\Component\Uid\Uuid::v4()->toRfc4122());
@@ -199,27 +214,41 @@ if (is_string($listingUuid) && is_string($cityToken) && is_string($immoToken)) {
     [$crossOrganizationInquiryStatus] = $request('POST', '/api/public/organizations/' . $organization->getSlug() . '/listings/' . $otherUnit->getUuid()->toRfc4122() . '/inquiries', $inquiryBody, null, \Symfony\Component\Uid\Uuid::v4()->toRfc4122());
     $check('une demande ne peut pas viser une annonce d’une autre organisation', $crossOrganizationInquiryStatus === 404, 'HTTP ' . $crossOrganizationInquiryStatus);
 
-    $inquiryRoot = '/api/v1/organizations/' . $organization->getUuid()->toRfc4122() . '/inquiries';
     [$unauthenticatedInquiryStatus] = $request('GET', $inquiryRoot);
-    [$cityInquiryStatus] = $request('GET', $inquiryRoot, null, $cityToken);
+    [$cityInquiryStatus, $cityInquiryPayload] = $request('GET', $inquiryRoot, null, $cityToken);
     [$patronInquiryStatus, $patronInquiryPayload] = $request('GET', $inquiryRoot, null, $patronToken);
     [$foreignInquiryStatus] = $request('GET', '/api/v1/organizations/' . $otherOrganization->getUuid()->toRfc4122() . '/inquiries', null, $immoToken);
-    $check('les demandes exigent une authentification et ADMIN_VILLE ne reçoit pas de droit nouveau', $unauthenticatedInquiryStatus === 401 && $cityInquiryStatus === 403, 'sans jeton ' . $unauthenticatedInquiryStatus . ', ADMIN_VILLE ' . $cityInquiryStatus);
-    $check('PATRON peut consulter les demandes de son organisation', $patronInquiryStatus === 200 && count($patronInquiryPayload['data']['items'] ?? []) === 1, 'HTTP ' . $patronInquiryStatus);
+    $check('ADMIN_VILLE reçoit les demandes des villes attribuées et PATRON les consulte', $unauthenticatedInquiryStatus === 401 && $cityInquiryStatus === 200 && count($cityInquiryPayload['data']['items'] ?? []) === 1 && $patronInquiryStatus === 200 && count($patronInquiryPayload['data']['items'] ?? []) === 1, 'sans jeton ' . $unauthenticatedInquiryStatus . ', ADMIN_VILLE ' . $cityInquiryStatus . ', PATRON ' . $patronInquiryStatus);
+    [$cityInquiryDetailStatus, $cityInquiryDetail] = $request('GET', $inquiryRoot . '/' . $inquiryReference, null, $cityToken);
+    [$cityInquiryHistoryStatus, $cityInquiryHistory] = $request('GET', $inquiryRoot . '/' . $inquiryReference . '/history', null, $cityToken);
+    $check('ADMIN_VILLE voit les coordonnées consenties et l’historique de la demande de sa ville', $cityInquiryDetailStatus === 200 && ($cityInquiryDetail['data']['phone'] ?? null) === $inquiryBody['phone'] && $cityInquiryHistoryStatus === 200 && count($cityInquiryHistory['data'] ?? []) === 1, 'détail ' . $cityInquiryDetailStatus . ', historique ' . $cityInquiryHistoryStatus);
+
+    $firstCityAssignment = $em->getRepository(UserCity::class)->findOneBy(['user' => $adminVille, 'city' => $city]);
+    $em->remove($firstCityAssignment);
+    $em->flush();
+    [$outOfScopeListStatus, $outOfScopeList] = $request('GET', $inquiryRoot, null, $cityToken);
+    [$outOfScopeDetailStatus] = $request('GET', $inquiryRoot . '/' . $inquiryReference, null, $cityToken);
+    $check('la liste et le détail refusent une demande hors des villes attribuées', $outOfScopeListStatus === 200 && ($outOfScopeList['data']['total'] ?? -1) === 0 && $outOfScopeDetailStatus === 403, 'liste ' . $outOfScopeListStatus . ', détail ' . $outOfScopeDetailStatus);
+    $em->persist((new UserCity())
+        ->setUser($em->getReference(User::class, $adminVille->getId()))
+        ->setCity($em->getReference(City::class, $city->getId())));
+    $em->flush();
     $check('ADMIN_IMMOBILIER ne peut pas ouvrir la file d’une autre organisation', $foreignInquiryStatus === 403, 'HTTP ' . $foreignInquiryStatus);
 
     $inquiryUuid = $inquiryReference;
     [$invalidTransitionStatus] = $request('POST', $inquiryRoot . '/' . $inquiryUuid . '/transition', ['status' => 'contacted'], $immoToken);
     [$patronMutationStatus] = $request('POST', $inquiryRoot . '/' . $inquiryUuid . '/take-ownership', null, $patronToken);
+    [$cityOwnershipStatus] = $request('POST', $inquiryRoot . '/' . $inquiryUuid . '/take-ownership', null, $cityToken);
     [$takeOwnershipStatus] = $request('POST', $inquiryRoot . '/' . $inquiryUuid . '/take-ownership', null, $immoToken);
     [$contactedStatus] = $request('POST', $inquiryRoot . '/' . $inquiryUuid . '/transition', ['status' => 'contacted'], $immoToken);
+    [$cityTransitionStatus] = $request('POST', $inquiryRoot . '/' . $inquiryUuid . '/transition', ['status' => 'negotiation'], $cityToken);
     $visitDate = (new DateTimeImmutable('+3 days', new DateTimeZone('UTC')))->format(DATE_ATOM);
-    [$proposeVisitStatus, $proposedVisit] = $request('POST', $inquiryRoot . '/' . $inquiryUuid . '/visits', ['scheduledAt' => $visitDate], $immoToken);
+    [$proposeVisitStatus, $proposedVisit] = $request('POST', $inquiryRoot . '/' . $inquiryUuid . '/visits', ['scheduledAt' => $visitDate], $cityToken);
     $visitUuid = $proposedVisit['data']['uuid'] ?? null;
-    [$visitListStatus, $visitList] = $request('GET', $inquiryRoot . '/' . $inquiryUuid . '/visits', null, $immoToken);
-    [$rescheduleVisitStatus, $rescheduledVisit] = $request('PATCH', $inquiryRoot . '/' . $inquiryUuid . '/visits/' . $visitUuid . '/reschedule', ['scheduledAt' => (new DateTimeImmutable('+4 days', new DateTimeZone('UTC')))->format(DATE_ATOM)], $immoToken);
-    [$confirmVisitStatus] = $request('PATCH', $inquiryRoot . '/' . $inquiryUuid . '/visits/' . $visitUuid . '/transition', ['status' => 'confirmed'], $immoToken);
-    [$completeVisitStatus] = $request('PATCH', $inquiryRoot . '/' . $inquiryUuid . '/visits/' . $visitUuid . '/transition', ['status' => 'completed', 'reason' => 'Le client souhaite poursuivre la négociation.'], $immoToken);
+    [$visitListStatus, $visitList] = $request('GET', $inquiryRoot . '/' . $inquiryUuid . '/visits', null, $cityToken);
+    [$rescheduleVisitStatus, $rescheduledVisit] = $request('PATCH', $inquiryRoot . '/' . $inquiryUuid . '/visits/' . $visitUuid . '/reschedule', ['scheduledAt' => (new DateTimeImmutable('+4 days', new DateTimeZone('UTC')))->format(DATE_ATOM)], $cityToken);
+    [$confirmVisitStatus] = $request('PATCH', $inquiryRoot . '/' . $inquiryUuid . '/visits/' . $visitUuid . '/transition', ['status' => 'confirmed'], $cityToken);
+    [$completeVisitStatus] = $request('PATCH', $inquiryRoot . '/' . $inquiryUuid . '/visits/' . $visitUuid . '/transition', ['status' => 'completed', 'reason' => 'Le client souhaite poursuivre la négociation.'], $cityToken);
     [$negotiationStatus] = $request('POST', $inquiryRoot . '/' . $inquiryUuid . '/transition', ['status' => 'negotiation'], $immoToken);
     [$noLeaseConversionStatus] = $request('POST', $inquiryRoot . '/' . $inquiryUuid . '/convert-to-lease', null, $immoToken);
     [$missingCloseReasonStatus] = $request('POST', $inquiryRoot . '/' . $inquiryUuid . '/transition', ['status' => 'closed'], $immoToken);
@@ -227,11 +256,13 @@ if (is_string($listingUuid) && is_string($cityToken) && is_string($immoToken)) {
     [$repeatCloseStatus] = $request('POST', $inquiryRoot . '/' . $inquiryUuid . '/transition', ['status' => 'closed', 'reason' => 'Le visiteur a choisi un autre bien.'], $immoToken);
     [$historyStatus, $historyPayload] = $request('GET', $inquiryRoot . '/' . $inquiryUuid . '/history', null, $immoToken);
     $historyActions = array_column($historyPayload['data'] ?? [], 'action');
+    $check('ADMIN_VILLE ne prend pas en charge le prospect et ne change pas son statut commercial', $cityOwnershipStatus === 403 && $cityTransitionStatus === 403, 'prise en charge ' . $cityOwnershipStatus . ', transition ' . $cityTransitionStatus);
     $check('les transitions impossibles et les mutations PATRON sont refusées', $invalidTransitionStatus === 409 && $patronMutationStatus === 403, 'transition ' . $invalidTransitionStatus . ', PATRON ' . $patronMutationStatus);
-    $check('ADMIN_IMMOBILIER enregistre une visite reportée, confirmée puis réalisée avant la négociation', $proposeVisitStatus === 201 && $visitListStatus === 200 && count($visitList['data'] ?? []) === 1 && $rescheduleVisitStatus === 200 && ($rescheduledVisit['data']['status'] ?? null) === 'rescheduled' && $confirmVisitStatus === 200 && $completeVisitStatus === 200 && $negotiationStatus === 200, 'création ' . $proposeVisitStatus . ', réalisation ' . $completeVisitStatus);
+    $check('ADMIN_VILLE organise, reporte, confirme et consigne la visite avant le suivi commercial', $proposeVisitStatus === 201 && $visitListStatus === 200 && count($visitList['data'] ?? []) === 1 && $rescheduleVisitStatus === 200 && ($rescheduledVisit['data']['status'] ?? null) === 'rescheduled' && $confirmVisitStatus === 200 && $completeVisitStatus === 200 && $negotiationStatus === 200, 'création ' . $proposeVisitStatus . ', réalisation ' . $completeVisitStatus);
     $check('une demande ne crée jamais de bail automatiquement et exige le parcours locatif existant', $noLeaseConversionStatus === 409, 'HTTP ' . $noLeaseConversionStatus);
     $check('ADMIN_IMMOBILIER clôture la demande avec un motif obligatoire', $takeOwnershipStatus === 200 && $contactedStatus === 200 && $missingCloseReasonStatus === 400 && $closeStatus === 200 && $repeatCloseStatus === 200, 'prise en charge ' . $takeOwnershipStatus . ', clôture ' . $closeStatus);
-    $check('l’historique trace la création, les visites et les transitions sans doublon', $historyStatus === 200 && $historyActions === ['CREATED_PUBLIC', 'TAKEN_OVER', 'STATUS_CHANGED', 'VISIT_PROPOSED', 'VISIT_RESCHEDULED', 'VISIT_CONFIRMED', 'VISIT_COMPLETED', 'STATUS_CHANGED', 'STATUS_CHANGED'], 'HTTP ' . $historyStatus . ', actions ' . count($historyActions));
+    $visitCompletedEvent = array_values(array_filter($historyPayload['data'] ?? [], static fn (array $event): bool => ($event['action'] ?? null) === 'VISIT_COMPLETED'))[0] ?? null;
+    $check('l’historique conserve les actions de visite et leur auteur ADMIN_VILLE', $historyStatus === 200 && $historyActions === ['CREATED_PUBLIC', 'TAKEN_OVER', 'STATUS_CHANGED', 'VISIT_PROPOSED', 'VISIT_RESCHEDULED', 'VISIT_CONFIRMED', 'VISIT_COMPLETED', 'STATUS_CHANGED', 'STATUS_CHANGED'] && ($visitCompletedEvent['actor'] ?? null) === $adminVille->getFullName(), 'HTTP ' . $historyStatus . ', actions ' . count($historyActions));
 
     $conversionKey = \Symfony\Component\Uid\Uuid::v4()->toRfc4122();
     [$conversionInquiryStatus, $conversionInquiry] = $request('POST', $inquiryUri, $inquiryBody, null, $conversionKey);

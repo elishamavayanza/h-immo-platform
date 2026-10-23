@@ -20,7 +20,7 @@ export type SecurityAction =
     | 'view_building' | 'create_building' | 'update_building' | 'delete_building'
     | 'view_unit' | 'create_unit' | 'update_unit' | 'delete_unit'
     | 'publish_listing' | 'view_listing' | 'create_listing' | 'update_listing' | 'submit_listing' | 'review_listing' | 'manage_listing_media'
-    | 'view_customer_inquiry' | 'manage_customer_inquiry'
+    | 'view_customer_inquiry' | 'manage_customer_inquiry' | 'manage_customer_visit'
     | 'view_tenant' | 'create_tenant' | 'update_tenant' | 'delete_tenant' | 'archive_tenant'
     | 'view_lease' | 'create_lease' | 'update_lease' | 'delete_lease' | 'activate_lease' | 'terminate_lease' | 'cancel_lease'
     | 'view_rent' | 'create_rent' | 'update_rent' | 'delete_rent' | 'mark_rent_overdue'
@@ -47,7 +47,7 @@ const ADMIN_IMMOBILIER_ACTIONS: ReadonlyArray<SecurityAction> = [
     'view_parcel', 'create_parcel', 'update_parcel', 'delete_parcel',
     'view_building', 'create_building', 'update_building', 'delete_building',
     'view_unit', 'create_unit', 'update_unit', 'delete_unit',
-    'view_listing', 'review_listing', 'publish_listing', 'manage_listing_media', 'view_customer_inquiry', 'manage_customer_inquiry',
+    'view_listing', 'review_listing', 'publish_listing', 'manage_listing_media', 'view_customer_inquiry', 'manage_customer_inquiry', 'manage_customer_visit',
     'view_tenant', 'view_lease', 'view_rent', 'view_payment',
     'view_worker', 'create_worker', 'update_worker', 'delete_worker', 'view_worker_assignment', 'view_expense', 'view_document',
     'view_report', 'export_report',
@@ -60,7 +60,7 @@ const ADMIN_VILLE_ACTIONS: ReadonlyArray<SecurityAction> = [
     'view_parcel', 'create_parcel', 'update_parcel', 'delete_parcel',
     'view_building', 'create_building', 'update_building', 'delete_building',
     'view_unit', 'create_unit', 'update_unit', 'delete_unit',
-    'view_listing', 'create_listing', 'update_listing', 'submit_listing', 'manage_listing_media',
+    'view_listing', 'create_listing', 'update_listing', 'submit_listing', 'manage_listing_media', 'view_customer_inquiry', 'manage_customer_visit',
     'view_tenant', 'create_tenant', 'update_tenant', 'archive_tenant',
     'view_lease', 'create_lease', 'update_lease', 'activate_lease', 'terminate_lease', 'cancel_lease',
     'view_rent', 'create_rent', 'update_rent', 'mark_rent_overdue',

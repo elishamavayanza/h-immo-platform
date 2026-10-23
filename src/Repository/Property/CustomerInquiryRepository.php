@@ -57,14 +57,19 @@ final class CustomerInquiryRepository extends ServiceEntityRepository
     }
 
     /** @return array{items: list<CustomerInquiry>, total: int} */
-    public function findForOrganization(Organization $organization, ?CustomerInquiryStatus $status, ?CustomerInquiryType $type, int $page, int $limit): array
+    public function findForOrganization(Organization $organization, array $cities, ?CustomerInquiryStatus $status, ?CustomerInquiryType $type, int $page, int $limit): array
     {
+        if ($cities === []) {
+            return ['items' => [], 'total' => 0];
+        }
+
         $query = $this->createQueryBuilder('i')->addSelect('listing', 'unit', 'building', 'parcel', 'city', 'assignee')
             ->innerJoin('i.listing', 'listing')->innerJoin('listing.unit', 'unit')
             ->innerJoin('unit.building', 'building')->innerJoin('building.parcel', 'parcel')->innerJoin('parcel.city', 'city')
             ->leftJoin('i.assignedTo', 'assignee')
             ->andWhere('i.organization = :organization')->andWhere('city.organization = :organization')
-            ->setParameter('organization', $organization)
+            ->andWhere('city IN (:cities)')
+            ->setParameter('organization', $organization)->setParameter('cities', $cities)
             ->orderBy('i.createdAt', 'DESC')->addOrderBy('i.id', 'DESC');
 
         if ($status !== null) {

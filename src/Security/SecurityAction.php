@@ -70,6 +70,7 @@ enum SecurityAction: string
     // Demandes publiques associées aux annonces
     case VIEW_CUSTOMER_INQUIRY = 'view_customer_inquiry';
     case MANAGE_CUSTOMER_INQUIRY = 'manage_customer_inquiry';
+    case MANAGE_CUSTOMER_VISIT = 'manage_customer_visit';
 
     // Tenant
     case VIEW_TENANT = 'view_tenant';

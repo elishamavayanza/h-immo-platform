@@ -109,7 +109,7 @@ console.log('\n=== Structure du menu par rôle (menu plat) ===\n');
 // entrée (écran de synthèse demandé par le cahier des charges).
 const EXPECTED_PATRON = ['dashboard', 'rapports', 'patrimoine', 'location-locataires', 'location-loyers', 'depenses', 'customer-inquiries', 'maintenance', 'administration'];
 const EXPECTED_ADMIN_IMMOBILIER = ['dashboard', 'rapports', 'patrimoine', 'location-locataires', 'location-loyers', 'depenses', 'customer-inquiries', 'personnel', 'maintenance', 'administration'];
-const EXPECTED_ADMIN_VILLE = ['dashboard', 'rapports', 'patrimoine', 'location-locataires', 'location-loyers', 'depenses', 'operations', 'maintenance'];
+const EXPECTED_ADMIN_VILLE = ['dashboard', 'rapports', 'patrimoine', 'location-locataires', 'location-loyers', 'depenses', 'customer-inquiries', 'operations', 'maintenance'];
 
 check(
     `PATRON : menu exact de ${EXPECTED_PATRON.length} entrées (reçu ${PATRON.length})`,
@@ -137,13 +137,14 @@ check('Vitrine affichée au PATRON autorisé par la plateforme', hasTopLevelItem
 check('Vitrine affichée à ADMIN_IMMOBILIER autorisé par la plateforme', hasTopLevelItem(resolveSidebar(null, 'admin_immobilier' as OrganizationRole, true), 'vitrine'));
 check('Vitrine affichée à ADMIN_VILLE lorsque la plateforme l’autorise pour son organisation', hasTopLevelItem(resolveSidebar(null, 'admin_ville' as OrganizationRole, true), 'vitrine'));
 check('ADMIN_VILLE autorisé atteint /app/vitrine', isPathInMenu(resolveSidebar(null, 'admin_ville' as OrganizationRole, true), '/app/vitrine'));
-check('PATRON et ADMIN_IMMOBILIER ont le menu des demandes, ADMIN_VILLE ne l’a pas', hasTopLevelItem(PATRON, 'customer-inquiries') && hasTopLevelItem(ADMIN_IMMOBILIER, 'customer-inquiries') && !hasTopLevelItem(ADMIN_VILLE, 'customer-inquiries'));
-check('La route des demandes est couverte seulement pour PATRON et ADMIN_IMMOBILIER', isPathInMenu(PATRON, '/app/demandes-clients') && isPathInMenu(ADMIN_IMMOBILIER, '/app/demandes-clients') && !isPathInMenu(ADMIN_VILLE, '/app/demandes-clients'));
+check('Les trois rôles ont le menu des demandes selon leur niveau d’accès', hasTopLevelItem(PATRON, 'customer-inquiries') && hasTopLevelItem(ADMIN_IMMOBILIER, 'customer-inquiries') && hasTopLevelItem(ADMIN_VILLE, 'customer-inquiries'));
+check('La route des demandes est couverte pour les trois rôles autorisés', isPathInMenu(PATRON, '/app/demandes-clients') && isPathInMenu(ADMIN_IMMOBILIER, '/app/demandes-clients') && isPathInMenu(ADMIN_VILLE, '/app/demandes-clients'));
 
 console.log('\n=== Permissions de création des Admin ville ===\n');
 check('PATRON consulte les demandes sans pouvoir les gérer', canDo('patron', 'view_customer_inquiry') && !canDo('patron', 'manage_customer_inquiry'));
-check('ADMIN_IMMOBILIER consulte et gère les demandes', canDo('admin_immobilier', 'view_customer_inquiry') && canDo('admin_immobilier', 'manage_customer_inquiry'));
-check('ADMIN_VILLE ne reçoit aucun droit de suivi des demandes', !canDo('admin_ville', 'view_customer_inquiry') && !canDo('admin_ville', 'manage_customer_inquiry'));
+check('ADMIN_IMMOBILIER gère la demande et les visites', canDo('admin_immobilier', 'view_customer_inquiry') && canDo('admin_immobilier', 'manage_customer_inquiry') && canDo('admin_immobilier', 'manage_customer_visit'));
+check('ADMIN_VILLE consulte les demandes et gère les visites sans gérer le suivi commercial', canDo('admin_ville', 'view_customer_inquiry') && canDo('admin_ville', 'manage_customer_visit') && !canDo('admin_ville', 'manage_customer_inquiry'));
+check('PATRON consulte les demandes mais ne gère pas les visites', canDo('patron', 'view_customer_inquiry') && !canDo('patron', 'manage_customer_visit'));
 check('ADMIN_IMMOBILIER peut créer un ADMIN_VILLE', canDo('admin_immobilier', 'create_city_admin'));
 check('ADMIN_IMMOBILIER peut créer une ville', canDo('admin_immobilier', 'create_city'));
 check('ADMIN_IMMOBILIER gère les villes (créer, modifier, statut, suppression)', canDo('admin_immobilier', 'create_city') && canDo('admin_immobilier', 'update_city') && canDo('admin_immobilier', 'activate_city') && canDo('admin_immobilier', 'deactivate_city') && canDo('admin_immobilier', 'delete_city'));
@@ -555,6 +556,7 @@ const iconExpectations: Array<[string, string]> = [
     ['location-locataires', 'user-single'],
     ['location-loyers', 'calendar-due'],
     ['depenses', 'wallet'],
+    ['customer-inquiries', 'megaphone'],
     ['vitrine', 'storefront'],
     ['personnel', 'hard-hat'],
     ['operations', 'clipboard-check'],

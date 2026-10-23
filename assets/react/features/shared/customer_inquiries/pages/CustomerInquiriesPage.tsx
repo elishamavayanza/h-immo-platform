@@ -1,4 +1,5 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { useCustomerInquiries } from '../hooks/useCustomerInquiries'
 import { Button } from '../../../../components/UI/Button'
 import { Badge } from '../../../../components/UI/Badge'
@@ -63,6 +64,7 @@ function toApiInstant(value: string): string {
 
 export function CustomerInquiriesPage() {
   const state = useCustomerInquiries()
+  const [searchParams, setSearchParams] = useSearchParams()
   const [closeReason, setCloseReason] = useState('')
   const [closing, setClosing] = useState(false)
   const [closeError, setCloseError] = useState<string | null>(null)
@@ -78,6 +80,13 @@ export function CustomerInquiriesPage() {
   const transitionTargets: ReadonlyArray<CustomerInquiryStatus> = selected?.status === 'visit_proposed'
     ? state.historyLoading || hasOpenVisit ? [] : ['contacted', 'closed']
     : selected ? CUSTOMER_INQUIRY_TRANSITIONS[selected.status] : []
+
+  useEffect(() => {
+    const inquiryUuid = searchParams.get('demande')
+    if (!inquiryUuid) return
+    void state.selectByUuid(inquiryUuid)
+    setSearchParams((current) => { current.delete('demande'); return current }, { replace: true })
+  }, [searchParams, setSearchParams, state.selectByUuid])
 
   const changeStatus = async (status: CustomerInquiryStatus) => {
     if (status === 'closed') {
@@ -96,10 +105,12 @@ export function CustomerInquiriesPage() {
 
   return <main className="organization-page customer-inquiries-page">
     <header className="organization-page__header">
-      <div><span className="organization-page__eyebrow">SUIVI COMMERCIAL</span><h1>Demandes clients</h1>
-        <p>{state.canManage ? 'Consultez les contacts reçus et suivez chaque demande jusqu’à sa clôture.' : 'Consultez les demandes reçues et leur historique. Cet espace est en lecture seule.'}</p>
+      <div><span className="organization-page__eyebrow">{state.organizationRole === 'admin_ville' ? 'DEMANDES ET VISITES' : 'SUIVI COMMERCIAL'}</span><h1>Demandes clients</h1>
+        <p>{state.organizationRole === 'admin_ville' ? 'Consultez les demandes de vos villes attribuées et coordonnez les visites avec l’équipe immobilière.' : state.canManage ? 'Consultez les contacts reçus et suivez chaque demande jusqu’à sa clôture.' : 'Consultez les demandes reçues et leur historique. Cet espace est en lecture seule.'}</p>
       </div>
     </header>
+
+    {state.organizationRole === 'admin_ville' && <aside className="customer-inquiries__city-notice" role="status"><strong>Suivi des demandes de vos villes</strong><p>Une alerte personnelle est créée pour vous lorsqu’une demande concerne une ville qui vous est attribuée. Elle apparaît dans la cloche en haut de l’espace et reste disponible jusqu’à sa consultation. L’ADMIN_IMMOBILIER garde le premier contact et le suivi commercial ; vous pouvez organiser les visites et consigner leur résultat.</p></aside>}
 
     <section className="customer-inquiries__panel" aria-labelledby="customer-inquiries-list-title">
       <div className="customer-inquiries__toolbar">
@@ -153,12 +164,12 @@ export function CustomerInquiriesPage() {
 
       <section className="customer-inquiries__visits" aria-labelledby="customer-visits-title">
         <div className="customer-inquiries__subheading"><div><h3 id="customer-visits-title">Visites</h3><p>Une proposition n’est pas une confirmation. Confirmez l’horaire avec le client en dehors de l’application.</p></div>
-          {state.canManage && ['contacted', 'visit_proposed', 'visit_completed'].includes(selected.status) && !creatingVisit && <Button variant="secondary" size="small" disabled={state.pending} onClick={() => { setReschedulingVisit(null); setVisitDate(''); setCreatingVisit(true) }}>Proposer une visite</Button>}
+          {state.canManageVisits && ['contacted', 'visit_proposed', 'visit_completed'].includes(selected.status) && !creatingVisit && <Button variant="secondary" size="small" disabled={state.pending} onClick={() => { setReschedulingVisit(null); setVisitDate(''); setCreatingVisit(true) }}>Proposer une visite</Button>}
         </div>
         {state.visits.length === 0 ? <p className="customer-inquiries__muted">Aucun rendez-vous enregistré.</p> : <ul className="customer-inquiries__visit-list">
           {state.visits.map((visit) => <li key={visit.uuid}>
             <div><strong>{dateLabel(visit.scheduledAt)}</strong><Badge variant={visit.status === 'completed' ? 'success' : visit.status === 'cancelled' ? 'default' : 'warning'}>{visitStatusLabel[visit.status]}</Badge><span>Proposée par {visit.createdBy}</span>{visit.outcome && <p>{visit.outcome}</p>}</div>
-            {state.canManage && <div className="customer-inquiries__actions">
+            {state.canManageVisits && <div className="customer-inquiries__actions">
               {['proposed', 'rescheduled'].includes(visit.status) && <Button size="small" disabled={state.pending} onClick={() => void state.changeVisit(visit.uuid, 'confirmed')}>Confirmer</Button>}
               {visit.status === 'confirmed' && <Button size="small" disabled={state.pending} onClick={() => { setVisitReason(''); setVisitReasonError(null); setVisitAction({ uuid: visit.uuid, status: 'completed' }); }}>Enregistrer le résultat</Button>}
               {['proposed', 'rescheduled', 'confirmed'].includes(visit.status) && <Button size="small" variant="secondary" disabled={state.pending} onClick={() => { setVisitReason(''); setVisitReasonError(null); setVisitAction({ uuid: visit.uuid, status: 'cancelled' }); }}>Annuler</Button>}
@@ -170,7 +181,7 @@ export function CustomerInquiriesPage() {
             </form>}
           </li>)}
         </ul>}
-        {state.canManage && ['contacted', 'visit_proposed', 'visit_completed'].includes(selected.status) && creatingVisit && reschedulingVisit === null && <form className="customer-inquiries__visit-form" onSubmit={(event) => { event.preventDefault(); if (visitDate) void state.proposeVisit(toApiInstant(visitDate)).then((ok) => { if (ok) { setVisitDate(''); setCreatingVisit(false) } }); }}>
+        {state.canManageVisits && ['contacted', 'visit_proposed', 'visit_completed'].includes(selected.status) && creatingVisit && reschedulingVisit === null && <form className="customer-inquiries__visit-form" onSubmit={(event) => { event.preventDefault(); if (visitDate) void state.proposeVisit(toApiInstant(visitDate)).then((ok) => { if (ok) { setVisitDate(''); setCreatingVisit(false) } }); }}>
           <FormField label="Date et heure proposées" htmlFor="customer-visit-scheduled-at" required><Input id="customer-visit-scheduled-at" type="datetime-local" value={visitDate} min={localDateTimeValue(new Date(Date.now() + 60_000).toISOString())} onChange={(event) => setVisitDate(event.target.value)} required fullWidth /></FormField>
           <Button type="submit" disabled={state.pending || !visitDate}>Enregistrer la proposition</Button><Button type="button" variant="secondary" disabled={state.pending} onClick={() => setCreatingVisit(false)}>Annuler</Button>
         </form>}

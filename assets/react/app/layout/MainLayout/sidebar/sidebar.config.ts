@@ -162,7 +162,7 @@ const VITRINE: AppMenuItem = {
 const CUSTOMER_INQUIRIES: AppMenuItem = {
     id: 'customer-inquiries',
     label: 'Demandes clients',
-    icon: 'clipboard-check',
+    icon: 'megaphone',
     section: 'operations',
     path: '/app/demandes-clients',
 };
@@ -239,7 +239,7 @@ const RAPPORTS: AppMenuItem = {
 export const ORGANIZATION_SIDEBAR: Record<OrganizationRole, SidebarMenu> = {
     patron: [DASHBOARD, RAPPORTS, PATRIMOINE, LOCATAIRES, LOYERS, DEPENSES, VITRINE, CUSTOMER_INQUIRIES, MAINTENANCE, ADMINISTRATION],
     admin_immobilier: [DASHBOARD, RAPPORTS, PATRIMOINE, LOCATAIRES, LOYERS, DEPENSES, VITRINE, CUSTOMER_INQUIRIES, PERSONNEL, MAINTENANCE, ADMINISTRATION],
-    admin_ville: [DASHBOARD, RAPPORTS, PATRIMOINE, LOCATAIRES, LOYERS, DEPENSES, VITRINE, ADMIN_VILLE_OPERATIONS, MAINTENANCE],
+    admin_ville: [DASHBOARD, RAPPORTS, PATRIMOINE, LOCATAIRES, LOYERS, DEPENSES, VITRINE, CUSTOMER_INQUIRIES, ADMIN_VILLE_OPERATIONS, MAINTENANCE],
 };
 
 /** Menu SUPER_ADMIN : aucune entrée métier d'organisation. */

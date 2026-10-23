@@ -2,7 +2,7 @@
 
 ## Périmètre et rôles
 
-Une demande publique est rattachée à une annonce publiée, donc à l’unité source du Patrimoine et à l’organisation qui possède cette unité. Le serveur relit ces relations pour chaque requête. `ADMIN_IMMOBILIER` gère la file et ses rendez-vous ; `PATRON` consulte les demandes et l’historique en lecture seule. `ADMIN_VILLE` n’accède pas aux coordonnées des prospects par ce parcours. La vitrine publique ne reçoit jamais le nom, le téléphone, l’e-mail ni le message du client dans son accusé de réception.
+Une demande publique est rattachée à une annonce publiée, donc à l’unité source du Patrimoine et à l’organisation qui possède cette unité. Le serveur relit ces relations pour chaque requête. `ADMIN_IMMOBILIER` prend en charge le contact initial et les transitions commerciales. Le `PATRON` consulte les demandes et l’historique en lecture seule. À la création, une alerte persistante est remise uniquement aux comptes `ADMIN_VILLE` actifs affectés à la ville du bien dans `UserCity`. La cloche affiche leur nombre d’alertes non lues et mène directement à la demande; le serveur vérifie encore l’organisation, le destinataire et la ville à chaque lecture. L’`ADMIN_VILLE` peut uniquement proposer, confirmer, reporter ou consigner le résultat d’une visite. Il ne peut ni prendre en charge le prospect, ni modifier son statut commercial, ni clôturer ou convertir la demande. Chaque action de visite est associée à son auteur et ajoutée à l’historique. La vitrine publique ne reçoit jamais le nom, le téléphone, l’e-mail ni le message du client dans son accusé de réception.
 
 ## Cycle d’une demande
 
@@ -20,6 +20,6 @@ Les demandes de vente suivent les étapes de contact, visite et négociation, ma
 
 ## Données et déploiement
 
-Les entités `CustomerInquiry`, `CustomerInquiryHistory` et `CustomerVisit` sont isolées par organisation. Les coordonnées ne sont pas recopiées dans les journaux d’audit ; ceux-ci ne contiennent que des identifiants de ressource, des états et des horodatages. Les changements de schéma sont définis dans `Version20261023160000CustomerInquiries`. Cette migration doit être appliquée séparément après sauvegarde et validation de l’environnement ; elle n’a pas été exécutée pendant le travail.
+Les entités `CustomerInquiry`, `CustomerInquiryHistory`, `CustomerVisit` et `CustomerInquiryNotification` sont isolées par organisation et destinataire ; les listes sont en plus bornées aux villes attribuées en base de données. Les coordonnées ne sont pas recopiées dans les alertes ni les journaux d’audit. Les migrations du cycle sont `Version20261023160000CustomerInquiries` et `Version20261023180000CustomerInquiryNotifications`; elles sont appliquées sur les bases de test et réelle.
 
 Le parcours complet est couvert par `tests/verify-listing-workflow.php`, qui refuse toute base autre que `gestion_himmo_security_test` et annule sa transaction. Il doit être lancé uniquement lorsque cette base est dédiée et initialisée avec les migrations requises.

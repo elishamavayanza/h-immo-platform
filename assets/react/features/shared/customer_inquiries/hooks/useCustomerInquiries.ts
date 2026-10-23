@@ -20,6 +20,7 @@ export function useCustomerInquiries() {
   const { currentOrganization, organizationRole } = useOrganization()
   const organizationUuid = currentOrganization?.uuid ?? null
   const canManage = canDo(organizationRole, 'manage_customer_inquiry')
+  const canManageVisits = canDo(organizationRole, 'manage_customer_visit')
   const { push } = useToast()
   const [status, setStatus] = useState<CustomerInquiryStatus | 'all'>('all')
   const [type, setType] = useState<CustomerInquiryType | 'all'>('all')
@@ -37,22 +38,30 @@ export function useCustomerInquiries() {
   const [pending, setPending] = useState(false)
   const requestId = useRef(0)
 
-  const reload = useCallback(async () => {
+  const reload = useCallback(async (silent = false) => {
     const current = ++requestId.current
-    if (!organizationUuid) { setItems([]); setTotal(0); setPages(1); setLoading(false); return }
-    setLoading(true); setError(null)
+    if (!organizationUuid) { setItems([]); setTotal(0); setPages(1); if (!silent) setLoading(false); return }
+    if (!silent) { setLoading(true); setError(null) }
     try {
       const result = await fetchCustomerInquiries(organizationUuid, status, type, page)
       if (current !== requestId.current) return
-      setItems(result.items); setTotal(result.total); setPages(result.pages)
+      setItems(result.items); setTotal(result.total); setPages(result.pages); setError(null)
     } catch (cause) {
-      if (current === requestId.current) setError(safeError(cause))
+      if (current === requestId.current && !silent) setError(safeError(cause))
     } finally {
-      if (current === requestId.current) setLoading(false)
+      if (current === requestId.current && !silent) setLoading(false)
     }
   }, [organizationUuid, status, type, page])
 
   useEffect(() => { void reload() }, [reload])
+
+  useEffect(() => {
+    if (organizationRole !== 'admin_ville') return
+    const timer = window.setInterval(() => {
+      if (document.visibilityState === 'visible') void reload(true)
+    }, 30_000)
+    return () => window.clearInterval(timer)
+  }, [organizationRole, reload])
 
   const select = useCallback(async (item: CustomerInquiry) => {
     setSelected(item); setHistory([]); setVisits([]); setHistoryError(null); setHistoryLoading(true)
@@ -67,6 +76,16 @@ export function useCustomerInquiries() {
     } catch (cause) { setHistoryError(safeError(cause)) }
     finally { setHistoryLoading(false) }
   }, [organizationUuid])
+
+  const selectByUuid = useCallback(async (uuid: string) => {
+    if (!organizationUuid) return
+    try {
+      const detail = await fetchCustomerInquiry(organizationUuid, uuid)
+      await select(detail)
+    } catch (cause) {
+      push('error', safeError(cause))
+    }
+  }, [organizationUuid, select, push])
 
   const runAction = useCallback(async (action: () => Promise<CustomerInquiry>, success: string, conflictMessage?: string) => {
     if (!organizationUuid || !selected || !canManage || pending) return false
@@ -83,6 +102,20 @@ export function useCustomerInquiries() {
     } finally { setPending(false) }
   }, [organizationUuid, selected, canManage, pending, push, reload, select])
 
+  const runVisitAction = useCallback(async (action: () => Promise<void>, success: string) => {
+    if (!organizationUuid || !selected || !canManageVisits || pending) return false
+    setPending(true)
+    try {
+      await action()
+      await Promise.all([select(selected), reload()])
+      push('success', success)
+      return true
+    } catch (cause) {
+      push('error', safeError(cause))
+      return false
+    } finally { setPending(false) }
+  }, [organizationUuid, selected, canManageVisits, pending, push, reload, select])
+
   const takeOwnership = () => selected && organizationUuid
     ? runAction(() => takeCustomerInquiry(organizationUuid, selected.uuid), 'La demande vous est attribuée.')
     : Promise.resolve(false)
@@ -92,41 +125,23 @@ export function useCustomerInquiries() {
     : Promise.resolve(false)
 
   const proposeVisit = (scheduledAt: string) => selected && organizationUuid
-    ? runAction(async () => {
-      await proposeCustomerVisit(organizationUuid, selected.uuid, scheduledAt)
-      return fetchCustomerInquiry(organizationUuid, selected.uuid)
-    }, 'La proposition de visite a été enregistrée. Confirmez l’horaire avec le client.')
+    ? runVisitAction(() => proposeCustomerVisit(organizationUuid, selected.uuid, scheduledAt).then(() => undefined), 'La proposition de visite a été enregistrée. Confirmez l’horaire avec le client.')
     : Promise.resolve(false)
 
   const changeVisit = async (visitUuid: string, status: 'confirmed' | 'completed' | 'cancelled', reason?: string) => {
-    if (!organizationUuid || !selected || !canManage || pending) return false
-    setPending(true)
-    try {
-      await transitionCustomerVisit(organizationUuid, selected.uuid, visitUuid, status, reason)
-      await select(selected)
-      await reload()
-      push('success', status === 'confirmed' ? 'La visite est confirmée.' : status === 'completed' ? 'Le résultat de la visite est enregistré.' : 'La visite est annulée.')
-      return true
-    } catch (cause) { push('error', safeError(cause)); return false }
-    finally { setPending(false) }
+    if (!organizationUuid || !selected) return false
+    const success = status === 'confirmed' ? 'La visite est confirmée.' : status === 'completed' ? 'Le résultat de la visite est enregistré.' : 'La visite est annulée.'
+    return runVisitAction(() => transitionCustomerVisit(organizationUuid, selected.uuid, visitUuid, status, reason).then(() => undefined), success)
   }
 
   const rescheduleVisit = async (visitUuid: string, scheduledAt: string) => {
-    if (!organizationUuid || !selected || !canManage || pending) return false
-    setPending(true)
-    try {
-      await rescheduleCustomerVisit(organizationUuid, selected.uuid, visitUuid, scheduledAt)
-      await select(selected)
-      await reload()
-      push('success', 'La nouvelle proposition de date est enregistrée. Confirmez-la avec le client.')
-      return true
-    } catch (cause) { push('error', safeError(cause)); return false }
-    finally { setPending(false) }
+    if (!organizationUuid || !selected) return false
+    return runVisitAction(() => rescheduleCustomerVisit(organizationUuid, selected.uuid, visitUuid, scheduledAt).then(() => undefined), 'La nouvelle proposition de date est enregistrée. Confirmez-la avec le client.')
   }
 
   const convertToLease = () => selected && organizationUuid
     ? runAction(() => convertCustomerInquiryToLease(organizationUuid, selected.uuid), 'La demande est liée au bail actif existant.', 'Aucun bail actif correspondant au bien et au numéro du demandeur. Créez et activez le bail dans le parcours locatif, puis réessayez.')
     : Promise.resolve(false)
 
-  return { organizationRole, canManage, status, setStatus: (value: CustomerInquiryStatus | 'all') => { setPage(1); setStatus(value) }, type, setType: (value: CustomerInquiryType | 'all') => { setPage(1); setType(value) }, page, setPage, items, total, pages, loading, error, selected, select, history, historyLoading, historyError, visits, pending, takeOwnership, transition, proposeVisit, changeVisit, rescheduleVisit, convertToLease, reload }
+  return { organizationRole, canManage, canManageVisits, status, setStatus: (value: CustomerInquiryStatus | 'all') => { setPage(1); setStatus(value) }, type, setType: (value: CustomerInquiryType | 'all') => { setPage(1); setType(value) }, page, setPage, items, total, pages, loading, error, selected, select, selectByUuid, history, historyLoading, historyError, visits, pending, takeOwnership, transition, proposeVisit, changeVisit, rescheduleVisit, convertToLease, reload }
 }

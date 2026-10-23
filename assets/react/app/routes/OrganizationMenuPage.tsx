@@ -72,6 +72,7 @@ export function OrganizationMenuPage({ path }: OrganizationMenuPageProps) {
             case '/app/depenses': page = showExpenseManagement ? <AdminVilleDepensesPage /> : <TreasuryPage />; break;
             case '/app/rapports': page = <AdminVilleReportsPage />; break;
             case '/app/vitrine': page = <AdminVilleVitrinePage />; break;
+            case '/app/demandes-clients': page = <CustomerInquiriesPage />; break;
             case '/app/operations': page = <AdminVilleOperationsPage />; break;
             case '/app/maintenance': page = <MaintenancePage />; break;
         }

@@ -19,7 +19,7 @@ use Symfony\Component\HttpKernel\Attribute\MapRequestPayload;
 use Symfony\Component\Routing\Attribute\Route;
 
 #[Route('/api/v1/organizations/{organizationUuid}/inquiries', name: 'api_customer_inquiry_')]
-#[OA\Tag(name: 'Customer Inquiries', description: 'Suivi des demandes dans le périmètre autorisé de l’organisation.')]
+#[OA\Tag(name: 'Customer Inquiries', description: 'Suivi des demandes dans le périmètre autorisé de l’organisation et des villes attribuées.')]
 final class CustomerInquiryManagementController extends AbstractController
 {
     public function __construct(private readonly CustomerInquiryService $inquiries)
@@ -33,10 +33,25 @@ final class CustomerInquiryManagementController extends AbstractController
         new OA\Parameter(name: 'page', in: 'query', schema: new OA\Schema(type: 'integer', minimum: 1, default: 1)),
         new OA\Parameter(name: 'limit', in: 'query', schema: new OA\Schema(type: 'integer', minimum: 1, maximum: 100, default: 20)),
     ])]
-    #[OA\Response(response: 200, description: 'Liste bornée à l’organisation', content: new OA\JsonContent(ref: new Model(type: Feedback::class)))]
+    #[OA\Response(response: 200, description: 'Liste bornée à l’organisation et aux villes attribuées au rôle ADMIN_VILLE', content: new OA\JsonContent(ref: new Model(type: Feedback::class)))]
     public function list(string $organizationUuid, #[MapQueryString(validationFailedStatusCode: 400)] ?CustomerInquiryFilterRequest $filter = null): JsonResponse
     {
         return $this->respond($this->inquiries->listForOrganization($organizationUuid, $filter ?? new CustomerInquiryFilterRequest()));
+    }
+
+    #[Route('/notifications', name: 'notifications', methods: ['GET'])]
+    #[OA\Get(summary: 'Charger les alertes personnelles de demandes client')]
+    public function notifications(string $organizationUuid): JsonResponse
+    {
+        return $this->respond($this->inquiries->notificationsForCurrentUser($organizationUuid));
+    }
+
+    #[Route('/notifications/{notificationUuid}/read', name: 'notification_read', methods: ['POST'])]
+    #[OA\Post(summary: 'Marquer comme lue une alerte personnelle de demande client')]
+    public function markNotificationRead(string $organizationUuid, string $notificationUuid): JsonResponse
+    {
+        $this->inquiries->markNotificationRead($organizationUuid, $notificationUuid);
+        return $this->respond(['read' => true]);
     }
 
     #[Route('/{inquiryUuid}', name: 'show', methods: ['GET'])]

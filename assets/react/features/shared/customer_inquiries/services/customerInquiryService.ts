@@ -6,6 +6,24 @@ function base(organizationUuid: string): string {
   return `/v1/organizations/${encodeURIComponent(organizationUuid)}/inquiries`
 }
 
+export type CustomerInquiryAlert = {
+  uuid: string
+  inquiryUuid: string
+  listingTitle: string
+  city: string
+  createdAt: string
+  readAt: string | null
+}
+
+export async function fetchCustomerInquiryAlerts(organizationUuid: string): Promise<{ items: CustomerInquiryAlert[]; unread: number }> {
+  const { data } = await apiClient.get<Feedback<{ items: CustomerInquiryAlert[]; unread: number }>>(`${base(organizationUuid)}/notifications`)
+  return data.data
+}
+
+export async function markCustomerInquiryAlertRead(organizationUuid: string, notificationUuid: string): Promise<void> {
+  await apiClient.post(`${base(organizationUuid)}/notifications/${encodeURIComponent(notificationUuid)}/read`, {})
+}
+
 export async function fetchCustomerInquiries(organizationUuid: string, status: CustomerInquiryStatus | 'all', type: CustomerInquiryType | 'all', page: number): Promise<CustomerInquiryPage> {
   const params = new URLSearchParams({ page: String(page), limit: '20' })
   if (status !== 'all') params.set('status', status)

@@ -8,6 +8,14 @@
   }
 
   .customer-inquiries__panel { margin-bottom: 1rem; }
+  .customer-inquiries__city-notice {
+    margin: 0 0 1rem;
+    padding: 1rem 1.15rem;
+    border: 1px solid color-mix(in srgb, var(--color-primary), var(--color-border) 72%);
+    border-radius: .9rem;
+    background: color-mix(in srgb, var(--color-primary-light), var(--color-bg-card) 48%);
+  }
+  .customer-inquiries__city-notice p { margin: .35rem 0 0; color: var(--color-text-muted); }
   .customer-inquiries__toolbar,
   .customer-inquiries__detail-heading,
   .customer-inquiries__pagination {
