@@ -12,10 +12,11 @@ const [security, profile, page, table, hook] = await Promise.all([
 
 const patronPolicy = security.match(/private function checkPatronAction\(SecurityAction \$action\): void([\s\S]*?)\n    }/);
 assert.ok(patronPolicy, 'La politique de permissions PATRON doit être trouvée.');
-for (const allowed of ['VIEW_ORGANIZATION', 'VIEW_USER', 'CREATE_CITY_ADMIN', 'CREATE_ORGANIZATION_ADMIN']) {
+for (const allowed of ['VIEW_ORGANIZATION', 'MANAGE_SHOWCASE', 'VIEW_USER', 'CREATE_CITY_ADMIN', 'CREATE_ORGANIZATION_ADMIN']) {
     assert.ok(patronPolicy[1].includes(`SecurityAction::${allowed}`), `Le PATRON doit avoir ${allowed}.`);
 }
-for (const forbidden of ['MANAGE_ORGANIZATION,', 'MANAGE_USERS,', 'ASSIGN_USER_CITY,', 'SecurityAction::UPDATE,']) {
+assert.ok(patronPolicy[1].includes('SecurityAction::UPDATE,'), 'Le PATRON conserve la mise à jour organisationnelle déjà prévue.');
+for (const forbidden of ['MANAGE_ORGANIZATION,', 'MANAGE_USERS,', 'ASSIGN_USER_CITY,']) {
     assert.ok(!patronPolicy[1].includes(forbidden), `La politique PATRON ne doit pas accorder ${forbidden}.`);
 }
 

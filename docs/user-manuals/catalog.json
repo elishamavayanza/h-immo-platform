@@ -1,6 +1,6 @@
 {
-  "version": "1.5.2",
-  "updatedAt": "2026-10-21",
+  "version": "1.5.3",
+  "updatedAt": "2026-10-23",
   "roles": {
     "super_admin": {
       "title": "Manuel d’utilisation — Administration de la plateforme",
@@ -260,6 +260,21 @@
           "id": "vitrine"
         },
         {
+          "name": "Demandes clients",
+          "menu": "Opérations → Demandes clients",
+          "goal": "Consulter les contacts reçus depuis les annonces publiques et suivre leur traitement dans l’organisation.",
+          "steps": [
+            "Ouvrez Demandes clients et vérifiez que l’organisation active est la bonne.",
+            "Filtrez par statut ou type de demande, puis ouvrez un dossier pour consulter le bien, les coordonnées communiquées, les rendez-vous et l’historique.",
+            "Suivez les étapes enregistrées afin de comprendre si la demande est nouvelle, en cours, en visite, en négociation, convertie ou clôturée.",
+            "Transmettez à l’ADMIN_IMMOBILIER toute correction ou opération de suivi nécessaire ; les actions de gestion ne sont pas disponibles dans votre rôle."
+          ],
+          "fields": "L’annonce et l’unité concernées, le nom et les coordonnées fournis par le client, le type de demande, le statut, les rendez-vous et les événements de suivi.",
+          "result": "Vous suivez les demandes et l’avancement de leur traitement sans modifier le dossier.",
+          "limits": "Le PATRON dispose de la consultation seule. L’ADMIN_IMMOBILIER prend en charge les demandes et effectue les transitions. Les données sont limitées à l’organisation active ; l’ADMIN_VILLE n’accède pas à cette page.",
+          "id": "demandes-clients"
+        },
+        {
           "name": "Maintenance",
           "menu": "Opérations → Maintenance",
           "goal": "Suivre les interventions et leur avancement dans l’organisation.",
@@ -320,7 +335,7 @@
           "id": "profil-et-parametres"
         }
       ],
-      "pageCount": 25
+      "pageCount": 26
     },
     "admin_immobilier": {
       "title": "Manuel d’utilisation — Administration immobilière",
@@ -451,18 +466,36 @@
         {
           "name": "Vitrine",
           "menu": "Gestion immobilière → Vitrine",
-          "goal": "Préparer et soumettre les annonces des biens disponibles dans vos villes attribuées.",
+          "goal": "Contrôler et publier les annonces préparées par les ADMIN_VILLE de l’organisation.",
           "steps": [
-            "Ouvrez Vitrine.",
-            "Choisissez une unité disponible du Patrimoine. Les maisons, chambres et appartements sont des types d’unité ; le bâtiment et la parcelle situent le bien.",
-            "Vérifiez les caractéristiques reprises du Patrimoine et ajoutez au moins une photo à la galerie de l’unité.",
-            "Rédigez le titre, la description et le prix, puis enregistrez le brouillon et soumettez-le au contrôle immobilier.",
-            "Consultez le statut et l’historique. Si des corrections sont demandées, modifiez le brouillon puis soumettez-le à nouveau."
+            "Ouvrez Vitrine et filtrez les annonces par statut. Les soumissions À vérifier demandent un contrôle ; les annonces Prêtes à publier ont été validées mais ne sont pas encore publiques.",
+            "Ouvrez une annonce et vérifiez la ville, le bâtiment, l’unité source, le type, les caractéristiques, le prix et les photos de la galerie du Patrimoine.",
+            "Si une information doit être corrigée, utilisez Demander des corrections et rédigez un motif précis. L’ADMIN_VILLE corrigera l’annonce ou le bien source puis la soumettra de nouveau.",
+            "Si l’annonce est conforme, validez-la pour publication. Cette validation ne la rend pas encore publique.",
+            "Dans l’état Prête à publier, sélectionnez Publier et vérifiez le nouveau statut ainsi que les réglages publics de l’organisation.",
+            "Consultez l’historique pour retrouver les décisions, leurs motifs et leurs auteurs. Retirez une annonce publiée si elle ne doit plus être diffusée."
           ],
-          "fields": "Le bien source, son type, sa localisation, ses caractéristiques et ses photos proviennent du Patrimoine. Le prix et la description sont ceux de l’annonce.",
-          "result": "L’annonce suit le circuit de vérification de l’ADMIN_IMMOBILIER avant sa publication publique.",
-          "limits": "La Vitrine est affichée si le SUPER_ADMIN l’a autorisée et si au moins une ville active vous est attribuée. Vous ne voyez que les biens de vos villes ; créez une annonce pour une unité libre, ajoutez au moins une photo, puis soumettez-la à l’ADMIN_IMMOBILIER. Celui-ci contrôle et publie l’annonce.",
+          "fields": "Le bien, ses caractéristiques et ses photos proviennent du Patrimoine. Vérifiez que l’unité est toujours disponible, qu’elle n’a pas de bail actif et qu’au moins une photo active est présente.",
+          "result": "L’annonce passe par le contrôle, la validation puis une publication explicite. L’activation d’un bail sur l’unité retire automatiquement l’annonce publique.",
+          "limits": "L’ADMIN_IMMOBILIER contrôle et publie uniquement les annonces de son organisation. Il ne prépare pas les annonces locales à la place de l’ADMIN_VILLE. Le PATRON consulte en lecture seule.",
           "id": "vitrine"
+        },
+        {
+          "name": "Demandes clients",
+          "menu": "Opérations → Demandes clients",
+          "goal": "Prendre en charge les contacts reçus depuis les annonces publiques et assurer leur suivi jusqu’à la clôture ou au rattachement à un bail.",
+          "steps": [
+            "Ouvrez Demandes clients et confirmez l’organisation active. Filtrez les dossiers par statut ou par type (information ou visite).",
+            "Ouvrez une demande Nouvelle, vérifiez l’annonce et les coordonnées, puis sélectionnez Prendre en charge. Le dossier passe à En cours et l’auteur est ajouté à l’historique.",
+            "Après le premier échange, marquez le contact comme établi. Poursuivez en Négociation ou clôturez le dossier avec un motif.",
+            "Pour une visite, proposez une date future. Confirmez-la après accord du client ; utilisez Reporter si nécessaire, puis enregistrez le résultat ou le motif d’annulation.",
+            "Pour une location conclue, créez et activez d’abord le bail dans Locataires. Depuis une demande en Négociation, rattachez-la au bail actif correspondant à la même unité et au même numéro de téléphone.",
+            "Consultez l’historique après chaque opération. Une conversion rattache un bail existant : elle ne crée ni bail, ni locataire, ni paiement."
+          ],
+          "fields": "Annonce et unité concernées, nom et coordonnées fournis, type de demande, statut, responsable, dates de visite, résultat ou motif, et référence du bail rattaché le cas échéant.",
+          "result": "Chaque étape du suivi et chaque rendez-vous sont historisés. Le statut Convertie indique un rattachement au bail existant ; Clôturée exige un motif.",
+          "limits": "L’ADMIN_IMMOBILIER peut consulter et gérer les demandes de son organisation. Le PATRON consulte en lecture seule. L’ADMIN_VILLE prépare les annonces dans ses villes mais ne gère pas les demandes clients. Les coordonnées ne doivent être utilisées que pour le suivi demandé.",
+          "id": "demandes-clients"
         },
         {
           "name": "Personnel",
@@ -542,7 +575,7 @@
           "id": "profil-et-parametres"
         }
       ],
-      "pageCount": 28
+      "pageCount": 31
     },
     "admin_ville": {
       "title": "Manuel d’utilisation — Administration de ville",
@@ -699,9 +732,26 @@
           "result": "Le profil et les réglages sont actualisés pour votre compte sans interrompre la session. Le raccourci ne s’installe qu’après votre confirmation et dépend des capacités du navigateur et d’une adresse sécurisée compatible.",
           "limits": "Ces choix ne changent pas les villes attribuées ni les permissions. Les réglages partagés de l’organisation n’apparaissent que si votre compte les autorise.",
           "id": "profil-et-parametres"
+        },
+        {
+          "name": "Vitrine",
+          "menu": "Opérations → Vitrine",
+          "goal": "Préparer et soumettre au contrôle immobilier des annonces liées aux unités disponibles de vos villes attribuées.",
+          "steps": [
+            "Ouvrez Vitrine et vérifiez la ville active. Les listes et les biens proposés restent limités aux villes attribuées à votre compte.",
+            "Choisissez une unité disponible du Patrimoine. Les maisons, chambres et appartements sont des types d’unité ; le bâtiment et la parcelle apportent le contexte.",
+            "Vérifiez les caractéristiques reprises du bien. Si une caractéristique est erronée, corrigez-la dans le Patrimoine avant de créer ou soumettre l’annonce.",
+            "Ajoutez au moins une photo active dans la galerie de l’unité, puis rédigez le titre, la description et le prix de l’annonce.",
+            "Enregistrez le brouillon puis soumettez-le au contrôle de l’ADMIN_IMMOBILIER. Consultez son statut et l’historique.",
+            "Si des corrections sont demandées, lisez le motif, corrigez les éléments visés puis soumettez de nouveau. La publication finale est effectuée par l’ADMIN_IMMOBILIER."
+          ],
+          "fields": "La ville, le bâtiment, l’unité, son type, ses caractéristiques et ses photos proviennent du Patrimoine. Le prix et la description commerciale sont saisis dans l’annonce.",
+          "result": "Le dossier soumis apparaît À vérifier. Après une éventuelle demande de corrections, une nouvelle soumission relance le contrôle ; vous ne publiez pas vous-même l’annonce.",
+          "limits": "La Vitrine doit être activée par le SUPER_ADMIN et au moins une ville active doit être attribuée à votre compte. Seules les unités actives et disponibles de vos villes peuvent être proposées ; les biens occupés, supprimés ou déjà engagés dans une annonce incompatible sont refusés côté serveur. Vous ne gérez pas les demandes clients.",
+          "id": "vitrine"
         }
       ],
-      "pageCount": 22
+      "pageCount": 24
     }
   }
 }

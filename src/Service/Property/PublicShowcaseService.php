@@ -7,8 +7,10 @@ namespace App\Service\Property;
 use App\Dto\Response\Property\PublicListingResponse;
 use App\Dto\Response\System\PublicShowcaseResponse;
 use App\Entity\Identity\Organization;
-use App\Enum\OrganizationStatus;
+use App\Entity\Property\Listing;
 use App\Enum\Currency;
+use App\Enum\ListingOfferType;
+use App\Enum\OrganizationStatus;
 use App\Enum\UnitType;
 use App\Mapper\Property\UnitMapper;
 use App\Repository\Identity\OrganizationRepository;
@@ -101,20 +103,17 @@ final readonly class PublicShowcaseService
         ?array $cityCodes = null,
         ?UnitType $type = null,
         ?int $minBedrooms = null,
-        ?string $minRent = null,
-        ?string $maxRent = null,
+        ?string $minPrice = null,
+        ?string $maxPrice = null,
         ?Currency $currency = null,
+        ?ListingOfferType $offerType = null,
         int $page = 1,
         int $limit = 20
     ): array {
-        // Une borne de loyer sans devise comparerait deux monnaies (§ Argent) :
-        // elle est donc ignorée, et le résultat reste cohérent.
-        if ($currency === null) {
-            $minRent = null;
-            $maxRent = null;
-        }
-
         $cities = $this->resolveCities($organization, $cityCodes);
+        if ($cityCodes !== null && $cities === []) {
+            return ['items' => [], 'total' => 0, 'page' => $page, 'pages' => 1];
+        }
 
         $result = $this->unitRepository->findPublishedAndVacant(
             $organization,
@@ -123,9 +122,10 @@ final readonly class PublicShowcaseService
             $limit,
             $type,
             $minBedrooms,
-            $minRent,
-            $maxRent,
-            $currency
+            $minPrice,
+            $maxPrice,
+            $currency,
+            $offerType
         );
 
         $items = [];
@@ -173,6 +173,23 @@ final readonly class PublicShowcaseService
             $this->unitPhotoService->listForUnit($unit),
             $unit->getListing() ?? throw new \LogicException('Une annonce publique doit être associée à son workflow publié.')
         );
+    }
+
+    /** Résout l'annonce uniquement si son unité est toujours publique et disponible. */
+    public function findAvailableListing(string $slug, string $unitUuid): ?Listing
+    {
+        $organization = $this->findListedOrganizationBySlug($slug);
+        if ($organization === null) {
+            return null;
+        }
+
+        try {
+            $uuid = \Symfony\Component\Uid\Uuid::fromString($unitUuid);
+        } catch (\InvalidArgumentException) {
+            return null;
+        }
+
+        return $this->unitRepository->findPublishedAndVacantByUuid($uuid, $organization)?->getListing();
     }
 
     /**

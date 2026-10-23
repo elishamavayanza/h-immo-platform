@@ -9,8 +9,8 @@ use App\Entity\Property\Building;
 use App\Entity\Property\BuildingLevel;
 use App\Entity\Property\City;
 use App\Entity\Property\Unit;
-use App\Enum\Currency;
 use App\Enum\CityStatus;
+use App\Enum\Currency;
 use App\Enum\LeaseStatus;
 use App\Enum\ListingOfferType;
 use App\Enum\ListingStatus;
@@ -495,9 +495,10 @@ class UnitRepository extends ServiceEntityRepository
         int $limit = 20,
         ?UnitType $type = null,
         ?int $minBedrooms = null,
-        ?string $minRent = null,
-        ?string $maxRent = null,
-        ?Currency $currency = null
+        ?string $minPrice = null,
+        ?string $maxPrice = null,
+        ?Currency $currency = null,
+        ?ListingOfferType $offerType = null
     ): array {
         $qb = $this->createQueryBuilder('u')
             ->innerJoin('u.building', 'b')
@@ -540,21 +541,20 @@ class UnitRepository extends ServiceEntityRepository
             $qb->andWhere('u.bedrooms >= :minBedrooms')->setParameter('minBedrooms', $minBedrooms);
         }
 
-        // `monthlyRent` est un DECIMAL : les bornes sont comparées comme des
-        // chaînes normalisées, jamais converties en float (§ Argent).
-        if ($minRent !== null && $minRent !== '') {
-            $qb->andWhere('listing.offerType = :rentOffer')->andWhere('listing.price >= :minRent')
-                ->setParameter('rentOffer', ListingOfferType::RENT)->setParameter('minRent', $minRent);
+        // Les prix DECIMAL restent comparés par MariaDB, sans conversion en float.
+        if ($offerType !== null) {
+            $qb->andWhere('listing.offerType = :offerType')->setParameter('offerType', $offerType);
         }
 
-        if ($maxRent !== null && $maxRent !== '') {
-            $qb->andWhere('listing.offerType = :rentOffer')->andWhere('listing.price <= :maxRent')
-                ->setParameter('rentOffer', ListingOfferType::RENT)->setParameter('maxRent', $maxRent);
+        if ($minPrice !== null) {
+            $qb->andWhere('listing.price >= :minPrice')->setParameter('minPrice', $minPrice);
         }
 
-        // Un filtre de loyer sans devise reviendrait à comparer des montants de
-        // devises différentes : le critère de disponibilité est donc la
-        // cohérence du regroupement, pas une commodité d'affichage.
+        if ($maxPrice !== null) {
+            $qb->andWhere('listing.price <= :maxPrice')->setParameter('maxPrice', $maxPrice);
+        }
+
+        // Les montants de devises différentes ne sont jamais comparés ensemble.
         if ($currency !== null) {
             $qb->andWhere('listing.currency = :currency')->setParameter('currency', $currency);
         }

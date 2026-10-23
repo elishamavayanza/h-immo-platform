@@ -12,6 +12,7 @@ enum SecurityAction: string
 
     // Organization
     case MANAGE_ORGANIZATION = 'manage_organization';
+    case MANAGE_SHOWCASE = 'manage_showcase';
     case SUSPEND_ORGANIZATION = 'suspend_organization';
     case ACTIVATE_ORGANIZATION = 'activate_organization';
     case VIEW_ORGANIZATION = 'view_organization';
@@ -65,6 +66,10 @@ enum SecurityAction: string
     case SUBMIT_LISTING = 'submit_listing';
     case REVIEW_LISTING = 'review_listing';
     case MANAGE_LISTING_MEDIA = 'manage_listing_media';
+
+    // Demandes publiques associées aux annonces
+    case VIEW_CUSTOMER_INQUIRY = 'view_customer_inquiry';
+    case MANAGE_CUSTOMER_INQUIRY = 'manage_customer_inquiry';
 
     // Tenant
     case VIEW_TENANT = 'view_tenant';

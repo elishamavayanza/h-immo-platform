@@ -5,9 +5,12 @@ declare(strict_types=1);
 namespace App\Controller\Api\Public;
 
 use App\Dto\Feedback;
-use App\Dto\Request\PaginationQuery;
+use App\Dto\Request\Property\PublicListingFilterQuery;
 use App\Dto\Response\Property\PublicListingResponse;
 use App\Dto\Response\System\PublicShowcaseResponse;
+use App\Enum\Currency;
+use App\Enum\ListingOfferType;
+use App\Enum\UnitType;
 use App\Service\Property\PublicShowcaseService;
 use App\Trait\FeedbackTrait;
 use Nelmio\ApiDocBundle\Attribute\Model;
@@ -92,8 +95,11 @@ final class PublicShowcaseController extends AbstractController
     #[OA\Parameter(name: 'city', description: 'Filtrer par code ville (ex: KIN)', in: 'query')]
     #[OA\Parameter(name: 'type', description: 'Type d\'unité', in: 'query', schema: new OA\Schema(type: 'string', enum: ['apartment', 'house', 'shop', 'office', 'restaurant', 'room', 'warehouse', 'workshop', 'storage', 'parking', 'other']))]
     #[OA\Parameter(name: 'bedrooms', description: 'Nombre minimum de chambres', in: 'query', schema: new OA\Schema(type: 'integer', minimum: 0))]
-    #[OA\Parameter(name: 'minRent', description: 'Loyer minimum', in: 'query', schema: new OA\Schema(type: 'string', format: 'decimal'))]
-    #[OA\Parameter(name: 'maxRent', description: 'Loyer maximum', in: 'query', schema: new OA\Schema(type: 'string', format: 'decimal'))]
+    #[OA\Parameter(name: 'offerType', description: 'Type d’offre', in: 'query', schema: new OA\Schema(type: 'string', enum: ['rent', 'sale']))]
+    #[OA\Parameter(name: 'minPrice', description: 'Prix minimum dans la devise sélectionnée', in: 'query', schema: new OA\Schema(type: 'string', format: 'decimal'))]
+    #[OA\Parameter(name: 'maxPrice', description: 'Prix maximum dans la devise sélectionnée', in: 'query', schema: new OA\Schema(type: 'string', format: 'decimal'))]
+    #[OA\Parameter(name: 'minRent', description: 'Alias historique du loyer minimum (location)', in: 'query', deprecated: true, schema: new OA\Schema(type: 'string', format: 'decimal'))]
+    #[OA\Parameter(name: 'maxRent', description: 'Alias historique du loyer maximum (location)', in: 'query', deprecated: true, schema: new OA\Schema(type: 'string', format: 'decimal'))]
     #[OA\Parameter(name: 'currency', description: 'Devise (USD, CDF)', in: 'query', schema: new OA\Schema(type: 'string', enum: ['USD', 'CDF']))]
     #[OA\Parameter(name: 'page', description: 'Numéro de page (1-indexé)', in: 'query', schema: new OA\Schema(type: 'integer', minimum: 1, default: 1))]
     #[OA\Parameter(name: 'limit', description: 'Éléments par page (max 100)', in: 'query', schema: new OA\Schema(type: 'integer', minimum: 1, maximum: 100, default: 20))]
@@ -107,15 +113,14 @@ final class PublicShowcaseController extends AbstractController
         description: 'Entreprise introuvable ou vitrine masquée',
         content: new OA\JsonContent(ref: new Model(type: Feedback::class))
     )]
+    #[OA\Response(
+        response: 400,
+        description: 'Un ou plusieurs filtres sont invalides ou incohérents',
+        content: new OA\JsonContent(ref: new Model(type: Feedback::class))
+    )]
     public function listings(
         string $slug,
-        #[MapQueryString] ?PaginationQuery $query = null,
-        ?string $city = null,
-        ?string $type = null,
-        ?int $bedrooms = null,
-        ?string $minRent = null,
-        ?string $maxRent = null,
-        ?string $currency = null
+        #[MapQueryString(validationFailedStatusCode: 400)] ?PublicListingFilterQuery $query = null,
     ): JsonResponse {
         $organization = $this->publicShowcaseService->findListedOrganizationBySlug($slug);
 
@@ -129,25 +134,19 @@ final class PublicShowcaseController extends AbstractController
             );
         }
 
-        $page = $query->page ?? 1;
-        $limit = min($query->limit ?? 20, 100);
-
-        $unitType = $type !== null ? \App\Enum\UnitType::tryFrom($type) : null;
-        $currencyEnum = $currency !== null ? \App\Enum\Currency::tryFrom($currency) : null;
-
-        // Valeur invalide = pas de filtre (même comportement que city inconnu)
-        // Un 400/422 serait plus strict, mais l'API publique privilégie la robustesse :
-        // un bot qui essaie des paramètres au hasard ne doit pas provoquer de 500.
+        $query ??= new PublicListingFilterQuery();
+        $legacyRentFilter = $query->minRent !== null || $query->maxRent !== null;
         $result = $this->publicShowcaseService->listListings(
             $organization,
-            $city !== null ? [$city] : null,
-            $unitType,
-            $bedrooms,
-            $minRent,
-            $maxRent,
-            $currencyEnum,
-            $page,
-            $limit
+            $query->city !== null ? [$query->city] : null,
+            $query->type !== null ? UnitType::from($query->type) : null,
+            $query->bedrooms,
+            $legacyRentFilter ? $query->minRent : $query->minPrice,
+            $legacyRentFilter ? $query->maxRent : $query->maxPrice,
+            $query->currency !== null ? Currency::from($query->currency) : null,
+            $legacyRentFilter ? ListingOfferType::RENT : ($query->offerType !== null ? ListingOfferType::from($query->offerType) : null),
+            $query->page,
+            min($query->limit, 100)
         );
 
         return $this->json(

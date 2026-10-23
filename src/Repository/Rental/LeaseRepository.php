@@ -109,6 +109,19 @@ class LeaseRepository extends ServiceEntityRepository
         return $qb->getQuery()->getOneOrNullResult();
     }
 
+    /** Recherche un bail actif de l'organisation qui couvre l'unité source, principale ou supplémentaire. */
+    public function findActiveLeaseForUnitInOrganization(Organization $organization, Unit $unit): ?Lease
+    {
+        return $this->createQueryBuilder('l')->distinct()
+            ->leftJoin('l.additionalUnits', 'additionalUnit')
+            ->andWhere('l.organization = :organization')
+            ->andWhere('(l.unit = :unit OR additionalUnit = :unit)')
+            ->andWhere('l.status = :status')->andWhere('l.deletedAt IS NULL')
+            ->setParameter('organization', $organization)->setParameter('unit', $unit)
+            ->setParameter('status', LeaseStatus::ACTIVE)
+            ->getQuery()->getOneOrNullResult();
+    }
+
     /** Recherche un bail actif rattaché à une unité du bâtiment, principale ou supplémentaire. */
     public function findActiveLeaseForBuilding(Building $building): ?Lease
     {

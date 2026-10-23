@@ -7,8 +7,9 @@ namespace App\Mapper\Property;
 use App\Dto\Request\Property\UnitRequest;
 use App\Dto\Response\Property\PublicListingResponse;
 use App\Dto\Response\Property\UnitResponse;
-use App\Entity\Property\Unit;
 use App\Entity\Property\Listing;
+use App\Entity\Property\Unit;
+use App\Enum\ListingOfferType;
 use App\Enum\UnitOccupancyStatus;
 
 /**
@@ -104,7 +105,7 @@ final class UnitMapper
             type: (string) ($snapshot['type'] ?? ''),
             floor: (int) ($snapshot['floor'] ?? 0),
             description: $listing->getDescription(),
-            monthlyRent: $listing->getOfferType()->value === 'rent' ? $listing->getPrice() : '0.00',
+            monthlyRent: $listing->getOfferType() === ListingOfferType::RENT ? $listing->getPrice() : null,
             currency: $listing->getCurrency()->value,
             surface: isset($snapshot['surface']) ? (string) $snapshot['surface'] : null,
             bedrooms: isset($snapshot['bedrooms']) ? (int) $snapshot['bedrooms'] : null,

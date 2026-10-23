@@ -25,6 +25,7 @@ use App\Repository\Rental\LeaseOccupantRepository;
 use App\Repository\Rental\TenantRepository;
 use App\Security\SecurityAction;
 use App\Security\SecurityServiceInterface;
+use App\Service\Property\ListingWorkflowService;
 use App\Service\System\AuditLogService;
 use App\Service\System\DateTimeService;
 use Doctrine\ORM\EntityManagerInterface;
@@ -57,6 +58,7 @@ final readonly class LeaseService
         private AuditLogService $auditLogService,
         private DateTimeService $dateTime,
         private RentScheduleCalculator $scheduleCalculator,
+        private ListingWorkflowService $listingWorkflow,
     ) {
     }
 
@@ -767,6 +769,12 @@ final readonly class LeaseService
 
                 $this->entityManager->persist($lease);
                 $this->entityManager->flush();
+
+                if ($checkOperationalAvailability && $lease->getStatus() === LeaseStatus::ACTIVE) {
+                    foreach ($selectedUnits as $unit) {
+                        $this->listingWorkflow->withdrawForLeaseActivation($lease, $unit);
+                    }
+                }
 
                 return true;
             }

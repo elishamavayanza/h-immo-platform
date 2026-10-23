@@ -158,6 +158,15 @@ const VITRINE: AppMenuItem = {
     path: '/app/vitrine',
 };
 
+/** Suivi des contacts reçus sur les annonces publiques, réservé à l'organisation. */
+const CUSTOMER_INQUIRIES: AppMenuItem = {
+    id: 'customer-inquiries',
+    label: 'Demandes clients',
+    icon: 'clipboard-check',
+    section: 'operations',
+    path: '/app/demandes-clients',
+};
+
 /**
  * Personnel : une entrée, exposée aux rôles qui n'ont PAS l'Administration
  * (ADMIN_IMMOBILIER). Les Affectations ne se consultent pas seules
@@ -228,8 +237,8 @@ const RAPPORTS: AppMenuItem = {
  *   lecture seule et les actions correspondantes sont masquées par rôle.
  */
 export const ORGANIZATION_SIDEBAR: Record<OrganizationRole, SidebarMenu> = {
-    patron: [DASHBOARD, RAPPORTS, PATRIMOINE, LOCATAIRES, LOYERS, DEPENSES, VITRINE, MAINTENANCE, ADMINISTRATION],
-    admin_immobilier: [DASHBOARD, RAPPORTS, PATRIMOINE, LOCATAIRES, LOYERS, DEPENSES, VITRINE, PERSONNEL, MAINTENANCE, ADMINISTRATION],
+    patron: [DASHBOARD, RAPPORTS, PATRIMOINE, LOCATAIRES, LOYERS, DEPENSES, VITRINE, CUSTOMER_INQUIRIES, MAINTENANCE, ADMINISTRATION],
+    admin_immobilier: [DASHBOARD, RAPPORTS, PATRIMOINE, LOCATAIRES, LOYERS, DEPENSES, VITRINE, CUSTOMER_INQUIRIES, PERSONNEL, MAINTENANCE, ADMINISTRATION],
     admin_ville: [DASHBOARD, RAPPORTS, PATRIMOINE, LOCATAIRES, LOYERS, DEPENSES, VITRINE, ADMIN_VILLE_OPERATIONS, MAINTENANCE],
 };
 

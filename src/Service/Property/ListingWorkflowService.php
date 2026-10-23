@@ -12,6 +12,7 @@ use App\Entity\Property\City;
 use App\Entity\Property\Listing;
 use App\Entity\Property\ListingHistory;
 use App\Entity\Property\Unit;
+use App\Entity\Rental\Lease;
 use App\Enum\CityStatus;
 use App\Enum\Currency;
 use App\Enum\ListingOfferType;
@@ -32,9 +33,11 @@ use Doctrine\DBAL\LockMode;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\HttpKernel\Exception\BadRequestHttpException;
 use Symfony\Component\HttpKernel\Exception\ConflictHttpException;
+use Symfony\Component\HttpKernel\Exception\HttpExceptionInterface;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 use Symfony\Component\Uid\Uuid;
 use Symfony\Component\Validator\Validator\ValidatorInterface;
+use Throwable;
 
 /** Règles serveur du cycle de vie éditorial de la vitrine immobilière. */
 final readonly class ListingWorkflowService
@@ -61,7 +64,7 @@ final readonly class ListingWorkflowService
         $this->assertShowcaseEnabled($organization);
         $this->validate($request);
 
-        return $this->entityManager->wrapInTransaction(function () use ($unit, $request): array {
+        return $this->transactional(function () use ($unit, $request): array {
             $this->units->lockForUpdate($unit);
             $this->security->checkUnitAccess($unit, SecurityAction::CREATE_LISTING);
             $this->assertUnitEligible($unit, requirePhoto: false);
@@ -158,6 +161,29 @@ final readonly class ListingWorkflowService
         return $this->reviewTransition($uuid, 'WITHDRAWN', ListingStatus::WITHDRAWN, $reason, [ListingStatus::PUBLISHED]);
     }
 
+    /** Retire une annonce publiée dans la transaction d'activation du bail qui occupe son unité. */
+    public function withdrawForLeaseActivation(Lease $lease, Unit $unit): void
+    {
+        if ($lease->getStatus() !== \App\Enum\LeaseStatus::ACTIVE
+            || $lease->getOrganization()->getId() !== $unit->getBuilding()->getParcel()->getCity()->getOrganization()->getId()
+            || ($lease->getUnit() !== $unit && !$lease->getAdditionalUnits()->contains($unit))) {
+            throw new \LogicException('Le bail actif ne couvre pas cette unité dans la même organisation.');
+        }
+
+        $listing = $this->listings->findOneByUnit($unit);
+        if ($listing === null || $listing->getStatus() !== ListingStatus::PUBLISHED) return;
+        $this->entityManager->lock($listing, LockMode::PESSIMISTIC_WRITE);
+        if ($listing->getStatus() !== ListingStatus::PUBLISHED) return;
+
+        $content = $this->content($listing);
+        $reason = sprintf('Annonce retirée automatiquement à l’activation du bail %s.', $lease->getReference());
+        $listing->setStatus(ListingStatus::WITHDRAWN)->setUpdatedAt($this->dateTime->now());
+        $unit->setIsPublished(false);
+        $this->record($listing, 'WITHDRAWN_FOR_ACTIVE_LEASE', ListingStatus::PUBLISHED->value, ListingStatus::WITHDRAWN,
+            $reason, $content, [...$content, 'leaseUuid' => (string) $lease->getUuid()]);
+        $this->entityManager->flush();
+    }
+
     /** @return array{items: list<array<string, mixed>>, total: int, page: int, pages: int} */
     public function listForOrganization(string $organizationUuid, ListingFilterRequest $request): array
     {
@@ -249,12 +275,42 @@ final readonly class ListingWorkflowService
 
     private function locked(string $uuid, callable $callback): array
     {
-        return $this->entityManager->wrapInTransaction(function () use ($uuid, $callback): array {
+        return $this->transactional(function () use ($uuid, $callback): array {
             $listing = $this->findListing($uuid);
             $this->entityManager->lock($listing, LockMode::PESSIMISTIC_WRITE);
 
             return $callback($listing);
         });
+    }
+
+    /**
+     * Les refus métier attendus annulent le verrouillage sans fermer l’EntityManager,
+     * afin qu’un client persistant puisse poursuivre avec une requête valide.
+     */
+    private function transactional(callable $operation): mixed
+    {
+        $connection = $this->entityManager->getConnection();
+        $connection->beginTransaction();
+
+        try {
+            $result = $operation();
+            $connection->commit();
+
+            return $result;
+        } catch (HttpExceptionInterface $exception) {
+            if ($connection->isTransactionActive()) {
+                $connection->rollBack();
+            }
+
+            throw $exception;
+        } catch (Throwable $exception) {
+            if ($connection->isTransactionActive()) {
+                $connection->rollBack();
+            }
+            $this->entityManager->close();
+
+            throw $exception;
+        }
     }
 
     private function transition(Listing $listing, string $action, ListingStatus $next, ?string $reason = null, ?array $extraNewValues = null): void

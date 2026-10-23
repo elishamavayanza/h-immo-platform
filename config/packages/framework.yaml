@@ -17,6 +17,10 @@ framework:
             policy: 'fixed_window'
             limit: 10
             interval: '1 hour'
+        public_customer_inquiries:
+            policy: 'fixed_window'
+            limit: 5
+            interval: '1 hour'
 
     # L'API est désormais sans état : le pare-feu `main` est `stateless`
     # et l'authentification se fait par jeton Bearer. Aucune session PHP

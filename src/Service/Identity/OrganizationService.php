@@ -598,7 +598,7 @@ final readonly class OrganizationService
     /**
      * Met à jour la vitrine publique de l'Organization.
      *
-     * Réservé au PATRON, via `MANAGE_ORGANIZATION` : la vitrine engage
+     * Réservé au PATRON, via `MANAGE_SHOWCASE` : la vitrine engage
      * l'image de l'entreprise et son URL publique, alors qu'un
      * `ADMIN_IMMOBILIER` ou un `ADMIN_VILLE` n'a mandat que sur son périmètre
      * immobilier ou son périmètre ville.
@@ -622,7 +622,7 @@ final readonly class OrganizationService
                 ->autoInitFlush();
         }
 
-        $this->security->checkOrganizationAccess($organization, SecurityAction::MANAGE_ORGANIZATION);
+        $this->security->checkOrganizationAccess($organization, SecurityAction::MANAGE_SHOWCASE);
 
         if (!$organization->isShowcaseEnabled()) {
             throw new \App\Exception\AccessDeniedException('La vitrine n’est pas activée pour cette organisation.');

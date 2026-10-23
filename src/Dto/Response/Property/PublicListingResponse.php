@@ -27,7 +27,8 @@ final readonly class PublicListingResponse
         public string $type,
         public int $floor,
         public ?string $description,
-        public string $monthlyRent,
+        /** Alias historique de price pour les locations ; null pour une vente. */
+        public ?string $monthlyRent,
         public string $currency,
         public ?string $surface,
         public ?int $bedrooms,

@@ -33,6 +33,7 @@ const AdminVilleLoyersPage = lazyPage(() => import('../../features/admin_ville/l
 const AdminVilleDepensesPage = lazyPage(() => import('../../features/admin_ville/depenses/pages/DepensesPage'), 'DepensesPage');
 const AdminVilleReportsPage = lazyPage(() => import('../../features/admin_ville/reports/pages/ReportsPage'), 'ReportsPage');
 const AdminVilleVitrinePage = lazyPage(() => import('../../features/admin_ville/vitrine/pages/VitrinePage'), 'VitrinePage');
+const CustomerInquiriesPage = lazyPage(() => import('../../features/shared/customer_inquiries/pages/CustomerInquiriesPage'), 'CustomerInquiriesPage');
 const AdminVilleOperationsPage = lazyPage(() => import('../../features/admin_ville/operations/pages/OperationsPage'), 'OperationsPage');
 const TreasuryPage = lazyPage(() => import('../../features/shared/finance/pages/TreasuryPage.tsx'), 'TreasuryPage');
 const MaintenancePage = lazyPage(() => import('../../features/shared/operations/pages/MaintenancePage.tsx'), 'MaintenancePage');
@@ -57,6 +58,7 @@ export function OrganizationMenuPage({ path }: OrganizationMenuPageProps) {
             case '/app/depenses': page = showExpenseManagement ? <AdminImmobilierDepensesPage /> : <TreasuryPage />; break;
             case '/app/rapports': page = <AdminImmobilierReportsPage />; break;
             case '/app/vitrine': page = <AdminImmobilierVitrinePage />; break;
+            case '/app/demandes-clients': page = <CustomerInquiriesPage />; break;
             case '/app/personnel': page = <AdminImmobilierPersonnelPage />; break;
             case '/app/administration': page = <AdminImmobilierAdministrationPage />; break;
             case '/app/maintenance': page = <MaintenancePage />; break;
@@ -82,6 +84,7 @@ export function OrganizationMenuPage({ path }: OrganizationMenuPageProps) {
             case '/app/depenses': page = showExpenseManagement ? <PatronDepensesPage /> : <TreasuryPage />; break;
             case '/app/rapports': page = <PatronReportsPage />; break;
             case '/app/vitrine': page = <PatronVitrinePage />; break;
+            case '/app/demandes-clients': page = <CustomerInquiriesPage />; break;
             case '/app/administration': page = <PatronAdministrationPage />; break;
             case '/app/maintenance': page = <MaintenancePage />; break;
         }

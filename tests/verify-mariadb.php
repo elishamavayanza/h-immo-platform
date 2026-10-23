@@ -129,6 +129,7 @@ $expected = [
     'publication', 'publication_recipient', 'residential_movement', 'lease_unit', 'lease_occupant', 'access_point', 'access_point_unit', 'demo_dataset',
     'organization_rental_rule_version', 'rent_rule_snapshot', 'organization_rental_rule_draft', 'rental_rule_publication_delegation',
     'property_listing', 'property_listing_history',
+    'customer_inquiry', 'customer_inquiry_history', 'customer_visit',
 ];
 
 $missing = array_values(array_diff($expected, $tables));
@@ -146,6 +147,13 @@ check('aucune table inattendue', $unexpected === [], implode(', ', $unexpected))
 check('la table revoked_token existe', in_array('revoked_token', $tables, true));
 check('la table unit_photo existe', in_array('unit_photo', $tables, true));
 check('les tables de workflow vitrine existent', in_array('property_listing', $tables, true) && in_array('property_listing_history', $tables, true));
+check('les demandes, leur historique et les visites disposent de tables dédiées', in_array('customer_inquiry', $tables, true) && in_array('customer_inquiry_history', $tables, true) && in_array('customer_visit', $tables, true));
+if (in_array('customer_inquiry', $tables, true) && in_array('customer_visit', $tables, true)) {
+    $inquiryColumns = array_map(static fn ($column): string => strtolower($column->getName()), $sm->listTableColumns('customer_inquiry'));
+    $visitColumns = array_map(static fn ($column): string => strtolower($column->getName()), $sm->listTableColumns('customer_visit'));
+    check('une demande garde le lien vers le bail auquel elle a été convertie', in_array('converted_lease_id', $inquiryColumns, true));
+    check('un rendez-vous conserve organisation, demande, responsable, date, statut et résultat', array_diff(['organization_id', 'inquiry_id', 'created_by_id', 'scheduled_at', 'status', 'outcome'], $visitColumns) === []);
+}
 
 // `is_published` reste un champ de compatibilité patrimoniale. La visibilité
 // publique relève désormais du statut explicite du workflow d'annonce.
