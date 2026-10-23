@@ -97,7 +97,12 @@ export const Select = forwardRef<HTMLSelectElement, SelectProps>(
             const nativeSelect = selectRef.current;
             if (!nativeSelect) return;
             Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, 'value')?.set?.call(nativeSelect, String(option.value));
-            nativeSelect.dispatchEvent(new Event('change', { bubbles: true }));
+            const changeEvent = new Event('change', { bubbles: true });
+            Object.defineProperties(changeEvent, {
+                target: { configurable: true, value: nativeSelect },
+                currentTarget: { configurable: true, value: nativeSelect },
+            });
+            onChange?.(changeEvent as unknown as React.ChangeEvent<HTMLSelectElement>);
             setIsOpen(false);
             triggerRef.current?.focus();
         };

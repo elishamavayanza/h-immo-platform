@@ -62,8 +62,10 @@ try {
 } catch { rejectedOverLimit = true; }
 assert(rejectedOverLimit, 'au-delà de la limite, aucun total partiel ne peut être présenté comme complet');
 
-assert(resolveCashCityUuid(ville, 'city-old', [{ id: 'city-allowed' }], 'city-allowed') === 'city-allowed', 'ADMIN_VILLE ne peut utiliser que la ville active autorisée');
-assert(resolveCashCityUuid(ville, 'city-old', [{ id: 'city-allowed' }], 'city-outside') === '', 'une ville active hors périmètre est rejetée');
+assert(resolveCashCityUuid(ville, 'city-old', [{ id: 'city-allowed' }], 'city-allowed') === 'city-allowed', 'ADMIN_VILLE utilise une ville attribuée');
+assert(resolveCashCityUuid(ville, 'city-old', [{ id: 'city-allowed' }], 'city-outside') === 'city-allowed', 'une ville active hors périmètre retombe sur une ville attribuée');
+assert(resolveCashCityUuid(ville, 'city-selected', [{ id: 'city-selected' }, { id: 'city-active' }], 'city-active') === 'city-selected', 'ADMIN_VILLE peut conserver une ville sélectionnée dans son périmètre, même si une autre ville est active');
+assert(resolveCashCityUuid(ville, 'city-outside', [{ id: 'city-allowed' }, { id: 'city-active' }], 'city-active') === 'city-active', 'une sélection hors périmètre retombe sur la ville active autorisée');
 assert(resolveCashCityUuid(immobilier, 'city-old', [{ id: 'city-new' }]) === 'city-new', 'un changement de contexte remplace une ville de caisse qui n’est plus disponible');
 assert(!requiresCashOpeningConfirmation(null) && requiresCashOpeningConfirmation('0.00'), 'la confirmation est demandée uniquement pour remplacer un solde déjà défini, même égal à zéro');
 

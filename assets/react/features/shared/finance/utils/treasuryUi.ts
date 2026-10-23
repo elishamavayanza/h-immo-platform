@@ -9,7 +9,11 @@ export function resolveCashCityUuid(
     allowedCities: readonly CashCityOption[],
     activeCityUuid?: string | null,
 ): string {
-    if (role === 'admin_ville') return allowedCities.some((city) => city.id === activeCityUuid) ? activeCityUuid ?? '' : '';
+    if (role === 'admin_ville') {
+        if (allowedCities.some((city) => city.id === currentUuid)) return currentUuid;
+        if (allowedCities.some((city) => city.id === activeCityUuid)) return activeCityUuid ?? '';
+        return allowedCities[0]?.id ?? '';
+    }
     return allowedCities.some((city) => city.id === currentUuid) ? currentUuid : allowedCities[0]?.id ?? '';
 }
 
