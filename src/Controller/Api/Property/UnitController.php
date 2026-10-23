@@ -176,8 +176,8 @@ final class UnitController extends AbstractController
 
     #[Route('/{uuid}/publish', name: 'publish', methods: ['PATCH'])]
     #[OA\Patch(
-        summary: 'Publier ou retirer l\'annonce d\'une unité sur la vitrine publique',
-        description: 'Bascule l\'état de publication. Publier une unité occupée est refusé (422).'
+        summary: 'Ancienne route de publication directe, conservée pour compatibilité',
+        description: 'La publication directe est désactivée. Utilisez le circuit de validation des annonces.'
     )]
     #[OA\RequestBody(content: new OA\JsonContent(ref: new Model(type: PublishListingRequest::class)))]
     #[OA\Response(
@@ -194,6 +194,7 @@ final class UnitController extends AbstractController
         response: 403,
         description: 'Accès refusé : droit PUBLISH_LISTING manquant sur la ville de l\'unité'
     )]
+    #[OA\Response(response: 409, description: 'La publication directe est désactivée au profit du workflow de validation')]
     #[OA\Response(
         response: 404,
         description: 'Unité introuvable'

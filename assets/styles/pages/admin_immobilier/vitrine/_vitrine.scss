@@ -1,1 +1,32 @@
 @use '../base';
+
+.listing-workflow {
+    margin-top: 20px;
+
+    &__list { display: grid; gap: 12px; }
+    &__item { padding: 16px; border: 1px solid var(--border-color, rgba(128, 128, 128, .25)); border-radius: 12px; }
+    &__heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+    &__heading h3 { margin: 0; }
+    &__heading p, &__description, &__feedback { margin: 6px 0 0; color: var(--text-secondary, #78828b); }
+    &__description { white-space: pre-line; }
+    &__cover { display: block; width: min(100%, 280px); max-height: 180px; margin-top: 12px; border-radius: 9px; object-fit: cover; }
+    &__next-step, &__candidate-empty, &__candidate-error, &__candidate-note, &__candidate-count, &__photo-note { margin: 12px 0 0; color: var(--text-secondary, #78828b); }
+    &__property-summary, &__gallery { margin-top: 16px; padding: 14px; border: 1px solid var(--border-color, rgba(128, 128, 128, .25)); border-radius: 10px; }
+    &__property-summary h3, &__gallery h3 { margin: 0; }
+    &__property-summary p, &__gallery > p { margin: 6px 0 0; color: var(--text-secondary, #78828b); }
+    &__property-summary dl { display: flex; flex-wrap: wrap; gap: 12px 20px; margin: 12px 0 0; }
+    &__property-summary dl div { display: grid; gap: 2px; }
+    &__property-summary dt { color: var(--text-secondary, #78828b); font-size: .85em; }
+    &__property-summary dd { margin: 0; font-weight: 600; }
+    &__gallery .photo-gallery { margin-top: 12px; }
+    &__feedback { padding: 9px 12px; border-left: 3px solid var(--color-primary, #328596); background: color-mix(in srgb, var(--color-primary, #328596) 8%, transparent); border-radius: 0 6px 6px 0; }
+    &__actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
+    &__history { display: grid; gap: 14px; padding-left: 22px; }
+    &__history li span { display: block; margin-top: 3px; color: var(--text-secondary, #78828b); font-size: .9em; }
+    &__history li p { margin: 6px 0 0; }
+}
+
+@media (max-width: 640px) {
+    .listing-workflow__item { padding: 12px; }
+    .listing-workflow__heading { align-items: flex-start; flex-direction: column; }
+}

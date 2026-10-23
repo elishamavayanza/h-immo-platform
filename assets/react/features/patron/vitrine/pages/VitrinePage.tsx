@@ -10,13 +10,9 @@ import { Input } from '../../../../components/Forms/Input';
 import { Textarea } from '../../../../components/Forms/Textarea';
 import { Switch } from '../../../../components/Forms/Switch';
 import { FormField } from '../../../../components/Forms/FormField';
-import { SearchInput } from '../../../../components/Forms/SearchInput';
-import { Select } from '../../../../components/Forms/Select';
-import { OrganizationSummary } from '../../../shared/components/OrganizationSummary';
 import { Tabs } from '../../../../components/Navigation/Tabs';
 import { OrganizationLogoPicker, type OrganizationLogoChange } from '../../../super_admin/organizations/components/OrganizationLogoPicker';
-import { useVitrine } from '../../../admin_immobilier/vitrine/hooks/useVitrine';
-import { VitrineTable } from '../../../admin_immobilier/vitrine/components/VitrineTable';
+import { ListingWorkflowPanel } from '../../../admin_immobilier/vitrine/components/ListingWorkflowPanel';
 import { fieldErrorMap } from '../../../shared/utils/actionErrors';
 import { usePublicSettings } from '../hooks/usePublicSettings';
 import '../../../../../styles/pages/patron/vitrine/_vitrine.scss';
@@ -35,8 +31,6 @@ import '../../../../../styles/pages/patron/vitrine/_vitrine.scss';
 export function VitrinePage() {
     const { organizationRole } = useOrganization();
     const { settings, isLoading, error, reload, save, saveLogo, removeLogo } = usePublicSettings();
-    const vitrine = useVitrine();
-    const allRows = vitrine.data?.rows ?? [];
     const navigate = useNavigate();
 
     const [slug, setSlug] = useState('');
@@ -90,25 +84,6 @@ export function VitrinePage() {
         }
     };
 
-    let listingBody = (
-        <VitrineTable
-            rows={vitrine.rows}
-            role={organizationRole}
-            pendingId={vitrine.pendingId}
-            onTogglePublished={() => {}}
-            onEdit={() => {}}
-            onAddPhoto={() => {}}
-            readOnly
-        />
-    );
-    if (vitrine.isLoading) {
-        listingBody = <EmptyState icon={<Spinner size="large" />} title="Chargement des annonces…" description="Récupération des biens de l’organisation." />;
-    } else if (vitrine.error) {
-        listingBody = <EmptyState title="Annonces indisponibles" description={vitrine.error} action={<Button onClick={() => void vitrine.reload()}>Réessayer</Button>} />;
-    } else if (vitrine.rows.length === 0) {
-        listingBody = <EmptyState title="Aucune annonce à afficher" description="Aucune unité enregistrée pour cette organisation." />;
-    }
-
     return (
         <main className="organization-page organization-operational-page">
             <header className="organization-page__header">
@@ -130,7 +105,7 @@ export function VitrinePage() {
                     variant="underline"
                     tabs={[
                         { id: 'settings', label: 'Réglages de la vitrine' },
-                        { id: 'listings', label: `Annonces (${allRows.length})` },
+                        { id: 'listings', label: 'Annonces' },
                     ]}
                     renderContent={(activeTabId) => activeTabId === 'settings' ? (
                         <div className="patron-vitrine-settings">
@@ -204,35 +179,7 @@ export function VitrinePage() {
                         </div>
                     ) : (
                         <>
-                            <OrganizationSummary
-                                items={[
-                                    { label: 'Annonces chargées', value: <>{allRows.length}</> },
-                                    { label: 'Publiées', value: <>{allRows.filter((row) => row.isPublished).length}</> },
-                                    { label: 'Brouillons', value: <>{allRows.filter((row) => !row.isPublished).length}</> },
-                                ]}
-                            />
-                            <Card className="organization-table-card" padding="medium">
-                                <div className="organization-table-toolbar">
-                                    <div>
-                                        <h2>Annonces immobilières</h2>
-                                        <p>{vitrine.data?.note ?? 'La publication des annonces est gérée par votre administrateur immobilier.'}</p>
-                                    </div>
-                                    <div className="organization-filters organization-filters--tenant">
-                                        <SearchInput value={vitrine.search} onSearch={vitrine.setSearch} placeholder="Rechercher une annonce…" fullWidth />
-                                        <Select
-                                            aria-label="Filtrer par statut"
-                                            value={vitrine.status}
-                                            onChange={(event) => vitrine.setStatus(event.target.value)}
-                                            options={[
-                                                { value: 'all', label: 'Tous les statuts' },
-                                                { value: 'published', label: 'Publiées' },
-                                                { value: 'unpublished', label: 'Brouillons' },
-                                            ]}
-                                        />
-                                    </div>
-                                </div>
-                                {listingBody}
-                            </Card>
+                            <ListingWorkflowPanel role={organizationRole} readOnly />
                         </>
                     )}
                 />

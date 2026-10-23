@@ -135,7 +135,8 @@ check('Sans rôle : menu vide', resolveSidebar(null, null).length === 0);
 check('Vitrine absente par défaut pour le PATRON', !hasTopLevelItem(PATRON, 'vitrine'));
 check('Vitrine affichée au PATRON autorisé par la plateforme', hasTopLevelItem(resolveSidebar(null, 'patron' as OrganizationRole, true), 'vitrine'));
 check('Vitrine affichée à ADMIN_IMMOBILIER autorisé par la plateforme', hasTopLevelItem(resolveSidebar(null, 'admin_immobilier' as OrganizationRole, true), 'vitrine'));
-check('ADMIN_VILLE ne reçoit pas la vitrine, même si l’organisation est autorisée', !hasTopLevelItem(resolveSidebar(null, 'admin_ville' as OrganizationRole, true), 'vitrine'));
+check('Vitrine affichée à ADMIN_VILLE lorsque la plateforme l’autorise pour son organisation', hasTopLevelItem(resolveSidebar(null, 'admin_ville' as OrganizationRole, true), 'vitrine'));
+check('ADMIN_VILLE autorisé atteint /app/vitrine', isPathInMenu(resolveSidebar(null, 'admin_ville' as OrganizationRole, true), '/app/vitrine'));
 
 console.log('\n=== Permissions de création des Admin ville ===\n');
 check('ADMIN_IMMOBILIER peut créer un ADMIN_VILLE', canDo('admin_immobilier', 'create_city_admin'));
@@ -143,7 +144,9 @@ check('ADMIN_IMMOBILIER peut créer une ville', canDo('admin_immobilier', 'creat
 check('ADMIN_IMMOBILIER gère les villes (créer, modifier, statut, suppression)', canDo('admin_immobilier', 'create_city') && canDo('admin_immobilier', 'update_city') && canDo('admin_immobilier', 'activate_city') && canDo('admin_immobilier', 'deactivate_city') && canDo('admin_immobilier', 'delete_city'));
 check('ADMIN_IMMOBILIER gère les parcelles (CRUD)', canDo('admin_immobilier', 'create_parcel') && canDo('admin_immobilier', 'view_parcel') && canDo('admin_immobilier', 'update_parcel') && canDo('admin_immobilier', 'delete_parcel'));
 check('ADMIN_IMMOBILIER gère les bâtiments (CRUD)', canDo('admin_immobilier', 'create_building') && canDo('admin_immobilier', 'view_building') && canDo('admin_immobilier', 'update_building') && canDo('admin_immobilier', 'delete_building'));
-check('ADMIN_IMMOBILIER gère les unités (CRUD) et leur publication autorisée', canDo('admin_immobilier', 'create_unit') && canDo('admin_immobilier', 'view_unit') && canDo('admin_immobilier', 'update_unit') && canDo('admin_immobilier', 'delete_unit') && canDo('admin_immobilier', 'publish_listing'));
+check('ADMIN_IMMOBILIER gère les unités et supervise la publication', canDo('admin_immobilier', 'create_unit') && canDo('admin_immobilier', 'view_unit') && canDo('admin_immobilier', 'update_unit') && canDo('admin_immobilier', 'delete_unit') && canDo('admin_immobilier', 'publish_listing') && canDo('admin_immobilier', 'review_listing'));
+check('ADMIN_VILLE prépare et soumet les annonces sans pouvoir les publier', canDo('admin_ville', 'create_listing') && canDo('admin_ville', 'submit_listing') && !canDo('admin_ville', 'publish_listing'));
+check('PATRON consulte les annonces sans permission d’écriture', canDo('patron', 'view_listing') && !canDo('patron', 'create_listing') && !canDo('patron', 'review_listing') && !canDo('patron', 'publish_listing'));
 check('ADMIN_IMMOBILIER ne reçoit pas la gestion générale des membres', !canDo('admin_immobilier', 'manage_users'));
 check('ADMIN_VILLE ne peut pas créer un autre administrateur', !canDo('admin_ville', 'create_city_admin'));
 check('PATRON consulte les locataires, sans créer ni modifier leurs données', canDo('patron', 'view_tenant') && !canDo('patron', 'create_tenant') && !canDo('patron', 'update_tenant'));

@@ -56,12 +56,15 @@ enum SecurityAction: string
     case UPDATE_UNIT = 'update_unit';
     case DELETE_UNIT = 'delete_unit';
 
-    // Vitrine publique : exposer une unité sur la page publique d'une
-    // entreprise. Volontairement distinct de `UPDATE_UNIT` : modifier une
-    // fiche ne relève pas du même arbitrage que la rendre visible à des
-    // visiteurs non authentifiés. Ce jour les trois rôles l'ont autant que
-    // `UPDATE_UNIT`, mais les deux actions peuvent être resserrées séparément.
+    // Vitrine publique : la publication est réservée à ADMIN_IMMOBILIER et
+    // passe par le workflow de validation, jamais par la fiche patrimoniale.
     case PUBLISH_LISTING = 'publish_listing';
+    case VIEW_LISTING = 'view_listing';
+    case CREATE_LISTING = 'create_listing';
+    case UPDATE_LISTING = 'update_listing';
+    case SUBMIT_LISTING = 'submit_listing';
+    case REVIEW_LISTING = 'review_listing';
+    case MANAGE_LISTING_MEDIA = 'manage_listing_media';
 
     // Tenant
     case VIEW_TENANT = 'view_tenant';

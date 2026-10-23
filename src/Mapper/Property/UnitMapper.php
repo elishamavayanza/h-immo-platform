@@ -8,6 +8,7 @@ use App\Dto\Request\Property\UnitRequest;
 use App\Dto\Response\Property\PublicListingResponse;
 use App\Dto\Response\Property\UnitResponse;
 use App\Entity\Property\Unit;
+use App\Entity\Property\Listing;
 use App\Enum\UnitOccupancyStatus;
 
 /**
@@ -88,25 +89,29 @@ final class UnitMapper
      */
     public function toPublicListing(
         Unit $unit,
-        array $photos
+        array $photos,
+        Listing $listing
     ): PublicListingResponse {
-        $city = $unit->getBuilding()->getParcel()->getCity();
-        $building = $unit->getBuilding();
+        $snapshot = $listing->getPublicSnapshot() ?? [];
 
         return new PublicListingResponse(
             unitId: (string) $unit->getUuid(),
-            reference: $unit->getReference(),
-            type: $unit->getType()->value,
-            floor: $unit->getFloor(),
-            description: $unit->getDescription(),
-            monthlyRent: $unit->getMonthlyRent(),
-            currency: $unit->getCurrency()->value,
-            surface: $unit->getSurface(),
-            bedrooms: $unit->getBedrooms(),
-            rooms: $unit->getRooms(),
-            bathrooms: $unit->getBathrooms(),
-            city: $city->getName(),
-            buildingName: $building->getName(),
+            listingId: (string) $listing->getUuid(),
+            title: $listing->getTitle(),
+            offerType: $listing->getOfferType()->value,
+            price: $listing->getPrice(),
+            reference: (string) ($snapshot['reference'] ?? ''),
+            type: (string) ($snapshot['type'] ?? ''),
+            floor: (int) ($snapshot['floor'] ?? 0),
+            description: $listing->getDescription(),
+            monthlyRent: $listing->getOfferType()->value === 'rent' ? $listing->getPrice() : '0.00',
+            currency: $listing->getCurrency()->value,
+            surface: isset($snapshot['surface']) ? (string) $snapshot['surface'] : null,
+            bedrooms: isset($snapshot['bedrooms']) ? (int) $snapshot['bedrooms'] : null,
+            rooms: isset($snapshot['rooms']) ? (int) $snapshot['rooms'] : null,
+            bathrooms: isset($snapshot['bathrooms']) ? (int) $snapshot['bathrooms'] : null,
+            city: (string) ($snapshot['city'] ?? ''),
+            buildingName: (string) ($snapshot['buildingName'] ?? ''),
             photos: $photos,
         );
     }

@@ -10,7 +10,11 @@ use App\Entity\Property\BuildingLevel;
 use App\Entity\Property\City;
 use App\Entity\Property\Unit;
 use App\Enum\Currency;
+use App\Enum\CityStatus;
 use App\Enum\LeaseStatus;
+use App\Enum\ListingOfferType;
+use App\Enum\ListingStatus;
+use App\Enum\OrganizationStatus;
 use App\Enum\UnitType;
 use App\Enum\UnitOperationalStatus;
 use App\Repository\PaginatedResultTrait;
@@ -66,6 +70,53 @@ class UnitRepository extends ServiceEntityRepository
             ->setParameter('uuid', $this->bindableUuid($uuid))
             ->getQuery()
             ->getOneOrNullResult();
+    }
+
+    /** Résout une unité utilisable par le workflow avec toute sa chaîne active. */
+    public function findForListingByUuid(Uuid $uuid): ?Unit
+    {
+        return $this->createQueryBuilder('u')
+            ->innerJoin('u.building', 'b')->innerJoin('b.parcel', 'p')->innerJoin('p.city', 'c')
+            ->andWhere('u.uuid = :uuid')->andWhere('u.deletedAt IS NULL')
+            ->andWhere('b.deletedAt IS NULL')->andWhere('p.deletedAt IS NULL')->andWhere('c.deletedAt IS NULL')
+            ->setParameter('uuid', $this->bindableUuid($uuid))
+            ->getQuery()->getOneOrNullResult();
+    }
+
+    /**
+     * Unités éligibles à la création d'une annonce dans les villes autorisées.
+     * Les baux couvrent aussi les unités supplémentaires d'un contrat.
+     *
+     * @param list<City> $cities
+     * @return array{items: list<Unit>, total: int}
+     */
+    public function findEligibleForListing(Organization $organization, array $cities, int $page = 1, int $limit = 100): array
+    {
+        if ($cities === []) {
+            return ['items' => [], 'total' => 0];
+        }
+
+        $qb = $this->createQueryBuilder('u')
+            ->innerJoin('u.building', 'b')->innerJoin('b.parcel', 'p')->innerJoin('p.city', 'c')
+            ->innerJoin('c.organization', 'org')
+            ->leftJoin('u.listing', 'listing')
+            ->andWhere('c IN (:cities)')->setParameter('cities', $cities)
+            ->andWhere('u.deletedAt IS NULL')->andWhere('b.deletedAt IS NULL')->andWhere('p.deletedAt IS NULL')->andWhere('c.deletedAt IS NULL')
+            ->andWhere('c.status = :cityActive')->setParameter('cityActive', CityStatus::ACTIVE)
+            ->andWhere('c.organization = :organization')->setParameter('organization', $organization)
+            ->andWhere('org.status = :organizationActive')->setParameter('organizationActive', OrganizationStatus::ACTIVE)
+            ->andWhere('org.deletedAt IS NULL')->andWhere('org.showcaseEnabled = true')
+            ->andWhere('u.operationalStatus = :available')->setParameter('available', UnitOperationalStatus::AVAILABLE)
+            ->andWhere('(listing.id IS NULL OR listing.status IN (:reopenable))')
+            ->setParameter('reopenable', [ListingStatus::REJECTED, ListingStatus::WITHDRAWN])
+            ->andWhere('NOT EXISTS (
+                SELECT 1 FROM App\\Entity\\Rental\\Lease lease
+                WHERE (lease.unit = u OR u MEMBER OF lease.additionalUnits)
+                  AND lease.status = :activeLease AND lease.deletedAt IS NULL
+            )')->setParameter('activeLease', LeaseStatus::ACTIVE)
+            ->orderBy('c.name', 'ASC')->addOrderBy('b.name', 'ASC')->addOrderBy('u.reference', 'ASC');
+
+        return $this->fetchPaginated($qb, $page, $limit);
     }
 
     /**
@@ -420,16 +471,15 @@ class UnitRepository extends ServiceEntityRepository
      * Les deux conditions sont indissociables, et c'est le cœur de la règle
      * métier de cette fonctionnalité :
      *
-     *  - `is_published` est la *décision* de l'ADMIN_VILLE, pas l'état de
-     *    disponibilité ;
+     *  - le statut `published` de l'annonce est posé uniquement par le
+     *    workflow de l'ADMIN_IMMOBILIER ;
      *  - l'absence de bail `ACTIVE` est l'*état réel*, recalculé à chaque
      *    lecture.
      *
-     * Ne filtrer que sur `is_published` laisserait afficher une unité louée ;
-     * ne filtrer que sur l'absence de bail publierait des unités qu'aucun
-     * gestionnaire n'a choisi d'exposer. Les lignes supprimées sont exclues à
-     * chaque niveau de la chaîne, `SoftDeletableEntity` n'ayant pas de filtre
-     * Doctrine automatique.
+     * Le statut publié n'expose que l'instantané contrôlé par le workflow.
+     * La disponibilité locative est recalculée à chaque lecture. Les lignes
+     * supprimées sont exclues à chaque niveau de la chaîne, `SoftDeletableEntity`
+     * n'ayant pas de filtre Doctrine automatique.
      *
      * Le `NOT EXISTS` porte sur `lease.unit_id` et `lease.status`, tous deux
      * indexés : la sous-requête corrélée ne se réexécute pas ligne à ligne.
@@ -453,14 +503,21 @@ class UnitRepository extends ServiceEntityRepository
             ->innerJoin('u.building', 'b')
             ->innerJoin('b.parcel', 'p')
             ->innerJoin('p.city', 'c')
+            ->innerJoin('c.organization', 'o')
+            ->innerJoin('u.listing', 'listing')
+            ->addSelect('listing')
             ->andWhere('u.deletedAt IS NULL')
             ->andWhere('b.deletedAt IS NULL')
             ->andWhere('p.deletedAt IS NULL')
             ->andWhere('c.deletedAt IS NULL')
             ->andWhere('c.organization = :organization')
             ->setParameter('organization', $organization)
-            ->andWhere('u.isPublished = :published')
-            ->setParameter('published', true)
+            ->andWhere('o.status = :organizationActive')->andWhere('o.isPubliclyListed = true')->andWhere('o.showcaseEnabled = true')
+            ->andWhere('c.status = :cityActive')
+            ->andWhere('listing.status = :listingPublished')->andWhere('listing.publicSnapshot IS NOT NULL')
+            ->setParameter('organizationActive', OrganizationStatus::ACTIVE)
+            ->setParameter('cityActive', CityStatus::ACTIVE)
+            ->setParameter('listingPublished', ListingStatus::PUBLISHED)
             ->andWhere('u.operationalStatus = :operationalAvailable')
             ->setParameter('operationalAvailable', UnitOperationalStatus::AVAILABLE)
             ->andWhere(
@@ -486,21 +543,29 @@ class UnitRepository extends ServiceEntityRepository
         // `monthlyRent` est un DECIMAL : les bornes sont comparées comme des
         // chaînes normalisées, jamais converties en float (§ Argent).
         if ($minRent !== null && $minRent !== '') {
-            $qb->andWhere('u.monthlyRent >= :minRent')->setParameter('minRent', $minRent);
+            $qb->andWhere('listing.offerType = :rentOffer')->andWhere('listing.price >= :minRent')
+                ->setParameter('rentOffer', ListingOfferType::RENT)->setParameter('minRent', $minRent);
         }
 
         if ($maxRent !== null && $maxRent !== '') {
-            $qb->andWhere('u.monthlyRent <= :maxRent')->setParameter('maxRent', $maxRent);
+            $qb->andWhere('listing.offerType = :rentOffer')->andWhere('listing.price <= :maxRent')
+                ->setParameter('rentOffer', ListingOfferType::RENT)->setParameter('maxRent', $maxRent);
         }
 
         // Un filtre de loyer sans devise reviendrait à comparer des montants de
         // devises différentes : le critère de disponibilité est donc la
         // cohérence du regroupement, pas une commodité d'affichage.
         if ($currency !== null) {
-            $qb->andWhere('u.currency = :currency')->setParameter('currency', $currency);
+            $qb->andWhere('listing.currency = :currency')->setParameter('currency', $currency);
         }
 
-        $qb->orderBy('u.monthlyRent', 'ASC')->addOrderBy('u.id', 'ASC');
+        if ($currency === null) {
+            // Le prix ne se compare qu'à devise égale : les résultats non
+            // filtrés sont d'abord groupés par devise.
+            $qb->orderBy('listing.currency', 'ASC')->addOrderBy('listing.price', 'ASC')->addOrderBy('u.id', 'ASC');
+        } else {
+            $qb->orderBy('listing.price', 'ASC')->addOrderBy('u.id', 'ASC');
+        }
 
         return $this->fetchPaginated($qb, $page, $limit);
     }
@@ -518,6 +583,9 @@ class UnitRepository extends ServiceEntityRepository
             ->innerJoin('u.building', 'b')
             ->innerJoin('b.parcel', 'p')
             ->innerJoin('p.city', 'c')
+            ->innerJoin('c.organization', 'o')
+            ->innerJoin('u.listing', 'listing')
+            ->addSelect('listing')
             ->andWhere('u.uuid = :uuid')
             ->setParameter('uuid', $this->bindableUuid($uuid))
             ->andWhere('u.deletedAt IS NULL')
@@ -526,8 +594,12 @@ class UnitRepository extends ServiceEntityRepository
             ->andWhere('c.deletedAt IS NULL')
             ->andWhere('c.organization = :organization')
             ->setParameter('organization', $organization)
-            ->andWhere('u.isPublished = :published')
-            ->setParameter('published', true)
+            ->andWhere('o.status = :organizationActive')->andWhere('o.isPubliclyListed = true')->andWhere('o.showcaseEnabled = true')
+            ->andWhere('c.status = :cityActive')
+            ->andWhere('listing.status = :listingPublished')->andWhere('listing.publicSnapshot IS NOT NULL')
+            ->setParameter('organizationActive', OrganizationStatus::ACTIVE)
+            ->setParameter('cityActive', CityStatus::ACTIVE)
+            ->setParameter('listingPublished', ListingStatus::PUBLISHED)
             ->andWhere('u.operationalStatus = :operationalAvailable')
             ->setParameter('operationalAvailable', UnitOperationalStatus::AVAILABLE)
             ->andWhere(

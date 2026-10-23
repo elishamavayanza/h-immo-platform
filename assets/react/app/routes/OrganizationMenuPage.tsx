@@ -32,6 +32,7 @@ const AdminVilleLocatairesPage = lazyPage(() => import('../../features/admin_vil
 const AdminVilleLoyersPage = lazyPage(() => import('../../features/admin_ville/loyers/pages/LoyersPage'), 'LoyersPage');
 const AdminVilleDepensesPage = lazyPage(() => import('../../features/admin_ville/depenses/pages/DepensesPage'), 'DepensesPage');
 const AdminVilleReportsPage = lazyPage(() => import('../../features/admin_ville/reports/pages/ReportsPage'), 'ReportsPage');
+const AdminVilleVitrinePage = lazyPage(() => import('../../features/admin_ville/vitrine/pages/VitrinePage'), 'VitrinePage');
 const AdminVilleOperationsPage = lazyPage(() => import('../../features/admin_ville/operations/pages/OperationsPage'), 'OperationsPage');
 const TreasuryPage = lazyPage(() => import('../../features/shared/finance/pages/TreasuryPage.tsx'), 'TreasuryPage');
 const MaintenancePage = lazyPage(() => import('../../features/shared/operations/pages/MaintenancePage.tsx'), 'MaintenancePage');
@@ -68,6 +69,7 @@ export function OrganizationMenuPage({ path }: OrganizationMenuPageProps) {
             case '/app/location/loyers': page = <AdminVilleLoyersPage />; break;
             case '/app/depenses': page = showExpenseManagement ? <AdminVilleDepensesPage /> : <TreasuryPage />; break;
             case '/app/rapports': page = <AdminVilleReportsPage />; break;
+            case '/app/vitrine': page = <AdminVilleVitrinePage />; break;
             case '/app/operations': page = <AdminVilleOperationsPage />; break;
             case '/app/maintenance': page = <MaintenancePage />; break;
         }

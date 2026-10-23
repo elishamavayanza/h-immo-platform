@@ -63,7 +63,7 @@ export function TreasuryPage() {
     const canFilterMovementCity = organizationRole === 'patron' || organizationRole === 'admin_immobilier';
     const movementCities = canFilterMovementCity ? assigned.cities : [];
     const selectedCashCityName = cashCities.find((city) => city.id === cashCityUuid)?.name ?? 'Ville indisponible';
-    const cashContextKey = `${currentOrganization?.uuid ?? ''}:${cashCityUuid}:${cashCurrency}`;
+    const cashContextKey = `${currentOrganization?.uuid ?? ''}:${organizationRole ?? ''}:${cashCityUuid}:${cashCurrency}`;
     const cashContextKeyRef = useRef(cashContextKey);
     const confirmationContextRef = useRef<string | null>(null);
     cashContextKeyRef.current = cashContextKey;
@@ -100,7 +100,7 @@ export function TreasuryPage() {
     useEffect(() => {
         setCashConfirmationOpen(false);
         confirmationContextRef.current = null;
-    }, [currentOrganization?.uuid, cashCityUuid, cashCurrency]);
+    }, [currentOrganization?.uuid, organizationRole, cashCityUuid, cashCurrency]);
 
     useEffect(() => {
         setCashSnapshot(null);

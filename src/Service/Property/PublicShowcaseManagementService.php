@@ -8,15 +8,16 @@ use App\Dto\Feedback;
 use App\Dto\Request\Property\PublishListingRequest;
 use App\Entity\Property\Unit;
 use App\Entity\Property\UnitPhoto;
+use App\Enum\ListingStatus;
 use App\Repository\Property\UnitPhotoRepository;
 use App\Repository\Property\UnitRepository;
-use App\Repository\Rental\LeaseRepository;
 use App\Security\SecurityAction;
 use App\Security\SecurityServiceInterface;
 use App\Service\System\AuditLogService;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\HttpFoundation\File\UploadedFile;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
+use Symfony\Component\HttpKernel\Exception\ConflictHttpException;
 use Symfony\Component\HttpKernel\Exception\UnprocessableEntityException;
 use Symfony\Component\Uid\Uuid;
 
@@ -27,7 +28,7 @@ use Symfony\Component\Uid\Uuid;
  * volontaire :
  *
  *   1. résoudre l'unité par UUID (404 si inconnue) ;
- *   2. vérifier `PUBLISH_LISTING` sur SA ville (403 sinon) ;
+ *   2. vérifier l'action précise sur SA ville (403 sinon) ;
  *   3. appliquer ensuite la règle métier propre à l'action.
  *
  * L'inversion de 2 et 3 est ce qui produit le bug classique : on refuse parce
@@ -40,7 +41,6 @@ final readonly class PublicShowcaseManagementService
     public function __construct(
         private UnitRepository $unitRepository,
         private UnitPhotoRepository $unitPhotoRepository,
-        private LeaseRepository $leaseRepository,
         private SecurityServiceInterface $security,
         private AuditLogService $auditLogService,
         private UnitPhotoService $unitPhotoService,
@@ -49,54 +49,14 @@ final readonly class PublicShowcaseManagementService
     }
 
     /**
-     * Publie ou retire l'annonce d'une unité.
-     *
-     * Publier une unité occupée est refusé : `is_published` est la décision
-     * d'exposition, et une décision qui promet au public une chose fausse
-     * n'est pas une décision. La disponibilité réelle reste de toute façon
-     * recalculée à la lecture, donc ce refus protège le gestionnaire d'une
-     * erreur, pas le visiteur d'un mensonge.
-     *
-     * Dépublier n'est jamais refusé : c'est au contraire le seul recours si
-     * un bail a été activé par erreur.
-     *
-     * @throws UnprocessableEntityException si publication demandée sur un bien occupé
+     * L'ancien basculement d'unité est conservé uniquement pour répondre
+     * clairement aux clients historiques : la publication exige désormais
+     * une annonce approuvée et une transition explicite du workflow.
      */
     public function publish(Unit $unit, PublishListingRequest $request): Feedback
     {
         $this->security->checkUnitPublishAccess($unit, SecurityAction::PUBLISH_LISTING);
-
-        $published = $request->isPublished ?? false;
-
-        if ($published && $this->leaseRepository->hasActiveLeaseForUnit($unit)) {
-            throw new UnprocessableEntityException(
-                'Impossible de publier une unité déjà occupée : un bail est actif sur ce bien.'
-            );
-        }
-
-        $unit->setIsPublished($published);
-        $this->unitRepository->save($unit, flush: true);
-
-        $this->auditLogService->log(
-            $published ? 'LISTING_PUBLISHED' : 'LISTING_UNPUBLISHED',
-            Unit::class,
-            (int) $unit->getId(),
-            $unit->getBuilding()->getParcel()->getCity()->getOrganization(),
-            $this->security->getCurrentUser(),
-            null,
-            [
-                'unitUuid' => (string) $unit->getUuid(),
-                'unitReference' => $unit->getReference(),
-                'isPublished' => $published,
-            ]
-        );
-
-        return (new Feedback())
-            ->setFlushDescription($published
-                ? 'Annonce publiée sur la vitrine publique.'
-                : 'Annonce retirée de la vitrine publique.')
-            ->setStatus(200)
-            ->autoInitFlush();
+        throw new ConflictHttpException('La publication directe est désactivée. Utilisez le workflow de validation des annonces.');
     }
 
     /**
@@ -108,7 +68,7 @@ final readonly class PublicShowcaseManagementService
      */
     public function addPhoto(Unit $unit, UploadedFile $file): Feedback
     {
-        $this->security->checkUnitPublishAccess($unit, SecurityAction::PUBLISH_LISTING);
+        $this->assertCanEditMedia($unit);
 
         $photo = $this->unitPhotoService->addPhoto($unit, $file);
 
@@ -136,7 +96,7 @@ final readonly class PublicShowcaseManagementService
     /** Lit la galerie après avoir vérifié le même périmètre que l'ajout. */
     public function listPhotos(Unit $unit): Feedback
     {
-        $this->security->checkUnitPublishAccess($unit, SecurityAction::PUBLISH_LISTING);
+        $this->security->checkUnitPublishAccess($unit, SecurityAction::VIEW_LISTING);
 
         return (new Feedback())
             ->setData($this->unitPhotoService->listForManagement($unit))
@@ -148,7 +108,7 @@ final readonly class PublicShowcaseManagementService
     /** Liste les photos retirées que l'utilisateur autorisé peut restaurer. */
     public function listDeletedPhotos(Unit $unit): Feedback
     {
-        $this->security->checkUnitPublishAccess($unit, SecurityAction::PUBLISH_LISTING);
+        $this->security->checkUnitPublishAccess($unit, SecurityAction::VIEW_LISTING);
 
         return (new Feedback())
             ->setData($this->unitPhotoService->listDeletedForManagement($unit))
@@ -169,7 +129,7 @@ final readonly class PublicShowcaseManagementService
     {
         $unit = $this->findUnitOrFail($unitUuid);
 
-        $this->security->checkUnitPublishAccess($unit, SecurityAction::PUBLISH_LISTING);
+        $this->assertCanEditMedia($unit);
 
         try {
             $photo = $this->unitPhotoRepository->findOneByUnitAndUuid(
@@ -210,7 +170,7 @@ final readonly class PublicShowcaseManagementService
     public function restorePhoto(string $unitUuid, string $photoUuid): Feedback
     {
         $unit = $this->findUnitOrFail($unitUuid);
-        $this->security->checkUnitPublishAccess($unit, SecurityAction::PUBLISH_LISTING);
+        $this->assertCanEditMedia($unit);
 
         try {
             $photo = $this->unitPhotoRepository->findDeletedOneByUnitAndUuid(
@@ -252,6 +212,14 @@ final readonly class PublicShowcaseManagementService
             ->setFlushDescription('Photo restaurée dans la galerie.')
             ->setStatus(200)
             ->autoInitFlush();
+    }
+
+    private function assertCanEditMedia(Unit $unit): void
+    {
+        $this->security->checkUnitPublishAccess($unit, SecurityAction::MANAGE_LISTING_MEDIA);
+        if ($unit->getListing()?->getStatus() === ListingStatus::PUBLISHED) {
+            throw new ConflictHttpException('Retirez l’annonce de la vitrine avant de modifier ses photos, puis soumettez-la à une nouvelle vérification.');
+        }
     }
 
     /**

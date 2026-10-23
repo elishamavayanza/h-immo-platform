@@ -7,6 +7,7 @@ namespace App\Service\Property;
 use App\Dto\Response\Property\PublicListingResponse;
 use App\Dto\Response\System\PublicShowcaseResponse;
 use App\Entity\Identity\Organization;
+use App\Enum\OrganizationStatus;
 use App\Enum\Currency;
 use App\Enum\UnitType;
 use App\Mapper\Property\UnitMapper;
@@ -23,7 +24,8 @@ use App\Service\System\FileUploadService;
  * seule garantie de non-divulgation est structurelle : tout ce qu'elle expose
  * vient de `UnitRepository::findPublishedAndVacant()` ou
  * `findPublishedAndVacantByUuid()`, qui bornent l'agrégat **en SQL** sur
- * l'Organization demandée, `is_published = true` et l'absence de bail `ACTIVE`.
+ * l'Organization demandée, le statut de workflow `published`, la vitrine
+ * activée et l'absence de bail `ACTIVE`.
  *
  * Conséquence à respecter : ne jamais accepter dans cette service une liste
  * d'identifiants venue du client sans avoir vérifié leur appartenance. Un
@@ -53,7 +55,7 @@ final readonly class PublicShowcaseService
     {
         $organization = $this->organizationRepository->findOneBySlug($slug);
 
-        if ($organization === null || !$organization->isShowcaseEnabled() || $organization->isPubliclyHidden()) {
+        if ($organization === null || $organization->getStatus() !== OrganizationStatus::ACTIVE || !$organization->isShowcaseEnabled() || $organization->isPubliclyHidden()) {
             return null;
         }
 
@@ -131,7 +133,8 @@ final readonly class PublicShowcaseService
         foreach ($result['items'] as $unit) {
             $items[] = $this->unitMapper->toPublicListing(
                 $unit,
-                $this->unitPhotoService->listForUnit($unit)
+                $this->unitPhotoService->listForUnit($unit),
+                $unit->getListing() ?? throw new \LogicException('Une annonce publique doit être associée à son workflow publié.')
             );
         }
 
@@ -167,7 +170,8 @@ final readonly class PublicShowcaseService
 
         return $this->unitMapper->toPublicListing(
             $unit,
-            $this->unitPhotoService->listForUnit($unit)
+            $this->unitPhotoService->listForUnit($unit),
+            $unit->getListing() ?? throw new \LogicException('Une annonce publique doit être associée à son workflow publié.')
         );
     }
 

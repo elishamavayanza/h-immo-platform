@@ -40,6 +40,7 @@ use App\Entity\Property\Building;
 use App\Entity\Property\City;
 use App\Entity\Property\Parcel;
 use App\Entity\Property\Unit;
+use App\Entity\Property\UnitPhoto;
 use App\Entity\Rental\Lease;
 use App\Entity\Rental\Rent;
 use App\Entity\Rental\Tenant;
@@ -199,6 +200,22 @@ $makeOrg = static function (string $name, string $code) use ($em, $suffix): Orga
 
 $orgA = $makeOrg('Organisation A', 'ORGA');
 $orgB = $makeOrg('Organisation B', 'ORGB');
+$orgA->setSlug('orga-' . strtolower($suffix));
+
+$adminImmobilier = (new User())
+    ->setEmail('admin.immobilier.' . $suffix . '@test.local')
+    ->setFullName('Admin Immobilier A')
+    ->setPassword(password_hash('MotDePasse!123', PASSWORD_BCRYPT))
+    ->setIsActive(true);
+$patron = (new User())
+    ->setEmail('patron.' . $suffix . '@test.local')
+    ->setFullName('Patron A')
+    ->setPassword(password_hash('MotDePasse!123', PASSWORD_BCRYPT))
+    ->setIsActive(true);
+$em->persist($adminImmobilier);
+$em->persist($patron);
+$em->persist((new OrganizationUser())->setUser($adminImmobilier)->setOrganization($orgA)->setRole(OrganizationRole::ADMIN_IMMOBILIER));
+$em->persist((new OrganizationUser())->setUser($patron)->setOrganization($orgA)->setRole(OrganizationRole::PATRON));
 
 $em->persist(
     (new OrganizationUser())->setUser($adminVille)->setOrganization($orgA)->setRole(OrganizationRole::ADMIN_VILLE)
@@ -254,6 +271,7 @@ $makeChain = static function (string $ref, City $city) use ($em): array {
 };
 
 $chainA1 = $makeChain('U-A1', $cityA1);
+$chainA1Available = $makeChain('U-A1-LIBRE', $cityA1);
 $chainA2 = $makeChain('U-A2', $cityA2);
 $chainB1 = $makeChain('U-B1', $cityB1);
 
@@ -386,6 +404,8 @@ $uuidParcelA2 = $chainA2['parcel']->getUuid()->toRfc4122();
 $uuidBuildingA1 = $chainA1['building']->getUuid()->toRfc4122();
 $uuidBuildingB1 = $chainB1['building']->getUuid()->toRfc4122();
 $uuidUnitA1 = $chainA1['unit']->getUuid()->toRfc4122();
+$uuidUnitA1Available = $chainA1Available['unit']->getUuid()->toRfc4122();
+$uuidUnitA2 = $chainA2['unit']->getUuid()->toRfc4122();
 $uuidUnitB1 = $chainB1['unit']->getUuid()->toRfc4122();
 $uuidRentA1 = $rentA1->getUuid()->toRfc4122();
 $uuidLeaseA1 = $leaseA1->getUuid()->toRfc4122();
@@ -414,6 +434,20 @@ if (!is_string($token)) {
     $rollback();
     exit(1);
 }
+
+[$status, $adminImmPayload] = $request('POST', '/api/auth/login', [
+    'email' => 'admin.immobilier.' . $suffix . '@test.local',
+    'password' => 'MotDePasse!123',
+]);
+$adminImmToken = is_array($adminImmPayload) ? ($adminImmPayload['accessToken'] ?? null) : null;
+check('Connexion de l’ADMIN_IMMOBILIER de A', $status === 200 && is_string($adminImmToken), "obtenu {$status}");
+
+[$status, $patronPayload] = $request('POST', '/api/auth/login', [
+    'email' => 'patron.' . $suffix . '@test.local',
+    'password' => 'MotDePasse!123',
+]);
+$patronToken = is_array($patronPayload) ? ($patronPayload['accessToken'] ?? null) : null;
+check('Connexion du PATRON de A', $status === 200 && is_string($patronToken), "obtenu {$status}");
 
 [$status] = $request('DELETE', '/api/v1/units/' . $uuidUnitA1, null, $token);
 check('ADMIN_VILLE ne supprime pas une unité liée à un bail actif de sa ville', $status === 409, 'obtenu ' . $status);
@@ -549,6 +583,72 @@ $trackUploadedPaths = static function (array $payload) use (&$uploadedPaths): vo
 };
 
 section('Photos : upload multipart d’un fichier unique');
+[$status] = $request('PATCH', '/api/v1/units/' . $uuidUnitA1Available . '/publish', ['isPublished' => true], $token);
+check('ADMIN_VILLE ne peut pas publier directement une unité, même dans sa ville attribuée', $status === 403, 'obtenu ' . $status);
+[$status] = $request('PATCH', '/api/v1/units/' . $uuidUnitA2 . '/publish', ['isPublished' => true], $token);
+check('ADMIN_VILLE ne publie pas une unité d’une ville non attribuée de son organisation', $status === 403, 'obtenu ' . $status);
+[$status] = $request('PATCH', '/api/v1/units/' . $uuidUnitB1 . '/publish', ['isPublished' => true], $token);
+check('ADMIN_VILLE ne publie pas une unité d’une autre organisation', $status === 403, 'obtenu ' . $status);
+
+section('Workflow vitrine : création, contrôle, publication et retrait');
+$listingDraft = ['title' => 'Appartement de test', 'description' => 'Annonce créée pour vérifier le circuit.', 'offerType' => 'rent', 'price' => '500.00', 'currency' => 'USD'];
+[$candidateStatus, $candidatePayload] = $request('GET', '/api/v1/organizations/' . $uuidOrgA . '/listing-candidates?cityUuid=' . $uuidCityA1, null, $token);
+$candidates = $candidatePayload['data'] ?? [];
+check('la sélection ne propose que l’unité libre de la ville attribuée, sans unité louée ni ville voisine', $candidateStatus === 200 && count($candidates) === 1 && ($candidates[0]['uuid'] ?? null) === $uuidUnitA1Available && ($candidates[0]['cityUuid'] ?? null) === $uuidCityA1, 'obtenu ' . $candidateStatus);
+[$unassignedCityCandidateStatus] = $request('GET', '/api/v1/organizations/' . $uuidOrgA . '/listing-candidates?cityUuid=' . $uuidCityA2, null, $token);
+check('le filtre vitrine refuse une ville non attribuée à ADMIN_VILLE', $unassignedCityCandidateStatus === 403, 'obtenu ' . $unassignedCityCandidateStatus);
+[$status, $listingPayload] = $request('POST', '/api/v1/units/' . $uuidUnitA1Available . '/listing', $listingDraft, $token);
+$listingUuid = $listingPayload['data']['uuid'] ?? null;
+check('ADMIN_VILLE crée un brouillon pour une unité de sa ville attribuée', $status === 201 && is_string($listingUuid), 'obtenu ' . $status);
+[$status] = $request('POST', '/api/v1/units/' . $uuidUnitB1 . '/listing', $listingDraft, $token);
+check('ADMIN_VILLE ne crée pas une annonce hors de ses villes', $status === 403, 'obtenu ' . $status);
+[$status] = $request('POST', '/api/v1/units/' . $uuidUnitA2 . '/listing', $listingDraft, $token);
+check('ADMIN_VILLE ne crée pas une annonce dans une autre ville de son organisation', $status === 403, 'obtenu ' . $status);
+[$status, $patronCreate] = $request('POST', '/api/v1/units/' . $uuidUnitA1 . '/listing', $listingDraft, is_string($patronToken) ? $patronToken : null);
+check('PATRON ne peut pas créer une annonce', $status === 403, 'obtenu ' . $status);
+
+if (is_string($listingUuid) && is_string($adminImmToken)) {
+    [$publicStatus, $publicPayload] = $request('GET', '/api/public/organizations/' . $orgA->getSlug() . '/listings');
+    $publicItems = $publicPayload['data']['items'] ?? [];
+    check('un brouillon reste absent de la vitrine publique', $publicStatus === 200 && !in_array($listingUuid, array_column($publicItems, 'listingId'), true), 'obtenu ' . $publicStatus);
+
+    [$status] = $request('POST', '/api/v1/listings/' . $listingUuid . '/submit', null, $token);
+    check('le serveur refuse la soumission sans photo du bien', $status === 409, 'obtenu ' . $status);
+    $em->persist(new UnitPhoto($chainA1Available['unit'], 'units/' . $uuidUnitA1Available . '/couverture-test.jpg'));
+    $em->flush();
+    [$status] = $request('POST', '/api/v1/listings/' . $listingUuid . '/submit', null, $token);
+    check('ADMIN_VILLE soumet son annonce au contrôle', $status === 200, 'obtenu ' . $status);
+    [$status, $cityListPayload] = $request('GET', '/api/v1/organizations/' . $uuidOrgA . '/listings?cityUuid=' . $uuidCityA1, null, $token);
+    check('la liste ADMIN_VILLE reste bornée aux annonces de ses villes attribuées', $status === 200 && count($cityListPayload['data']['items'] ?? []) === 1, 'obtenu ' . $status);
+    [$unassignedCityListStatus] = $request('GET', '/api/v1/organizations/' . $uuidOrgA . '/listings?cityUuid=' . $uuidCityA2, null, $token);
+    check('la file vitrine refuse une ville non attribuée à ADMIN_VILLE', $unassignedCityListStatus === 403, 'obtenu ' . $unassignedCityListStatus);
+    [$status] = $request('POST', '/api/v1/listings/' . $listingUuid . '/request-corrections', ['reason' => 'Ajouter les détails du logement.'], $adminImmToken);
+    check('ADMIN_IMMOBILIER demande une correction avec motif', $status === 200, 'obtenu ' . $status);
+    [$status] = $request('PUT', '/api/v1/listings/' . $listingUuid, [...$listingDraft, 'description' => 'Annonce corrigée avec les détails demandés.'], $token);
+    check('ADMIN_VILLE corrige son annonce renvoyée', $status === 200, 'obtenu ' . $status);
+    [$status] = $request('POST', '/api/v1/listings/' . $listingUuid . '/submit', null, $token);
+    check('ADMIN_VILLE soumet à nouveau son annonce corrigée', $status === 200, 'obtenu ' . $status);
+    [$status] = $request('POST', '/api/v1/listings/' . $listingUuid . '/queue-publication', null, $adminImmToken);
+    check('ADMIN_IMMOBILIER place l’annonce vérifiée en attente de publication', $status === 200, 'obtenu ' . $status);
+    [$status] = $request('POST', '/api/v1/listings/' . $listingUuid . '/publish', null, $token);
+    check('ADMIN_VILLE ne peut pas publier depuis le workflow', $status === 403, 'obtenu ' . $status);
+    [$status] = $request('POST', '/api/v1/listings/' . $listingUuid . '/publish', null, is_string($patronToken) ? $patronToken : null);
+    check('PATRON ne peut pas publier depuis le workflow', $status === 403, 'obtenu ' . $status);
+    [$status] = $request('POST', '/api/v1/listings/' . $listingUuid . '/publish', null, $adminImmToken);
+    check('ADMIN_IMMOBILIER publie explicitement l’annonce validée', $status === 200, 'obtenu ' . $status);
+    [$publicStatus, $publicPayload] = $request('GET', '/api/public/organizations/' . $orgA->getSlug() . '/listings');
+    $publicItems = $publicPayload['data']['items'] ?? [];
+    check('l’annonce publiée apparaît sur la vitrine publique', $publicStatus === 200 && in_array($listingUuid, array_column($publicItems, 'listingId'), true), 'obtenu ' . $publicStatus);
+    [$status] = $request('POST', '/api/v1/listings/' . $listingUuid . '/withdraw', ['reason' => 'Le propriétaire retire le bien.'], $adminImmToken);
+    check('ADMIN_IMMOBILIER retire l’annonce avec motif', $status === 200, 'obtenu ' . $status);
+    [$publicStatus, $publicPayload] = $request('GET', '/api/public/organizations/' . $orgA->getSlug() . '/listings');
+    $publicItems = $publicPayload['data']['items'] ?? [];
+    check('le retrait enlève immédiatement l’annonce de la vitrine publique', $publicStatus === 200 && !in_array($listingUuid, array_column($publicItems, 'listingId'), true), 'obtenu ' . $publicStatus);
+    [$status, $historyPayload] = $request('GET', '/api/v1/listings/' . $listingUuid, null, $adminImmToken);
+    $historyActions = array_column($historyPayload['data']['history'] ?? [], 'action');
+    check('l’historique conserve les décisions de correction, publication et retrait', $status === 200 && in_array('CORRECTIONS_REQUESTED', $historyActions, true) && in_array('PUBLISHED', $historyActions, true) && in_array('WITHDRAWN', $historyActions, true), 'obtenu ' . $status);
+}
+
 [$status, $parcelPhotoPayload] = $uploadSinglePhoto('/api/v1/media/parcels/' . $uuidParcelA1 . '/photos', 'files');
 $trackUploadedPaths($parcelPhotoPayload ?? []);
 check('ADMIN_VILLE ajoute une photo unique à une parcelle de sa ville', $status === 200 && count($parcelPhotoPayload['data']['uploaded'] ?? []) === 1, 'obtenu ' . $status);

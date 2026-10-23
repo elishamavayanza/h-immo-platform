@@ -467,7 +467,7 @@ final readonly class UnitService
      * Trouve une unité par son UUID, ou lève NotFoundHttpException.
      *
      * Ne fait PAS de contrôle d'accès : l'appelant (PublicShowcaseManagementService)
-     * applique son propre contrôle (`PUBLISH_LISTING`) après la résolution.
+     * applique son propre contrôle d'action après la résolution.
      * C'est délibéré pour que l'exception 404 ne distingue pas "unité d'un autre
      * tenant" d'"unité inexistante" — seul un 404 unifié évite l'énumération.
      */

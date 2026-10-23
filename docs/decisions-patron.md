@@ -103,6 +103,13 @@ modifier »). L'interface ne propose donc que la modification, jamais le retrait
 du slug, et n'envoie le champ que s'il est renseigné. La description, elle, se
 vide en envoyant `""`.
 
+**Mise à jour du workflow d’annonces.** Les mentions historiques de
+`Unit isPublished`, `VitrineTable` et de l’ancien hook décrivent l’ancienne
+implémentation. Elles sont remplacées par le circuit défini dans
+[`decisions-vitrine-annonces.md`](decisions-vitrine-annonces.md). Le PATRON
+consulte les annonces en lecture seule ; l’ADMIN_IMMOBILIER effectue le
+contrôle et la publication.
+
 ## Écarts backend constatés (P0)
 
 - **D-B1 — `MediaController` sans `use App\Security\SecurityAction;`.** Les

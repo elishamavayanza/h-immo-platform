@@ -17,7 +17,7 @@ use Symfony\Component\HttpFoundation\File\UploadedFile;
  * le nom de fichier côté serveur et refuse la traversée de chemin. Cette
  * service ne fait que le lien entre l'unité et le disque : aucune vérification
  * de sécurité ici, elle appartient à l'appelant qui a déjà contrôlé
- * `PUBLISH_LISTING`.
+ * `MANAGE_LISTING_MEDIA`.
  */
 final readonly class UnitPhotoService
 {

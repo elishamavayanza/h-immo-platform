@@ -18,7 +18,8 @@ export type SecurityAction =
     | 'view_city' | 'create_city' | 'update_city' | 'delete_city' | 'activate_city' | 'deactivate_city'
     | 'view_parcel' | 'create_parcel' | 'update_parcel' | 'delete_parcel'
     | 'view_building' | 'create_building' | 'update_building' | 'delete_building'
-    | 'view_unit' | 'create_unit' | 'update_unit' | 'delete_unit' | 'publish_listing'
+    | 'view_unit' | 'create_unit' | 'update_unit' | 'delete_unit'
+    | 'publish_listing' | 'view_listing' | 'create_listing' | 'update_listing' | 'submit_listing' | 'review_listing' | 'manage_listing_media'
     | 'view_tenant' | 'create_tenant' | 'update_tenant' | 'delete_tenant' | 'archive_tenant'
     | 'view_lease' | 'create_lease' | 'update_lease' | 'delete_lease' | 'activate_lease' | 'terminate_lease' | 'cancel_lease'
     | 'view_rent' | 'create_rent' | 'update_rent' | 'delete_rent' | 'mark_rent_overdue'
@@ -33,7 +34,7 @@ export type SecurityAction =
 
 const PATRON_ACTIONS: ReadonlyArray<SecurityAction> = [
     'view', 'view_organization', 'view_user', 'manage_organization_logo', 'manage_exchange_rate',
-    'view_city', 'view_parcel', 'view_building', 'view_unit', 'view_tenant', 'view_lease',
+    'view_city', 'view_parcel', 'view_building', 'view_unit', 'view_listing', 'view_tenant', 'view_lease',
     'view_rent', 'view_payment', 'view_worker', 'view_worker_assignment', 'view_expense',
     'view_maintenance', 'view_document', 'view_report', 'export_report', 'view_audit_log', 'export_audit_log',
 ];
@@ -44,7 +45,8 @@ const ADMIN_IMMOBILIER_ACTIONS: ReadonlyArray<SecurityAction> = [
     'view_city', 'create_city', 'update_city', 'delete_city', 'activate_city', 'deactivate_city',
     'view_parcel', 'create_parcel', 'update_parcel', 'delete_parcel',
     'view_building', 'create_building', 'update_building', 'delete_building',
-    'view_unit', 'create_unit', 'update_unit', 'delete_unit', 'publish_listing',
+    'view_unit', 'create_unit', 'update_unit', 'delete_unit',
+    'view_listing', 'review_listing', 'publish_listing', 'manage_listing_media',
     'view_tenant', 'view_lease', 'view_rent', 'view_payment',
     'view_worker', 'create_worker', 'update_worker', 'delete_worker', 'view_worker_assignment', 'view_expense', 'view_document',
     'view_report', 'export_report',
@@ -56,7 +58,8 @@ const ADMIN_VILLE_ACTIONS: ReadonlyArray<SecurityAction> = [
     'view', 'view_organization', 'view_city',
     'view_parcel', 'create_parcel', 'update_parcel', 'delete_parcel',
     'view_building', 'create_building', 'update_building', 'delete_building',
-    'view_unit', 'create_unit', 'update_unit', 'delete_unit', 'publish_listing',
+    'view_unit', 'create_unit', 'update_unit', 'delete_unit',
+    'view_listing', 'create_listing', 'update_listing', 'submit_listing', 'manage_listing_media',
     'view_tenant', 'create_tenant', 'update_tenant', 'archive_tenant',
     'view_lease', 'create_lease', 'update_lease', 'activate_lease', 'terminate_lease', 'cancel_lease',
     'view_rent', 'create_rent', 'update_rent', 'mark_rent_overdue',

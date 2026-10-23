@@ -256,7 +256,7 @@
           ],
           "fields": "Les champs de présentation sont ceux du formulaire réel ; ne publiez pas de coordonnées internes.",
           "result": "Vous contrôlez la présentation publique et repérez les informations à corriger.",
-          "limits": "La Vitrine est affichée uniquement si le SUPER_ADMIN a autorisé cette fonctionnalité pour votre organisation. Si elle est absente du menu, demandez cette activation à la plateforme. Le PATRON n’effectue pas les modifications opérationnelles de la vitrine.",
+          "limits": "La Vitrine est affichée uniquement si le SUPER_ADMIN l’a autorisée pour l’organisation. Le PATRON consulte le circuit en lecture seule ; l’ADMIN_IMMOBILIER contrôle et publie les annonces.",
           "id": "vitrine"
         },
         {
@@ -374,12 +374,12 @@
             "Ouvrez la parcelle puis l’onglet de gestion des bâtiments. Utilisez « Modifier » sur le bâtiment concerné.",
             "Ouvrez le bâtiment puis l’onglet de gestion des unités. Utilisez « Modifier » sur l’unité concernée.",
             "Lors de la création ou modification du bâtiment, indiquez les étages au-dessus du RDC : 0 = plain-pied, 1 = jusqu’au 1er, 2 = jusqu’au 2e. Dans Gérer les unités → Gérer les niveaux, numérotez le RDC 0, les étages supérieurs 1…N et les sous-sols −1, −2… ; associez ensuite les unités à ces niveaux.",
-            "Si la Vitrine est autorisée pour l’organisation, choisissez Actions → « Publier » pour rendre l’unité visible ou « Retirer de la vitrine » pour la masquer ; gérez ses photos depuis le même menu.",
+            "Dans Vitrine, contrôlez les annonces soumises par les villes. Demandez des corrections ou validez l’annonce, puis publiez-la explicitement. Les photos se gèrent dans la galerie de l’unité du Patrimoine ; une photo active au minimum est obligatoire avant la soumission.",
             "Vérifiez la ville et les éléments parents avant chaque enregistrement ; la modification ne déplace pas le bien vers une autre ville, parcelle ou bâtiment."
           ],
-          "fields": "Ville : nom et code uniques obligatoires, province et pays facultatifs. Parcelle, bâtiment et unité : les formulaires valident leurs champs et conservent les rattachements parents. Le nombre d’étages compte ceux au-dessus du RDC ; les unités et niveaux partagés utilisent le même repère (RDC 0, étages positifs, sous-sols négatifs). La publication d’une unité dépend de l’autorisation Vitrine de l’organisation.",
+          "fields": "Ville : nom et code uniques obligatoires, province et pays facultatifs. Parcelle, bâtiment et unité : les formulaires valident leurs champs et conservent les rattachements parents. Le nombre d’étages compte ceux au-dessus du RDC ; les unités et niveaux partagés utilisent le même repère (RDC 0, étages positifs, sous-sols négatifs). Une annonce est rattachée à une unité existante, jamais à un bâtiment pris comme conteneur.",
           "result": "Les créations, modifications et suppressions logiques sont enregistrées dans le patrimoine de l’organisation. Les changements et publications sont soumis aux contrôles de capacité et de rattachement.",
-          "limits": "L’ADMIN_IMMOBILIER dispose du CRUD des villes, parcelles, bâtiments et unités de son organisation, ainsi que de leur publication lorsque la Vitrine est autorisée. Les plafonds de capacité s’appliquent. La suppression est logique et peut retirer une ville et ses éléments du patrimoine actif ; vérifiez les baux et l’historique avant de confirmer. Le rattachement à une autre organisation n’est jamais permis. Les opérations locatives et financières restent réservées aux rôles autorisés de la ville.",
+          "limits": "L’ADMIN_IMMOBILIER contrôle, valide et publie les annonces de l’organisation via le circuit de validation ; il ne publie pas directement une unité. Le PATRON consulte en lecture seule. Les plafonds de capacité s’appliquent. La suppression est logique et peut retirer une ville et ses éléments du patrimoine actif ; vérifiez les baux et l’historique avant de confirmer. Le rattachement à une autre organisation n’est jamais permis.",
           "id": "patrimoine"
         },
         {
@@ -451,16 +451,17 @@
         {
           "name": "Vitrine",
           "menu": "Gestion immobilière → Vitrine",
-          "goal": "Superviser la présentation publique de l’organisation.",
+          "goal": "Préparer et soumettre les annonces des biens disponibles dans vos villes attribuées.",
           "steps": [
             "Ouvrez Vitrine.",
-            "Vérifiez le contenu et l’état de publication.",
-            "Signalez à l’ADMIN_VILLE responsable les informations à corriger.",
-            "Vérifiez l’aperçu ou le lien public après la mise à jour par l’équipe locale."
+            "Choisissez une unité disponible du Patrimoine. Les maisons, chambres et appartements sont des types d’unité ; le bâtiment et la parcelle situent le bien.",
+            "Vérifiez les caractéristiques reprises du Patrimoine et ajoutez au moins une photo à la galerie de l’unité.",
+            "Rédigez le titre, la description et le prix, puis enregistrez le brouillon et soumettez-le au contrôle immobilier.",
+            "Consultez le statut et l’historique. Si des corrections sont demandées, modifiez le brouillon puis soumettez-le à nouveau."
           ],
-          "fields": "Champs de présentation visibles dans la page.",
-          "result": "La supervision permet de contrôler l’exactitude des informations publiques.",
-          "limits": "La Vitrine est affichée uniquement si le SUPER_ADMIN a autorisé cette fonctionnalité pour votre organisation. Si elle est absente du menu, demandez cette activation à la plateforme. La publication et les modifications d’unités sont des opérations locales réservées à l’ADMIN_VILLE.",
+          "fields": "Le bien source, son type, sa localisation, ses caractéristiques et ses photos proviennent du Patrimoine. Le prix et la description sont ceux de l’annonce.",
+          "result": "L’annonce suit le circuit de vérification de l’ADMIN_IMMOBILIER avant sa publication publique.",
+          "limits": "La Vitrine est affichée si le SUPER_ADMIN l’a autorisée et si au moins une ville active vous est attribuée. Vous ne voyez que les biens de vos villes ; créez une annonce pour une unité libre, ajoutez au moins une photo, puis soumettez-la à l’ADMIN_IMMOBILIER. Celui-ci contrôle et publie l’annonce.",
           "id": "vitrine"
         },
         {

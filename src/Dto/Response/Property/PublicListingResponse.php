@@ -19,6 +19,10 @@ final readonly class PublicListingResponse
 {
     public function __construct(
         public string $unitId,
+        public string $listingId,
+        public string $title,
+        public string $offerType,
+        public string $price,
         public string $reference,
         public string $type,
         public int $floor,

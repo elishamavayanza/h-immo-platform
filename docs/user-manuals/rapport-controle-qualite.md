@@ -25,6 +25,11 @@
 - Vérifications exécutées : `yarn type-check`, `yarn build`, lint PHP des fichiers modifiés, `lint:container`, `doctrine:schema:validate` (mapping et base synchronisés), statut des migrations, JSON valide et `git diff --check`. La migration `Version20261018130000OrganizationCapacityLimits` a été appliquée sur la base de développement `gestion_himmo`.
 - Génération réussie des quatre PDF avec le runtime Python du workspace ; examen visuel des pages contenant les nouveaux articles, sans débordement ni défaut de pagination manifeste. Les parcours métiers complets et les scripts de tests autonomes n’ont pas été exécutés dans cette révision.
 
+## Révision 1.3.5 — Circuit des annonces par rôle
+
+- La Vitrine est disponible à ADMIN_VILLE lorsque la capacité organisationnelle est activée et qu’une ville active lui est attribuée. Il prépare les annonces pour ses unités disponibles ; ADMIN_IMMOBILIER les contrôle et les publie ; PATRON consulte en lecture seule.
+- Une annonce référence une unité du Patrimoine et réutilise sa galerie photo. Au moins une photo est exigée avant la soumission. La publication directe d’une unité a été remplacée par les transitions du workflow.
+
 ## Révision 1.3.4 — Autorisation de la vitrine par organisation
 
 - Ajout d’un réglage d’autorisation de la vitrine à la fiche Organisation du SUPER_ADMIN. L’accès est désactivé par défaut et chaque changement est protégé par le rôle plateforme et enregistré dans l’audit d’organisation.

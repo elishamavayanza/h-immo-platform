@@ -45,6 +45,10 @@ class Unit extends SoftDeletableEntity
     #[ORM\JoinColumn(name: 'parent_unit_id', referencedColumnName: 'id', nullable: true, onDelete: 'SET NULL')]
     private ?self $parentUnit = null;
 
+    /** Annonce soumise pour l'unité, exposée uniquement après décision métier. */
+    #[ORM\OneToOne(mappedBy: 'unit', targetEntity: Listing::class)]
+    private ?Listing $listing = null;
+
     /**
      * Référence unique de l'unité dans le bâtiment.
      */
@@ -142,6 +146,9 @@ class Unit extends SoftDeletableEntity
     {
         return $this->parentUnit;
     }
+
+    public function getListing(): ?Listing { return $this->listing; }
+    public function setListing(?Listing $listing): static { $this->listing = $listing; return $this; }
 
     public function getLevel(): ?BuildingLevel { return $this->level; }
     public function setLevel(?BuildingLevel $level): static { $this->level = $level; return $this; }

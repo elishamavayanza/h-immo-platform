@@ -128,6 +128,7 @@ $expected = [
     'user', 'user_city', 'worker', 'worker_assignment', 'private_document', 'cash_opening_balance', 'maintenance_work_order',
     'publication', 'publication_recipient', 'residential_movement', 'lease_unit', 'lease_occupant', 'access_point', 'access_point_unit', 'demo_dataset',
     'organization_rental_rule_version', 'rent_rule_snapshot', 'organization_rental_rule_draft', 'rental_rule_publication_delegation',
+    'property_listing', 'property_listing_history',
 ];
 
 $missing = array_values(array_diff($expected, $tables));
@@ -144,9 +145,10 @@ check('aucune table inattendue', $unexpected === [], implode(', ', $unexpected))
 
 check('la table revoked_token existe', in_array('revoked_token', $tables, true));
 check('la table unit_photo existe', in_array('unit_photo', $tables, true));
+check('les tables de workflow vitrine existent', in_array('property_listing', $tables, true) && in_array('property_listing_history', $tables, true));
 
-// Colonnes de la vitrine : `is_published` porte la décision de publier,
-// jamais l'état de disponibilité, recalculé à chaque lecture publique.
+// `is_published` reste un champ de compatibilité patrimoniale. La visibilité
+// publique relève désormais du statut explicite du workflow d'annonce.
 $unitColumns = array_map(
     static fn ($column): string => strtolower($column->getName()),
     $sm->listTableColumns('unit'),
@@ -157,6 +159,10 @@ $organizationColumns = array_map(
 );
 
 check('unit.is_published existe', in_array('is_published', $unitColumns, true));
+if (in_array('property_listing', $tables, true)) {
+    $listingColumns = array_map(static fn ($column): string => strtolower($column->getName()), $sm->listTableColumns('property_listing'));
+    check('property_listing conserve le statut, l’instantané et la version', in_array('status', $listingColumns, true) && in_array('public_snapshot', $listingColumns, true) && in_array('version', $listingColumns, true));
+}
 check(
     'organization expose slug, public_description et is_publicly_listed',
     in_array('slug', $organizationColumns, true)

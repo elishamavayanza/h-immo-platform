@@ -1193,6 +1193,7 @@ final class SecurityService implements SecurityServiceInterface
             SecurityAction::VIEW_PARCEL,
             SecurityAction::VIEW_BUILDING,
             SecurityAction::VIEW_UNIT,
+            SecurityAction::VIEW_LISTING,
             SecurityAction::VIEW_TENANT,
             SecurityAction::VIEW_LEASE,
             SecurityAction::VIEW_RENT,
@@ -1238,7 +1239,7 @@ final class SecurityService implements SecurityServiceInterface
             SecurityAction::VIEW_PARCEL, SecurityAction::CREATE_PARCEL, SecurityAction::UPDATE_PARCEL, SecurityAction::DELETE_PARCEL,
             SecurityAction::VIEW_BUILDING, SecurityAction::CREATE_BUILDING, SecurityAction::UPDATE_BUILDING, SecurityAction::DELETE_BUILDING,
             SecurityAction::VIEW_UNIT, SecurityAction::CREATE_UNIT, SecurityAction::UPDATE_UNIT, SecurityAction::DELETE_UNIT,
-            SecurityAction::PUBLISH_LISTING,
+            SecurityAction::VIEW_LISTING, SecurityAction::REVIEW_LISTING, SecurityAction::PUBLISH_LISTING, SecurityAction::MANAGE_LISTING_MEDIA,
             SecurityAction::VIEW_TENANT,
             SecurityAction::VIEW_LEASE,
             SecurityAction::VIEW_RENT,
@@ -1283,7 +1284,7 @@ final class SecurityService implements SecurityServiceInterface
             SecurityAction::VIEW_BUILDING, SecurityAction::CREATE_BUILDING, SecurityAction::UPDATE_BUILDING, SecurityAction::DELETE_BUILDING,
 
             SecurityAction::VIEW_UNIT, SecurityAction::CREATE_UNIT, SecurityAction::UPDATE_UNIT, SecurityAction::DELETE_UNIT,
-            SecurityAction::PUBLISH_LISTING,
+            SecurityAction::VIEW_LISTING, SecurityAction::CREATE_LISTING, SecurityAction::UPDATE_LISTING, SecurityAction::SUBMIT_LISTING, SecurityAction::MANAGE_LISTING_MEDIA,
 
             SecurityAction::VIEW_TENANT, SecurityAction::CREATE_TENANT, SecurityAction::UPDATE_TENANT, SecurityAction::ARCHIVE_TENANT,
 

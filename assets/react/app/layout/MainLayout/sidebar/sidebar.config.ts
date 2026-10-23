@@ -26,8 +26,8 @@
 //                        sans Administration, AVEC Personnel :
 //                        le backend lui accorde VIEW/CREATE/UPDATE/DELETE
 //                        sur Worker et WorkerAssignment)
-//   - ADMIN_VILLE      : 7 entrées (sans Administration ; Opérations expose
-//                        les affectations de ville, seules modifiables)
+//   - ADMIN_VILLE      : 8 entrées (+ Vitrine si la plateforme l’autorise ;
+//                        Opérations expose les affectations de ville)
 //   - SUPER_ADMIN      : 5 entrées, toutes au niveau plateforme
 //
 // Ce menu reflète la matrice `SecurityService::checkXxxAction()` : toute
@@ -230,7 +230,7 @@ const RAPPORTS: AppMenuItem = {
 export const ORGANIZATION_SIDEBAR: Record<OrganizationRole, SidebarMenu> = {
     patron: [DASHBOARD, RAPPORTS, PATRIMOINE, LOCATAIRES, LOYERS, DEPENSES, VITRINE, MAINTENANCE, ADMINISTRATION],
     admin_immobilier: [DASHBOARD, RAPPORTS, PATRIMOINE, LOCATAIRES, LOYERS, DEPENSES, VITRINE, PERSONNEL, MAINTENANCE, ADMINISTRATION],
-    admin_ville: [DASHBOARD, RAPPORTS, PATRIMOINE, LOCATAIRES, LOYERS, DEPENSES, ADMIN_VILLE_OPERATIONS, MAINTENANCE],
+    admin_ville: [DASHBOARD, RAPPORTS, PATRIMOINE, LOCATAIRES, LOYERS, DEPENSES, VITRINE, ADMIN_VILLE_OPERATIONS, MAINTENANCE],
 };
 
 /** Menu SUPER_ADMIN : aucune entrée métier d'organisation. */
