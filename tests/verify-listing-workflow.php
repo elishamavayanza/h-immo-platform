@@ -120,8 +120,8 @@ $em->persist((new UserCity())->setUser($adminVille)->setCity($secondCity));
 $em->persist((new UserCity())->setUser($otherCityAdmin)->setCity($secondCity));
 $em->flush();
 
-$request = static function (string $method, string $uri, ?array $body = null, ?string $token = null, ?string $idempotencyKey = null) use ($kernel): array {
-    $server = ['REQUEST_METHOD' => $method, 'REQUEST_URI' => $uri, 'HTTP_HOST' => 'localhost'];
+$request = static function (string $method, string $uri, ?array $body = null, ?string $token = null, ?string $idempotencyKey = null, string $remoteIp = '198.51.100.10') use ($kernel): array {
+    $server = ['REQUEST_METHOD' => $method, 'REQUEST_URI' => $uri, 'HTTP_HOST' => 'localhost', 'REMOTE_ADDR' => $remoteIp];
     if ($token !== null) $server['HTTP_AUTHORIZATION'] = 'Bearer ' . $token;
     if ($idempotencyKey !== null) $server['HTTP_IDEMPOTENCY_KEY'] = $idempotencyKey;
     $content = $body === null ? null : json_encode($body, JSON_THROW_ON_ERROR);
@@ -132,6 +132,24 @@ $request = static function (string $method, string $uri, ?array $body = null, ?s
     $payload = json_decode((string) $response->getContent(), true) ?: [];
     $kernel->terminate($request, $response);
     return [$status, $payload];
+};
+$inquiryIpSequence = random_int(30, 100);
+$submitPublicInquiry = static function (string $uri, array $body, string $idempotencyKey) use ($request, &$inquiryIpSequence): array {
+    $remoteIp = '198.51.100.' . (++$inquiryIpSequence);
+    [$challengeStatus, $challenge] = $request('GET', $uri . '/challenge', null, null, null, $remoteIp);
+    if ($challengeStatus !== 200 || !is_string($challenge['data']['token'] ?? null)) {
+        return [$challengeStatus, $challenge];
+    }
+
+    // Le jeton HMAC impose un âge minimal de trois secondes contre le postage instantané.
+    usleep(3_100_000);
+    $body['challengeToken'] = $challenge['data']['token'];
+    $body['website'] = '';
+    $body['turnstileToken'] = null; // Le parcours isolé tourne en dev, où le service tiers est simulé.
+
+    [$status, $payload] = $request('POST', $uri, $body, null, $idempotencyKey, $remoteIp);
+
+    return [$status, $payload, $body['challengeToken'], $remoteIp];
 };
 $login = static function (string $email) use ($request, $password): ?string {
     [$status, $payload] = $request('POST', '/api/auth/login', ['email' => $email, 'password' => $password]);
@@ -190,11 +208,54 @@ if (is_string($listingUuid) && is_string($cityToken) && is_string($immoToken)) {
     $inquiryUri = '/api/public/organizations/' . $organization->getSlug() . '/listings/' . $unit->getUuid()->toRfc4122() . '/inquiries';
     $inquiryKey = \Symfony\Component\Uid\Uuid::v4()->toRfc4122();
     $inquiryBody = ['type' => 'information', 'name' => 'Visiteur test', 'phone' => '+243 000 000 000', 'email' => 'visiteur@test.local', 'message' => 'Je souhaite des informations.', 'privacyConsent' => true];
-    [$inquiryStatus, $inquiryPayload] = $request('POST', $inquiryUri, $inquiryBody, null, $inquiryKey);
+
+    // Les refus anti-spam doivent précéder toute création persistée.
+    $initialInquiryCount = (int) $connection->fetchOne('SELECT COUNT(*) FROM customer_inquiry WHERE organization_id = ?', [$organization->getId()]);
+    $probeIp = '198.51.100.' . random_int(160, 200);
+    [$probeChallengeStatus, $probeChallenge] = $request('GET', $inquiryUri . '/challenge', null, null, null, $probeIp);
+    $probeToken = $probeChallenge['data']['token'] ?? null;
+    if ($probeChallengeStatus === 200 && is_string($probeToken)) {
+        usleep(3_100_000);
+        $probeBody = [...$inquiryBody, 'challengeToken' => $probeToken, 'website' => 'remplissage-robot', 'turnstileToken' => null];
+        [$honeypotStatus] = $request('POST', $inquiryUri, $probeBody, null, \Symfony\Component\Uid\Uuid::v4()->toRfc4122(), $probeIp);
+        $check('le honeypot rempli est refusé par le véritable endpoint HTTP', $honeypotStatus === 422, 'HTTP ' . $honeypotStatus);
+        $check('le honeypot ne crée aucune demande métier', (int) $connection->fetchOne('SELECT COUNT(*) FROM customer_inquiry WHERE organization_id = ?', [$organization->getId()]) === $initialInquiryCount);
+
+        $probeBody['website'] = '';
+        $otherOrganizationUri = '/api/public/organizations/' . $otherOrganization->getSlug() . '/listings/' . $otherUnit->getUuid()->toRfc4122() . '/inquiries';
+        [$wrongOrganizationStatus] = $request('POST', $otherOrganizationUri, $probeBody, null, \Symfony\Component\Uid\Uuid::v4()->toRfc4122(), '198.51.100.' . random_int(201, 210));
+        $check('un jeton lié à une autre organisation est refusé par HTTP', $wrongOrganizationStatus === 400, 'HTTP ' . $wrongOrganizationStatus);
+        $wrongUnitUuid = \Symfony\Component\Uid\Uuid::v4()->toRfc4122();
+        [$wrongListingStatus] = $request('POST', str_replace($unit->getUuid()->toRfc4122(), $wrongUnitUuid, $inquiryUri), $probeBody, null, \Symfony\Component\Uid\Uuid::v4()->toRfc4122(), '198.51.100.' . random_int(211, 220));
+        $check('un jeton lié à une autre annonce est refusé par HTTP', $wrongListingStatus === 400, 'HTTP ' . $wrongListingStatus);
+
+        $challengeService = new App\Service\Property\PublicInquiryChallengeService(
+            new App\Service\System\DateTimeService(),
+            '',
+            (string) ($_SERVER['APP_SECRET'] ?? $_ENV['APP_SECRET'] ?? ''),
+            'dev',
+        );
+        $issuedAt = (new DateTimeImmutable())->getTimestamp() - 1801;
+        $nonce = rtrim(strtr(base64_encode(random_bytes(16)), '+/', '-_'), '=');
+        $signatureMethod = new ReflectionMethod($challengeService, 'signature');
+        $expiredToken = $issuedAt . '.' . $nonce . '.' . $signatureMethod->invoke($challengeService, $organization->getSlug(), $unit->getUuid()->toRfc4122(), $issuedAt, $nonce);
+        $probeBody['challengeToken'] = $expiredToken;
+        [$expiredStatus] = $request('POST', $inquiryUri, $probeBody, null, \Symfony\Component\Uid\Uuid::v4()->toRfc4122(), '198.51.100.' . random_int(221, 230));
+        $check('un jeton expiré est refusé par le véritable endpoint HTTP', $expiredStatus === 400, 'HTTP ' . $expiredStatus);
+        $check('les refus honeypot, organisation, annonce et expiration ne créent rien', (int) $connection->fetchOne('SELECT COUNT(*) FROM customer_inquiry WHERE organization_id = ?', [$organization->getId()]) === $initialInquiryCount);
+    } else {
+        $check('le défi HTTP est disponible pour les scénarios anti-spam', false, 'HTTP ' . $probeChallengeStatus);
+    }
+
+    [$inquiryStatus, $inquiryPayload, $inquiryChallengeToken, $inquiryRemoteIp] = $submitPublicInquiry($inquiryUri, $inquiryBody, $inquiryKey);
     $inquiryReference = $inquiryPayload['data']['reference'] ?? null;
     $check('une demande publique valide est enregistrée sans exposer les données de contact', $inquiryStatus === 201 && is_string($inquiryReference) && isset($inquiryPayload['data']['receivedAt']) && !isset($inquiryPayload['data']['name'], $inquiryPayload['data']['email']), 'HTTP ' . $inquiryStatus);
-    [$repeatStatus, $repeatPayload] = $request('POST', $inquiryUri, $inquiryBody, null, $inquiryKey);
+    [$repeatStatus, $repeatPayload] = $submitPublicInquiry($inquiryUri, $inquiryBody, $inquiryKey);
     $check('une reprise avec la même clé ne crée pas une seconde demande', $repeatStatus === 200 && ($repeatPayload['data']['reference'] ?? null) === $inquiryReference, 'HTTP ' . $repeatStatus);
+    $inquiryCountAfterSuccess = (int) $connection->fetchOne('SELECT COUNT(*) FROM customer_inquiry WHERE organization_id = ?', [$organization->getId()]);
+    [$reusedChallengeStatus] = $request('POST', $inquiryUri, [...$inquiryBody, 'challengeToken' => $inquiryChallengeToken, 'website' => '', 'turnstileToken' => null], null, \Symfony\Component\Uid\Uuid::v4()->toRfc4122(), '198.51.100.254');
+    $check('la réutilisation du même jeton HMAC est refusée par HTTP', $reusedChallengeStatus === 400, 'HTTP ' . $reusedChallengeStatus);
+    $check('la réutilisation du jeton ne crée aucun doublon', (int) $connection->fetchOne('SELECT COUNT(*) FROM customer_inquiry WHERE organization_id = ?', [$organization->getId()]) === $inquiryCountAfterSuccess);
     $inquiryRoot = '/api/v1/organizations/' . $organization->getUuid()->toRfc4122() . '/inquiries';
     [$cityAlertsStatus, $cityAlerts] = $request('GET', $inquiryRoot . '/notifications', null, $cityToken);
     [$otherCityAlertsStatus, $otherCityAlerts] = $request('GET', $inquiryRoot . '/notifications', null, $otherCityToken);
@@ -205,13 +266,13 @@ if (is_string($listingUuid) && is_string($cityToken) && is_string($immoToken)) {
     [$readOtherNotificationStatus] = $request('POST', $inquiryRoot . '/notifications/' . $notificationUuid . '/read', [], $otherCityToken);
     [$readCityAlertsStatus, $readCityAlerts] = $request('GET', $inquiryRoot . '/notifications', null, $cityToken);
     $check('l’alerte reste personnelle, et son indicateur non lu disparaît après consultation', $readNotificationStatus === 200 && $readOtherNotificationStatus === 404 && $readCityAlertsStatus === 200 && ($readCityAlerts['data']['unread'] ?? -1) === 0 && ($readCityAlerts['data']['items'][0]['readAt'] ?? null) !== null, 'lecture destinataire ' . $readNotificationStatus . ', autre compte ' . $readOtherNotificationStatus);
-    [$keyConflictStatus] = $request('POST', $inquiryUri, [...$inquiryBody, 'message' => 'Un autre contenu'], null, $inquiryKey);
+    [$keyConflictStatus] = $submitPublicInquiry($inquiryUri, [...$inquiryBody, 'message' => 'Un autre contenu'], $inquiryKey);
     $check('une clé de soumission ne peut pas être réutilisée avec un autre contenu', $keyConflictStatus === 409, 'HTTP ' . $keyConflictStatus);
-    [$invalidInquiryStatus] = $request('POST', $inquiryUri, [...$inquiryBody, 'email' => 'adresse invalide'], null, \Symfony\Component\Uid\Uuid::v4()->toRfc4122());
+    [$invalidInquiryStatus] = $submitPublicInquiry($inquiryUri, [...$inquiryBody, 'email' => 'adresse invalide'], \Symfony\Component\Uid\Uuid::v4()->toRfc4122());
     $check('les coordonnées invalides sont refusées côté serveur', $invalidInquiryStatus === 422, 'HTTP ' . $invalidInquiryStatus);
-    [$unknownListingInquiryStatus] = $request('POST', '/api/public/organizations/' . $organization->getSlug() . '/listings/' . \Symfony\Component\Uid\Uuid::v4()->toRfc4122() . '/inquiries', $inquiryBody, null, \Symfony\Component\Uid\Uuid::v4()->toRfc4122());
+    [$unknownListingInquiryStatus] = $submitPublicInquiry('/api/public/organizations/' . $organization->getSlug() . '/listings/' . \Symfony\Component\Uid\Uuid::v4()->toRfc4122() . '/inquiries', $inquiryBody, \Symfony\Component\Uid\Uuid::v4()->toRfc4122());
     $check('une demande pour une annonce inconnue est refusée', $unknownListingInquiryStatus === 404, 'HTTP ' . $unknownListingInquiryStatus);
-    [$crossOrganizationInquiryStatus] = $request('POST', '/api/public/organizations/' . $organization->getSlug() . '/listings/' . $otherUnit->getUuid()->toRfc4122() . '/inquiries', $inquiryBody, null, \Symfony\Component\Uid\Uuid::v4()->toRfc4122());
+    [$crossOrganizationInquiryStatus] = $submitPublicInquiry('/api/public/organizations/' . $organization->getSlug() . '/listings/' . $otherUnit->getUuid()->toRfc4122() . '/inquiries', $inquiryBody, \Symfony\Component\Uid\Uuid::v4()->toRfc4122());
     $check('une demande ne peut pas viser une annonce d’une autre organisation', $crossOrganizationInquiryStatus === 404, 'HTTP ' . $crossOrganizationInquiryStatus);
 
     [$unauthenticatedInquiryStatus] = $request('GET', $inquiryRoot);
@@ -265,7 +326,7 @@ if (is_string($listingUuid) && is_string($cityToken) && is_string($immoToken)) {
     $check('l’historique conserve les actions de visite et leur auteur ADMIN_VILLE', $historyStatus === 200 && $historyActions === ['CREATED_PUBLIC', 'TAKEN_OVER', 'STATUS_CHANGED', 'VISIT_PROPOSED', 'VISIT_RESCHEDULED', 'VISIT_CONFIRMED', 'VISIT_COMPLETED', 'STATUS_CHANGED', 'STATUS_CHANGED'] && ($visitCompletedEvent['actor'] ?? null) === $adminVille->getFullName(), 'HTTP ' . $historyStatus . ', actions ' . count($historyActions));
 
     $conversionKey = \Symfony\Component\Uid\Uuid::v4()->toRfc4122();
-    [$conversionInquiryStatus, $conversionInquiry] = $request('POST', $inquiryUri, $inquiryBody, null, $conversionKey);
+    [$conversionInquiryStatus, $conversionInquiry] = $submitPublicInquiry($inquiryUri, $inquiryBody, $conversionKey);
     $conversionInquiryUuid = $conversionInquiry['data']['reference'] ?? '';
     [$conversionTakeStatus] = $request('POST', $inquiryRoot . '/' . $conversionInquiryUuid . '/take-ownership', null, $immoToken);
     [$conversionContactStatus] = $request('POST', $inquiryRoot . '/' . $conversionInquiryUuid . '/transition', ['status' => 'contacted'], $immoToken);
@@ -336,6 +397,31 @@ if (is_string($listingUuid) && is_string($cityToken) && is_string($immoToken)) {
     $check('une vente publiée expose son vrai prix sans faux loyer', $saleSubmitStatus === 200 && $saleQueueStatus === 200 && $salePublishStatus === 200 && $salePublicStatus === 200 && ($salePublic['offerType'] ?? null) === 'sale' && ($salePublic['price'] ?? null) === '125000.00' && (!array_key_exists('monthlyRent', $salePublic) || $salePublic['monthlyRent'] === null), 'HTTP ' . $salePublicStatus . ', offre ' . ($salePublic['offerType'] ?? 'absente') . ', prix ' . ($salePublic['price'] ?? 'absent') . ', loyer ' . json_encode($salePublic['monthlyRent'] ?? 'absent'));
     [$legacySaleStatus, $legacySalePayload] = $request('GET', $publicBase . '?minRent=100000&currency=CDF');
     $check('un filtre historique de loyer ne retourne pas une vente', $legacySaleStatus === 200 && ($legacySalePayload['data']['items'] ?? null) === [], 'HTTP ' . $legacySaleStatus);
+
+    $limitIp = '198.51.100.' . random_int(231, 239);
+    $beforeLimitCount = (int) $connection->fetchOne('SELECT COUNT(*) FROM customer_inquiry WHERE organization_id = ?', [$organization->getId()]);
+    $limitTokens = [];
+    for ($index = 0; $index < 6; $index++) {
+        [$limitChallengeStatus, $limitChallenge] = $request('GET', $inquiryUri . '/challenge', null, null, null, $limitIp);
+        if ($limitChallengeStatus !== 200 || !is_string($limitChallenge['data']['token'] ?? null)) {
+            $limitTokens = [];
+            break;
+        }
+        $limitTokens[] = $limitChallenge['data']['token'];
+    }
+    if (count($limitTokens) === 6) {
+        usleep(3_100_000);
+        $limitStatuses = [];
+        foreach ($limitTokens as $index => $limitToken) {
+            [$limitStatus] = $request('POST', $inquiryUri, [...$inquiryBody, 'challengeToken' => $limitToken, 'website' => '', 'turnstileToken' => null], null, \Symfony\Component\Uid\Uuid::v4()->toRfc4122(), $limitIp);
+            $limitStatuses[] = $limitStatus;
+        }
+        $limitInquiryCount = (int) $connection->fetchOne('SELECT COUNT(*) FROM customer_inquiry WHERE organization_id = ?', [$organization->getId()]);
+        $check('la limite HTTP bloque la sixième demande d’une même IP dans la fenêtre horaire', array_slice($limitStatuses, 0, 5) === [201, 201, 201, 201, 201] && ($limitStatuses[5] ?? null) === 429, 'statuts ' . json_encode($limitStatuses));
+        $check('la demande bloquée par la limite ne crée aucun enregistrement', $limitInquiryCount === $beforeLimitCount + 5, $beforeLimitCount . ' avant, ' . $limitInquiryCount . ' après');
+    } else {
+        $check('six défis anti-spam sont disponibles pour vérifier la limite HTTP', false, count($limitTokens) . ' sur 6');
+    }
 }
 
 $rollback();

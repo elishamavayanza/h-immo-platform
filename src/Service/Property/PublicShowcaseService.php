@@ -48,6 +48,26 @@ final readonly class PublicShowcaseService
     }
 
     /**
+     * Répertorie les vitrines actives et publiques pour le sitemap dynamique.
+     * Les slugs proviennent d’une requête filtrée en base; aucune organisation cachée n’est sérialisée.
+     *
+     * @return array{items: list<string>, total: int, page: int, pages: int}
+     */
+    public function listPublicOrganizationSlugs(int $page = 1, int $limit = 100): array
+    {
+        $page = max(1, $page);
+        $limit = max(1, min(100, $limit));
+        $result = $this->organizationRepository->findPublicShowcaseSlugs($page, $limit);
+
+        return [
+            'items' => $result['items'],
+            'total' => $result['total'],
+            'page' => $page,
+            'pages' => max(1, (int) ceil($result['total'] / $limit)),
+        ];
+    }
+
+    /**
      * Retrouve une entreprise par son slug de vitrine.
      *
      * Une Organization masquée (`is_publicly_listed = false`) ou supprimée est

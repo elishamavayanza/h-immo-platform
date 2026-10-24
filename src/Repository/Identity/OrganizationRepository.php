@@ -78,6 +78,33 @@ class OrganizationRepository extends ServiceEntityRepository
             ->setParameter('now', $now)->getQuery()->getResult();
     }
 
+    /** @return array{items: list<string>, total: int} */
+    public function findPublicShowcaseSlugs(int $page, int $limit): array
+    {
+        $baseQuery = $this->createQueryBuilder('o')
+            ->andWhere('o.deletedAt IS NULL')
+            ->andWhere('o.status = :active')
+            ->andWhere('o.showcaseEnabled = true')
+            ->andWhere('o.isPubliclyListed = true')
+            ->andWhere('o.slug IS NOT NULL')
+            ->setParameter('active', OrganizationStatus::ACTIVE);
+
+        $items = (clone $baseQuery)
+            ->select('o.slug AS slug')
+            ->orderBy('o.slug', 'ASC')
+            ->setFirstResult((max(1, $page) - 1) * max(1, min(100, $limit)))
+            ->setMaxResults(max(1, min(100, $limit)))
+            ->getQuery()
+            ->getScalarResult();
+
+        $total = (int) (clone $baseQuery)
+            ->select('COUNT(o.id)')
+            ->getQuery()
+            ->getSingleScalarResult();
+
+        return ['items' => array_values(array_map(static fn (array $row): string => (string) $row['slug'], $items)), 'total' => $total];
+    }
+
     /**
      * Recherche une Organization par son slug de vitrine publique.
      *

@@ -120,6 +120,20 @@ foreach (['/api/auth/login', '/api/auth/logout', '/api/auth/me'] as $route) {
     check("La route {$route} est documentée", isset($paths[$route]), 'route absente du document');
 }
 
+$organizationIndexPath = '/api/public/organizations';
+$challengePath = '/api/public/organizations/{slug}/listings/{unitUuid}/inquiries/challenge';
+$inquiryPath = '/api/public/organizations/{slug}/listings/{unitUuid}/inquiries';
+check('Le flux des vitrines publiques est documenté', isset($paths[$organizationIndexPath]['get']), 'route des slugs absente');
+check('Le défi anti-robot public est documenté en GET', isset($paths[$challengePath]['get']), 'route GET absente');
+$inquiryPost = $paths[$inquiryPath]['post'] ?? [];
+$inquiryRef = $inquiryPost['requestBody']['content']['application/json']['schema']['$ref'] ?? null;
+$inquirySchema = is_string($inquiryRef) ? ($decoded['components']['schemas'][basename(str_replace('#/components/schemas/', '', $inquiryRef))] ?? []) : [];
+check(
+    'La demande publique documente HMAC, le leurre et Turnstile',
+    isset($inquirySchema['properties']['challengeToken'], $inquirySchema['properties']['website'], $inquirySchema['properties']['turnstileToken']),
+    'champs anti-robot absents du schéma'
+);
+
 // Un groupe de sérialisation absent produirait un schéma de requête vide
 // pour les DTO d'écriture.
 $parcels = $paths['/api/v1/parcels'] ?? [];

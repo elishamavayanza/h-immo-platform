@@ -7,6 +7,7 @@ namespace App\Controller\Api\Public;
 use App\Dto\Feedback;
 use App\Dto\Request\Property\PublicGlobalListingFilterQuery;
 use App\Dto\Request\Property\PublicListingFilterQuery;
+use App\Dto\Request\Property\PublicOrganizationSlugFilterQuery;
 use App\Dto\Response\Property\PublicListingResponse;
 use App\Dto\Response\System\PublicShowcaseResponse;
 use App\Enum\Currency;
@@ -44,6 +45,20 @@ final class PublicShowcaseController extends AbstractController
     public function __construct(
         private readonly PublicShowcaseService $publicShowcaseService,
     ) {
+    }
+
+    #[Route('/organizations', name: 'organizations', methods: ['GET'])]
+    #[OA\Get(summary: 'Lister les slugs des vitrines publiques actives', description: 'Inclut les organisations actives, publiques et avec vitrine activée, même si elles n’ont actuellement aucune annonce disponible.')]
+    #[OA\Parameter(name: 'page', in: 'query', schema: new OA\Schema(type: 'integer', minimum: 1, default: 1))]
+    #[OA\Parameter(name: 'limit', in: 'query', schema: new OA\Schema(type: 'integer', minimum: 1, maximum: 100, default: 100))]
+    #[OA\Response(response: 200, description: 'Slugs des vitrines publiques paginés', content: new OA\JsonContent(ref: new Model(type: Feedback::class)))]
+    public function organizations(
+        #[MapQueryString(validationFailedStatusCode: 400)] ?PublicOrganizationSlugFilterQuery $query = null,
+    ): JsonResponse {
+        $query ??= new PublicOrganizationSlugFilterQuery();
+        $result = $this->publicShowcaseService->listPublicOrganizationSlugs($query->page, $query->limit);
+
+        return $this->json((new Feedback())->setData($result)->setStatus(200)->autoInitFlush(), 200);
     }
 
     #[Route('/listings', name: 'global_listings', methods: ['GET'])]

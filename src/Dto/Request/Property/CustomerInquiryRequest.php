@@ -33,6 +33,17 @@ final readonly class CustomerInquiryRequest
         #[Assert\IsTrue(message: 'Votre accord est nécessaire pour être recontacté au sujet de cette demande.')]
         #[OA\Property(type: 'boolean', example: true)]
         public bool $privacyConsent = false,
+        #[Assert\NotBlank(message: 'Rechargez le formulaire avant de réessayer.')]
+        #[Assert\Length(max: 200)]
+        #[OA\Property(type: 'string', maxLength: 200, description: 'Jeton temporaire signé par le serveur.')]
+        public ?string $challengeToken = null,
+        #[Assert\Blank(message: 'La demande n’a pas pu être vérifiée.')]
+        #[Assert\Length(max: 200)]
+        #[OA\Property(type: 'string', maxLength: 200, nullable: true, description: 'Champ piège anti-robot, doit rester vide.')]
+        public ?string $website = null,
+        #[Assert\Length(max: 2048)]
+        #[OA\Property(type: 'string', maxLength: 2048, nullable: true, description: 'Jeton Turnstile vérifié côté serveur.')]
+        public ?string $turnstileToken = null,
     ) {
     }
 }

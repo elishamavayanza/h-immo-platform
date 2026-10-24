@@ -23,6 +23,8 @@ parameters:
     app.user_manual_pages_directory: '%kernel.project_dir%/output/pdf/manual-pages'
 
 services:
+    App\Service\Property\TurnstileSiteverifyClientInterface: '@App\Service\Property\CloudflareTurnstileSiteverifyClient'
+
     # default configuration for services in *this* file
     _defaults:
         autowire: true      # Automatically injects dependencies in your services.

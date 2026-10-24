@@ -1,6 +1,7 @@
 # see https://symfony.com/doc/current/reference/configuration/framework.html
 framework:
     secret: '%env(APP_SECRET)%'
+    trusted_proxies: '%env(TRUSTED_PROXIES)%'
 
     # Signalements techniques : faible volume et fenêtres fixes pour
     # éviter qu'une erreur répétée ne transforme les rapports en spam.
@@ -18,9 +19,25 @@ framework:
             limit: 10
             interval: '1 hour'
         public_customer_inquiries:
-            policy: 'fixed_window'
+            policy: 'sliding_window'
             limit: 5
             interval: '1 hour'
+            cache_pool: cache.public_inquiry
+        public_inquiry_challenge_requests:
+            policy: 'fixed_window'
+            limit: 60
+            interval: '1 hour'
+            cache_pool: cache.public_inquiry
+        public_inquiry_challenge_uses:
+            policy: 'fixed_window'
+            limit: 1
+            interval: '30 minutes'
+            cache_pool: cache.public_inquiry
+
+    cache:
+        pools:
+            cache.public_inquiry:
+                adapter: cache.app
 
     # L'API est désormais sans état : le pare-feu `main` est `stateless`
     # et l'authentification se fait par jeton Bearer. Aucune session PHP
