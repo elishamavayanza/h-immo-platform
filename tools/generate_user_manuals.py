@@ -32,7 +32,7 @@ from reportlab.platypus.tableofcontents import TableOfContents
 ROOT = Path(__file__).resolve().parents[1]
 CATALOG = ROOT / 'docs/user-manuals/catalog.json'
 OUT = ROOT / 'output/pdf'
-LOGO = ROOT / 'public/logo.png'
+LOGO = ROOT / 'tools/assets/soft-immo-logo-pdf.png'
 DATA = json.loads(CATALOG.read_text(encoding='utf-8'))
 
 FONT_DIR = Path('/usr/share/fonts/truetype/msttcorefonts')

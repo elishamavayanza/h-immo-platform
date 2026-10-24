@@ -632,10 +632,7 @@ final class ReportController extends AbstractController
     /** Le logo de l’application est embarqué afin que le PDF reste autonome. */
     private function applicationLogoDataUri(): ?string
     {
-        $path = $this->kernel->getProjectDir() . '/public/logo-email.png';
-        if (!is_file($path)) {
-            $path = $this->kernel->getProjectDir() . '/public/logo.png';
-        }
+        $path = $this->kernel->getProjectDir() . '/tools/assets/soft-immo-logo-pdf.png';
         if (!is_file($path)) {
             return null;
         }
