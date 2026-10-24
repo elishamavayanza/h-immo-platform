@@ -1,0 +1,42 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" fill="none">
+  <title>H-IMMO — Symbole architectural</title>
+  <defs>
+    <linearGradient id="himmo-roof-gradient" x1="100" y1="150" x2="410" y2="150" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="var(--himmo-logo-roof-start, #FFFFFF)" />
+      <stop offset="0.48" stop-color="var(--himmo-logo-roof-mid, #EAF5FF)" />
+      <stop offset="1" stop-color="var(--himmo-logo-accent, #0878FF)" />
+    </linearGradient>
+    <linearGradient id="himmo-structure-gradient" x1="150" y1="180" x2="370" y2="410" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="var(--himmo-logo-structure-start, #FFFFFF)" />
+      <stop offset="1" stop-color="var(--himmo-logo-structure-end, #DCEAFF)" />
+    </linearGradient>
+    <linearGradient id="himmo-window-gradient" x1="210" y1="180" x2="300" y2="290" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="var(--himmo-logo-accent-bright, #63E2FF)" />
+      <stop offset="1" stop-color="var(--himmo-logo-accent, #0066FF)" />
+    </linearGradient>
+    <linearGradient id="himmo-ribbon-gradient" x1="90" y1="290" x2="420" y2="350" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="var(--himmo-logo-accent-bright, #27D9F5)" />
+      <stop offset="0.55" stop-color="var(--himmo-logo-accent, #079DFF)" />
+      <stop offset="1" stop-color="var(--himmo-logo-accent-dark, #0755ED)" />
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" rx="112" fill="#102326" />
+  <g id="himmo-mark">
+    <path d="M256 55 L420 175 L393 201 L256 101 L119 201 L92 175 Z" fill="url(#himmo-roof-gradient)" />
+    <g fill="url(#himmo-structure-gradient)">
+      <path d="M147 193 L193 161 L193 263 L147 263 Z" />
+      <path d="M319 161 L365 193 L365 263 L319 263 Z" />
+      <path d="M147 263 H365 V302 H147 Z" />
+      <path d="M147 302 H193 V415 L147 402 Z" />
+      <path d="M319 302 H365 V402 L319 415 Z" />
+    </g>
+    <g fill="url(#himmo-window-gradient)">
+      <path d="M220 173 L252 155 V203 H220 Z" />
+      <path d="M260 155 L292 173 V203 H260 Z" />
+      <path d="M220 211 H252 V243 H220 Z" />
+      <path d="M260 211 H292 V243 H260 Z" />
+    </g>
+    <path d="M142 233 C111 257 99 285 116 301 C144 329 243 322 321 300 C367 287 401 267 404 248 C416 267 399 288 375 305 C317 346 202 357 132 335 C70 316 68 271 142 233 Z" fill="url(#himmo-ribbon-gradient)" />
+    <path d="M335 101 H369 V143 L335 119 Z" fill="var(--himmo-logo-accent, #0878FF)" />
+  </g>
+</svg>

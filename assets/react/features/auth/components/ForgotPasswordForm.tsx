@@ -17,7 +17,7 @@ import { Input } from '../../../components/Forms/Input/Input';
 
 import { DEFAULT_FORGOT_RESET_MESSAGE, useForgotPasswordForm } from '../hooks/useForgotPasswordForm';
 
-import logoUrl from '../../../app/upload/logo.png';
+import { BrandLogo } from '../../../components/Brand/BrandLogo';
 
 const MAIL_ICON = (
     <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
@@ -35,11 +35,7 @@ export function ForgotPasswordForm() {
         return (
             <main className="auth-form">
                 <header className="auth-page__header">
-                    <img
-                        className="auth-page__logo"
-                        src={logoUrl}
-                        alt="H-Immo"
-                    />
+                    <BrandLogo className="auth-page__logo" />
                     <h1 className="auth-page__title">Email envoyé</h1>
                 </header>
 
@@ -59,11 +55,7 @@ export function ForgotPasswordForm() {
     return (
         <main className="auth-form">
             <header className="auth-page__header">
-                <img
-                    className="auth-page__logo"
-                    src={logoUrl}
-                    alt="H-Immo"
-                />
+                <BrandLogo className="auth-page__logo" />
                 <h1 className="auth-page__title">Mot de passe oublié</h1>
                 <p className="auth-page__description">
                     Saisissez votre adresse email. Si un compte existe, un lien de

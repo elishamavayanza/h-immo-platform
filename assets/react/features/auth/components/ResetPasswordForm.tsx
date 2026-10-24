@@ -19,7 +19,7 @@ import { Password } from '../../../components/Forms/Password/Password';
 
 import { RESET_SUCCESS_MESSAGE, useResetPasswordForm } from '../hooks/useResetPasswordForm';
 
-import logoUrl from '../../../app/upload/logo.png';
+import { BrandLogo } from '../../../components/Brand/BrandLogo';
 
 export function ResetPasswordForm({ token }: { token: string }) {
     const form = useResetPasswordForm(token);
@@ -32,11 +32,7 @@ export function ResetPasswordForm({ token }: { token: string }) {
         return (
             <main className="auth-form">
                 <header className="auth-page__header">
-                    <img
-                        className="auth-page__logo"
-                        src={logoUrl}
-                        alt="H-Immo"
-                    />
+                    <BrandLogo className="auth-page__logo" />
                     <h1 className="auth-page__title">Lien de réinitialisation invalide</h1>
                 </header>
 
@@ -55,11 +51,7 @@ export function ResetPasswordForm({ token }: { token: string }) {
         return (
             <main className="auth-form">
                 <header className="auth-page__header">
-                    <img
-                        className="auth-page__logo"
-                        src={logoUrl}
-                        alt="H-Immo"
-                    />
+                    <BrandLogo className="auth-page__logo" />
                     <h1 className="auth-page__title">Mot de passe défini</h1>
                 </header>
 
@@ -77,11 +69,7 @@ export function ResetPasswordForm({ token }: { token: string }) {
     return (
         <main className="auth-form">
             <header className="auth-page__header">
-                <img
-                    className="auth-page__logo"
-                    src={logoUrl}
-                    alt="H-Immo"
-                />
+                <BrandLogo className="auth-page__logo" />
                 <h1 className="auth-page__title">Réinitialiser mon mot de passe</h1>
                 <p className="auth-page__description">
                     Choisissez un nouveau mot de passe pour votre compte.

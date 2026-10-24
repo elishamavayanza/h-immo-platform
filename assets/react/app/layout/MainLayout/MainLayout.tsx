@@ -23,6 +23,7 @@ import { useIsMobile } from '../../../hooks/useIsMobile';
 import { useMediaQuery } from '../../../hooks/useMediaQuery';
 import { MEDIA_QUERIES } from '../../../services/device';
 import { mediaHref } from '../../../features/shared/media/services/mediaService';
+import { BrandLogo } from '../../../components/Brand/BrandLogo';
 import { WorkspaceSwitcher } from './WorkspaceSwitcher';
 import { GlobalSearch } from '../../../features/shared/search/components/GlobalSearch';
 import { rememberLastLocation } from '../../routes/navigationMemory';
@@ -33,23 +34,19 @@ import { settingsService } from '../../../features/shared/account/settings/servi
 import { useToast } from './contexts/ToastContext';
 
 /**
- * Marque du sidebar : logo + "IMMO" + nom de l'organisation active sur sa propre ligne.
+ * Marque du sidebar : logo à gauche, noms de la plateforme et de l'organisation à droite.
  * Composant pur pour éviter de le recréer à chaque rendu.
  */
 function Brand({ organizationName }: { organizationName?: string }) {
     return (
         <div className="main-layout__brand">
-            <div className="main-layout__brand-main">
-                <img
-                    src="/assets/logo.png"
-                    alt="H-Immo"
-                    className="main-layout__brand-logo"
-                />
+            <BrandLogo className="main-layout__brand-logo" />
+            <div className="main-layout__brand-copy">
                 <span className="main-layout__brand-name">Soft-IMMO</span>
+                {organizationName && (
+                    <span className="main-layout__brand-org">{organizationName}</span>
+                )}
             </div>
-            {organizationName && (
-                <span className="main-layout__brand-org">{organizationName}</span>
-            )}
         </div>
     );
 }
@@ -213,6 +210,7 @@ export function MainLayout() {
     if (isAuthLoading || isOrgLoading) {
         return (
             <div className="main-layout main-layout--centered">
+                <BrandLogo className="main-layout__loading-logo" decorative />
                 <Loading text="Chargement de votre espace..." />
             </div>
         );

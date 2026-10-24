@@ -21,7 +21,7 @@ import { setThemePreference } from '../../../services/userPreferences';
 
 import { useLoginForm } from '../hooks/useLoginForm';
 
-import logoUrl from '../../../app/upload/logo.png';
+import { BrandLogo } from '../../../components/Brand/BrandLogo';
 
 const MAIL_ICON = (
     <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
@@ -86,11 +86,7 @@ export function LoginForm({ notice }: { notice?: string | null } = {}) {
                 <span className="auth-theme-switch__label">{isLightTheme ? 'Clair' : 'Sombre'}</span>
             </button>
             <header className="auth-page__header">
-<img
-                        className="auth-page__logo"
-                        src={logoUrl}
-                        alt="H-Immo"
-                    />
+<BrandLogo className="auth-page__logo" />
                 <h1 className="auth-page__title">Connexion</h1>
                 <p className="auth-page__description">
                     Accédez à votre espace de gestion immobilière.

@@ -327,24 +327,22 @@
 
 
 // ============================================================
-// BRAND (logo + IMMO + nom org sur ligne séparée)
+// BRAND (logo à gauche, nom de la plateforme et organisation à droite)
 // ============================================================
 
 .main-layout__brand {
-    @include flex(column, flex-start, center, $spacing-1);
+    @include flex(row, center, flex-start, $spacing-2);
     min-width: 0;
-    align-items: flex-start;
 
-    &-main {
-        @include flex(row, center, flex-start, $spacing-2);
+    &-copy {
+        @include flex(column, flex-start, center, 2px);
         min-width: 0;
+        flex: 1;
     }
 
     &-logo {
-        width: 36px;
-        height: 36px;
-        border-radius: $radius-sm;
-        object-fit: cover;
+        width: 56px;
+        height: 56px;
         flex-shrink: 0;
     }
 
@@ -358,10 +356,28 @@
     }
 }
 
+// Le bandeau reprend la couleur d'accent : le symbole doit donc utiliser
+// son premier plan clair pour rester lisible en thème clair comme sombre.
+.sidebar__header .main-layout__brand-logo {
+    --himmo-logo-roof-start: var(--sidebar-header-foreground, #f5f8f8);
+    --himmo-logo-roof-mid: color-mix(in srgb, var(--sidebar-header-foreground, #f5f8f8) 82%, var(--color-primary));
+    --himmo-logo-structure-start: var(--sidebar-header-foreground, #f5f8f8);
+    --himmo-logo-structure-end: color-mix(in srgb, var(--sidebar-header-foreground, #f5f8f8) 80%, var(--color-primary));
+    --himmo-logo-accent: color-mix(in srgb, var(--color-primary) 38%, var(--sidebar-header-foreground, #f5f8f8));
+    --himmo-logo-accent-bright: color-mix(in srgb, var(--color-primary) 24%, var(--sidebar-header-foreground, #f5f8f8));
+    --himmo-logo-accent-dark: color-mix(in srgb, var(--color-primary) 54%, var(--sidebar-header-foreground, #f5f8f8));
+}
+
+.main-layout__loading-logo {
+    width: 104px;
+    height: 104px;
+    margin-bottom: $spacing-3;
+}
+
 // Nom de l'organisation active : sur sa propre ligne, dans un badge
 // arrondi avec fond discret — ne déstabilise pas la ligne principale.
 .main-layout__brand-org {
-    @include flex-center;
+    display: block;
     font-size: $font-size-xs;  // 12px
     font-weight: $font-weight-medium;
     color: inherit;
@@ -374,7 +390,7 @@
     max-width: 100%;
     white-space: nowrap;
     overflow: hidden;
-    margin-left: 30px;  // aligné sous "IMMO" (logo 28px + gap 2px)
+    margin: 0;
 }
 
 .main-layout__sidebar-footer {
@@ -546,20 +562,14 @@
 // « IMMO » et le nom d'org sont masqués pour ne pas déborder sur 72px.
 .sidebar--collapsed .main-layout__brand {
     justify-content: center;
-    align-items: center;
 
-    &-main {
-        justify-content: center;
-    }
-
-    &-name,
-    &-org {
+    &-copy {
         display: none;
     }
 
     &-logo {
-        width: 32px;
-        height: 32px;
+        width: 48px;
+        height: 48px;
     }
 }
 
